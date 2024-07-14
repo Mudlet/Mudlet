@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2022 by Stephen Lyons             *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -84,7 +84,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2024");
         QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -1047,7 +1047,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     nameFont.setPixelSize(32);
     nameFont.setFamily(qsl("Bitstream Vera Sans"));
 
-    for (const auto& name: qAsConst(mightier_than_swords)) {
+    for (const auto& name: std::as_const(mightier_than_swords)) {
         QImage background(qsl(":/icons/frame_swords.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
@@ -1056,7 +1056,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         image_counter++;
     }
 
-    for (const auto& name: qAsConst(on_a_plaque)) {
+    for (const auto& name: std::as_const(on_a_plaque)) {
         QImage background(qsl(":/icons/frame_plaque.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
@@ -1077,13 +1077,24 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         // clang-format on
     }
 
-    QString supporters_text(qsl(R"(
-               <p align="center"><br>%1<br></p>
-               %2
-               )")
-                  .arg(tr(R"(
-                          These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
-                          )"), supporters_image_html));
+    QString supporters_text;
+    if (mudlet::smSteamMode) {
+        supporters_text = qsl(R"(
+                <p align="center"><br>%1<br></p>
+                %2
+                )")
+                    .arg(tr(R"(
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support on Mudlet's patreon:
+                            )"), supporters_image_html);
+    } else {
+        supporters_text = qsl(R"(
+                <p align="center"><br>%1<br></p>
+                %2
+                )")
+                    .arg(tr(R"(
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
+                            )"), supporters_image_html);
+    }
 
     supportersDocument->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());

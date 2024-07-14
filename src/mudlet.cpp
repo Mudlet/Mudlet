@@ -92,7 +92,7 @@
 #include <QSettings>
 #endif
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
 #include <CoreFoundation/CoreFoundation.h>
@@ -324,28 +324,21 @@ mudlet::mudlet()
     mpActionMuteMedia->setObjectName(qsl("muteMedia"));
     mpActionMuteMedia->setCheckable(true);
 
-    mpActionMuteAPI = new QAction(tr("Mute Mudlet API (Triggers, Scripts, etc.)"), this);
+    mpActionMuteAPI = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
     mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteAPI->setIconText(tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
+    mpActionMuteAPI->setIconText(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
     mpActionMuteAPI->setObjectName(qsl("muteAPI"));
     mpActionMuteAPI->setCheckable(true);
 
-    mpActionMuteMCMP = new QAction(tr("Mute game MCMP (Mud Client Media Protocol)"), this);
-    mpActionMuteMCMP->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteMCMP->setIconText(tr("Mute game MCMP (Mud Client Media Protocol)"));
-    mpActionMuteMCMP->setObjectName(qsl("muteMCMP"));
-    mpActionMuteMCMP->setCheckable(true);
-
-    mpActionMuteMSP = new QAction(tr("Mute game MSP (Mud Sound Protocol)"), this);
-    mpActionMuteMSP->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteMSP->setIconText(tr("Mute game MSP (Mud Sound Protocol)"));
-    mpActionMuteMSP->setObjectName(qsl("muteMSP"));
-    mpActionMuteMSP->setCheckable(true);
+    mpActionMuteGame = new QAction(tr("Mute sounds from the game (MCMP, MSP)"), this);
+    mpActionMuteGame->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteGame->setIconText(tr("Mute sounds from the game (MCMP, MSP)"));
+    mpActionMuteGame->setObjectName(qsl("muteGame"));
+    mpActionMuteGame->setCheckable(true);
 
     mpButtonMute->addAction(mpActionMuteMedia);
     mpButtonMute->addAction(mpActionMuteAPI);
-    mpButtonMute->addAction(mpActionMuteMCMP);
-    mpButtonMute->addAction(mpActionMuteMSP);
+    mpButtonMute->addAction(mpActionMuteGame);
     mpButtonMute->setDefaultAction(mpActionMuteMedia);
 
     mpButtonDiscord = new QToolButton(this);
@@ -512,8 +505,7 @@ mudlet::mudlet()
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(mpActionMuteMedia.data(), &QAction::triggered, this, &mudlet::slot_muteMedia);
     connect(mpActionMuteAPI.data(), &QAction::triggered, this, &mudlet::slot_muteAPI);
-    connect(mpActionMuteMCMP.data(), &QAction::triggered, this, &mudlet::slot_muteMCMP);
-    connect(mpActionMuteMSP.data(), &QAction::triggered, this, &mudlet::slot_muteMSP);
+    connect(mpActionMuteGame.data(), &QAction::triggered, this, &mudlet::slot_muteGame);
 
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_showConnectionDialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -534,6 +526,11 @@ mudlet::mudlet()
         if (!host) {
             return;
         }
+        host->mpEditorDialog = createMudletEditor();
+        if (!host->mpEditorDialog) {
+            return;
+        }
+
         host->mpEditorDialog->showCurrentTriggerItem();
         host->mpEditorDialog->raise();
         host->mpEditorDialog->showNormal();
@@ -569,8 +566,7 @@ mudlet::mudlet()
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multiView);
     connect(dactionMuteMedia, &QAction::triggered, this, &mudlet::slot_muteMedia);
     connect(dactionMuteAPI, &QAction::triggered, this, &mudlet::slot_muteAPI);
-    connect(dactionMuteMCMP, &QAction::triggered, this, &mudlet::slot_muteMCMP);
-    connect(dactionMuteMSP, &QAction::triggered, this, &mudlet::slot_muteMSP);
+    connect(dactionMuteGame, &QAction::triggered, this, &mudlet::slot_muteGame);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compactInputLine);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
@@ -652,12 +648,10 @@ mudlet::mudlet()
     mpButtonMute->setEnabled(true);
     mpActionMuteMedia->setEnabled(true);
     mpActionMuteAPI->setEnabled(true);
-    mpActionMuteMCMP->setEnabled(true);
-    mpActionMuteMSP->setEnabled(true);
+    mpActionMuteGame->setEnabled(true);
     dactionMuteMedia->setEnabled(true);
     dactionMuteAPI->setEnabled(true);
-    dactionMuteMCMP->setEnabled(true);
-    dactionMuteMSP->setEnabled(true);
+    dactionMuteGame->setEnabled(true);
 
     // Edbee has a singleton that needs some initialisation
     initEdbee();
@@ -1158,7 +1152,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
         }
     }
 
-    for (auto& translationFileName : qAsConst(translationFilesList)) {
+    for (auto& translationFileName : std::as_const(translationFilesList)) {
         QString languageCode(translationFileName);
         languageCode.remove(qsl("mudlet_"), Qt::CaseInsensitive);
         languageCode.remove(qsl(".qm"), Qt::CaseInsensitive);
@@ -1497,12 +1491,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-
-    auto pEditor = new dlgTriggerEditor(pH);
-    pH->mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
 
@@ -1856,7 +1844,11 @@ void mudlet::readEarlySettings(const QSettings& settings)
         return;
     }
 
-//    qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+// #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
+//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+// #else
+//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+// #endif
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -1902,8 +1894,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     slot_multiView(multiView);
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
-    slot_muteMCMP(settings.contains(qsl("enableMuteMCMP")) ? settings.value(qsl("enableMuteMCMP"), QVariant(false)).toBool() : false);
-    slot_muteMSP(settings.contains(qsl("enableMuteMSP")) ? settings.value(qsl("enableMuteMSP"), QVariant(false)).toBool() : false);
+    slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2045,8 +2036,7 @@ void mudlet::writeSettings()
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
-    settings.setValue(qsl("enableMuteMCMP"), mMuteMCMP);
-    settings.setValue(qsl("enableMuteMSP"), mMuteMSP);
+    settings.setValue(qsl("enableMuteGame"), mMuteGame);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2066,13 +2056,33 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->show();
 }
 
+dlgTriggerEditor* mudlet::createMudletEditor()
+{
+    Host* pHost = getActiveHost();
+    if (pHost == nullptr) {
+        return nullptr;
+    }
+
+    if (pHost->mpEditorDialog != nullptr) {
+        return pHost->mpEditorDialog;
+    }
+
+    auto* pEditor = new dlgTriggerEditor(pHost);
+    pHost->mpEditorDialog = pEditor;
+    connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    pEditor->fillout_form();
+
+    return pEditor;
+}
+
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2088,7 +2098,7 @@ void mudlet::slot_showTriggerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2104,7 +2114,7 @@ void mudlet::slot_showAliasDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2120,7 +2130,7 @@ void mudlet::slot_showTimerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2136,7 +2146,7 @@ void mudlet::slot_showScriptDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2152,7 +2162,7 @@ void mudlet::slot_showKeyDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2168,7 +2178,7 @@ void mudlet::slot_showVariableDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2184,7 +2194,7 @@ void mudlet::slot_showActionDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2953,7 +2963,7 @@ void mudlet::slot_multiView(const bool state)
     }
 }
 
-void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText)
+void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
@@ -2962,24 +2972,30 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
     for (auto pHost : mHostManager) {
         if (state) {
-            pHost->mpMedia->muteMedia(protocol);
+            if (isAPINotGame) {
+                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);
+            } else {
+                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolGMCP);
+                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolMSP);
+            }
         } else {
-            pHost->mpMedia->unmuteMedia(protocol);
+            if (isAPINotGame) {
+                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolAPI);
+            } else {
+                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolGMCP);
+                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolMSP);
+            }
         }
     }
 
-    if (protocol == TMediaData::MediaProtocolAPI) {
+    if (isAPINotGame) {
         mMuteAPI = state;
         mpActionMuteAPI->setText(mMuteAPI ? unmuteText : muteText);
         mpActionMuteAPI->setIcon(QIcon(mMuteAPI ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
-    } else if (protocol == TMediaData::MediaProtocolGMCP) {
-        mMuteMCMP = state;
-        mpActionMuteMCMP->setText(mMuteMCMP ? unmuteText : muteText);
-        mpActionMuteMCMP->setIcon(QIcon(mMuteMCMP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
-    } else if (protocol == TMediaData::MediaProtocolMSP) {
-        mMuteMSP = state;
-        mpActionMuteMSP->setText(mMuteMSP ? unmuteText : muteText);
-        mpActionMuteMSP->setIcon(QIcon(mMuteMSP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    } else {
+        mMuteGame = state;
+        mpActionMuteGame->setText(mMuteGame ? unmuteText : muteText);
+        mpActionMuteGame->setIcon(QIcon(mMuteGame ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     }
 
     // Toolbar icon. "Mute" when any protocol is unmuted. "Unmute" only when all protocols are muted.
@@ -3001,10 +3017,10 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
             if (sequence && !sequence->toString().isEmpty()) {
                 message = isMediaMuted
-                    ? tr("[ INFO ]  - Mudlet is muted. Use %1 to unmute.").arg(sequence->toString())
-                    : tr("[ INFO ]  - Mudlet is unmuted. Use %1 to mute.").arg(sequence->toString());
+                    ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.").arg(sequence->toString())
+                    : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.").arg(sequence->toString());
             } else {
-                message = isMediaMuted ? tr("[ INFO ]  - Mudlet is muted.") : tr("[ INFO ]  - Mudlet is unmuted.");
+                message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted.") : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
             }
 
             pHost->postMessage(message);
@@ -3014,36 +3030,26 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
 void mudlet::slot_muteAPI(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteAPI, dactionMuteAPI, TMediaData::MediaProtocolAPI, tr("Unmute Mudlet API (Triggers, Scripts, etc.)"), tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
+    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
 }
 
-void mudlet::slot_muteMCMP(const bool state)
+void mudlet::slot_muteGame(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteMCMP, dactionMuteMCMP, TMediaData::MediaProtocolGMCP, tr("Unmute game MCMP (Mud Client Media Protocol)"), tr("Mute game MCMP (Mud Client Media Protocol)"));
-}
-
-void mudlet::slot_muteMSP(const bool state)
-{
-    toggleMuteForProtocol(state, mpActionMuteMSP, dactionMuteMSP, TMediaData::MediaProtocolMSP, tr("Unmute game MSP (Mud Sound Protocol)"), tr("Mute game MSP (Mud Sound Protocol)"));
+    toggleMute(state, mpActionMuteGame, dactionMuteGame, false, tr("Unmute sounds from the game (MCMP, MSP)"), tr("Mute sounds from the game (MCMP, MSP)"));
 }
 
 void mudlet::slot_muteMedia()
 {
     if (mediaMuted()) {
         slot_muteAPI(false);
-        slot_muteMCMP(false);
-        slot_muteMSP(false);
+        slot_muteGame(false);
     } else {
         if (!mMuteAPI) {
             slot_muteAPI(true);
         }
 
-        if (!mMuteMCMP) {
-            slot_muteMCMP(true);
-        }
-
-        if (!mMuteMSP) {
-            slot_muteMSP(true);
+        if (!mMuteGame) {
+            slot_muteGame(true);
         }
     }
 }
@@ -3267,8 +3273,11 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     zip_uint64_t bytesRead = 0;
     char buf[4096]; // Was 100 but that seems unduly stingy...!
     zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
+    if (err) {
+        zip_error_t *error = zip_get_error(archive);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        zip_error_fini(error);
+        zip_discard(archive);
         return false;
     }
 
@@ -3359,7 +3368,10 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 
     err = zip_close(archive);
     if (err) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
+        zip_error_t *error = zip_get_error(archive);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        zip_error_fini(error);
+        zip_discard(archive);
         return false;
     }
 
@@ -4016,8 +4028,13 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
             qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
             qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                          << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+#else
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+#endif
         }
         loadTranslators(languageCode);
         // For full dynamic language change support (no restart necessary) we
@@ -4331,8 +4348,8 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
 #endif
     return Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
 }
@@ -4507,7 +4524,11 @@ static QString getShortPathName(const QString& name)
     }
     QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
     GetShortPathNameW(nameC, buffer.data(), length);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
+#else
+    const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
+#endif
     return rc;
 }
 
@@ -4780,7 +4801,7 @@ bool mudlet::desktopInDarkMode()
 #if defined(Q_OS_WIN32)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
     return settings.value("AppsUseLightTheme", 1).toInt() == 0;
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     bool isDark = false;
     CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
     CFStringRef uiStyle = nullptr;

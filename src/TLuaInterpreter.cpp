@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -5075,6 +5075,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "setBold", TLuaInterpreter::setBold);
+    lua_register(pGlobalLua, "setFaint", TLuaInterpreter::setFaint);
     lua_register(pGlobalLua, "setItalics", TLuaInterpreter::setItalics);
     lua_register(pGlobalLua, "setOverline", TLuaInterpreter::setOverline);
     lua_register(pGlobalLua, "setReverse", TLuaInterpreter::setReverse);
@@ -5468,7 +5469,7 @@ void TLuaInterpreter::initLuaGlobals()
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
@@ -5800,13 +5801,15 @@ void TLuaInterpreter::loadGlobal()
     // luaL_dostring(pGlobalLua, qsl("debugLoading = true").toUtf8().constData());
 
 #if defined(Q_OS_WIN32)
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     // Needed to enable permissions checks on NTFS file systems - normally
     // turned off for performance reasons:
     extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 #endif
+#endif
 
     int error;
-    for (const auto& pathFileName : qAsConst(mPossiblePaths)) {
+    for (const auto& pathFileName : std::as_const(mPossiblePaths)) {
         if (!(QFileInfo::exists(pathFileName))) {
             failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(pathFileName);
             continue;
@@ -5819,15 +5822,23 @@ void TLuaInterpreter::loadGlobal()
 
 #if defined(Q_OS_WIN32)
         // Turn on permission checking on NTFS file systems
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         qt_ntfs_permission_lookup++;
+#else
+        qEnableNtfsPermissionChecks();
+#endif
 #endif
         if (!(QFileInfo(pathFileName).isReadable())) {
             failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)").arg(pathFileName);
             continue;
         }
 #if defined(Q_OS_WIN32)
-        // Turn off permission checking
+        // Turn off permission checking on NTFS file systems
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         qt_ntfs_permission_lookup--;
+#else
+        qDisableNtfsPermissionChecks();
+#endif
 #endif
 
         // Leave a global variable set to the path so we can use it to find the
@@ -5936,7 +5947,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
 
     const int id = pS->getID();
     pS->setIsActive(false);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {id, QString()};
 }
 
@@ -5953,7 +5964,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
     const auto ids = mpHost->getScriptUnit()->findItems(name);
     int id = -1;
     TScript* pS = nullptr;
-    if (pos >= 0 && pos < ids.size()) {
+    if (pos >= 0 && pos < static_cast<ptrdiff_t>(ids.size())) {
         id = ids.at(pos);
         pS = mpHost->getScriptUnit()->getScript(id);
     }
@@ -5966,7 +5977,9 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
-    mpHost->mpEditorDialog->writeScript(id);
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->writeScript(id);
+    }
     return {id, QString()};
 }
 
@@ -6004,7 +6017,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     }
 
     pT->setIsActive(false);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6053,7 +6066,7 @@ std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, con
     pT->registerAlias();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6098,7 +6111,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6280,7 +6293,7 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return std::pair(pT->getID(), QString());
 }
 
@@ -6308,7 +6321,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return std::pair(pT->getID(), QString());
 }
 
@@ -6336,7 +6349,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6363,7 +6376,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6841,7 +6854,7 @@ void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
 
     // Parse headers, add them as key-value pairs to the empty table
     const QList<QByteArray> headerList = reply->rawHeaderList();
-    for (const QByteArray header : headerList) {
+    for (const QByteArray& header : headerList) {
         // Push header key onto stack
         lua_pushstring(L, header.constData());
         // Push header value onto stack
@@ -6873,7 +6886,7 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     const Host& host = getHostFromLua(L);
     QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
-    for (const QNetworkCookie cookie : cookies) {
+    for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack
         lua_pushstring(L, cookie.name().constData());
         // Push cookie value onto stack
@@ -7368,6 +7381,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("boldIsBright")) {
+        host.mBoldIsBright = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("logInHTML")) {
+        host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7475,7 +7496,9 @@ int TLuaInterpreter::getConfig(lua_State *L)
             default:
                 lua_pushstring(L, "asis");
             }
-        } } //, <- not needed until another one is added
+        } },
+        { qsl("boldIsBright"), [&](){ lua_pushboolean(L, host.mBoldIsBright); } },
+        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } } //, <- not needed until another one is added
     };
 
     auto it = configMap.find(key);
@@ -7551,4 +7574,11 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
     pCommandline->mSaveCommands = saveCommands;
     lua_pushboolean(L, true);
     return 1;
+}
+
+void TLuaInterpreter::updateEditor()
+{
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->mNeedUpdateData = true;
+    }
 }

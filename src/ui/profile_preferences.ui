@@ -756,11 +756,14 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_font">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font" rowstretch="1,0,0" columnstretch="0,1,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="label_30">
             <property name="text">
              <string>Font:</string>
+            </property>
+            <property name="buddy">
+             <cstring>fontComboBox</cstring>
             </property>
            </widget>
           </item>
@@ -785,12 +788,25 @@
             <property name="text">
              <string>Size:</string>
             </property>
+            <property name="buddy">
+             <cstring>fontSize</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="3">
            <widget class="QComboBox" name="fontSize"/>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="0" column="4">
+           <widget class="QCheckBox" name="checkBox_antiAlias">
+            <property name="toolTip">
+             <string>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="5">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -802,7 +818,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="4">
+          <item row="2" column="0" colspan="5">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
              <font>
@@ -812,16 +828,6 @@
             <property name="text">
              <string comment="Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer">This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="mNoAntiAlias">
-            <property name="toolTip">
-             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
-            </property>
-            <property name="text">
-             <string>Enable anti-aliasing</string>
             </property>
            </widget>
           </item>
@@ -1913,6 +1919,16 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QPushButton" name="pushButton_resetColors">
             <property name="text">
              <string>Reset all colors to default</string>
+            </property>
+           </widget>
+          </item>
+          <item row="14" column="0" colspan="4">
+           <widget class="QCheckBox" name="checkBox_boldIsBright">
+            <property name="toolTip">
+             <string>&lt;p&gt;Server uses BOLD to make Light 8 colors (only for some 16 Color MUDs)&lt;/p&gt;&lt;p&gt;Some older Game Servers support eight different colors which are selected by using the original eight &quot;Set Graphic Rendition&quot; &lt;tt&gt; &amp;lt;SGR&amp;gt; 30&lt;/tt&gt; (black) to &lt;tt&gt;37&lt;/tt&gt; (white)&lt;/tt&gt; ANSI ESC color codes and combine those with the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; (bold or more intense) code to provide a second set of eight colors for sixteen in total. This checkbox causes this use of the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; code however it should not be used if the Game Server:&lt;ul&gt;&lt;li&gt;only uses eight colors&lt;/li&gt;&lt;li&gt;uses more than sixteen colors&lt;/li&gt;&lt;li&gt;uses sixteen colors but selects the &quot;brighter&quot; eight colors with &lt;tt&gt;&amp;lt;SGR&amp;gt; 90&lt;/tt&gt; (light black) to &lt;tt&gt;&amp;lt;SGR&amp;gt; 97&lt;/tt&gt; (light white) {and &lt;tt&gt;100&lt;/tt&gt; to &lt;tt&gt;107&lt;/tt&gt; for the same as a background} of the sixteeen&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Older versions of Mudlet had code that effectively had this option permanently enabled. However nowadays it interferes with using the BOLD attribute to provide &lt;b&gt;bold&lt;/b&gt; text alongside the less often used FAINT attribute to provide &lt;span style=&quot; font-weight: 200&quot;&gt;faint&lt;/span&gt; and &lt;span style=&quot; font-weight: 600&quot;&gt;demi-bold&lt;/span&gt; text effects.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>BOLD is Bright</string>
             </property>
            </widget>
           </item>
@@ -4467,8 +4483,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
   <tabstop>fontComboBox</tabstop>
-  <tabstop>mNoAntiAlias</tabstop>
   <tabstop>fontSize</tabstop>
+  <tabstop>checkBox_antiAlias</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -4504,6 +4520,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_cyan</tabstop>
   <tabstop>pushButton_white</tabstop>
   <tabstop>checkBox_allowServerToRedefineColors</tabstop>
+  <tabstop>checkBox_boldIsBright</tabstop>
   <tabstop>pushButton_lBlack</tabstop>
   <tabstop>pushButton_lRed</tabstop>
   <tabstop>pushButton_lGreen</tabstop>

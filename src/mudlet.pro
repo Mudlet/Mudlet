@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2024 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -89,6 +89,7 @@ qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
+
 greaterThan(QT_MAJOR_VERSION, 5) {
     QT += core5compat
 }
@@ -118,38 +119,27 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 }
 
 
-########################## Version and Build setting ###########################
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.17.2
+# Set Mudlet version (update in CMakeLists.txt as well)
+VERSION = 4.18.2
 
-# if you are distributing modified code, it would be useful if you
-# put something distinguishing into the MUDLET_VERSION_BUILD environment
-# variable (it should use '-' as the first character) to make identification of
-# the used version simpler
-# Note: the qmake BUILD variable is NOT a built-in one
+# Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
-# Possible values are:
-# "-dev" for the development build
-# "-ptb" for the public test build
-# "" for the release build
-# A core dev team member setting things up for a release should comment out the
-# following line - as the app-build.txt file must not contain anything (other
-# than whitespace) for a RELEASE build:
-   BUILD = "-dev-"$${GIT_SHA1}
+!isEmpty(BUILD) {
+    BUILD = $${BUILD}-$${GIT_SHA1}
 } else {
-   BUILD = $${BUILD}-$${GIT_SHA1}
+    BUILD = "-dev-"$${GIT_SHA1}
 }
 
-# This does append a line-feed to the file which would be problematic if it
-# wasn't trimmed off when read:
-write_file( app-build.txt, BUILD )
+# Write BUILD to app-build.txt, note that this adds a newline to the file
+write_file(app-build.txt, BUILD)
 
-isEmpty( BUILD ) {
-    !build_pass:message("Value written to app-build.txt file: {nothing}")
-} else {
-    !build_pass:message("Value written to app-build.txt file: " $${BUILD})
+# Log the value written to app-build.txt
+!build_pass {
+    isEmpty(BUILD) {
+        message("Value written to app-build.txt file: {nothing}")
+    } else {
+        message("Value written to app-build.txt file: " $${BUILD})
+    }
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -168,7 +158,7 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # APP_BUILD is going away (it is not currently used in the source code now as
 # Mudlet instead reads it from the resource file) however until the CI/CB system
 # is cleaned up to not use it in any way in the
-# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
+# /CI/travis.validate_deployment.sh script we probably have to
 # leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
@@ -362,6 +352,7 @@ unix:!macx {
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
+
     contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
         # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
         isEmpty( MINGW_BASE_DIR_TEST ) {
@@ -378,23 +369,51 @@ unix:!macx {
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 
     } else {
-        # For users/developers building with MSYS2 on Windows:
         isEmpty( MINGW_BASE_DIR_TEST ) {
             error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
-"the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
-"application build) typically this is one of:\\n"\
-"'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
-"'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
-"'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+            "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
+            "application build) typically this is one of:\\n"\
+            "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
+            "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
+            "'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
         }
-        LIBS +=  \
-            -L$${MINGW_BASE_DIR_TEST}/bin \
-            -llua5.1 \
-            -llibhunspell-1.7
+        GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
+        isEmpty( GITHUB_WORKSPACE_TEST ) {
+            # For users/developers building with MSYS2 on Windows:
+            LIBS +=  \
+                -L$${MINGW_BASE_DIR_TEST}/bin \
+                -llua5.1 \
+                -llibhunspell-1.7
 
-        INCLUDEPATH += \
-             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
-             $${MINGW_BASE_DIR_TEST}/include/pugixml
+            INCLUDEPATH += \
+                 $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+                 $${MINGW_BASE_DIR_TEST}/include/pugixml
+        } else {
+            # For users/developers building with MSYS2 for Windows in a GH Workflow:
+            contains(QMAKE_HOST.arch, x86_64) {
+                LIBS +=  \
+                    -LD:\\a\\_temp\\msys64\\mingw64/lib \
+                    -LD:\\a\\_temp\\msys64\\mingw64/bin \
+                    -llua5.1 \
+                    -llibhunspell-1.7
+
+                INCLUDEPATH += \
+                     D:\\a\\_temp\\msys64\\mingw64/include \
+                     D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                     $${MINGW_BASE_DIR_TEST}/include/pugixml
+            } else {
+                LIBS +=  \
+                    -LD:\\a\\_temp\\msys64\\mingw32/lib \
+                    -LD:\\a\\_temp\\msys64\\mingw32/bin \
+                    -llua5.1 \
+                    -llibhunspell-1.7
+
+                INCLUDEPATH += \
+                     D:\\a\\_temp\\msys64\\mingw32/include \
+                     D:/a/_temp/msys64/mingw32/include/lua5.1 \
+                     $${MINGW_BASE_DIR_TEST}/include/pugixml
+            }
+        }
     }
 
     LIBS += \
@@ -445,10 +464,15 @@ macx {
 BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_C
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe) {
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
+    message("Found ccache, updating QMAKE_CXX and QMAKE_C")
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_C = ccache $$BASE_C
+} else {
+    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
 }
+
+message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_C: '"$${QMAKE_C}"'")
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
@@ -970,7 +994,11 @@ contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         message("Including own copy of QtKeyChain library code in this configuration")
     }
 } else {
-    LIBS += -lqt5keychain
+    lessThan(QT_MAJOR_VERSION,6) {
+        LIBS += -lqt5keychain
+    } else {
+        LIBS += -lqt6keychain
+    }
     !build_pass{
         message("Linking with system QtKeyChain library code in this configuration")
     }
@@ -1622,7 +1650,6 @@ win32 {
 # This is a list of files that we want to show up in the Qt Creator IDE that are
 # not otherwise used by the main project:
 OTHER_FILES += \
-    ../.appveyor.yml \
     ../.crowdin.yml \
     ../.devcontainer/Dockerfile \
     ../.devcontainer/devcontainer.json \
@@ -1640,12 +1667,15 @@ OTHER_FILES += \
     ../.github/repo-metadata.yml \
     ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/build-mudlet-win.yml \
     ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/clangtidy-post-comments.yml \
     ../.github/workflows/codeql-analysis.yml \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
     ../.github/workflows/generate-changelog.yml \
     ../.github/workflows/generate-coder-attribution.yml \
+    ../.github/workflows/qridlayout-ordering.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/performance-analysis.yml \
     ../.github/workflows/tag-pull-requests.yml \
@@ -1655,17 +1685,16 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.build.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.validate_deployment.ps1 \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/build-mudlet-for-windows.sh \
+    ../CI/deploy-mudlet-for-windows.sh \
+    ../CI/fix.grid.ui.ordering.js \
     ../CI/generate-changelog.lua \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/lua-5.1.5-so.patch \
+    ../CI/org.mudlet.mudlet.yml \
     ../CI/qt-silent-install.qs \
+    ../CI/register-windows-release.sh \
+    ../CI/package-mudlet-for-windows.sh \
+    ../CI/setup-windows-sdk.sh \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
@@ -1678,6 +1707,7 @@ OTHER_FILES += \
     ../CI/travis.set-build-info.sh \
     ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
+    ../CI/validate-deployment-for-windows.sh \
     ../dangerfile.js \
     ../docker/.env.template \
     ../docker/docker-compose.override.linux.yml \
