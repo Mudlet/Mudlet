@@ -4353,7 +4353,7 @@ function map.roomFind(query, lines)
         string.format(
           "&lt;DarkSlateGrey&gt;%s&lt;DarkSlateGrey&gt;\n", getRoomAreaName(getRoomArea(roomid))
         ),
-        [[map.echoPath(map.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
@@ -4380,7 +4380,7 @@ function map.roomFind(query, lines)
       fg("DarkSlateGrey")
       echoLink(
         " &gt; Show path\n",
-        [[map.echoPath(map.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
