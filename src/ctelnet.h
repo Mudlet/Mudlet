@@ -282,6 +282,7 @@ private:
     QByteArray prepareNewEnvironData(const QString&);
     QString getNewEnvironValueUser();
     QString getNewEnvironValueSystemType();
+    QString getNewEnvironBoldIsBright();
     QString getNewEnvironCharset();
     QString getNewEnvironClientName();
     QString getNewEnvironClientVersion();

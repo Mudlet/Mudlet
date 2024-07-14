@@ -1016,6 +1016,12 @@ QString cTelnet::getNewEnvironValueSystemType()
     return systemType.isEmpty() ? QString(): systemType;
 }
 
+QString cTelnet::getNewEnvironBoldIsBright()
+{
+    return qsl("2"); // 4.17.2? otherwise --> return QString();
+    // return qsl("%1").arg(mpHost->mBoldIsBright); // Future: Bold is Bright
+}
+
 QString cTelnet::getNewEnvironCharset()
 {
     const QString charsetEncoding = getEncoding();
@@ -1190,6 +1196,7 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironFont())); // Needs an OPT-IN to be enabled, next PR
     //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironFontSize())); // Needs an OPT-IN to be enabled, next PR
     newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironWordWrap()));
+    newEnvironDataMap.insert(qsl("BOLD_IS_BRIGHT"), qMakePair(isUserVar, getNewEnvironBoldIsBright()));
 
     return newEnvironDataMap;
 }
