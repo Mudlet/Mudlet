@@ -379,8 +379,8 @@ private:
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processEUC_KRSequence(const std::string&, bool, size_t, size_t&, bool&);
     void decodeSGR(const QString&);
-    void decodeSGR38(QColor&, const QStringList&, const bool isColonSeparated = true);
-    void decodeSGR48(QColor&, const QStringList&, const bool isColonSeparated = true);
+    void decodeSGR38(const QStringList&, bool isColonSeparated = true);
+    void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
 
@@ -415,6 +415,7 @@ private:
     QColor mLightWhite;
     QColor mWhite;
     QColor mForeGroundColor;
+    QColor mForeGroundColorLight;
     QColor mBackGroundColor;
 
     QPointer<Host> mpHost;
@@ -432,6 +433,12 @@ private:
     bool mFastBlink = false;
     bool mConcealed = false;
     quint8 mAltFont = 0;
+    // If enabled by a per profile setting (Host::mBoldIsBright == true) this
+    // will cause the first 8 ANSI colors (set by direct <SGR>30m to <SGR>37m)
+    // to be converted to second 8 ANSI colors (equivalent to <SGR>90m to
+    // <SGR>97m) if the Bold attribute (<SGR>1m) is ALSO active -  was called
+    // mIsDefaultColor but used in an inverted sense:
+    bool mMayShift8ColorSet = false;
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
