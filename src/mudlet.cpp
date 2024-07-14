@@ -324,9 +324,9 @@ mudlet::mudlet()
     mpActionMuteMedia->setObjectName(qsl("muteMedia"));
     mpActionMuteMedia->setCheckable(true);
 
-    mpActionMuteAPI = new QAction(tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"), this);
+    mpActionMuteAPI = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
     mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteAPI->setIconText(tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"));
+    mpActionMuteAPI->setIconText(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
     mpActionMuteAPI->setObjectName(qsl("muteAPI"));
     mpActionMuteAPI->setCheckable(true);
 
@@ -3030,7 +3030,7 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
 
 void mudlet::slot_muteAPI(const bool state)
 {
-    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"));
+    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
 }
 
 void mudlet::slot_muteGame(const bool state)
