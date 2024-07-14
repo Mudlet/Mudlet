@@ -7252,7 +7252,30 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("boldIsBright")) {
-        host.mBoldIsBright = getVerifiedBool(L, __func__, 2, "value");
+        static const QStringList values{"false", "never", "true", "sometimes", "sameSequence", "always"};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+
+        if (!values.contains(value)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"",
+                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            return 2;
+        }
+
+        if (value == qsl("never") || value == qsl("false")) {
+            host.mBoldIsBright = Qt::Unchecked;
+            return success();
+        }
+        if (value == qsl("always")) {
+            host.mBoldIsBright = Qt::Checked;
+            return success();
+        }
+
+        // Of the remaining value "true" might be expected from scripts for
+        // Mudlet 4.18.0 to .2 and in those versions it behaved like this
+        // choice, "sometimes" is the value used in the profile save data and it
+        // might conceiveably be used by those inspecting the XML data:
+        host.mBoldIsBright = Qt::PartiallyChecked;
         return success();
     }
     if (key == qsl("logInHTML")) {
@@ -7367,7 +7390,18 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "asis");
             }
         } },
-        { qsl("boldIsBright"), [&](){ lua_pushboolean(L, host.mBoldIsBright); } },
+        { qsl("boldIsBright"), [&](){
+            switch (host.mBoldIsBright) {
+            case Qt::Unchecked:
+                lua_pushstring(L, "never");
+                break;
+            case Qt::Checked:
+                lua_pushstring(L, "always");
+                break;
+            default:
+                lua_pushstring(L, "sameSequence");
+            }
+        } },
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } } //, <- not needed until another one is added
     };
 

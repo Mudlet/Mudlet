@@ -713,9 +713,13 @@ public:
     // codes (<SGR>90m to <SGR>97m) codes or the <SGR>38::5:Nm ones are later
     // (better) ways of accessing that second set of 8 but some Servers only
     // know the first for 16 color operation. The prior behaviour for Mudlet
-    // would be almost equivalent to this option being true but it limits the
-    // ability to have completely separate bold (and faint) font weightings:
-    bool mBoldIsBright = true;
+    // would be almost equivalent to this option being Checked but it limits
+    // the ability to have completely separate bold (and faint) font weightings.
+    // The partially checked state means only do this when the BOLD code is in
+    // the same sequence as the fg or bg color setting sequence - Checked means
+    // don't ever use the BOLD code for bold text effects (and also don't use
+    // the faint code either):
+    Qt::CheckState mBoldIsBright = Qt::PartiallyChecked;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

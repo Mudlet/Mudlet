@@ -1196,7 +1196,7 @@ void TBuffer::decodeSGR(const QString& sequence)
     }
 
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
-    const bool boldIsBright = pHost->mBoldIsBright;
+    const Qt::CheckState boldIsBright = pHost->mBoldIsBright;
     QColor foregroundColor = mForeGroundColor;
     QColor lightForegroundColor = foregroundColor;
     QColor backgroundColor = mBackGroundColor;
@@ -1504,6 +1504,8 @@ void TBuffer::decodeSGR(const QString& sequence)
                     hasFaint = false;
                     has8ColorFg = false;
                     has8ColorBg = false;
+                    m8ColorFg = 255;
+                    m8ColorBg = 255;
                     break;
                 case 1:
                     // While we note this we will not apply it to the
@@ -1590,6 +1592,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 22: // "Neither Bold nor Dim" (Faint)
                     hasBold = false;
                     hasFaint = false;
+                    mHasBoldForBright = false;
                     break;
                 case 23:
                     mItalics = false;
@@ -1615,47 +1618,56 @@ void TBuffer::decodeSGR(const QString& sequence)
                     lightForegroundColor = mLightBlack;
                     // This has priority over Background color
                     has8ColorFg = true;
+                    m8ColorFg = 0;
                     break;
                 case 31:
                     foregroundColor = mRed;
                     lightForegroundColor = mLightRed;
                     has8ColorFg = true;
+                    m8ColorFg = 1;
                     break;
                 case 32:
                     foregroundColor = mGreen;
                     lightForegroundColor = mLightGreen;
                     has8ColorFg = true;
+                    m8ColorFg = 2;
                     break;
                 case 33:
                     foregroundColor = mYellow;
                     lightForegroundColor = mLightYellow;
                     has8ColorFg = true;
+                    m8ColorFg = 3;
                     break;
                 case 34:
                     foregroundColor = mBlue;
                     lightForegroundColor = mLightBlue;
                     has8ColorFg = true;
+                    m8ColorFg = 4;
                     break;
                 case 35:
                     foregroundColor = mMagenta;
                     lightForegroundColor = mLightMagenta;
                     has8ColorFg = true;
+                    m8ColorFg = 5;
                     break;
                 case 36:
                     foregroundColor = mCyan;
                     lightForegroundColor = mLightCyan;
                     has8ColorFg = true;
+                    m8ColorFg = 6;
                     break;
                 case 37:
                     foregroundColor = mWhite;
                     lightForegroundColor = mLightWhite;
                     has8ColorFg = true;
+                    m8ColorFg = 7;
                     break;
                 case 38: {
                     // We are not now using the basic 8 colors so we won't
                     // attempt to use the Bold attribute to shift those to the
                     // next 8 out of the first 16:
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     // We only have single elements so we will need to steal the
                     // needed number from the remainder:
                     if (paraIndex + 1 >= total) {
@@ -1753,56 +1765,66 @@ void TBuffer::decodeSGR(const QString& sequence)
                     foregroundColor = pHost->mFgColor;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 40:
+                    backgroundColor = mBlack;
+                    lightBackgroundColor = mLightBlack;
                     // We have an 8-color setting for the background color
                     // however it will only be considered to be a 16-color
                     // one if the foreground is NOT also set within this
                     // SGR sequence:
                     has8ColorBg = true;
-                    backgroundColor = mBlack;
-                    lightBackgroundColor = mLightBlack;
+                    m8ColorBg = 0;
                     break;
                 case 41:
-                    has8ColorBg = true;
                     backgroundColor = mRed;
                     lightBackgroundColor = mLightRed;
+                    has8ColorBg = true;
+                    m8ColorBg = 1;
                     break;
                 case 42:
-                    has8ColorBg = true;
                     backgroundColor = mGreen;
                     lightBackgroundColor = mLightGreen;
+                    has8ColorBg = true;
+                    m8ColorBg = 2;
                     break;
                 case 43:
-                    has8ColorBg = true;
                     backgroundColor = mYellow;
-                    lightBackgroundColor = mLightGreen;
+                    lightBackgroundColor = mLightYellow;
+                    has8ColorBg = true;
+                    m8ColorBg = 3;
                     break;
                 case 44:
-                    has8ColorBg = true;
                     backgroundColor = mBlue;
                     lightBackgroundColor = mLightBlue;
+                    has8ColorBg = true;
+                    m8ColorBg = 4;
                     break;
                 case 45:
-                    has8ColorBg = true;
                     backgroundColor = mMagenta;
                     lightBackgroundColor = mLightMagenta;
+                    has8ColorBg = true;
+                    m8ColorBg = 5;
                     break;
                 case 46:
-                    has8ColorBg = true;
                     backgroundColor = mCyan;
                     lightBackgroundColor = mLightCyan;
+                    has8ColorBg = true;
+                    m8ColorBg = 6;
                     break;
                 case 47:
-                    has8ColorBg = true;
                     backgroundColor = mWhite;
                     lightBackgroundColor = mLightWhite;
+                    has8ColorBg = true;
+                    m8ColorBg = 7;
                     break;
                 case 48: {
                     // We are not now using the basic 8 colors so we won't
                     // attempt to use the Bold attribute to shift those to the
                     // next 8 out of the first 16:
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     // We only have single elements so we will need to steal the
                     // needed number from the remainder:
                     if (paraIndex + 1 >= total) {
@@ -1897,6 +1919,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 49: // default background color
                     mBackGroundColor = pHost->mBgColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 // case 51: // Framed
                 //    break;
@@ -1927,81 +1950,97 @@ void TBuffer::decodeSGR(const QString& sequence)
                     foregroundColor = mLightBlack;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 91:
                     foregroundColor = mLightRed;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 92:
                     foregroundColor = mLightGreen;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 93:
                     foregroundColor = mLightYellow;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 94:
                     foregroundColor = mLightBlue;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 95:
                     foregroundColor = mLightMagenta;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 96:
                     foregroundColor = mLightCyan;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 97:
                     foregroundColor = mLightWhite;
                     lightForegroundColor = foregroundColor;
                     has8ColorFg = false;
+                    m8ColorFg = 255;
                     break;
                 case 100:
                     backgroundColor = mLightBlack;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 101:
                     backgroundColor = mLightRed;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 102:
                     backgroundColor = mLightGreen;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 103:
                     backgroundColor = mLightYellow;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 104:
                     backgroundColor = mLightBlue;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 105:
                     backgroundColor = mLightMagenta;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 106:
                     backgroundColor = mLightCyan;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 case 107:
                     backgroundColor = mLightWhite;
                     lightBackgroundColor = backgroundColor;
                     has8ColorBg = false;
+                    m8ColorBg = 255;
                     break;
                 default:
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
@@ -2010,7 +2049,22 @@ void TBuffer::decodeSGR(const QString& sequence)
         }
     }
 
-    if (boldIsBright) {
+    // Put the processing in three separate if()s just to make it simpler to
+    // follow!
+    if (boldIsBright == Qt::Unchecked) {
+        // Bold is NEVER used to select a color and always used for a text effect:
+        if (hasBold.has_value()) {
+            mBold = hasBold.value();
+        }
+        if (hasFaint.has_value()) {
+            mFaint = hasFaint.value();
+        }
+        mForeGroundColor = foregroundColor;
+        mBackGroundColor = backgroundColor;
+        return;
+    }
+
+    if (boldIsBright == Qt::PartiallyChecked) {
         if (!(  (has8ColorFg.has_value() && has8ColorFg.value())
              || (has8ColorBg.has_value() && has8ColorBg.value()))) {
 
@@ -2023,6 +2077,7 @@ void TBuffer::decodeSGR(const QString& sequence)
             if (hasFaint.has_value()) {
                 mFaint = hasFaint.value();
             }
+
             // Now set the color changes we've detected (if any) during the
             // parsing of this SGR sequence:
             mForeGroundColor = foregroundColor;
@@ -2053,16 +2108,201 @@ void TBuffer::decodeSGR(const QString& sequence)
                 mBackGroundColor = backgroundColor;
             }
         }
-    } else {
-        if (hasBold.has_value()) {
-            mBold = hasBold.value();
-        }
-        if (hasFaint.has_value()) {
-            mFaint = hasFaint.value();
-        }
-        mForeGroundColor = foregroundColor;
-        mBackGroundColor = backgroundColor;
+        return;
     }
+
+    // If we get here then bold is ALWAYS uses to select bright colors
+    if (hasBold.has_value()) {
+        // So record if we have a bold:
+        mHasBoldForBright = hasBold.value();
+    }
+
+    // Now combine the three values, whether changed here or not, to select the
+    // right colours
+    if (mHasBoldForBright) {
+        switch (m8ColorFg) {
+        case 0:
+            mForeGroundColor = mLightBlack;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 1:
+            mForeGroundColor = mLightRed;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 2:
+            mForeGroundColor = mLightGreen;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 3:
+            mForeGroundColor = mLightYellow;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 4:
+            mForeGroundColor = mLightBlue;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 5:
+            mForeGroundColor = mLightMagenta;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 6:
+            mForeGroundColor = mLightCyan;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 7:
+            mForeGroundColor = mLightWhite;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 255:
+            // Do nothing so we continue to next switch
+            break;
+        default:
+            // Any other value should not be seen
+            Q_UNREACHABLE();
+            // For release builds (where the above does NOT stop things
+            // dead) just reset things - and changing the switch condition
+            // value here will not execute a jump to any other case:
+            m8ColorFg = 255;
+        }
+
+        switch (m8ColorBg) {
+        case 0:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightBlack;
+            return;
+        case 1:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightRed;
+            return;
+        case 2:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightGreen;
+            return;
+        case 3:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightYellow;
+            return;
+        case 4:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightBlue;
+            return;
+        case 5:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightMagenta;
+            return;
+        case 6:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightCyan;
+            return;
+        case 7:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mLightWhite;
+            return;
+        case 255:
+            // Do nothing so we continue to next chunk of code
+            break;
+        default:
+            // Any other value should not be seen
+            Q_UNREACHABLE();
+            // For release builds (where the above does NOT stop things
+            // dead) just reset things - and changing the switch condition
+            // value here will not execute a jump to any other case:
+            m8ColorBg = 255;
+        }
+    } else {
+        switch (m8ColorFg) {
+        case 0:
+            mForeGroundColor = mBlack;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 1:
+            mForeGroundColor = mRed;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 2:
+            mForeGroundColor = mGreen;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 3:
+            mForeGroundColor = mYellow;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 4:
+            mForeGroundColor = mBlue;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 5:
+            mForeGroundColor = mMagenta;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 6:
+            mForeGroundColor = mCyan;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 7:
+            mForeGroundColor = mWhite;
+            mBackGroundColor = backgroundColor;
+            return;
+        case 255:
+            // Do nothing so we continue to next switch
+            break;
+        default:
+            // Any other value should not be seen
+            Q_UNREACHABLE();
+            // For release builds (where the above does NOT stop things
+            // dead) just reset things - and changing the switch condition
+            // value here will not execute a jump to any other case:
+            m8ColorFg = 255;
+        }
+
+        switch (m8ColorBg) {
+        case 0:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mBlack;
+            return;
+        case 1:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mRed;
+            return;
+        case 2:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mGreen;
+            return;
+        case 3:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mYellow;
+            return;
+        case 4:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mBlue;
+            return;
+        case 5:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mMagenta;
+            return;
+        case 6:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mCyan;
+            return;
+        case 7:
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = mWhite;
+            return;
+        case 255:
+            // Do nothing so we continue to next chunk of code
+            break;
+        default:
+            // Any other value should not be seen
+            Q_UNREACHABLE();
+            // For release builds (where the above does NOT stop things
+            // dead) just reset things - and changing the switch condition
+            // value here will not execute a jump to any other case:
+            m8ColorBg = 255;
+        }
+    }
+
+    mForeGroundColor = foregroundColor;
+    mBackGroundColor = backgroundColor;
 }
 
 void TBuffer::decodeOSC(const QString& sequence)
