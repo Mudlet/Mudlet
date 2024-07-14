@@ -160,7 +160,7 @@ void TClientVariables::sendClientVariablesResponse(const QString& data) {
     }
 }
 
-void TClientVariables::sendClientVariableInfo(const QString& variable) {
+void TClientVariables::sendClientVariableInfo(const QString& var) {
     QJsonObject info;
 
     QMap<QString, std::function<Host::DataSharingBehaviour()>> specialRequestVariables{
@@ -172,19 +172,19 @@ void TClientVariables::sendClientVariableInfo(const QString& variable) {
         {"USER", [this] { return mpHost->mShareUser; }}
     };
 
-    Host::DataSharingBehaviour behaviour = specialRequestVariables[variable](); // Needs an OPT-IN to be available
+    Host::DataSharingBehaviour behaviour = specialRequestVariables[var](); // Needs an OPT-IN to be available
 
     if (behaviour == Host::DataSharingBehaviour::OptIn) {
-        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = mpHost->mTelnet.getNewEnvironDataMap();
 
         if (newEnvironDataMap.contains(var)) {
             // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
             const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
             const QString val = newEnvironData.second;
 
-            info[variable] = QJsonObject{{"available", true}, {"value", val}};
+            info[var] = QJsonObject{{"available", true}, {"value", val}};
         } else {
-            info[variable] = QJsonObject{{"available", true}};
+            info[var] = QJsonObject{{"available", true}};
         }
     }
 
