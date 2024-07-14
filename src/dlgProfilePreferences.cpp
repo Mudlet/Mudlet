@@ -3082,7 +3082,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
 
-        const int priorBoldIsBright = pHost->mBoldIsBright;
+        const auto priorBoldIsBright = pHost->mBoldIsBright;
         pHost->mBoldIsBright = checkBox_boldIsBright->checkState();
 
         if (priorBoldIsBright != pHost->mBoldIsBright) {
