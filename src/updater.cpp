@@ -66,6 +66,10 @@ Updater::~Updater()
 // setup manual updates to do our custom actions
 void Updater::checkUpdatesOnStart()
 {
+    if (mudlet::self()->updaterDisabled()) {
+        return;
+    }
+
 #if defined(Q_OS_MACOS)
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
@@ -112,6 +116,10 @@ bool Updater::updateAutomatically() const
 
 void Updater::manuallyCheckUpdates()
 {
+    if (mudlet::self()->updaterDisabled()) {
+        return;
+    }
+
 #if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
 #else

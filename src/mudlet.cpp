@@ -4892,3 +4892,13 @@ void mudlet::armForceClose()
         forceClose();
     });
 }
+
+void mudlet::setUpdaterDisabled(bool disabled)
+{
+    mUpdaterDisabled = disabled;
+}
+
+bool mudlet::updaterDisabled() const
+{
+    return mUpdaterDisabled;
+}

@@ -280,6 +280,10 @@ int main(int argc, char* argv[])
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
+    const QCommandLineOption disableUpdater(QStringList() << "disable-updater", QCoreApplication::translate("main", "Disable the built-in updater"));
+    parser.addOption(disableUpdater);
+
+
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -428,7 +432,7 @@ int main(int argc, char* argv[])
 
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-    
+
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
@@ -499,6 +503,7 @@ int main(int argc, char* argv[])
     if (showSplash) {
         splash.show();
     }
+
     app->processEvents();
 
     const QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
@@ -661,6 +666,8 @@ int main(int argc, char* argv[])
     mudlet::self()->show();
 
     mudlet::self()->startAutoLogin(cliProfiles);
+
+    mudlet::self()->setUpdaterDisabled(parser.isSet(disableUpdater));
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
