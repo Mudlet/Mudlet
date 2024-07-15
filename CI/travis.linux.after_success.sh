@@ -127,14 +127,13 @@ then
 
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
 
-      # file_cat=2 asuming Linux is the 2nd item in WP-Download-Manager category
       curl -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
       -F "file_name=Mudlet-${VERSION} (Linux)" \
       -F "file_des=sha256: $SHA256SUM" \
-      -F "file_cat=2" \
+      -F "file_cat=4" \
       -F "file_permission=-1" \
       -F "output=json" \
       -F "do=Add File"
@@ -181,7 +180,7 @@ then
       -F "file_remote=$FILE_URL" \
       -F "file_name=Mudlet-${VERSION} (Source Code)" \
       -F "file_des=sha256: $SHA256SUM" \
-      -F "file_cat=3" \
+      -F "file_cat=5" \
       -F "file_permission=-1" \
       -F "output=json" \
       -F "do=Add File"

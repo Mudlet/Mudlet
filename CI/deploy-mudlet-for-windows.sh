@@ -324,14 +324,21 @@ EOF
     echo "=== Updating WP-Download-Manager ==="
     echo "sha256 of installer: $SHA256SUM"
 
-    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
+    if [ "${BUILD_BITNESS}" = "32" ]; then
+      FILE_CATEGORY="1"
+    else
+      FILE_CATEGORY="2"
+    fi
+
+
+
     curl -X POST 'https://www.mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
     -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
     -F "file_des=sha256: $SHA256SUM" \
-    -F "file_cat=0" \
+    -F "file_cat=${FILE_CATEGORY}" \
     -F "file_permission=-1" \
     -F "output=json" \
     -F "do=Add File"
