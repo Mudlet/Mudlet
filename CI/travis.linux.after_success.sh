@@ -131,7 +131,7 @@ then
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
-      -F "file_name=Mudlet-${VERSION} (Linux)" \
+      -F "file_name=Mudlet ${VERSION} (Linux)" \
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=4" \
       -F "file_permission=-1" \
@@ -178,7 +178,7 @@ then
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$FILE_URL" \
-      -F "file_name=Mudlet-${VERSION} (Source Code)" \
+      -F "file_name=Mudlet ${VERSION} (Source Code)" \
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=5" \
       -F "file_permission=-1" \

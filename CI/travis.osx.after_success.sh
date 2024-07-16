@@ -152,7 +152,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
-      -F "file_name=Mudlet-${VERSION} (macOS)" \
+      -F "file_name=Mudlet ${VERSION} (macOS)" \
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=3" \
       -F "file_permission=-1" \
