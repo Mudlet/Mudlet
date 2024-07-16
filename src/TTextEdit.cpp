@@ -85,7 +85,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 // Should be the same as the size of the timeStampFormat constant in the TBuffer
 // class:
 , mTimeStampWidth(13)
+#if defined(DEBUG_UTF8_PROCESSING)
 , mShowAllCodepointIssues(false)
+#endif
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -97,6 +99,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mpHost->setDisplayFontFixedPitch(true);
         setFont(hostFont);
 
+#if defined(DEBUG_UTF8_PROCESSING)
         // There is no point in setting this option on the Central Debug Console
         // as A) it is shared and B) any codepoints that it can't handle will
         // probably have already cropped up on another TConsole:
@@ -104,6 +107,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
             mShowAllCodepointIssues = mpHost->debugShowAllProblemCodepoints();
             connect(mpHost, &Host::signal_changeDebugShowAllProblemCodepoints, this, &TTextEdit::slot_changeDebugShowAllProblemCodepoints);
         }
+#endif
     } else {
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
@@ -751,6 +755,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
     case 2: // Draw as wide
         return 2;
     case widechar_nonprint:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -1 = The character is not printable - so put in a replacement
         // character instead - and so it can be seen it need a space:
         if (!mIsLowerPane) {
@@ -766,8 +771,10 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 0;
     case widechar_non_character:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -7 = The character is a non-character - we might make use of some of them for
         // internal purposes in the future (in which case we might need additional code here
         // or elsewhere) but we don't right now:
@@ -783,9 +790,11 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
-     }
+        }
+#endif
         return 0;
     case widechar_combining:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -2 = The character is a zero-width combiner - and should not be
         // present as the FIRST codepoint in a grapheme so this indicates an
         // error somewhere - so put in the replacement character
@@ -802,11 +811,13 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 0;
     case widechar_ambiguous:
         // -3 = The character is East-Asian ambiguous width.
         return mWideAmbigousWidthGlyphs ? 2 : 1;
     case widechar_private_use:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -4 = The character is for private use - we cannot know for certain
         // what width to used - let's assume 1 for the moment:
         if (!mIsLowerPane) {
@@ -822,8 +833,10 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 1;
     case widechar_unassigned:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -5 = The character is unassigned - at least for the Unicode version
         // that our widechar_wcwidth(...) was built for - assume 1:
         if (!mIsLowerPane) {
@@ -839,6 +852,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+    #endif
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
         return 2;
@@ -1111,7 +1125,7 @@ void TTextEdit::expandSelectionToWords()
             // Ensure xind is within the valid range for the current line
             if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
                 break; // xind is out of bounds, break the loop
-            } 
+            }
             const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
             if (currentChar == QChar::Space
                 || mpHost->mDoubleClickIgnore.contains(currentChar)) {
@@ -2791,12 +2805,14 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
+#if defined(DEBUG_UTF8_PROCESSING)
 void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 {
     if (mShowAllCodepointIssues != state) {
         mShowAllCodepointIssues = state;
     }
 }
+#endif
 
 void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
@@ -2821,6 +2837,8 @@ void TTextEdit::slot_mouseAction(const QString &uniqueName)
     mpHost->raiseEvent(event);
 }
 
+
+#if defined(DEBUG_UTF8_PROCESSING)
 // Originally this was going to be part of the destructor - but it was unable
 // to get the parent Console and Profile names at that point:
 void TTextEdit::reportCodepointErrors()
@@ -2858,6 +2876,7 @@ void TTextEdit::reportCodepointErrors()
         qDebug().nospace().noquote() << " ";
     }
 }
+#endif
 
 void TTextEdit::setCaretPosition(int line, int column)
 {
