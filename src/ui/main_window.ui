@@ -352,7 +352,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Mute sounds from Mudlet (Triggers, Scripts, etc.)</string>
+    <string>Mute sounds from Mudlet (triggers, scripts, etc.)</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</string>

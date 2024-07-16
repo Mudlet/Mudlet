@@ -92,7 +92,7 @@
 #include <QSettings>
 #endif
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
 #include <CoreFoundation/CoreFoundation.h>
@@ -324,9 +324,9 @@ mudlet::mudlet()
     mpActionMuteMedia->setObjectName(qsl("muteMedia"));
     mpActionMuteMedia->setCheckable(true);
 
-    mpActionMuteAPI = new QAction(tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"), this);
+    mpActionMuteAPI = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
     mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteAPI->setIconText(tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"));
+    mpActionMuteAPI->setIconText(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
     mpActionMuteAPI->setObjectName(qsl("muteAPI"));
     mpActionMuteAPI->setCheckable(true);
 
@@ -524,10 +524,6 @@ mudlet::mudlet()
     connect(dactionShowErrors, &QAction::triggered, this, [=]() {
         auto host = getActiveHost();
         if (!host) {
-            return;
-        }
-        host->mpEditorDialog = createMudletEditor();
-        if (!host->mpEditorDialog) {
             return;
         }
 
@@ -1492,6 +1488,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     pConsole->show();
 
+    auto pEditor = new dlgTriggerEditor(pH);
+    pH->mpEditorDialog = pEditor;
+    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    pEditor->fillout_form();
+
     pH->getActionUnit()->updateToolbar();
 
     pH->mpConsole->show();
@@ -2056,33 +2058,13 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->show();
 }
 
-dlgTriggerEditor* mudlet::createMudletEditor()
-{
-    Host* pHost = getActiveHost();
-    if (pHost == nullptr) {
-        return nullptr;
-    }
-
-    if (pHost->mpEditorDialog != nullptr) {
-        return pHost->mpEditorDialog;
-    }
-
-    auto* pEditor = new dlgTriggerEditor(pHost);
-    pHost->mpEditorDialog = pEditor;
-    connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
-
-    return pEditor;
-}
-
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2098,7 +2080,7 @@ void mudlet::slot_showTriggerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2114,7 +2096,7 @@ void mudlet::slot_showAliasDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2130,7 +2112,7 @@ void mudlet::slot_showTimerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2146,7 +2128,7 @@ void mudlet::slot_showScriptDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2162,7 +2144,7 @@ void mudlet::slot_showKeyDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2178,7 +2160,7 @@ void mudlet::slot_showVariableDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -2194,7 +2176,7 @@ void mudlet::slot_showActionDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = createMudletEditor();
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
     if (!pEditor) {
         return;
     }
@@ -3030,7 +3012,7 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
 
 void mudlet::slot_muteAPI(const bool state)
 {
-    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"));
+    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
 }
 
 void mudlet::slot_muteGame(const bool state)
@@ -4801,7 +4783,7 @@ bool mudlet::desktopInDarkMode()
 #if defined(Q_OS_WIN32)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
     return settings.value("AppsUseLightTheme", 1).toInt() == 0;
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     bool isDark = false;
     CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
     CFStringRef uiStyle = nullptr;
