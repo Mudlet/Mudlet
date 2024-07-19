@@ -740,8 +740,8 @@ private:
 
     // amount of times the shortcut to cancel split screen has been shown help educate new users
     int mScrollbackTutorialsShown = 0;
-    // show the split screen tutorial maximum 5 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 5;
+    // show the split screen tutorial maximum 3 times on a new Mudlet
+    static const int mScrollbackTutorialsMax = 3;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
