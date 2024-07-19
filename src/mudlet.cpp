@@ -4891,6 +4891,11 @@ void mudlet::showedSplitscreenTutorial()
 // tutorial tips, such as splitscreen cancel shortcut
 bool mudlet::experiencedMudletPlayer()
 {
+    static std::optional<bool> cachedResult;
+    if (cachedResult.has_value()) {
+        return cachedResult.value();
+    }
+
     // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
     QDir profilesDir(mudlet::getMudletPath(mudlet::profilesPath));
     QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
@@ -4898,8 +4903,10 @@ bool mudlet::experiencedMudletPlayer()
 
     for (const QFileInfo &entry : entries) {
         if (entry.lastModified() < sixMonthsAgo) {
+            cachedResult = true;
             return true;
         }
     }
+    cachedResult = false;
     return false;
 }
