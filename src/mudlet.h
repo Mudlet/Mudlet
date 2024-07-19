@@ -416,6 +416,7 @@ public:
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     auto showSplitscreenTutorial() -> bool;
     auto showedSplitscreenTutorial() -> void;
+    auto experiencedMudletPlayer() -> bool;
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
