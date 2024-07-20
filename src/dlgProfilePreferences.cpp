@@ -25,6 +25,7 @@
 #include "dlgProfilePreferences.h"
 
 #include "Host.h"
+#include "ClientVariables.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -4520,7 +4521,7 @@ void dlgProfilePreferences::slot_changeShareFont(const int index)
         pHost->mShareFont = newIndex;
 
         if (newIndex == Host::DataSharingBehaviour::OptIn) {
-            pHost->mpClientVariables->sendClientVariableInfo(qsl("FONT"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
         }
     }
 }
@@ -4539,7 +4540,7 @@ void dlgProfilePreferences::slot_changeShareFontSize(const int index)
         pHost->mShareFontSize = newIndex;
 
         if (newIndex == Host::DataSharingBehaviour::OptIn) {
-            pHost->mpClientVariables->sendClientVariableInfo(qsl("FONT_SIZE"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
         }
     }
 }
@@ -4558,7 +4559,7 @@ void dlgProfilePreferences::slot_changeShareLanguage(const int index)
         pHost->mShareLanguage = newIndex;
 
         if (newIndex == Host::DataSharingBehaviour::OptIn) {
-            pHost->mpClientVariables->sendClientVariableInfo(qsl("LANGUAGE"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
         }
     }
 }
@@ -4577,7 +4578,7 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
         pHost->mShareScreenReader = newIndex;
 
         if (newIndex == Host::DataSharingBehaviour::OptIn) {
-            pHost->mpClientVariables->sendClientVariableInfo(qsl("SCREEN_READER"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
         }
     }
 }
@@ -4596,7 +4597,7 @@ void dlgProfilePreferences::slot_changeShareSystemType(const int index)
         pHost->mShareSystemType = newIndex;
 
         if (newIndex == Host::DataSharingBehaviour::OptIn) {
-            pHost->mpClientVariables->sendClientVariableInfo(qsl("SYSTEMTYPE"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
         }
     }
 }
@@ -4615,7 +4616,7 @@ void dlgProfilePreferences::slot_changeShareUser(const int index)
         pHost->mShareUser = newIndex;
 
         if (newIndex == Host::DataSharingBehaviour::OptIn) {
-            pHost->mpClientVariables->sendClientVariableInfo(qsl("USER"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
         }
     }
 }

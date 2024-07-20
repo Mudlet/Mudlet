@@ -59,7 +59,7 @@ class QDockWidget;
 class QPushButton;
 class QListWidget;
 
-class TClientVariables;
+class ClientVariables;
 class TEvent;
 class TArea;
 class LuaInterface;
@@ -486,7 +486,7 @@ public:
     bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;
-    QScopedPointer<TClientVariables> mpClientVariables;
+    QScopedPointer<ClientVariables> mpClientVariables;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;

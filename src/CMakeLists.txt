@@ -56,6 +56,7 @@ set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     AltFocusMenuBarDisable.cpp
+    ClientVariables.cpp
     ctelnet.cpp
     DarkTheme.cpp
     discord.cpp
@@ -109,7 +110,6 @@ set(mudlet_SRCS
     TAlias.cpp
     TArea.cpp
     TBuffer.cpp
-    TClientVariables.cpp
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
@@ -227,6 +227,7 @@ set(mudlet_HDRS
     AliasUnit.h
     AltFocusMenuBarDisable.h
     Announcer.h
+    ClientVariables.h
     ctelnet.h
     DarkTheme.h
     discord.h
@@ -283,7 +284,6 @@ set(mudlet_HDRS
     TArea.h
     TAstar.h
     TBuffer.h
-    TClientVariables.h
     TCommandLine.h
     TConsole.h
     TDebug.h

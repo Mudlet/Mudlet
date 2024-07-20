@@ -30,9 +30,9 @@
 #include "ctelnet.h"
 
 
+#include "ClientVariables.h"
 #include "Host.h"
 #include "TBuffer.h"
-#include "TClientVariables.h"
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMainConsole.h"

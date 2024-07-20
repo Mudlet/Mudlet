@@ -25,6 +25,7 @@
 
 #include "Host.h"
 
+#include "ClientVariables.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -35,7 +36,6 @@
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
 #include "mudlet.h"
-#include "TClientVariables.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -233,7 +233,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
-, mpClientVariables(new TClientVariables(this))
+, mpClientVariables(new ClientVariables(this))
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))

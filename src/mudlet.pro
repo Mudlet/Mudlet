@@ -614,6 +614,7 @@ SOURCES += \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
     DarkTheme.cpp \
+    ClientVariables.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -667,7 +668,6 @@ SOURCES += \
     TAlias.cpp \
     TArea.cpp \
     TBuffer.cpp \
-    TClientVariables.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
@@ -743,6 +743,7 @@ HEADERS += \
     Announcer.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    ClientVariables.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -799,7 +800,6 @@ HEADERS += \
     TArea.h \
     TAstar.h \
     TBuffer.h \
-    TClientVariables.h \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \

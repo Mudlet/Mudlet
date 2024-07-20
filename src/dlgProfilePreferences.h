@@ -24,10 +24,10 @@
  ***************************************************************************/
 
 
+#include "ClientVariables.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
-#include "TClientVariables.h"
 #include "TKey.h"
 #include "TMedia.h"
 #include "TScript.h"
