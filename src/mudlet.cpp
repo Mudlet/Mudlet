@@ -527,8 +527,7 @@ mudlet::mudlet()
             return;
         }
 
-        host->mpEditorDialog = createMudletEditor();
-        if (!host->mpEditorDialog) {
+        if (!host->mpEditorDialog && !createMudletEditor()) {
             qWarning() << "Failed to create editor dialog";
             return;
         }
