@@ -1245,12 +1245,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1026"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1028"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2055"/>
@@ -5286,12 +5286,12 @@ Count</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1133"/>
       <source>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</source>
-      <translation type="unfinished"/>
+      <translation>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1136"/>
       <source>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</source>
-      <translation type="unfinished"/>
+      <translation>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1149"/>
@@ -5322,13 +5322,13 @@ Count</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="1203"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-      <translation type="unfinished"/>
+      <translation>CPU (WoW64)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1164"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1210"/>
       <source>CPU (%1-bits)</source>
-      <translation type="unfinished"/>
+      <translation>CPU (%1-bits)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1169"/>
@@ -5344,21 +5344,21 @@ Count</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="1248"/>
       <source>Qt version (compilation)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt version (compilation)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1181"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1254"/>
       <source>Qt version (run-time)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt version (run-time)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1221"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1277"/>
       <source>Qt version</source>
       <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt version</translation>
     </message>
   </context>
   <context>
@@ -9383,7 +9383,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="355"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mute sounds from Mudlet (triggers, scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="358"/>
@@ -10139,7 +10139,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <location filename="../src/mudlet.cpp" line="329"/>
       <location filename="../src/mudlet.cpp" line="3015"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mute sounds from Mudlet (triggers, scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="357"/>
@@ -12593,7 +12593,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="821"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1191"/>
