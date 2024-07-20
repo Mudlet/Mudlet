@@ -110,6 +110,8 @@ void removeOldNoteColorEmojiFonts()
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
     // Release: "Unicode 14.0"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Unicode 15.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -522,8 +524,8 @@ int main(int argc, char* argv[])
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
-    // Release: "Unicode 15.0"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    // Release: "Unicode 15.1, take 3"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -579,8 +581,8 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 

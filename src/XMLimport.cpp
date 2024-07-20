@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1061,13 +1061,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
-    }
-
-    if (attributes().hasAttribute(qsl("BoldIsBright"))) {
-        pHost->mBoldIsBright = (attributes().value(qsl("BoldIsBright")) == YES);
-    } else {
-        // The default, backwards compatible, option is true, though false would be "better":
-        pHost->mBoldIsBright = true;
     }
 
     if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
