@@ -73,7 +73,9 @@ class ClientVariables : public QObject
         QMap<QString, bool> nonProtectedVariablesMap() const {
             QMap<QString, bool> nonProtectedVariables = nonMNESVariablesMap();
 
-            nonProtectedVariables.insert(mnesVariablesMap());
+            for (auto it = mnesVariablesMap().constBegin(); it != mnesVariablesMap().constEnd(); ++it) {
+                nonProtectedVariables.insert(it.key(), it.value());
+            }
 
             return nonProtectedVariables;
         }
