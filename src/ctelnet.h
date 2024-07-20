@@ -103,7 +103,6 @@ const char TN_IAC = static_cast<char>(255);
 const char TNSB_IS = 0;
 const char TNSB_SEND = 1;
 
-
 const char OPT_ECHO = 1;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
@@ -141,29 +140,6 @@ const char MSDP_TABLE_CLOSE = 4;
 const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
 
-// https://tintin.mudhalla.net/protocols/mtts/
-const int MTTS_STD_ANSI = 1; // Client supports all common ANSI color codes.
-const int MTTS_STD_VT100 = 2; // Client supports all common VT100 codes.
-const int MTTS_STD_UTF_8 = 4; // Client is using UTF-8 character encoding.
-const int MTTS_STD_256_COLORS = 8; // Client supports all 256 color codes.
-const int MTTS_STD_MOUSE_TRACKING = 16; // Client supports xterm mouse tracking.
-const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
-const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
-const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
-const int MTTS_STD_TRUECOLOR = 256; // Client supports truecolor codes using semicolon notation.
-const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
-const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
-const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
-
-// https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
-const char NEW_ENVIRON_IS = 0;
-const char NEW_ENVIRON_SEND = 1;
-const char NEW_ENVIRON_INFO = 2;
-const char NEW_ENVIRON_VAR = 0;
-const char NEW_ENVIRON_VAL = 1;
-const char NEW_ENVIRON_ESC = 2;
-const char NEW_ENVIRON_USERVAR = 3;
-
 class cTelnet : public QObject
 {
     Q_OBJECT
@@ -179,9 +155,6 @@ public:
     // Second argument needs to be set false when sending password to prevent
     // it being sniffed by scripts/packages:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true);
-    QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
-    bool isMNESVariable(const QString&);
-    void sendInfoNewEnvironValue(const QString&);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
@@ -205,6 +178,8 @@ public:
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
     const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
+    QTextEncoder* getOutgoingDataEncoder() const { return outgoingDataEncoder; }
+    QTextCodec* getOutOfBandDataIncomingCodec() const { return mpOutOfBandDataIncomingCodec; }
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -230,7 +205,6 @@ public:
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
 
-
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed = true;
     double networkLatencyTime = 0.0;
@@ -243,7 +217,6 @@ public:
     QProgressDialog* mpProgressDialog = nullptr;
     QString mServerPackage;
     QString mProfileName;
-
 
 public slots:
     void slot_setDownloadProgress(qint64, qint64);
@@ -267,7 +240,6 @@ signals:
     void signal_connected(Host*);
     void signal_disconnected(Host*);
 
-
 private:
     cTelnet() = default;
 
@@ -278,33 +250,6 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
     void sendLoginAndPass();
-
-    QByteArray prepareNewEnvironData(const QString&);
-    QString getNewEnvironValueUser();
-    QString getNewEnvironValueSystemType();
-    QString getNewEnvironCharset();
-    QString getNewEnvironClientName();
-    QString getNewEnvironClientVersion();
-    QString getNewEnvironTerminalType();
-    QString getNewEnvironMTTS();
-    QString getNewEnvironANSI();
-    QString getNewEnvironVT100();
-    QString getNewEnviron256Colors();
-    QString getNewEnvironUTF8();
-    QString getNewEnvironOSCColorPalette();
-    QString getNewEnvironScreenReader();
-    QString getNewEnvironTruecolor();
-    QString getNewEnvironTLS();
-    QString getNewEnvironLanguage();
-    QString getNewEnvironFont();
-    QString getNewEnvironFontSize();
-    QString getNewEnvironWordWrap();
-    void appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
-    void appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
-    void sendIsNewEnvironValues(const QByteArray&);
-    void sendAllMNESValues();
-    void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
-    void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
     void sendTelnetOption(char type, char option);
@@ -319,7 +264,6 @@ private:
 #endif
     void sendNAWS(int width, int height);
     static std::pair<bool, bool> testReadReplayFile();
-
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
@@ -373,7 +317,6 @@ private:
     int mCommands = 0;
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
-
 
     std::string mMudData;
     bool mIsTimerPosting = false;

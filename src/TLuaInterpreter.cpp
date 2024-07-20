@@ -27,7 +27,7 @@
 
 #include "TLuaInterpreter.h"
 
-
+#include "ClientVariables.h"
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
@@ -7185,11 +7185,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
 
         if (behaviour == qsl("optout")) {
-            host.mShareFont = Host::DataSharingBehaviour::OptOut;
+            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (behaviour == qsl("optin")) {
-            host.mShareFont = Host::DataSharingBehaviour::OptIn;
+            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (behaviour == qsl("block")) {
-            host.mShareFont = Host::DataSharingBehaviour::Block;
+            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Block;
         }
 
         return success();
@@ -7205,11 +7205,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
 
         if (behaviour == qsl("optout")) {
-            host.mShareFontSize = Host::DataSharingBehaviour::OptOut;
+            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (behaviour == qsl("optin")) {
-            host.mShareFontSize = Host::DataSharingBehaviour::OptIn;
+            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (behaviour == qsl("block")) {
-            host.mShareFontSize = Host::DataSharingBehaviour::Block;
+            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Block;
         }
 
         return success();
@@ -7225,11 +7225,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
 
         if (behaviour == qsl("optout")) {
-            host.mShareLanguage = Host::DataSharingBehaviour::OptOut;
+            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (behaviour == qsl("optin")) {
-            host.mShareLanguage = Host::DataSharingBehaviour::OptIn;
+            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (behaviour == qsl("block")) {
-            host.mShareLanguage = Host::DataSharingBehaviour::Block;
+            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Block;
         }
 
         return success();
@@ -7245,11 +7245,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
 
         if (behaviour == qsl("optout")) {
-            host.mShareScreenReader = Host::DataSharingBehaviour::OptOut;
+            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (behaviour == qsl("optin")) {
-            host.mShareScreenReader = Host::DataSharingBehaviour::OptIn;
+            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (behaviour == qsl("block")) {
-            host.mShareScreenReader = Host::DataSharingBehaviour::Block;
+            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Block;
         }
 
         return success();
@@ -7265,11 +7265,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
 
         if (behaviour == qsl("optout")) {
-            host.mShareSystemType = Host::DataSharingBehaviour::OptOut;
+            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (behaviour == qsl("optin")) {
-            host.mShareSystemType = Host::DataSharingBehaviour::OptIn;
+            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (behaviour == qsl("block")) {
-            host.mShareSystemType = Host::DataSharingBehaviour::Block;
+            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Block;
         }
 
         return success();
@@ -7285,11 +7285,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
 
         if (behaviour == qsl("optout")) {
-            host.mShareUser = Host::DataSharingBehaviour::OptOut;
+            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (behaviour == qsl("optin")) {
-            host.mShareUser = Host::DataSharingBehaviour::OptIn;
+            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (behaviour == qsl("block")) {
-            host.mShareUser = Host::DataSharingBehaviour::Block;
+            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Block;
         }
 
         return success();

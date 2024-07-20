@@ -22,7 +22,7 @@
 
 #include "XMLimport.h"
 
-
+#include "ClientVariables.h"
 #include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
@@ -852,11 +852,11 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareFont(attributes().value(qsl("shareFont")));
 
         if (shareFont == qsl("OptIn")) {
-            pHost->mShareFont = Host::DataSharingBehaviour::OptIn;
+            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (shareFont == qsl("OptOut")) {
-            pHost->mShareFont = Host::DataSharingBehaviour::OptOut;
+            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (shareFont == qsl("Block")) {
-            pHost->mShareFont = Host::DataSharingBehaviour::Block;
+            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Block;
         }
     }
 
@@ -864,11 +864,11 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareFontSize(attributes().value(qsl("shareFontSize")));
 
         if (shareFontSize == qsl("OptIn")) {
-            pHost->mShareFontSize = Host::DataSharingBehaviour::OptIn;
+            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (shareFontSize == qsl("OptOut")) {
-            pHost->mShareFontSize = Host::DataSharingBehaviour::OptOut;
+            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (shareFontSize == qsl("Block")) {
-            pHost->mShareFontSize = Host::DataSharingBehaviour::Block;
+            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Block;
         }
     }
 
@@ -876,11 +876,11 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareLanguage(attributes().value(qsl("shareLanguage")));
 
         if (shareLanguage == qsl("OptIn")) {
-            pHost->mShareLanguage = Host::DataSharingBehaviour::OptIn;
+            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (shareLanguage == qsl("OptOut")) {
-            pHost->mShareLanguage = Host::DataSharingBehaviour::OptOut;
+            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (shareLanguage == qsl("Block")) {
-            pHost->mShareLanguage = Host::DataSharingBehaviour::Block;
+            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Block;
         }
     }
 
@@ -888,11 +888,11 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareScreenReader(attributes().value(qsl("shareScreenReader")));
 
         if (shareScreenReader == qsl("OptIn")) {
-            pHost->mShareScreenReader = Host::DataSharingBehaviour::OptIn;
+            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (shareScreenReader == qsl("OptOut")) {
-            pHost->mShareScreenReader = Host::DataSharingBehaviour::OptOut;
+            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (shareScreenReader == qsl("Block")) {
-            pHost->mShareScreenReader = Host::DataSharingBehaviour::Block;
+            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Block;
         }
     }
 
@@ -900,11 +900,11 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareSystemType(attributes().value(qsl("shareSystemType")));
 
         if (shareSystemType == qsl("OptIn")) {
-            pHost->mShareSystemType = Host::DataSharingBehaviour::OptIn;
+            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (shareSystemType == qsl("OptOut")) {
-            pHost->mShareSystemType = Host::DataSharingBehaviour::OptOut;
+            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (shareSystemType == qsl("Block")) {
-            pHost->mShareSystemType = Host::DataSharingBehaviour::Block;
+            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Block;
         }
     }
 
@@ -912,11 +912,11 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareUser(attributes().value(qsl("shareUser")));
 
         if (shareUser == qsl("OptIn")) {
-            pHost->mShareUser = Host::DataSharingBehaviour::OptIn;
+            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptIn;
         } else if (shareUser == qsl("OptOut")) {
-            pHost->mShareUser = Host::DataSharingBehaviour::OptOut;
+            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptOut;
         } else if (shareUser == qsl("Block")) {
-            pHost->mShareUser = Host::DataSharingBehaviour::Block;
+            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Block;
         }
     }
 

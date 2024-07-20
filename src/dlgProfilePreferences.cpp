@@ -792,17 +792,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
-    comboBox_shareFont->setCurrentIndex(static_cast<int>(pHost->mShareFont));
+    comboBox_shareFont->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareFont));
     connect(comboBox_shareFont, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareFont);
-    comboBox_shareFontSize->setCurrentIndex(static_cast<int>(pHost->mShareFontSize));
+    comboBox_shareFontSize->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareFontSize));
     connect(comboBox_shareFontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareFontSize);
-    comboBox_shareLanguage->setCurrentIndex(static_cast<int>(pHost->mShareLanguage));
+    comboBox_shareLanguage->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareLanguage));
     connect(comboBox_shareLanguage, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareLanguage);
-    comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(pHost->mShareScreenReader));
+    comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareScreenReader));
     connect(comboBox_shareScreenReader, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareScreenReader);
-    comboBox_shareSystemType->setCurrentIndex(static_cast<int>(pHost->mShareSystemType));
+    comboBox_shareSystemType->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareSystemType));
     connect(comboBox_shareSystemType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareSystemType);
-    comboBox_shareUser->setCurrentIndex(static_cast<int>(pHost->mShareUser));
+    comboBox_shareUser->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareUser));
     connect(comboBox_shareUser, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareUser);
 
     // same with special connection warnings
@@ -1904,7 +1904,7 @@ void dlgProfilePreferences::slot_setFontSize()
         return;
     }
 
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
 }
 
 void dlgProfilePreferences::slot_setDisplayFont()
@@ -1953,7 +1953,7 @@ void dlgProfilePreferences::slot_setDisplayFont()
     config->setFont(newFont);
     config->endChanges();
 
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
+    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
 }
 
 // Currently UNUSED!
@@ -3112,12 +3112,12 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
 
-        pHost->mShareFont = static_cast<Host::DataSharingBehaviour>(comboBox_shareFont->currentIndex());
-        pHost->mShareFontSize = static_cast<Host::DataSharingBehaviour>(comboBox_shareFontSize->currentIndex());
-        pHost->mShareLanguage = static_cast<Host::DataSharingBehaviour>(comboBox_shareLanguage->currentIndex());
-        pHost->mShareScreenReader = static_cast<Host::DataSharingBehaviour>(comboBox_shareScreenReader->currentIndex());
-        pHost->mShareSystemType = static_cast<Host::DataSharingBehaviour>(comboBox_shareSystemType->currentIndex());
-        pHost->mShareUser = static_cast<Host::DataSharingBehaviour>(comboBox_shareUser->currentIndex());
+        pHost->mpClientVariables->mShareFont = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareFont->currentIndex());
+        pHost->mpClientVariables->mShareFontSize = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareFontSize->currentIndex());
+        pHost->mpClientVariables->mShareLanguage = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareLanguage->currentIndex());
+        pHost->mpClientVariables->mShareScreenReader = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareScreenReader->currentIndex());
+        pHost->mpClientVariables->mShareSystemType = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareSystemType->currentIndex());
+        pHost->mpClientVariables->mShareUser = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareUser->currentIndex());
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
@@ -4246,7 +4246,7 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
         return;
     }
 
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
+    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
 void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
@@ -4495,9 +4495,9 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     if (pHost->mAdvertiseScreenReader != state) {
         pHost->mAdvertiseScreenReader = state;
 
-        if (pHost->mShareScreenReader == Host::DataSharingBehaviour::OptIn) {
-            pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
-            pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+        if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::OptIn) {
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("MTTS"));
         }
     }
 }
@@ -4510,12 +4510,12 @@ void dlgProfilePreferences::slot_changeShareFont(const int index)
         return;
     }
 
-    Host::DataSharingBehaviour newIndex = static_cast<Host::DataSharingBehaviour>(index);
+    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
 
-    if (pHost->mShareFont != newIndex) {
-        pHost->mShareFont = newIndex;
+    if (pHost->mpClientVariables->mShareFont != newIndex) {
+        pHost->mpClientVariables->mShareFont = newIndex;
 
-        if (newIndex == Host::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
         }
     }
@@ -4529,12 +4529,12 @@ void dlgProfilePreferences::slot_changeShareFontSize(const int index)
         return;
     }
 
-    Host::DataSharingBehaviour newIndex = static_cast<Host::DataSharingBehaviour>(index);
+    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
 
-    if (pHost->mShareFontSize != newIndex) {
-        pHost->mShareFontSize = newIndex;
+    if (pHost->mpClientVariables->mShareFontSize != newIndex) {
+        pHost->mpClientVariables->mShareFontSize = newIndex;
 
-        if (newIndex == Host::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
         }
     }
@@ -4548,12 +4548,12 @@ void dlgProfilePreferences::slot_changeShareLanguage(const int index)
         return;
     }
 
-    Host::DataSharingBehaviour newIndex = static_cast<Host::DataSharingBehaviour>(index);
+    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
 
-    if (pHost->mShareLanguage != newIndex) {
-        pHost->mShareLanguage = newIndex;
+    if (pHost->mpClientVariables->mShareLanguage != newIndex) {
+        pHost->mpClientVariables->mShareLanguage = newIndex;
 
-        if (newIndex == Host::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
         }
     }
@@ -4567,12 +4567,12 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
         return;
     }
 
-    Host::DataSharingBehaviour newIndex = static_cast<Host::DataSharingBehaviour>(index);
+    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
 
-    if (pHost->mShareScreenReader != newIndex) {
-        pHost->mShareScreenReader = newIndex;
+    if (pHost->mpClientVariables->mShareScreenReader != newIndex) {
+        pHost->mpClientVariables->mShareScreenReader = newIndex;
 
-        if (newIndex == Host::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
         }
     }
@@ -4586,12 +4586,12 @@ void dlgProfilePreferences::slot_changeShareSystemType(const int index)
         return;
     }
 
-    Host::DataSharingBehaviour newIndex = static_cast<Host::DataSharingBehaviour>(index);
+    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
 
-    if (pHost->mShareSystemType != newIndex) {
-        pHost->mShareSystemType = newIndex;
+    if (pHost->mpClientVariables->mShareSystemType != newIndex) {
+        pHost->mpClientVariables->mShareSystemType = newIndex;
 
-        if (newIndex == Host::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
         }
     }
@@ -4605,12 +4605,12 @@ void dlgProfilePreferences::slot_changeShareUser(const int index)
         return;
     }
 
-    Host::DataSharingBehaviour newIndex = static_cast<Host::DataSharingBehaviour>(index);
+    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
 
-    if (pHost->mShareUser != newIndex) {
-        pHost->mShareUser = newIndex;
+    if (pHost->mpClientVariables->mShareUser != newIndex) {
+        pHost->mpClientVariables->mShareUser = newIndex;
 
-        if (newIndex == Host::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
         }
     }
@@ -4624,7 +4624,7 @@ void dlgProfilePreferences::slot_changeWrapAt()
         return;
     }
 
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
 void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
