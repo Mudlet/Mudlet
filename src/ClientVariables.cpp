@@ -93,6 +93,12 @@ QString ClientVariables::getClientVariableSystemType()
     return systemType.isEmpty() ? QString() : systemType;
 }
 
+QString ClientVariables::getClientVariableBoldIsBright()
+{
+    return qsl("2"); // 4.17.2? otherwise --> return QString();
+    //return qsl("%1").arg(mpHost->mBoldIsBright);
+}
+
 QString ClientVariables::getClientVariableCharset()
 {
     const QString charsetEncoding = mpHost->mTelnet.getEncoding();
@@ -233,60 +239,61 @@ QString ClientVariables::getClientVariableWordWrap()
 
 QMap<QString, QPair<bool, QString>> ClientVariables::getClientVariableDataMap()
 {
-    QMap<QString, QPair<bool, QString>> newEnvironDataMap;
+    QMap<QString, QPair<bool, QString>> clientVariablesDataMap;
     const bool isUserVar = true;
 
     // Per https://tintin.mudhalla.net/protocols/mnes/, the variables are limited to the following only.
     // * These will be be requested with NEW_ENVIRON_VAR for the MNES protocol
     // * "IPADDRESS" Intentionally not implemented by Mudlet Makers
     // * These will be used by NEW_ENVIRON as well and be requested with NEW_ENVIRON_USERVAR
-    newEnvironDataMap.insert(qsl("CHARSET"), qMakePair(isUserVar, getClientVariableCharset()));
-    newEnvironDataMap.insert(qsl("CLIENT_NAME"), qMakePair(isUserVar, getClientVariableClientName()));
-    newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserVar, getClientVariableClientVersion()));
-    newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserVar, getClientVariableMTTS()));
-    newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserVar, getClientVariableTerminalType()));
+    clientVariablesDataMap.insert(qsl("CHARSET"), qMakePair(isUserVar, getClientVariableCharset()));
+    clientVariablesDataMap.insert(qsl("CLIENT_NAME"), qMakePair(isUserVar, getClientVariableClientName()));
+    clientVariablesDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserVar, getClientVariableClientVersion()));
+    clientVariablesDataMap.insert(qsl("MTTS"), qMakePair(isUserVar, getClientVariableMTTS()));
+    clientVariablesDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserVar, getClientVariableTerminalType()));
 
     if (mpHost->mEnableMNES) {
-        return newEnvironDataMap;
+        return clientVariablesDataMap;
     }
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, these will be requested with NEW_ENVIRON_USERVAR
-    newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getClientVariableANSI()));
-    newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserVar, getClientVariableVT100()));
-    newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getClientVariable256Colors()));
-    newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getClientVariableUTF8()));
-    newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getClientVariableOSCColorPalette()));
-    newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getClientVariableTruecolor()));
-    newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getClientVariableTLS()));
-    newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getClientVariableWordWrap()));
+    clientVariablesDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getClientVariableANSI()));
+    clientVariablesDataMap.insert(qsl("VT100"), qMakePair(isUserVar, getClientVariableVT100()));
+    clientVariablesDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getClientVariable256Colors()));
+    clientVariablesDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getClientVariableUTF8()));
+    clientVariablesDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getClientVariableOSCColorPalette()));
+    clientVariablesDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getClientVariableTruecolor()));
+    clientVariablesDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getClientVariableTLS()));
+    clientVariablesDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getClientVariableWordWrap()));
+    clientVariablesDataMap.insert(qsl("BOLD_IS_BRIGHT"), qMakePair(isUserVar, getClientVariableBoldIsBright()));
 
     if (mShareFont == ClientVariables::DataSharingBehaviour::OptIn) {
-        newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getClientVariableFont()));
+        clientVariablesDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getClientVariableFont()));
     }
 
     if (mShareFontSize == ClientVariables::DataSharingBehaviour::OptIn) {
-        newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getClientVariableFontSize()));
+        clientVariablesDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getClientVariableFontSize()));
     }
 
     if (mShareLanguage == ClientVariables::DataSharingBehaviour::OptIn) {
-        newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getClientVariableLanguage()));
+        clientVariablesDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getClientVariableLanguage()));
     }
 
     if (mShareScreenReader == ClientVariables::DataSharingBehaviour::OptIn) {
-        newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getClientVariableScreenReader()));
+        clientVariablesDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getClientVariableScreenReader()));
     }
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "SYSTEMTYPE" is well-known and will be requested with NEW_ENVIRON_VAR
     if (mShareSystemType == ClientVariables::DataSharingBehaviour::OptIn) {
-        newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getClientVariableSystemType()));
+        clientVariablesDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getClientVariableSystemType()));
     }
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" is well-known and will be requested with NEW_ENVIRON_VAR
     if (mShareUser == ClientVariables::DataSharingBehaviour::OptIn) {
-        newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getClientVariableUser()));
+        clientVariablesDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getClientVariableUser()));
     }
 
-    return newEnvironDataMap;
+    return clientVariablesDataMap;
 }
 
 // SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
@@ -305,13 +312,13 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
         return;
     }
 
-    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getClientVariableDataMap();
+    const QMap<QString, QPair<bool, QString>> clientVariablesDataMap = getClientVariableDataMap();
 
-    if (newEnvironDataMap.contains(var)) {
+    if (clientVariablesDataMap.contains(var)) {
         qDebug() << "We updated NEW_ENVIRON" << var;
 
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
-        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+        const QPair<bool, QString> newEnvironData = clientVariablesDataMap.value(var);
         const bool isUserVar = !mpHost->mEnableMNES && newEnvironData.first;
         const QString val = newEnvironData.second;
 
@@ -354,9 +361,9 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
     }
 }
 
-void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
+void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &clientVariablesDataMap)
 {
-    for (auto it = newEnvironDataMap.begin(); it != newEnvironDataMap.end(); ++it) {
+    for (auto it = clientVariablesDataMap.begin(); it != clientVariablesDataMap.end(); ++it) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
         const QPair<bool, QString> newEnvironData = it.value();
 
@@ -391,11 +398,11 @@ void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool 
     }
 }
 
-void ClientVariables::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
+void ClientVariables::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &clientVariablesDataMap)
 {
-    if (newEnvironDataMap.contains(var)) {
+    if (clientVariablesDataMap.contains(var)) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
-        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+        const QPair<bool, QString> newEnvironData = clientVariablesDataMap.value(var);
         const QString val = newEnvironData.second;
 
         if (newEnvironData.first != isUserVar) {
@@ -449,7 +456,7 @@ void ClientVariables::appendNewEnvironValue(std::string &output, const QString &
 // SEND IS per https://www.rfc-editor.org/rfc/rfc1572
 void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
 {
-    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getClientVariableDataMap();
+    const QMap<QString, QPair<bool, QString>> clientVariablesDataMap = getClientVariableDataMap();
 
     QString transcodedMsg;
 
@@ -480,20 +487,20 @@ void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
 
         if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
-                appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariablesDataMap);
                 var = QString();
             } else if (is_var || is_uservar) {
-                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariablesDataMap);
             }
 
             is_uservar = false;
             is_var = true;
         } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
             if (!var.isEmpty()) {
-                appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariablesDataMap);
                 var = QString();
             } else if (is_var || is_uservar) {
-                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariablesDataMap);
             }
 
             is_var = false;
@@ -504,12 +511,12 @@ void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last on the stack variable
-        appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+        appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariablesDataMap);
     } else if (is_var || is_uservar) { // Last on the stack VAR or USERVAR with no name
-        appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+        appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariablesDataMap);
     } else { // No list specified, send the entire list of defined VAR and USERVAR variables
-        appendAllNewEnvironValues(output, false, newEnvironDataMap);
-        appendAllNewEnvironValues(output, true, newEnvironDataMap);
+        appendAllNewEnvironValues(output, false, clientVariablesDataMap);
+        appendAllNewEnvironValues(output, true, clientVariablesDataMap);
     }
 
     output += TN_IAC;
@@ -528,7 +535,7 @@ void ClientVariables::sendAllMNESValues()
         return;
     }
 
-    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getClientVariableDataMap();
+    const QMap<QString, QPair<bool, QString>> clientVariablesDataMap = getClientVariableDataMap();
 
     std::string output;
     output += TN_IAC;
@@ -536,7 +543,7 @@ void ClientVariables::sendAllMNESValues()
     output += OPT_NEW_ENVIRON;
     output += NEW_ENVIRON_IS;
 
-    for (auto it = newEnvironDataMap.begin(); it != newEnvironDataMap.end(); ++it) {
+    for (auto it = clientVariablesDataMap.begin(); it != clientVariablesDataMap.end(); ++it) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
         const QPair<bool, QString> newEnvironData = it.value();
         const QString val = newEnvironData.second;
@@ -561,7 +568,7 @@ void ClientVariables::sendAllMNESValues()
     mpHost->mTelnet.socketOutRaw(output);
 }
 
-void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
+void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, QString>> &clientVariablesDataMap)
 {
     if (!mpHost->mEnableMNES) {
         return;
@@ -578,9 +585,9 @@ void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, QPai
     output += NEW_ENVIRON_IS;
     output += NEW_ENVIRON_VAR;
 
-    if (newEnvironDataMap.contains(var)) {
+    if (clientVariablesDataMap.contains(var)) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
-        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+        const QPair<bool, QString> newEnvironData = clientVariablesDataMap.value(var);
         const QString val = newEnvironData.second;
 
         output += prepareNewEnvironData(var).toStdString();
@@ -615,7 +622,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
         return;
     }
 
-    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getClientVariableDataMap();
+    const QMap<QString, QPair<bool, QString>> clientVariablesDataMap = getClientVariableDataMap();
 
     QString transcodedMsg;
 
@@ -638,7 +645,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
 
         if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
-                sendMNESValue(var, newEnvironDataMap);
+                sendMNESValue(var, clientVariablesDataMap);
                 var = QString();
             }
 
@@ -649,7 +656,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last variable on the stack
-        sendMNESValue(var, newEnvironDataMap);
+        sendMNESValue(var, clientVariablesDataMap);
         return;
     }
 
@@ -718,7 +725,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     const auto nonProtectedVariables = nonProtectedVariablesMap();
     const auto protectedVariables = protectedVariablesMap();
-    const auto newEnvironDataMap = getClientVariableDataMap(); // client variable values
+    const auto clientVariablesDataMap = getClientVariableDataMap(); // client variable values
     QStringList sources = {"request", "server", "client"};  // initiated by
     qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();  // current timestamp
 
@@ -733,7 +740,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
         if (!value.isEmpty()) {
             if (source == ClientVariables::SourceServer) {
-                obj["success"] = (available && updatable && value == newEnvironDataMap[key].second);
+                obj["success"] = (available && updatable && value == clientVariablesDataMap[key].second);
             }
 
             obj["value"] = value;
@@ -762,14 +769,14 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
                     requested << translation;
                 }
 
-                if (newEnvironDataMap.contains(key)) {
+                if (clientVariablesDataMap.contains(key)) {
                     addResponse(key, available, updatable, !available, value);
                 } else {
                     addResponse(key, available, updatable, !available);
                 }
             }
         } else if (nonProtectedVariables.contains(key)) {
-            if (newEnvironDataMap.contains(key)) {
+            if (clientVariablesDataMap.contains(key)) {
                 addResponse(key, true, nonProtectedVariables[key], false, value);
             } else {
                 addResponse(key, true, nonProtectedVariables[key]);

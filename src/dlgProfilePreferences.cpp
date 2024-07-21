@@ -1904,7 +1904,10 @@ void dlgProfilePreferences::slot_setFontSize()
         return;
     }
 
-    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    if (pHost->mpClientVariables->mShareFontSize == ClientVariables::DataSharingBehaviour::OptIn) {
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
+        pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    }
 }
 
 void dlgProfilePreferences::slot_setDisplayFont()
@@ -1953,7 +1956,10 @@ void dlgProfilePreferences::slot_setDisplayFont()
     config->setFont(newFont);
     config->endChanges();
 
-    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
+    if (pHost->mpClientVariables->mShareFont == ClientVariables::DataSharingBehaviour::OptIn) {
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
+        pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
+    }
 }
 
 // Currently UNUSED!
@@ -3121,6 +3127,16 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+
+        /* Uncomment when mBoldIsBright is implemented 
+        const auto priorBoldIsBright = pHost->mBoldIsBright;
+        pHost->mBoldIsBright = checkBox_boldIsBright->checkState();
+
+        if (priorBoldIsBright != pHost->mBoldIsBright) {
+            slot_changeBoldIsBright();
+        }
+        */
+
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
@@ -4246,7 +4262,10 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
         return;
     }
 
-    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
+    if (pHost->mpClientVariables->mShareLanguage == ClientVariables::DataSharingBehaviour::OptIn) {
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
+        pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
+    }
 }
 
 void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
@@ -4483,7 +4502,19 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
 
     qWarning() << "unknown link clicked in profile preferences:" << link;
 }
+/* Uncomment when BoldIsBright is implemented
+void dlgProfilePreferences::slot_changeBoldIsBright()
+{
+    Host* pHost = mpHost;
 
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mpClientVariables->sendClientVariablesUpdate(qsl("BOLD_IS_BRIGHT"), ClientVariables::SourceClient);
+    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("BOLD_IS_BRIGHT"));
+}
+*/
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
     Host* pHost = mpHost;
@@ -4496,7 +4527,9 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         pHost->mAdvertiseScreenReader = state;
 
         if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::OptIn) {
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("MTTS"));
         }
     }
@@ -4517,6 +4550,7 @@ void dlgProfilePreferences::slot_changeShareFont(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
         }
     }
 }
@@ -4536,6 +4570,7 @@ void dlgProfilePreferences::slot_changeShareFontSize(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
         }
     }
 }
@@ -4555,6 +4590,7 @@ void dlgProfilePreferences::slot_changeShareLanguage(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
         }
     }
 }
@@ -4574,6 +4610,7 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
         }
     }
 }
@@ -4593,6 +4630,7 @@ void dlgProfilePreferences::slot_changeShareSystemType(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SYSTEMTYPE"));
         }
     }
 }
@@ -4612,6 +4650,7 @@ void dlgProfilePreferences::slot_changeShareUser(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("USER"));
         }
     }
 }
@@ -4624,6 +4663,7 @@ void dlgProfilePreferences::slot_changeWrapAt()
         return;
     }
 
+    pHost->mpClientVariables->sendClientVariablesUpdate(qsl("WORD_WRAP"), ClientVariables::SourceClient);
     pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 

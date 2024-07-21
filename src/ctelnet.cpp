@@ -344,10 +344,14 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
         }
     }
 
-    mpHost->mpClientVariables->sendInfoNewEnvironValue(qsl("CHARSET")); // Positioned here so we get ASCII updates too
+    // Positioned here so we get ASCII updates too
+    mpHost->mpClientVariables->sendClientVariablesUpdate(qsl("CHARSET"), ClientVariables::SourceClient);
+    mpHost->mpClientVariables->sendInfoNewEnvironValue(qsl("CHARSET"));
 
     if (updateNewEnviron) {
+        mpHost->mpClientVariables->sendClientVariablesUpdate(qsl("UTF-8"), ClientVariables::SourceClient);
         mpHost->mpClientVariables->sendInfoNewEnvironValue(qsl("UTF-8"));
+        mpHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
         mpHost->mpClientVariables->sendInfoNewEnvironValue(qsl("MTTS"));
     }
 

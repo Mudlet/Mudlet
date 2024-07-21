@@ -46,6 +46,7 @@ class ClientVariables : public QObject
             SourceServer = 1,
             SourceClient = 2};
 
+        QString getClientVariableBoldIsBright();
         QString getClientVariableCharset();
         QString getClientVariableClientName();
         QString getClientVariableClientVersion();
@@ -130,12 +131,14 @@ class ClientVariables : public QObject
                 {"TRUECOLOR", false},
                 {"TLS", false},
                 {"WORD_WRAP", true},
+                {"BOLD_IS_BRIGHT", true}
             };
         }
         QMap<QString, bool> nonProtectedVariablesMap() const {
             QMap<QString, bool> nonProtectedVariables = nonMNESVariablesMap();
+            QMap<QString, bool> mnesVariables = mnesVariablesMap();
 
-            for (auto it = mnesVariablesMap().constBegin(); it != mnesVariablesMap().constEnd(); ++it) {
+            for (auto it = mnesVariables.constBegin(); it != mnesVariables.constEnd(); ++it) {
                 nonProtectedVariables.insert(it.key(), it.value());
             }
 
