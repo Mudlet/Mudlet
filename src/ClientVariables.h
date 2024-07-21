@@ -123,15 +123,15 @@ class ClientVariables : public QObject
         QMap<QString, bool> nonMNESVariablesMap() const {
             // {variable, updatable}
             return {
-                {"ANSI", true},
-                {"VT100", false},
                 {"256_COLORS", false},
-                {"UTF-8", false},
+                {"ANSI", false},
+                {"BOLD_IS_BRIGHT", true},
                 {"OSC_COLOR_PALETTE", false},
-                {"TRUECOLOR", false},
+                {"UTF-8", false},
                 {"TLS", false},
-                {"WORD_WRAP", true},
-                {"BOLD_IS_BRIGHT", true}
+                {"TRUECOLOR", false},
+                {"VT100", false},
+                {"WORD_WRAP", false}
             };
         }
         QMap<QString, bool> nonProtectedVariablesMap() const {
@@ -142,15 +142,17 @@ class ClientVariables : public QObject
                 nonProtectedVariables.insert(it.key(), it.value());
             }
 
+            // {variable, updatable}
             return nonProtectedVariables;
         }
         QMap<QString, std::tuple<bool, ClientVariables::DataSharingBehaviour, QString>> protectedVariablesMap() {
+            // {variable, {updatable, behaviour, translation}}
             return {
                 {"FONT", {false, mShareFont, tr("font")}},
                 {"FONT_SIZE", {false, mShareFontSize, tr("font size")}},
                 {"LANGUAGE", {false, mShareLanguage, tr("language")}},
-                {"SYSTEMTYPE", {false, mShareSystemType, tr("operating system type")}},
                 {"SCREEN_READER", {false, mShareScreenReader, tr("screen reader use")}},
+                {"SYSTEMTYPE", {false, mShareSystemType, tr("operating system type")}},
                 {"USER", {false, mShareUser, tr("character name")}}
             };
         }
@@ -166,7 +168,7 @@ class ClientVariables : public QObject
         void appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
         void appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
         void sendClientVariablesList();
-        void sendClientVariablesResponse(const QString& data);
+        bool updateClientVariable(const QString&, const QString&, QMap<QString, QPair<bool, QString>>&);
 
         Host* mpHost;
         QSet<QString> newEnvironVariablesSent;

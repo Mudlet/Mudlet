@@ -719,13 +719,78 @@ void ClientVariables::sendClientVariablesList() {
     }
 }
 
+bool ClientVariables::updateClientVariable(const QString& key, const QString& value, QMap<QString, QPair<bool, QString>>& clientVariablesDataMap) {
+    bool updated = false;
+
+    if (key == "CHARSET") {
+        bool updated = false;
+        QByteArray byteValue = value.toUtf8();
+        QByteArray encoding;
+
+        if (byteValue.contains(QByteArray("ASCII"))) {
+            encoding = QByteArray("ASCII");
+
+            if (encoding != clientVariablesDataMap[key].second.toUtf8()) {
+                mpHost->mTelnet.setEncoding(encoding, true); // Force variants of ASCII to ASCII
+                updated = true;
+            }
+        } else if (byteValue.startsWith("ISO-")) {
+            encoding = QByteArray("ISO " + byteValue.mid(4));
+
+            if (encoding != clientVariablesDataMap[key].second.toUtf8()) {
+                mpHost->mTelnet.setEncoding(encoding, true); // Align with TEncodingTable::csmEncodings
+                updated = true;
+            }
+        } else if (byteValue.startsWith("ISO") && !value.startsWith("ISO ")) {
+            encoding = QByteArray("ISO " + byteValue.mid(3));
+
+            if (encoding != clientVariablesDataMap[key].second.toUtf8()) {
+                mpHost->mTelnet.setEncoding(encoding, true); // Align with TEncodingTable::csmEncodings
+                updated = true;
+            }
+        } else {
+            encoding = byteValue;
+
+            if (encoding != clientVariablesDataMap[key].second.toUtf8()) {
+                mpHost->mTelnet.setEncoding(encoding, true);
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            qDebug() << "Game changed encoding to" << encoding;
+        }
+    } else if (key == "BOLD_IS_BRIGHT") {
+        bool updated = false;
+
+        if (value != clientVariablesDataMap[key].second) {
+            if (value.toInt() == Qt::Unchecked) {
+                //mpHost->mBoldIsBright = Qt::Unchecked;
+                updated = true;
+            } else if (value.toInt() == Qt::Checked) {
+                //mpHost->mBoldIsBright = Qt::Checked;
+                updated = true;
+            } else {
+                //mpHost->mBoldIsBright = Qt::PartiallyChecked;
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            qDebug() << "Game changed boldIsBright to" << value;
+        }
+    }
+
+    return updated;
+}
+
 void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVariables::Source source) {
     QJsonObject response;
     QStringList requested;
 
     const auto nonProtectedVariables = nonProtectedVariablesMap();
     const auto protectedVariables = protectedVariablesMap();
-    const auto clientVariablesDataMap = getClientVariableDataMap(); // client variable values
+    auto clientVariablesDataMap = getClientVariableDataMap(); // client variable values
     QStringList sources = {"request", "server", "client"};  // initiated by
     qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();  // current timestamp
 
@@ -740,6 +805,10 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
         if (!value.isEmpty()) {
             if (source == ClientVariables::SourceServer) {
+                if (updateClientVariable(key, value, clientVariablesDataMap)) {
+                    clientVariablesDataMap = getClientVariableDataMap(); // refresh
+                }
+
                 obj["success"] = (available && updatable && value == clientVariablesDataMap[key].second);
             }
 
