@@ -119,7 +119,7 @@ then
 
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-      read day month year hour minute second <<< $current_timestamp
+      read -r day month year hour minute second <<< "$current_timestamp"
 
       # file_cat=2 asuming Linux is the 2nd item in WP-Download-Manager category
       curl -X POST 'https://www.mudlet.org/download-add.php' \
@@ -175,7 +175,7 @@ then
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-      read day month year hour minute second <<< $current_timestamp
+      read -r day month year hour minute second <<< "$current_timestamp"
 
       # file_cat=3 asuming Source is the 4th item in WP-Download-Manager category
       curl -X POST 'https://www.mudlet.org/download-add.php' \

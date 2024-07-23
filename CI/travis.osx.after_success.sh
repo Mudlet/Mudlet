@@ -145,7 +145,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # file_cat=1 asuming macOS is the 1st item in WP-Download-Manager category
       # Get current timestamp
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-      read day month year hour minute second <<< $current_timestamp
+      read -r day month year hour minute second <<< "$current_timestamp"
 
       curl -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \

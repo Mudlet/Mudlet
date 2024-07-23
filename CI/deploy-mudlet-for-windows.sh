@@ -294,7 +294,7 @@ else
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-    read day month year hour minute second <<< $current_timestamp
+    read -r day month year hour minute second <<< "$current_timestamp"
 
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/download-add.php' \
