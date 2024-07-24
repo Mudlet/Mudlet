@@ -139,7 +139,7 @@ mudlet::mudlet()
 
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
-    publicTestVersion = mAppBuild.startsWith("-ptb");
+    publicTestVersion = true; //mAppBuild.startsWith("-ptb");
     developmentVersion = !releaseVersion && !publicTestVersion;
 
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
@@ -539,9 +539,10 @@ mudlet::mudlet()
     });
 
 #if defined(INCLUDE_UPDATER)
-    // Show the update option if the code is present AND if this is a
+    // Show the chanlgelog/update options if the code is present AND if this is a
     // release OR a public test version:
     dactionUpdate->setVisible(releaseVersion || publicTestVersion);
+    dactionChangelog->setVisible(releaseVersion || publicTestVersion);
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
@@ -558,6 +559,7 @@ mudlet::mudlet()
     // Unconditionally hide the update and report bug menu items if the updater
     // code is not included:
     dactionUpdate->setVisible(false);
+    dactionChangelog->setVisible(false);
     dactionReportIssue->setVisible(false);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_packageManager);
@@ -632,9 +634,11 @@ mudlet::mudlet()
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
+    connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showChangelog);
 #if defined(Q_OS_MACOS)
-    // ensure that 'Check for updates' is under the Applications menu per convention
+    // ensure that 'Check for updates' and 'Changelog' is under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
+    dactionChangelog->setMenuRole(QAction::ApplicationSpecificRole);
 #else
     connect(pUpdater, &Updater::signal_updateInstalled, this, &mudlet::slot_updateInstalled);
 #endif // !Q_OS_MACOS
@@ -3632,6 +3636,11 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_manualUpdateCheck()
 {
     pUpdater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_showChangelog()
+{
+    pUpdater->showChangelog();
 }
 
 void mudlet::slot_reportIssue()
