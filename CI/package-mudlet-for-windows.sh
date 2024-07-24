@@ -70,8 +70,6 @@ GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
 echo "MSYSTEM is: ${MSYSTEM}"
-echo "PATH is now:"
-echo "${PATH}"
 echo ""
 
 cd $GITHUB_WORKSPACE_UNIX_PATH || exit 1
