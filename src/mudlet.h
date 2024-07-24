@@ -489,6 +489,11 @@ public:
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
 
+    double mTtsPitch = 0.0;
+    double mTtsRate = 0.0;
+    double mTtsVolume = 0.0;
+    QVoice mTtsVoice = {};
+
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
 #endif
