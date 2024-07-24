@@ -1900,6 +1900,11 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
+    mTtsPitch = settings.value(qsl("ttsPitch"), QVariant(0.0)).toDouble();
+    mTtsRate = settings.value(qsl("ttsRate"), QVariant(0.0)).toDouble();
+    mTtsVolume = settings.value(qsl("ttsVolume"), QVariant(0.0)).toDouble();
+    // there has to be a Qt-supplied way to deserialise this value
+    // settings.value(qsl("ttsVoice"), mTtsVoice);
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2042,6 +2047,11 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
+    settings.setValue(qsl("ttsPitch"), mTtsPitch);
+    settings.setValue(qsl("ttsRate"), mTtsRate);
+    settings.setValue(qsl("ttsVolume"), mTtsVolume);
+    // there has to be a Qt-supplied way to serialise this value
+    // settings.setValue(qsl("ttsVoice"), mTtsVoice);
 }
 
 void mudlet::slot_showConnectionDialog()
