@@ -41,44 +41,14 @@ jobs:
         msystem: MINGW64
         update: true
         install: >-
-          mingw-w64-i686-qt6-base
-          mingw-w64-i686-qt6-multimedia
-          mingw-w64-i686-qt6-svg
-          mingw-w64-i686-qt6-speech
-          mingw-w64-i686-qt6-imageformats
-          mingw-w64-i686-qt6-tools
-          mingw-w64-i686-qt6-5compat
-          mingw-w64-i686-qtkeychain-qt6
-          mingw-w64-i686-ccache
-          mingw-w64-i686-toolchain
-          mingw-w64-i686-pcre
-          mingw-w64-i686-libzip
-          mingw-w64-i686-ntldd
-          mingw-w64-i686-pugixml
-          mingw-w64-i686-lua51
-          mingw-w64-i686-lua51-lpeg
-          mingw-w64-i686-lua51-lsqlite3
-          mingw-w64-i686-hunspell
-          mingw-w64-i686-zlib
-          mingw-w64-i686-boost
-          mingw-w64-i686-yajl
-          mingw-w64-i686-lua-luarocks
-          mingw-w64-i686-jq
-
-    - name: (Windows 32) Setup MSYS2
-      if: matrix.buildname == 'windows32'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW32
-        update: true
-        install: >-
-          mingw-w64-x86_64-qt5-base
-          mingw-w64-x86_64-qt5-multimedia
-          mingw-w64-x86_64-qt5-svg
-          mingw-w64-x86_64-qt5-speech
-          mingw-w64-x86_64-qt5-imageformats
-          mingw-w64-x86_64-qt5-winextras
-          mingw-w64-x86_64-qt5-tools
+          mingw-w64-x86_64-qt6-base
+          mingw-w64-x86_64-qt6-multimedia
+          mingw-w64-x86_64-qt6-svg
+          mingw-w64-x86_64-qt6-speech
+          mingw-w64-x86_64-qt6-imageformats
+          mingw-w64-x86_64-qt6-tools
+          mingw-w64-x86_64-qt6-5compat
+          mingw-w64-x86_64-qtkeychain-qt6
           mingw-w64-x86_64-ccache
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-pcre
@@ -94,6 +64,36 @@ jobs:
           mingw-w64-x86_64-yajl
           mingw-w64-x86_64-lua-luarocks
           mingw-w64-x86_64-jq
+
+    - name: (Windows 32) Setup MSYS2
+      if: matrix.buildname == 'windows32'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW32
+        update: true
+        install: >-
+          mingw-w64-i686-qt5-base
+          mingw-w64-i686-qt5-multimedia
+          mingw-w64-i686-qt5-svg
+          mingw-w64-i686-qt5-speech
+          mingw-w64-i686-qt5-imageformats
+          mingw-w64-i686-qt5-winextras
+          mingw-w64-i686-qt5-tools
+          mingw-w64-i686-ccache
+          mingw-w64-i686-toolchain
+          mingw-w64-i686-pcre
+          mingw-w64-i686-libzip
+          mingw-w64-i686-ntldd
+          mingw-w64-i686-pugixml
+          mingw-w64-i686-lua51
+          mingw-w64-i686-lua51-lpeg
+          mingw-w64-i686-lua51-lsqlite3
+          mingw-w64-i686-hunspell
+          mingw-w64-i686-zlib
+          mingw-w64-i686-boost
+          mingw-w64-i686-yajl
+          mingw-w64-i686-lua-luarocks
+          mingw-w64-i686-jq
 
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
