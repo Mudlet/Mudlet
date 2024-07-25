@@ -553,10 +553,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
+#if defined(DEBUG_UTF8_PROCESSING)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
         mUpperPane->reportCodepointErrors();
     }
+#endif
 }
 
 Host* TConsole::getHost()

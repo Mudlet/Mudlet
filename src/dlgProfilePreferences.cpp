@@ -767,7 +767,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     setColors2();
 
+
+#if defined(DEBUG_UTF8_PROCESSING)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
+#else
+    checkBox_debugShowAllCodepointProblems->hide();
+#endif
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
 
