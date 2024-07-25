@@ -103,19 +103,20 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then 
+      "mingw-w64-${BUILDCOMPONENT}-angleproject" \
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
         break
     fi
-    
+
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
     pacman_attempts=$((pacman_attempts +1))
-    
+
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
-  
+
 else
 
   echo "=== Installing Qt5 Packages ==="
@@ -131,12 +132,12 @@ else
       "mingw-w64-${BUILDCOMPONENT}-qt5-tools"; then
         break
     fi
-    
+
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
     pacman_attempts=$((pacman_attempts +1))
-    
+
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
@@ -165,12 +166,12 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
-    
+
   if [ $pacman_attempts -eq 10 ]; then
     exit 7
   fi
   pacman_attempts=$((pacman_attempts +1))
-    
+
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
@@ -186,12 +187,12 @@ if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/
   echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
   echo "  not end up in the same place when --tree \"user\" is used..."
   echo ""
-  
+
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
-  echo "    Completed" 
+  echo "    Completed"
 else
   echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
   echo "  do not end up in the same place"
