@@ -293,6 +293,8 @@ else
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+    read -r day month year hour minute second <<< "$current_timestamp"
 
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/download-add.php' \
@@ -303,6 +305,12 @@ else
     -F "file_des=sha256: $SHA256SUM" \
     -F "file_cat=0" \
     -F "file_permission=-1" \
+    -F "file_timestamp_day=$day" \
+    -F "file_timestamp_month=$month" \
+    -F "file_timestamp_year=$year" \
+    -F "file_timestamp_hour=$hour" \
+    -F "file_timestamp_minute=$minute" \
+    -F "file_timestamp_second=$second" \
     -F "output=json" \
     -F "do=Add File"
     
