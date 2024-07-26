@@ -1496,6 +1496,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
 
