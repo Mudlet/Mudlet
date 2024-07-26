@@ -317,6 +317,8 @@ EOF
     fi
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+    read -r day month year hour minute second <<< "$current_timestamp"
 
     # blank echo to remove the stray 'PS D:\a\Mudlet\Mudlet\installers\windows> ' that shows up otherwise
 
@@ -340,6 +342,12 @@ EOF
     -F "file_des=sha256: $SHA256SUM" \
     -F "file_cat=${FILE_CATEGORY}" \
     -F "file_permission=-1" \
+    -F "file_timestamp_day=$day" \
+    -F "file_timestamp_month=$month" \
+    -F "file_timestamp_year=$year" \
+    -F "file_timestamp_hour=$hour" \
+    -F "file_timestamp_minute=$minute" \
+    -F "file_timestamp_second=$second" \
     -F "output=json" \
     -F "do=Add File"
 
