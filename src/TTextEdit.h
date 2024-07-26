@@ -93,7 +93,11 @@ public:
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
+
+#if defined(DEBUG_UTF8_PROCESSING)
     void reportCodepointErrors();
+#endif
+
     void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
@@ -144,7 +148,9 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+#if defined(DEBUG_UTF8_PROCESSING)
     void slot_changeDebugShowAllProblemCodepoints(const bool);
+#endif
     void slot_mouseAction(const QString&);
 
 protected:
@@ -222,10 +228,14 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
+
+#if defined(DEBUG_UTF8_PROCESSING)
     bool mShowAllCodepointIssues;
     // Marked mutable so that it is permissible to change this in class methods
     // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
+#endif
+
     // We scroll on the basis that one vertical mouse wheel click is one line
     // (vertically, not really concerned about horizontal stuff at present).
     // According to Qt: "Most mouse types work in steps of 15 degrees, in which
