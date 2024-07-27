@@ -143,6 +143,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}.dmg" | awk '{print $1}')
 
       # file_cat=1 asuming macOS is the 1st item in WP-Download-Manager category
+      # Get current timestamp
+      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+      read -r day month year hour minute second <<< "$current_timestamp"
+
       curl -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
@@ -151,6 +155,12 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=1" \
       -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
       -F "output=json" \
       -F "do=Add File"
 
