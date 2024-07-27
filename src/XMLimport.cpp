@@ -851,10 +851,10 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("shareFont")) {
         const QStringView shareFont(attributes().value(qsl("shareFont")));
 
-        if (shareFont == qsl("OptIn")) {
-            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptIn;
-        } else if (shareFont == qsl("OptOut")) {
-            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptOut;
+        if (shareFont == qsl("Share")) {
+            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Share;
+        } else if (shareFont == qsl("DoNotShare")) {
+            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::DoNotShare;
         } else if (shareFont == qsl("Block")) {
             pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -863,10 +863,10 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("shareFontSize")) {
         const QStringView shareFontSize(attributes().value(qsl("shareFontSize")));
 
-        if (shareFontSize == qsl("OptIn")) {
-            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptIn;
-        } else if (shareFontSize == qsl("OptOut")) {
-            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptOut;
+        if (shareFontSize == qsl("Share")) {
+            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Share;
+        } else if (shareFontSize == qsl("DoNotShare")) {
+            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::DoNotShare;
         } else if (shareFontSize == qsl("Block")) {
             pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -875,10 +875,10 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("shareLanguage")) {
         const QStringView shareLanguage(attributes().value(qsl("shareLanguage")));
 
-        if (shareLanguage == qsl("OptIn")) {
-            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptIn;
-        } else if (shareLanguage == qsl("OptOut")) {
-            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptOut;
+        if (shareLanguage == qsl("Share")) {
+            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Share;
+        } else if (shareLanguage == qsl("DoNotShare")) {
+            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::DoNotShare;
         } else if (shareLanguage == qsl("Block")) {
             pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -887,10 +887,10 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("shareScreenReader")) {
         const QStringView shareScreenReader(attributes().value(qsl("shareScreenReader")));
 
-        if (shareScreenReader == qsl("OptIn")) {
-            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptIn;
-        } else if (shareScreenReader == qsl("OptOut")) {
-            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptOut;
+        if (shareScreenReader == qsl("Share")) {
+            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Share;
+        } else if (shareScreenReader == qsl("DoNotShare")) {
+            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::DoNotShare;
         } else if (shareScreenReader == qsl("Block")) {
             pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -899,10 +899,10 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("shareSystemType")) {
         const QStringView shareSystemType(attributes().value(qsl("shareSystemType")));
 
-        if (shareSystemType == qsl("OptIn")) {
-            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptIn;
-        } else if (shareSystemType == qsl("OptOut")) {
-            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptOut;
+        if (shareSystemType == qsl("Share")) {
+            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Share;
+        } else if (shareSystemType == qsl("DoNotShare")) {
+            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::DoNotShare;
         } else if (shareSystemType == qsl("Block")) {
             pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -911,10 +911,10 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("shareUser")) {
         const QStringView shareUser(attributes().value(qsl("shareUser")));
 
-        if (shareUser == qsl("OptIn")) {
-            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptIn;
-        } else if (shareUser == qsl("OptOut")) {
-            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptOut;
+        if (shareUser == qsl("Share")) {
+            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Share;
+        } else if (shareUser == qsl("DoNotShare")) {
+            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::DoNotShare;
         } else if (shareUser == qsl("Block")) {
             pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Block;
         }

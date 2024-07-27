@@ -7175,7 +7175,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("shareFont")) {
-        static const QStringList behaviours{"optout", "optin", "block"};
+        static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
@@ -7184,10 +7184,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return lua_error(L);
         }
 
-        if (behaviour == qsl("optout")) {
-            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptOut;
-        } else if (behaviour == qsl("optin")) {
-            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::OptIn;
+        if (behaviour == qsl("donotshare")) {
+            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Share;
         } else if (behaviour == qsl("block")) {
             host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -7195,7 +7195,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("shareFontSize")) {
-        static const QStringList behaviours{"optout", "optin", "block"};
+        static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
@@ -7204,10 +7204,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return lua_error(L);
         }
 
-        if (behaviour == qsl("optout")) {
-            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptOut;
-        } else if (behaviour == qsl("optin")) {
-            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::OptIn;
+        if (behaviour == qsl("donotshare")) {
+            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Share;
         } else if (behaviour == qsl("block")) {
             host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -7215,7 +7215,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("shareLanguage")) {
-        static const QStringList behaviours{"optout", "optin", "block"};
+        static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
@@ -7224,10 +7224,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return lua_error(L);
         }
 
-        if (behaviour == qsl("optout")) {
-            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptOut;
-        } else if (behaviour == qsl("optin")) {
-            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::OptIn;
+        if (behaviour == qsl("donotshare")) {
+            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Share;
         } else if (behaviour == qsl("block")) {
             host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -7235,7 +7235,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("shareScreenReader")) {
-        static const QStringList behaviours{"optout", "optin", "block"};
+        static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
@@ -7244,10 +7244,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return lua_error(L);
         }
 
-        if (behaviour == qsl("optout")) {
-            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptOut;
-        } else if (behaviour == qsl("optin")) {
-            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::OptIn;
+        if (behaviour == qsl("donotshare")) {
+            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Share;
         } else if (behaviour == qsl("block")) {
             host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -7255,7 +7255,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("shareSystemType")) {
-        static const QStringList behaviours{"optout", "optin", "block"};
+        static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
@@ -7264,10 +7264,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return lua_error(L);
         }
 
-        if (behaviour == qsl("optout")) {
-            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptOut;
-        } else if (behaviour == qsl("optin")) {
-            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::OptIn;
+        if (behaviour == qsl("donotshare")) {
+            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Share;
         } else if (behaviour == qsl("block")) {
             host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Block;
         }
@@ -7275,7 +7275,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("shareUser")) {
-        static const QStringList behaviours{"optout", "optin", "block"};
+        static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
@@ -7284,10 +7284,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return lua_error(L);
         }
 
-        if (behaviour == qsl("optout")) {
-            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptOut;
-        } else if (behaviour == qsl("optin")) {
-            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::OptIn;
+        if (behaviour == qsl("donotshare")) {
+            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Share;
         } else if (behaviour == qsl("block")) {
             host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Block;
         }

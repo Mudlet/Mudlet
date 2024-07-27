@@ -3771,7 +3771,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <widget class="QGroupBox" name="groupBox_sharing">
          <property name="title">
-          <string>Given consent, the game server may request then receive the following data via NEW-ENVIRON, MNES, MTTS, and GMCP protocols</string>
+          <string>Given consent, the game or a script may request then receive the following data via NEW-ENVIRON, MNES, MTTS, and GMCP protocols</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_sharing">
           <item row="0" column="0">
@@ -3798,12 +3798,12 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QComboBox" name="comboBox_shareFont">
             <item>
              <property name="text">
-              <string>Opt Out / Do Not Share</string>
+              <string>Do Not Share</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Opt In / Share</string>
+              <string>Share</string>
              </property>
             </item>
             <item>
@@ -3837,12 +3837,12 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QComboBox" name="comboBox_shareFontSize">
             <item>
              <property name="text">
-              <string>Opt Out / Do Not Share</string>
+              <string>Do Not Share</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Opt In / Share</string>
+              <string>Share</string>
              </property>
             </item>
             <item>
@@ -3876,12 +3876,12 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QComboBox" name="comboBox_shareLanguage">
             <item>
              <property name="text">
-              <string>Opt Out / Do Not Share</string>
+              <string>Do Not Share</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Opt In / Share</string>
+              <string>Share</string>
              </property>
             </item>
             <item>
@@ -3915,12 +3915,12 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QComboBox" name="comboBox_shareScreenReader">
             <item>
              <property name="text">
-              <string>Opt Out / Do Not Share</string>
+              <string>Do Not Share</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Opt In / Share</string>
+              <string>Share</string>
              </property>
             </item>
             <item>
@@ -3954,12 +3954,12 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QComboBox" name="comboBox_shareSystemType">
             <item>
              <property name="text">
-              <string>Opt Out / Do Not Share</string>
+              <string>Do Not Share</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Opt In / Share</string>
+              <string>Share</string>
              </property>
             </item>
             <item>
@@ -3993,12 +3993,12 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QComboBox" name="comboBox_shareUser">
             <item>
              <property name="text">
-              <string>Opt Out / Do Not Share</string>
+              <string>Do Not Share</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Opt In / Share</string>
+              <string>Share</string>
              </property>
             </item>
             <item>

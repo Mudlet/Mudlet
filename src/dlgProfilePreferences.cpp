@@ -1909,7 +1909,7 @@ void dlgProfilePreferences::slot_setFontSize()
         return;
     }
 
-    if (pHost->mpClientVariables->mShareFontSize == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (pHost->mpClientVariables->mShareFontSize == ClientVariables::DataSharingBehaviour::Share) {
         pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
         pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
     }
@@ -1961,7 +1961,7 @@ void dlgProfilePreferences::slot_setDisplayFont()
     config->setFont(newFont);
     config->endChanges();
 
-    if (pHost->mpClientVariables->mShareFont == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (pHost->mpClientVariables->mShareFont == ClientVariables::DataSharingBehaviour::Share) {
         pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
         pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
     }
@@ -4267,7 +4267,7 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
         return;
     }
 
-    if (pHost->mpClientVariables->mShareLanguage == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (pHost->mpClientVariables->mShareLanguage == ClientVariables::DataSharingBehaviour::Share) {
         pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
         pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
     }
@@ -4531,7 +4531,7 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     if (pHost->mAdvertiseScreenReader != state) {
         pHost->mAdvertiseScreenReader = state;
 
-        if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
@@ -4553,7 +4553,7 @@ void dlgProfilePreferences::slot_changeShareFont(const int index)
     if (pHost->mpClientVariables->mShareFont != newIndex) {
         pHost->mpClientVariables->mShareFont = newIndex;
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
         }
@@ -4573,7 +4573,7 @@ void dlgProfilePreferences::slot_changeShareFontSize(const int index)
     if (pHost->mpClientVariables->mShareFontSize != newIndex) {
         pHost->mpClientVariables->mShareFontSize = newIndex;
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
         }
@@ -4593,7 +4593,7 @@ void dlgProfilePreferences::slot_changeShareLanguage(const int index)
     if (pHost->mpClientVariables->mShareLanguage != newIndex) {
         pHost->mpClientVariables->mShareLanguage = newIndex;
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
         }
@@ -4613,7 +4613,7 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
     if (pHost->mpClientVariables->mShareScreenReader != newIndex) {
         pHost->mpClientVariables->mShareScreenReader = newIndex;
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
         }
@@ -4633,7 +4633,7 @@ void dlgProfilePreferences::slot_changeShareSystemType(const int index)
     if (pHost->mpClientVariables->mShareSystemType != newIndex) {
         pHost->mpClientVariables->mShareSystemType = newIndex;
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SYSTEMTYPE"));
         }
@@ -4653,7 +4653,7 @@ void dlgProfilePreferences::slot_changeShareUser(const int index)
     if (pHost->mpClientVariables->mShareUser != newIndex) {
         pHost->mpClientVariables->mShareUser = newIndex;
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::OptIn) {
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("USER"));
         }

@@ -158,7 +158,7 @@ QString ClientVariables::getClientVariableMTTS()
         terminalStandards |= MTTS_STD_UTF_8;
     }
 
-    if (mShareScreenReader == ClientVariables::DataSharingBehaviour::OptIn && mpHost->mAdvertiseScreenReader) {
+    if (mShareScreenReader == ClientVariables::DataSharingBehaviour::Share && mpHost->mAdvertiseScreenReader) {
         terminalStandards |= MTTS_STD_SCREEN_READER;  // Needs an OPT-IN to be enabled
     }
 
@@ -267,29 +267,29 @@ QMap<QString, QPair<bool, QString>> ClientVariables::getClientVariableDataMap()
     clientVariablesDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getClientVariableWordWrap()));
     clientVariablesDataMap.insert(qsl("BOLD_IS_BRIGHT"), qMakePair(isUserVar, getClientVariableBoldIsBright()));
 
-    if (mShareFont == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (mShareFont == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getClientVariableFont()));
     }
 
-    if (mShareFontSize == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (mShareFontSize == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getClientVariableFontSize()));
     }
 
-    if (mShareLanguage == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (mShareLanguage == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getClientVariableLanguage()));
     }
 
-    if (mShareScreenReader == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (mShareScreenReader == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getClientVariableScreenReader()));
     }
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "SYSTEMTYPE" is well-known and will be requested with NEW_ENVIRON_VAR
-    if (mShareSystemType == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (mShareSystemType == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getClientVariableSystemType()));
     }
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" is well-known and will be requested with NEW_ENVIRON_VAR
-    if (mShareUser == ClientVariables::DataSharingBehaviour::OptIn) {
+    if (mShareUser == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getClientVariableUser()));
     }
 
@@ -691,7 +691,7 @@ void ClientVariables::sendClientVariablesList() {
             const auto &[updatable, behaviour, translation] = it.value();
 
             if (behaviour != ClientVariables::DataSharingBehaviour::Block) {
-                const bool available = (behaviour == ClientVariables::DataSharingBehaviour::OptIn);
+                const bool available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
                 clientVariablesList[it.key()] = QJsonObject{
                     {"available", available},
                     {"updatable", updatable}
@@ -797,23 +797,35 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
     auto addResponse = [&](const QString& key, bool available, bool updatable, bool requested = false, const QString& value = QString()) {
         QJsonObject obj{
             {"available", available},
-            {"updatable", updatable},
-            {"requested", requested},
-            {"source", sources[source]},
-            {"timestamp", timestamp}
+            {"updatable", updatable}
         };
 
+        if (source == ClientVariables::SourceRequest) {
+            obj["requested"] = requested;
+        }
+
         if (!value.isEmpty()) {
+            bool successful = false;
+
             if (source == ClientVariables::SourceServer) {
                 if (updateClientVariable(key, value, clientVariablesDataMap)) {
                     clientVariablesDataMap = getClientVariableDataMap(); // refresh
                 }
 
-                obj["success"] = (available && updatable && value == clientVariablesDataMap[key].second);
+                successful = (available && updatable && value == clientVariablesDataMap[key].second);
+
+                obj["success"] = successful;
             }
 
-            obj["value"] = value;
+            if (successful) {
+                obj["value"] = clientVariablesDataMap[key].second;
+            } else {
+                obj["value"] = value;
+            }
         }
+
+        obj["source"] = sources[source];
+        obj["timestamp"] = timestamp;
 
         response[key] = obj;
     };
@@ -832,7 +844,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
             if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
                 addResponse(key, false, false);
             } else {
-                available = (behaviour == ClientVariables::DataSharingBehaviour::OptIn);
+                available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
 
                 if (!available && source == ClientVariables::SourceRequest) {
                     requested << translation;
@@ -881,7 +893,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         commandList << "showSettingsTab(\"tab_sharing\")";
         hintList << tr("Open the Sharing tab of the Settings menu");
 
-        const QString info1 = tr("[ INFO ]  - To customize the experience, the server requests you consent to share:");
+        const QString info1 = tr("[ INFO ]  - To customize the experience, the game or a script requests you consent to share:");
         mpHost->mTelnet.postMessage(info1);
         const QString info2 = tr("[ INFO ]  - %1").arg(requested.join(", "));
         mpHost->mTelnet.postMessage(info2);
