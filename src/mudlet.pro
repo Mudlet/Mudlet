@@ -375,7 +375,7 @@ unix:!macx {
             "application build) typically this is one of:\\n"\
             "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
             "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
-            "'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+            "'C:\msys64\mingw64' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
         }
         GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
         isEmpty( GITHUB_WORKSPACE_TEST ) {
