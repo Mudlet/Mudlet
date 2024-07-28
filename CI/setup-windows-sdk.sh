@@ -103,19 +103,19 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then 
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
         break
     fi
-    
+
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
     pacman_attempts=$((pacman_attempts +1))
-    
+
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
-  
+
 else
 
   echo "=== Installing Qt5 Packages ==="
@@ -131,12 +131,12 @@ else
       "mingw-w64-${BUILDCOMPONENT}-qt5-tools"; then
         break
     fi
-    
+
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
     pacman_attempts=$((pacman_attempts +1))
-    
+
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
@@ -165,12 +165,12 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
-    
+
   if [ $pacman_attempts -eq 10 ]; then
     exit 7
   fi
   pacman_attempts=$((pacman_attempts +1))
-    
+
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
@@ -186,32 +186,21 @@ if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/
   echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
   echo "  not end up in the same place when --tree \"user\" is used..."
   echo ""
-  
+
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
-  echo "    Completed" 
+  echo "    Completed"
 else
   echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
   echo "  do not end up in the same place"
 fi
-echo ""
-echo "  When using lua modules from luarocks and you wish to use a per-user one"
-echo "rather than sharing them with other users on this PC it is recommended that"
-echo "you avoid using the --local option to luarocks but instead use"
-echo "--tree \"user\" {the word user, NOT your username). This is so that if you"
-echo "are building things for other PC systems and are working with more than"
-echo "one 'bitness' or are investigating the different Mingw-w64 environments"
-echo "the rocks compiled for each variant do not end up in the same set of"
-echo "directories - which will break things!"
-echo ""
-echo "You will probably have to tweak the LUA_PATH and LUA_CPATH environmental"
-echo "variables before running Mudlet so that it can find the per-user modules"
-echo "You will likely want to review the output from 'luarocks path --help'"
-echo "for more information (remembering to include the '--lua-version 5.1'"
-echo "command line argument to get the right details when using it!)"
-echo ""
+echo "For per-user Lua modules from LuaRocks:"
+echo "- Use '--tree \"user\"' instead of '--local'"
+echo "- This separates modules for different build environments"
+echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
+echo "- See 'luarocks path --help --lua-version 5.1' for details"
 
 # Need to overcome a problem with luarock 3.9.0 which uses Windows CMD MKDIR
 # but which cannot make any missing intermediate directories if the
@@ -235,16 +224,7 @@ fi
 # itself runs in a Lua 5.4 environment) - otherwise one has to do the same thing
 # for EVERY luarock!
 
-# Save the wanted Luarocks 5.1 command so it can be used repeatedly next
-# this uses the "system" (shared between all users) tree, using the --local
-# option does NOT work, but the alternative --tree "user" (the literal string
-# user NOT the user's name) does for "per user" luarocks as the previous use
-# of sed above has "fixed" things:
 ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
-# CHECKCOMMAND=$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")
-# FIXME: Only install if needed - this whole script is safe to be rerun
-# (idempotent) but it is an unnecessary delay to reinstall the same things over
-# again:
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
