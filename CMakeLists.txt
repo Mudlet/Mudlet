@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024 by Stephen Lyons            #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -103,7 +103,7 @@ else()
 endif()
 
 # Set APP_VERSION (update in mudlet.pro as well)
-set(APP_VERSION 4.17.2)
+set(APP_VERSION 4.18.3)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")

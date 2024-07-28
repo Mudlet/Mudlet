@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -706,17 +706,6 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
-    // Support a long-standing hack among all clients for using the <SGR>1m
-    // Bold) code to select a set of brighter 8 colors (the second eight) from
-    // the 256 colors for "16 color" mode of operation - alongside the basic
-    // <SGR>30m (Black) to <SGR>37m (White) set of codes. Using the "AIXTERM"
-    // codes (<SGR>90m to <SGR>97m) codes or the <SGR>38::5:Nm ones are later
-    // (better) ways of accessing that second set of 8 but some Servers only
-    // know the first for 16 color operation. The prior behaviour for Mudlet
-    // would be almost equivalent to this option being true but it limits the
-    // ability to have completely separate bold (and faint) font weightings:
-    bool mBoldIsBright = true;
-
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -725,7 +714,7 @@ signals:
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
-    // problems as they arrive as well as a summery upon destruction:
+    // problems as they arrive as well as a summary upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:

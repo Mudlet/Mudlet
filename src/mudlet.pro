@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2024 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -120,12 +120,12 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 
 
 # Set Mudlet version (update in CMakeLists.txt as well)
-VERSION = 4.17.2
+VERSION = 4.18.3
 
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
-    BUILD = ${BUILD}-${GIT_SHA1}
+    BUILD = $${BUILD}-$${GIT_SHA1}
 } else {
     BUILD = "-dev-"$${GIT_SHA1}
 }
@@ -375,7 +375,7 @@ unix:!macx {
             "application build) typically this is one of:\\n"\
             "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
             "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
-            "'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+            "'C:\msys64\mingw64' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
         }
         GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
         isEmpty( GITHUB_WORKSPACE_TEST ) {
@@ -462,17 +462,17 @@ macx {
 
 # use ccache if available
 BASE_CXX = $$QMAKE_CXX
-BASE_C = $$QMAKE_C
+BASE_C = $$QMAKE_CC
 # common linux location
 exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
-    message("Found ccache, updating QMAKE_CXX and QMAKE_C")
+    message("Found ccache, updating QMAKE_CXX and QMAKE_CC")
     QMAKE_CXX = ccache $$BASE_CXX
-    QMAKE_C = ccache $$BASE_C
+    QMAKE_CC = ccache $$BASE_C
 } else {
     message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
 }
 
-message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_C: '"$${QMAKE_C}"'")
+message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_CC: '"$${QMAKE_CC}"'")
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
@@ -1683,8 +1683,16 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
+    ../CI/build-mudlet-for-windows.sh \
+    ../CI/deploy-mudlet-for-windows.sh \
+    ../CI/fix.grid.ui.ordering.js \
     ../CI/generate-changelog.lua \
+    ../CI/lua-5.1.5-so.patch \
+    ../CI/org.mudlet.mudlet.yml \
     ../CI/qt-silent-install.qs \
+    ../CI/register-windows-release.sh \
+    ../CI/package-mudlet-for-windows.sh \
+    ../CI/setup-windows-sdk.sh \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
@@ -1697,6 +1705,7 @@ OTHER_FILES += \
     ../CI/travis.set-build-info.sh \
     ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
+    ../CI/validate-deployment-for-windows.sh \
     ../dangerfile.js \
     ../docker/.env.template \
     ../docker/docker-compose.override.linux.yml \

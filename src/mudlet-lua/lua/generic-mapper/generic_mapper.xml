@@ -404,7 +404,8 @@ map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Update Alias</name>
-				<script>map.updateVersion()</script>
+				<script>map.silentUpdate = false
+map.updateVersion()</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map update$</regex>
@@ -893,7 +894,7 @@ else
 end
 
 if map.setExit(map.currentRoom, otherroom, matches[3]) then
-  if not matches[4] then map.setExit(otherroom, map.currentRoom, mmp.ranytolong(matches[3])) end
+  if not matches[4] then map.setExit(otherroom, map.currentRoom, map.ranytolong(matches[3])) end
 
   map.echo(string.format("Linked %s (%d) to %s (%d) via a %s%s exit.",
     (getRoomName(map.currentRoom) ~= "" and getRoomName(map.currentRoom) or "''"), map.currentRoom, (getRoomName(otherroom) ~= "" and getRoomName(otherroom) or "''"), otherroom, (matches[4] and "one-way " or ''), matches[3]))
@@ -1259,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.1"
+local version = "2.1.3"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -2258,6 +2259,7 @@ map.save.recall = map.save.recall or {}
 map.save.prompt_pattern = map.save.prompt_pattern or {}
 map.save.ignore_patterns = map.save.ignore_patterns or {}
 map.save.move_methods = map.save.move_methods or {}
+map.silentUpdate = true
 
 local oldstring = string
 local string = utf8
@@ -4003,13 +4005,20 @@ local function check_version()
     local pos = table.index_of(versions, map.version) or 0
     if pos ~= #versions then
         enableAlias("Map Update Alias")
-        map.echo(string.format("The Generic Mapping Script is currently &lt;red&gt;%d&lt;reset&gt; versions behind.",#versions - pos))
-        map.echo("To update now, please type: &lt;yellow&gt;map update&lt;reset&gt;")
+        if not map.silentUpdate then
+          map.echo(string.format("The Generic Mapping Script is currently &lt;red&gt;%d&lt;reset&gt; versions behind.",#versions - pos))
+          map.echo("To update now, please type: &lt;yellow&gt;map update&lt;reset&gt;")
+        else
+          map.updateVersion()
+        end
     end
     map.update_timer = tempTimer(3600, [[map.checkVersion()]])
 end
 
 function map.checkVersion()
+    if #getRooms() &gt; 0 then
+      map.silentUpdate = false
+    end    
     if map.update_timer then
         killTimer(map.update_timer)
         map.update_timer = nil
@@ -4030,7 +4039,9 @@ local function update_version()
     uninstallPackage("generic_mapper")
     installPackage(path)
     map.updatingMapper = nil
-    map.echo("Generic Mapping Script updated successfully.")
+    if not map.silentUpdate then
+      map.echo("Generic Mapping Script updated successfully.")
+    end
 end
 
 function map.updateVersion()
@@ -4043,6 +4054,7 @@ function map.showMap(shown)
     local configs = map.configs.map_window
     shown = shown or not configs.shown
     map.configs.map_window.shown = shown
+    map.silentUpdate = false
     local x, y, w, h, origin = configs.x, configs.y, configs.w, configs.h, configs.origin
     if string.find(origin,"bottom") then
         if y == 0 or y == "0%" then
@@ -4341,7 +4353,7 @@ function map.roomFind(query, lines)
         string.format(
           "&lt;DarkSlateGrey&gt;%s&lt;DarkSlateGrey&gt;\n", getRoomAreaName(getRoomArea(roomid))
         ),
-        [[map.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
@@ -4368,7 +4380,7 @@ function map.roomFind(query, lines)
       fg("DarkSlateGrey")
       echoLink(
         " &gt; Show path\n",
-        [[map.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
