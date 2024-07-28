@@ -465,7 +465,7 @@ BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_C
 # common linux location
 exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(C:\msys64\mingw64\bin\ccache.exe)|exists(C:\msys64\mingw32\bin\ccache.exe) {
-    message("Found ccache, updating QMAKE_CXX and QMAKE_C")
+    message("Found ccache")
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_C = ccache $$BASE_C
 } else {
