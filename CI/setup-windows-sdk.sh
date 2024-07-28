@@ -288,7 +288,7 @@ echo "Copy the following lines into the build environment for a project in Qt Cr
 echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
 echo ""
 echo "WITH_MAIN_BUILD_SYSTEM=NO"
-echo "MINGW_BASE_DIR=C:\msys64$(echo ${MINGW_BASE_DIR} | sed 's/\//\\/g')"
+echo "MINGW_BASE_DIR=$echo(cygpath -aw /)$(echo ${MINGW_BASE_DIR} | sed 's/\//\\/g')"
 echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
 echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 
