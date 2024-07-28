@@ -358,7 +358,9 @@ jobs:
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.6
       with:
-        run: gdb -batch -ex "run" -ex "bt full" --args ${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror
+        run: |
+          sudo apt-get install gdb
+          gdb -batch -ex "run" -ex "bt full" --args ${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
