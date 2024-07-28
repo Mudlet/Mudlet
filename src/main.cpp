@@ -662,7 +662,10 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfiles);
+    QTimer::singleShot(0, qApp, [cliProfiles]() {
+        // ensure Mudlet singleton is initialised before calling profile loading
+        mudlet::self()->startAutoLogin(cliProfiles);
+    });
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

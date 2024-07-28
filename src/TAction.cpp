@@ -197,17 +197,6 @@ void TAction::expandToolbar(TToolBar* pT)
         // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
         button->setStyleSheet(css);
 
-        /*
-         * CHECK: The other expandToolbar(...) has the following in this position:
-         *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-         *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
-         *       {
-         *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
-         *          action->execute();
-         *       }
-         * Why does it have this and we do not? - Slysven
-         */
-
         if (action->isFolder()) {
             auto newMenu = new QMenu(pT);
             // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
