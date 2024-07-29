@@ -181,6 +181,7 @@ then
       xz "Mudlet-${VERSION}.tar"
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
+      SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}.tar.xz" | awk '{print $1}')
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
