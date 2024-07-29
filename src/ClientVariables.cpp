@@ -307,7 +307,7 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
         return;
     }
 
-    if (!newEnvironVariablesSent.contains(var)) {
+    if (!newEnvironVariablesRequested.contains(var)) {
         qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
         return;
     }
@@ -375,7 +375,7 @@ void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool 
 
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
         output += prepareNewEnvironData(it.key()).toStdString();
-        newEnvironVariablesSent.insert(it.key());
+        newEnvironVariablesRequested.insert(it.key());
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -410,7 +410,7 @@ void ClientVariables::appendNewEnvironValue(std::string &output, const QString &
             // USERVAR, or IAC SE) then that variable is undefined.
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
             output += prepareNewEnvironData(var).toStdString();
-            newEnvironVariablesSent.insert(var);
+            newEnvironVariablesRequested.insert(var);
 
             if (!isUserVar) {
                 qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it as VAR (use USERVAR!)";
@@ -420,7 +420,7 @@ void ClientVariables::appendNewEnvironValue(std::string &output, const QString &
         } else {
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
             output += prepareNewEnvironData(var).toStdString();
-            newEnvironVariablesSent.insert(var);
+            newEnvironVariablesRequested.insert(var);
             output += NEW_ENVIRON_VAL;
 
             // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -550,7 +550,7 @@ void ClientVariables::sendAllMNESValues()
 
         output += NEW_ENVIRON_VAR;
         output += prepareNewEnvironData(it.key()).toStdString();
-        newEnvironVariablesSent.insert(it.key());
+        newEnvironVariablesRequested.insert(it.key());
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -591,7 +591,7 @@ void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, QPai
         const QString val = newEnvironData.second;
 
         output += prepareNewEnvironData(var).toStdString();
-        newEnvironVariablesSent.insert(var);
+        newEnvironVariablesRequested.insert(var);
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -664,6 +664,10 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
 }
 
 void ClientVariables::sendClientVariablesList() {
+    if (!mpHost->mEnableGMCP) {
+        return;
+    }
+
     QJsonObject clientVariablesList;
 
     const auto mnesVariables = mnesVariablesMap();
@@ -785,6 +789,10 @@ bool ClientVariables::updateClientVariable(const QString& key, const QString& va
 }
 
 void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVariables::Source source) {
+    if (!mpHost->mEnableGMCP) {
+        return;
+    }
+
     QJsonObject response;
     QStringList requested;
 
@@ -801,6 +809,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         };
 
         if (source == ClientVariables::SourceRequest) {
+            clientVariablesRequested.insert(key);
             obj["requested"] = requested;
         }
 
@@ -813,7 +822,6 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
                 }
 
                 successful = (available && updatable && value == clientVariablesDataMap[key].second);
-
                 obj["success"] = successful;
             }
 
@@ -826,45 +834,108 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
         obj["source"] = sources[source];
         obj["timestamp"] = timestamp;
-
         response[key] = obj;
     };
 
-    auto doc = QJsonDocument::fromJson(data.toUtf8());
-    auto jsonObj = doc.object();
+    const QString process = (source == ClientVariables::SourceClient ? "[ \"" + data + "\" ]" : data);
+    auto doc = QJsonDocument::fromJson(process.toUtf8());
 
-    for (QJsonObject::ConstIterator it = jsonObj.constBegin(); it != jsonObj.constEnd(); ++it) {
-        bool available = !mpHost->mEnableMNES; // Default availability state
-        const QString key = (doc.isArray() ? it.key() : it.value()[0]).toString();
-        const QString value = (doc.isArray() ? QString() : it.value()[1]).toString();
+    if (doc.isNull()) {
+        qWarning() << "ClientVariables::sendClientVariablesUpdate: Invalid JSON data";
+        return;
+    }
 
-        if (protectedVariables.contains(key)) {
-            const auto &[updatable, behaviour, translation] = protectedVariables[key];
+    if (doc.isArray()) {
+        QJsonArray jsonArray = doc.array();
 
-            if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
-                addResponse(key, false, false);
-            } else {
-                available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
+        for (const QJsonValue& value : jsonArray) {
+            if (value.isString()) {
+                QString key = value.toString();
+                bool available = !mpHost->mEnableMNES; // Default availability state
 
-                if (!available && source == ClientVariables::SourceRequest) {
-                    requested << translation;
+                if (source != ClientVariables::SourceRequest && !clientVariablesRequested.contains(key)) {
+                    qDebug() << "We did not update client variable" << key << "because the server did not request it yet";
+                    continue;
                 }
 
-                if (clientVariablesDataMap.contains(key)) {
-                    addResponse(key, available, updatable, !available, value);
+                if (protectedVariables.contains(key)) {
+                    const auto &[updatable, behaviour, translation] = protectedVariables[key];
+
+                    if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
+                        addResponse(key, false, false);
+                    } else {
+                        available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
+
+                        if (!available && source == ClientVariables::SourceRequest) {
+                            requested << translation;
+                        }
+
+                        if (clientVariablesDataMap.contains(key)) {
+                            addResponse(key, available, updatable, !available, clientVariablesDataMap[key].second);
+                        } else {
+                            addResponse(key, available, updatable, !available);
+                        }
+                    }
+                } else if (nonProtectedVariables.contains(key)) {
+                    if (clientVariablesDataMap.contains(key)) {
+                        addResponse(key, true, nonProtectedVariables[key], false, clientVariablesDataMap[key].second);
+                    } else {
+                        addResponse(key, true, nonProtectedVariables[key]);
+                    }
                 } else {
-                    addResponse(key, available, updatable, !available);
+                    addResponse(key, false, false);
                 }
-            }
-        } else if (nonProtectedVariables.contains(key)) {
-            if (clientVariablesDataMap.contains(key)) {
-                addResponse(key, true, nonProtectedVariables[key], false, value);
             } else {
-                addResponse(key, true, nonProtectedVariables[key]);
+                qWarning() << "ClientVariables::sendClientVariablesUpdate: Array element is not a string";
             }
-        } else {
-            addResponse(key, false, false);
         }
+    } else if (doc.isObject()) {
+        QJsonObject jsonObj = doc.object();
+
+        for (QJsonObject::ConstIterator it = jsonObj.constBegin(); it != jsonObj.constEnd(); ++it) {
+            QString key = it.key();
+            QString value = it.value().toString();
+            bool available = !mpHost->mEnableMNES; // Default availability state
+
+            if (source != ClientVariables::SourceRequest && !clientVariablesRequested.contains(key)) {
+                qDebug() << "We did not update client variable" << key << "because the server did not request it yet";
+                continue;
+            }
+
+            if (protectedVariables.contains(key)) {
+                const auto &[updatable, behaviour, translation] = protectedVariables[key];
+
+                if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
+                    addResponse(key, false, false);
+                } else {
+                    available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
+
+                    if (!available && source == ClientVariables::SourceRequest) {
+                        requested << translation;
+                    }
+
+                    if (clientVariablesDataMap.contains(key)) {
+                        addResponse(key, available, updatable, !available, value);
+                    } else {
+                        addResponse(key, available, updatable, !available);
+                    }
+                }
+            } else if (nonProtectedVariables.contains(key)) {
+                if (clientVariablesDataMap.contains(key)) {
+                    addResponse(key, true, nonProtectedVariables[key], false, value);
+                } else {
+                    addResponse(key, true, nonProtectedVariables[key]);
+                }
+            } else {
+                addResponse(key, false, false);
+            }
+        }
+    } else {
+        qWarning() << "ClientVariables::sendClientVariablesUpdate: Unsupported JSON format";
+    }
+
+    if (source == ClientVariables::SourceClient && response.isEmpty()) {
+        return;
     }
 
     QJsonDocument doc2(response);
@@ -881,10 +952,9 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     // Send response to server
     mpHost->mTelnet.socketOutRaw(output);
-    qDebug() << "Sent client variables response";
 
     // Post message about client variable settings
-    if (source == ClientVariables::SourceRequest && !response.isEmpty()) {
+    if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
         const QString text = tr("\n        --> Control sharing preferences by clicking here for the Sharing tab in Settings <--\n\n\n");
         QStringList commandList;
         QStringList hintList;

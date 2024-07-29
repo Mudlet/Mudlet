@@ -62,6 +62,8 @@ class ClientVariables : public QObject
         QString getClientVariableWordWrap();
 
         QMap<QString, QPair<bool, QString>> getClientVariableDataMap();
+        void resetClientVariablesRequested() { clientVariablesRequested.clear(); }
+        void resetNewEnvironVariablesRequested() { newEnvironVariablesRequested.clear(); }
 
         bool isMNESVariable(const QString&);
         void sendIsNewEnvironValues(const QByteArray&);
@@ -171,5 +173,6 @@ class ClientVariables : public QObject
         bool updateClientVariable(const QString&, const QString&, QMap<QString, QPair<bool, QString>>&);
 
         Host* mpHost;
-        QSet<QString> newEnvironVariablesSent;
+        QSet<QString> clientVariablesRequested;
+        QSet<QString> newEnvironVariablesRequested;
     };

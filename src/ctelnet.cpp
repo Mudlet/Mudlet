@@ -383,7 +383,8 @@ void cTelnet::connectIt(const QString& address, int port)
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
         mCycleCountMTTS = 0;
-        newEnvironVariablesSent.clear();
+        mpHost->mpClientVariables->resetClientVariablesRequested();
+        mpHost->mpClientVariables->resetNewEnvironVariablesRequested();
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();

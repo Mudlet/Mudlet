@@ -327,7 +327,6 @@ private:
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
     int mCycleCountMTTS = 0;
-    QSet<QString> newEnvironVariablesSent;
     bool mReplayHasFaultyFormat = false;
     bool enableNewEnviron = false;
     bool enableCHARSET = false;
