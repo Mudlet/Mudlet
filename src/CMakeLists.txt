@@ -591,9 +591,6 @@ endif()
 if(WIN32)
   target_link_libraries(mudlet ws2_32)
   set_target_properties(mudlet PROPERTIES WIN32_EXECUTABLE ON)
-  if(USE_MAIN_BUILD_SYSTEM)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_MAIN_BUILD_SYSTEM)
-  endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(mudlet PRIVATE UNICODE _UNICODE)
