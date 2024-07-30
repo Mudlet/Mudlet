@@ -376,7 +376,7 @@ jobs:
       with:
         run: |
           sudo apt-get install gdb
-          gdb -batch -ex "run" -ex "bt full" --args ${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror
+          gdb -batch -ex "run" -ex "bt full" --args "${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror"
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
