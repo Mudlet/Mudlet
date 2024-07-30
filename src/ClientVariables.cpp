@@ -95,7 +95,7 @@ QString ClientVariables::getClientVariableSystemType()
 
 QString ClientVariables::getClientVariableBoldIsBright()
 {
-    return qsl("2"); // 4.17.2? otherwise --> return QString();
+    return qsl("1"); // 4.17.2
     //return qsl("%1").arg(mpHost->mBoldIsBright);
 }
 
