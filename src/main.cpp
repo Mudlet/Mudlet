@@ -619,6 +619,7 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::start();
+    mudlet::self()->init();
 
 #if defined(Q_OS_WIN)
     // Associate mudlet with .mpackage files

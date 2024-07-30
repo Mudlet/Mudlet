@@ -313,6 +313,7 @@ public:
     void hideEvent(QHideEvent*) override;
 
 
+    void init();
     void activateProfile(Host*);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();

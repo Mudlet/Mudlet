@@ -131,6 +131,11 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 mudlet::mudlet()
 : QMainWindow()
 {
+    // Initialisation happens later in setupConfig() and init()
+}
+
+void mudlet::init()
+{
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     QFile gitShaFile(":/app-build.txt");
