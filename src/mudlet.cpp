@@ -705,6 +705,35 @@ static QString findExecutableDir()
     return QCoreApplication::applicationDirPath();
 }
 
+static QString readMarkerFile(const QString& path)
+{
+    QString line;
+    QFile file(path);
+    file.open(QIODevice::ReadOnly);
+    QTextStream(&file).readLineInto(&line);
+    file.close();
+    return line;
+}
+
+static bool validateConfDir(QString& path)
+{
+    if (path.isEmpty()) {
+        qWarning("WARN: portable data path not specified");
+        return false;
+    }
+    QFileInfo pathInfo(path);
+    if (pathInfo.isFile()) {
+        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
+        return false;
+    }
+    QFileInfo parentInfo(pathInfo.dir().path());
+    if (!parentInfo.isDir()) {
+        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parentInfo.filePath()));
+        return false;
+    }
+    return true;
+}
+
 static void migrateConfig(QSettings& settings)
 {
     if (settings.contains(qsl("pos"))) {
@@ -732,8 +761,16 @@ void mudlet::setupConfig()
     QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
     QString execDir = findExecutableDir();
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
+    QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
     if (QFileInfo(markerExecDir).isFile()) {
         confPath = qsl("%1/portable").arg(execDir);
+    } else if (QFileInfo(markerHomeDir).isFile()) {
+        QString portPath = readMarkerFile(markerHomeDir);
+        portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
+        if (!validateConfDir(portPath)) {
+            qFatal("FATAL: portable data path invalid");
+        }
+        confPath = portPath;
     } else {
         confPath = confDirDefault;
     }
