@@ -694,19 +694,35 @@ void mudlet::init()
 //    });
 }
 
+static void migrateConfig(QSettings& settings)
+{
+    if (settings.contains(qsl("pos"))) {
+        return;
+    }
+    // Old default configs, stored in NativeFormat
+    const QSettings settings_old2(qsl("mudlet"), qsl("Mudlet"));
+    if (settings_old2.contains(qsl("pos"))) {
+        for (auto& key : settings_old2.allKeys()) {
+            settings.setValue(key, settings_old2.value(key));
+        }
+        return;
+    }
+    const QSettings settings_old1(qsl("Mudlet"), qsl("Mudlet 1.0"));
+    if (settings_old1.contains(qsl("pos"))) {
+        for (auto& key : settings_old1.allKeys()) {
+            settings.setValue(key, settings_old1.value(key));
+        }
+        return;
+    }
+}
+
 void mudlet::setupConfig()
 {
     confPath = qsl("%1/.config/mudlet").arg(QDir::homePath());
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
-    /*In case sensitive environments, two different config directories
-        were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-        Furthermore, we skip the version from the application name to follow the convention.
-        For compatibility with older settings, if no config is loaded
-        from the config directory "mudlet", application "Mudlet", we try to load from the config
-        directory "Mudlet", application "Mudlet 1.0". */
-    const QSettings settings_new("mudlet", "Mudlet");
-    mpSettings = new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+    mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
+    migrateConfig(*mpSettings);
 }
 
 // This is a static wrapper for singleton instance method
