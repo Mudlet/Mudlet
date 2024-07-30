@@ -694,6 +694,17 @@ void mudlet::init()
 //    });
 }
 
+static QString findExecutableDir()
+{
+    // Linux AppImage support
+    QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
+    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
+        QString appimgPath = systemEnvironment.value(qsl("APPIMAGE"), QString());
+        return QFileInfo(appimgPath).dir().path();
+    }
+    return QCoreApplication::applicationDirPath();
+}
+
 static void migrateConfig(QSettings& settings)
 {
     if (settings.contains(qsl("pos"))) {
@@ -718,7 +729,14 @@ static void migrateConfig(QSettings& settings)
 
 void mudlet::setupConfig()
 {
-    confPath = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    QString execDir = findExecutableDir();
+    QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
+    if (QFileInfo(markerExecDir).isFile()) {
+        confPath = qsl("%1/portable").arg(execDir);
+    } else {
+        confPath = confDirDefault;
+    }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
