@@ -150,7 +150,6 @@ void mudlet::init()
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
-    mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -628,7 +627,6 @@ void mudlet::init()
     mpShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &mKeySequenceReconnect);
     mpShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &mKeySequenceCloseProfile);
 
-    mpSettings = getQSettings();
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
@@ -700,10 +698,7 @@ void mudlet::setupConfig()
 {
     confPath = qsl("%1/.config/mudlet").arg(QDir::homePath());
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
-}
 
-QSettings* mudlet::getQSettings()
-{
     /*In case sensitive environments, two different config directories
         were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
         Furthermore, we skip the version from the application name to follow the convention.
@@ -711,7 +706,14 @@ QSettings* mudlet::getQSettings()
         from the config directory "mudlet", application "Mudlet", we try to load from the config
         directory "Mudlet", application "Mudlet 1.0". */
     const QSettings settings_new("mudlet", "Mudlet");
-    return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+    mpSettings = new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+}
+
+// This is a static wrapper for singleton instance method
+// Should only be called after mudlet has been initialised
+/*static*/ QSettings* mudlet::getQSettings()
+{
+    return self()->mpSettings;
 }
 
 void mudlet::initEdbee()
@@ -2023,10 +2025,7 @@ bool mudlet::isControlsVisible() const
 
 void mudlet::writeSettings()
 {
-    /*In case sensitive environments, two different config directories
-      were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
-      Furthermore, we skip the version from the application name to follow the convention.*/
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *getQSettings();
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mToolbarIconSize);

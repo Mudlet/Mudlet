@@ -235,6 +235,7 @@ public:
 
 
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
@@ -341,7 +342,6 @@ public:
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
-    QSettings* getQSettings();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }

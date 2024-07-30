@@ -131,9 +131,7 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
-    auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
-                                   (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
+    QSettings* pSettings = mudlet::getQSettings();
     auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
