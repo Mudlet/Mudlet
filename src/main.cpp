@@ -247,6 +247,10 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
 
+    mudlet::start();
+    // Detect config path before any files are read
+    mudlet::self()->setupConfig();
+
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
     // The third (and fourth if provided) arguments are used to populate the
@@ -618,7 +622,6 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    mudlet::start();
     mudlet::self()->init();
 
 #if defined(Q_OS_WIN)

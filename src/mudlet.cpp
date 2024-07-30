@@ -696,6 +696,12 @@ void mudlet::init()
 //    });
 }
 
+void mudlet::setupConfig()
+{
+    confPath = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
+}
+
 QSettings* mudlet::getQSettings()
 {
     /*In case sensitive environments, two different config directories
@@ -3416,11 +3422,11 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     return true;
 }
 
-// Convenience helper - may aide things if we want to put files in a different
-// place...!
+// This is a static wrapper for singleton instance method
+// Should only be called after mudlet has been initialised
 QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
 {
-    QString confPath = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    QString confPath = self()->confPath;
     switch (mode) {
     case mainPath:
         // The root of all mudlet data for the user - does not end in a '/'

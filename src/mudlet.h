@@ -297,6 +297,7 @@ public:
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
+    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
@@ -314,6 +315,7 @@ public:
 
 
     void init();
+    void setupConfig();
     void activateProfile(Host*);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
