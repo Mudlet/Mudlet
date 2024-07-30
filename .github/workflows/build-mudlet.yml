@@ -362,9 +362,7 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.6
-      with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
@@ -373,9 +371,7 @@ jobs:
     - name: (Linux) Run Lua tests (GDB)
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.6
-      with:
-        run: gdb -batch -ex "run" -ex "bt full" --args ${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror
+      run: xvfb-run gdb -batch -ex "run" -ex "bt full" --args ${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
