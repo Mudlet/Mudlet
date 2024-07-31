@@ -4639,7 +4639,6 @@ void dlgTriggerEditor::saveTimer()
     const int timerID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
-        const QString old_name = pT->getName();
         pT->setName(name);
         const QString command = mpTimersMainArea->lineEdit_timer_command->text();
         const int hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
@@ -4726,22 +4725,10 @@ void dlgTriggerEditor::saveTimer()
         if (pT->state()) {
             clearEditorNotification();
 
-            if (old_name == tr("New timer")) {
-                QIcon _icon;
-                if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descActiveFolder;
-                } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descActive;
-                }
-                pItem->setIcon(0, _icon);
-                pItem->setText(0, name);
-                pT->setIsActive(true);
-            } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-            }
+            // don't activate new timers by default - might be annoying
+            pItem->setIcon(0, icon);
+            pItem->setText(0, name);
+
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
