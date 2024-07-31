@@ -49,7 +49,9 @@
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
+#ifdef QT_TEXTTOSPEECH_LIB
 #include <QVoice>
+#endif
 #include "post_guard.h"
 
 #include "TMxpMudlet.h"
