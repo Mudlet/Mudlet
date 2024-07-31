@@ -94,7 +94,9 @@
 
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QVoice>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 Q_DECLARE_METATYPE(QVoice)
+#endif
 #endif
 
 #if defined(Q_OS_MACOS)
