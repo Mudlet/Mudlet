@@ -1904,8 +1904,10 @@ void mudlet::readLateSettings(const QSettings& settings)
     mTtsPitch = settings.value(qsl("ttsPitch"), QVariant(0.0)).toDouble();
     mTtsRate = settings.value(qsl("ttsRate"), QVariant(0.0)).toDouble();
     mTtsVolume = settings.value(qsl("ttsVolume"), QVariant(0.0)).toDouble();
-    // there has to be a Qt-supplied way to deserialise this value
-    // settings.value(qsl("ttsVoice"), mTtsVoice);
+    QVariant voiceVariant = settings.value(qsl("ttsVoice"));
+    if (voiceVariant.canConvert<QVoice>()) {
+        mTtsVoice = voiceVariant.value<QVoice>();
+    }
 #endif
 }
 
@@ -2054,7 +2056,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("ttsRate"), mTtsRate);
     settings.setValue(qsl("ttsVolume"), mTtsVolume);
     // there has to be a Qt-supplied way to serialise this value
-    // settings.setValue(qsl("ttsVoice"), mTtsVoice);
+    settings.setValue(qsl("ttsVoice"), QVariant::fromValue(mTtsVoice));
 #endif
 }
 
