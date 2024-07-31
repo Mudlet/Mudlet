@@ -103,19 +103,19 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then 
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
         break
     fi
-    
+
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
     pacman_attempts=$((pacman_attempts +1))
-    
+
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
-  
+
 else
 
   echo "=== Installing Qt5 Packages ==="
@@ -131,12 +131,12 @@ else
       "mingw-w64-${BUILDCOMPONENT}-qt5-tools"; then
         break
     fi
-    
+
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
     pacman_attempts=$((pacman_attempts +1))
-    
+
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
@@ -165,12 +165,12 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
-    
+
   if [ $pacman_attempts -eq 10 ]; then
     exit 7
   fi
   pacman_attempts=$((pacman_attempts +1))
-    
+
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
@@ -186,12 +186,12 @@ if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/
   echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
   echo "  not end up in the same place when --tree \"user\" is used..."
   echo ""
-  
+
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
-  echo "    Completed" 
+  echo "    Completed"
 else
   echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
   echo "  do not end up in the same place"
@@ -213,27 +213,6 @@ echo "for more information (remembering to include the '--lua-version 5.1'"
 echo "command line argument to get the right details when using it!)"
 echo ""
 
-# Need to overcome a problem with luarock 3.9.0 which uses Windows CMD MKDIR
-# but which cannot make any missing intermediate directories if the
-# luafilesystem module for Lua 5.4 is not present, see:
-# https://github.com/msys2/MINGW-packages/pull/12002
-if [ "$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")" -eq 0 ]; then
-  # Need to install the 5.4 luafilesystem rock
-  echo "  Improving the luarocks operation by installing the 5.4 luafilesystem rock."
-  neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
-  until [ -z "${neededPath}" ]; do
-    echo "    Inserting a needed directory: ${neededPath} ..."
-    mkdir -p "${neededPath}"
-    neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
-    echo ""
-  done
-  echo "    Completed"
-  echo ""
-fi
-
-# Doing the above fixes things for 5.1 luarocks subsequently (as luarocks
-# itself runs in a Lua 5.4 environment) - otherwise one has to do the same thing
-# for EVERY luarock!
 
 # Save the wanted Luarocks 5.1 command so it can be used repeatedly next
 # this uses the "system" (shared between all users) tree, using the --local
