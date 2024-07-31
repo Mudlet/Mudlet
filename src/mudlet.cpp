@@ -92,6 +92,11 @@
 #include <QSettings>
 #endif
 
+#ifdef QT_TEXTTOSPEECH_LIB
+#include <QVoice>
+Q_DECLARE_METATYPE(QVoice)
+#endif
+
 #if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
