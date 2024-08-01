@@ -351,6 +351,10 @@ unix:!macx {
         "'C:\msys64\mingw64' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
     }
     GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
+    
+    message("MINGW_BASE_DIR_TEST=$${MINGW_BASE_DIR_TEST}")
+    message("GITHUB_WORKSPACE_TEST=$${GITHUB_WORKSPACE_TEST}")
+    
     isEmpty( GITHUB_WORKSPACE_TEST ) {
         # For users/developers building with MSYS2 on Windows:
         LIBS +=  \
@@ -364,16 +368,16 @@ unix:!macx {
     } else {
         # For CI building with MSYS2 for Windows in a GH Workflow:
         contains(QMAKE_HOST.arch, x86_64) {
-
+        
             LIBS +=  \
-                -LD:\\a\\_temp\\msys64\\mingw64/lib \
-                -LD:\\a\\_temp\\msys64\\mingw64/bin \
+                -LD:\\a\\_temp\\msys64\\clang64/lib \
+                -LD:\\a\\_temp\\msys64\\clang64/bin \
                 -llua5.1 \
                 -llibhunspell-1.7
 
             INCLUDEPATH += \
-                D:\\a\\_temp\\msys64\\mingw64/include \
-                D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                D:\\a\\_temp\\msys64\\clang64/include \
+                D:/a/_temp/msys64/clang64/include/lua5.1 \
                 $${MINGW_BASE_DIR_TEST}/include/pugixml
         } else {
             LIBS +=  \
