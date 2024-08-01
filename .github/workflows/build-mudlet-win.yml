@@ -38,7 +38,7 @@ jobs:
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
 
     - name: (Windows 32) Setup MSYS2

@@ -47,10 +47,16 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   exit 2
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
+  MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+  export MINGW_INTERNAL_BASE_DIR
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+  MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+  export MINGW_INTERNAL_BASE_DIR
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  export BUILD_BITNESS="64"
+  MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
+  export MINGW_INTERNAL_BASE_DIR
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
   echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
@@ -90,10 +96,10 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
+# What is this needed for?
 MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
 export MINGW_BASE_DIR
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
+
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
 RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
@@ -129,7 +135,7 @@ echo ""
 #### Qt Creator note ####
 # The following WITH_XXXXs can usefully be used in the Qt Creator's "Project"
 # tab for the "Kit" concerned in the "Build Environment" section:
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+if [ "${BUILD_BITNESS}" = "64" ]; then
   # The MINGW64 case already has the Qt5 keychain package pre-built so no need
   # to build our bundled copy:
   export WITH_OWN_QTKEYCHAIN="NO"
@@ -150,7 +156,10 @@ export WITH_MAIN_BUILD_SYSTEM="NO"
 echo "Running qmake to make MAKEFILE ..."
 echo ""
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+# TODO: This can be made better by just making a QMAKE and SPEC (or similar) variable
+if [ "${MSYSTEM}" = "CLANG64" ]; then
+    qmake6 ../src/mudlet.pro -spec win32-clang-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 else
     qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
@@ -159,14 +168,15 @@ fi
 echo " ... qmake done."
 echo ""
 
-export WITH_CCACHE="YES"
+# TODO: Check for Clang build and change accordingly...
+export WITH_CCACHE="NO"
 
-if [ "${WITH_CCACHE}" = "YES" ]; then
-  echo "  Tweaking Makefile.Release to use ccache..."
-  sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
-  sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
-  echo ""
-fi
+#if [ "${WITH_CCACHE}" = "YES" ]; then
+#  echo "  Tweaking Makefile.Release to use ccache..."
+#  sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
+#  sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
+#  echo ""
+#fi
 
 echo "Running make to build project ..."
 echo ""
