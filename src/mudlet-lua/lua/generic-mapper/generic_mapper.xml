@@ -4344,7 +4344,7 @@ function map.roomFind(query, lines)
       roomarea = v.area
       cechoLink(
         string.format("&lt;cyan&gt; %-10s", roomid),
-        'map.gotoRoom(' .. roomid .. ')',
+        'gotoRoom(' .. roomid .. ')',
         string.format("Go to %s (%s)", roomid, tostring(roomname)),
         true
       )
@@ -4368,7 +4368,7 @@ function map.roomFind(query, lines)
       cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
       cechoLink(
         "&lt;cyan&gt;" .. roomid,
-        'map.gotoRoom(' .. roomid .. ')',
+        'gotoRoom(' .. roomid .. ')',
         string.format("Go to %s (%s)", roomid, tostring(roomname)),
         true
       )

@@ -427,8 +427,8 @@ public:
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
-    dlgPackageManager* mpPackageManager;
-    dlgModuleManager* mpModuleManager;
+    QPointer<dlgPackageManager> mpPackageManager;
+    QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
