@@ -4531,11 +4531,10 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     if (pHost->mAdvertiseScreenReader != state) {
         pHost->mAdvertiseScreenReader = state;
 
-        if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("MTTS"));
+        if (pHost->mAdvertiseScreenReader) {
+            comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));
+        } else if (pHost->mpClientVariables->mShareScreenReader != ClientVariables::DataSharingBehaviour::Block) {
+            comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::DoNotShare));
         }
     }
 }
@@ -4612,10 +4611,13 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
 
     if (pHost->mpClientVariables->mShareScreenReader != newIndex) {
         pHost->mpClientVariables->mShareScreenReader = newIndex;
+        checkBox_advertiseScreenReader->setChecked(pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share ? true : false);
 
         if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("MTTS"));
         }
     }
 }
