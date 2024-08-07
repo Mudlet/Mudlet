@@ -763,7 +763,15 @@ void mudlet::setupConfig()
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
     if (QFileInfo(markerExecDir).isFile()) {
-        confPath = qsl("%1/portable").arg(execDir);
+        QString portPath = readMarkerFile(markerExecDir);
+        if (portPath.isEmpty()) {
+            portPath = qsl("./portable"); // fallback value for empty portable.txt
+        }
+        portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
+        if (!validateConfDir(portPath)) {
+            qFatal("FATAL: portable data path invalid");
+        }
+        confPath = portPath;
     } else if (QFileInfo(markerHomeDir).isFile()) {
         QString portPath = readMarkerFile(markerHomeDir);
         portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
