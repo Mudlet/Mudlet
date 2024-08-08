@@ -57,6 +57,7 @@ include(../3rdparty/communi/communi.pri)
 # NOW we can put ours in:
     QMAKE_CXXFLAGS_RELEASE += -O3
     QMAKE_CFLAGS_RELEASE += -O3
+    QMAKE_LFLAGS += -lmimalloc
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
     QMAKE_CXXFLAGS_DEBUG += -O0
@@ -366,8 +367,13 @@ unix:!macx {
             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
             $${MINGW_BASE_DIR_TEST}/include/pugixml
     } else {
+        message("Printing entire GitHub Env for build environment debugging...")
+        message($${GITHUB_ENV})
+    
         # For CI building with MSYS2 for Windows in a GH Workflow:
         contains(QMAKE_HOST.arch, x86_64) {
+        
+            # For Clang builds MINGW_BASE_DIR is wrong, we probably need to use a CLANG_BASE_DIR?
         
             LIBS +=  \
                 -LD:\\a\\_temp\\msys64\\clang64/lib \
@@ -378,7 +384,7 @@ unix:!macx {
             INCLUDEPATH += \
                 D:\\a\\_temp\\msys64\\clang64/include \
                 D:/a/_temp/msys64/clang64/include/lua5.1 \
-                $${MINGW_BASE_DIR_TEST}/include/pugixml
+                D:/a/_temp/msys64/clang64/include/pugixml
         } else {
             LIBS +=  \
                 -LD:\\a\\_temp\\msys64\\mingw32/lib \

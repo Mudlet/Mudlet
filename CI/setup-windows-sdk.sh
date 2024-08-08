@@ -100,6 +100,7 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   pacman_attempts=1
   while true; do
     if /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
@@ -152,9 +153,9 @@ while true; do
     git \
     man \
     rsync \
-    "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+    "mingw-w64-${BUILDCOMPONENT}-mimalloc" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
     "mingw-w64-${BUILDCOMPONENT}-ntldd" \
