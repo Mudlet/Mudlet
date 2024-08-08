@@ -7910,7 +7910,9 @@ void dlgTriggerEditor::showError(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::showInfo(const QString& error)
@@ -7920,7 +7922,9 @@ void dlgTriggerEditor::showInfo(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::showWarning(const QString& error)
@@ -7930,7 +7934,9 @@ void dlgTriggerEditor::showWarning(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::slot_showActions()
