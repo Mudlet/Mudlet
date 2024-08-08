@@ -200,7 +200,7 @@ echo "For per-user Lua modules from LuaRocks:"
 echo "- Use '--tree \"user\"' instead of '--local'"
 echo "- This separates modules for different build environments"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
-echo "- See 'luarocks path --help --lua-version 5.1' for details"
+echo "- See 'luarocks path --help' for details"
 
 # Need to overcome a problem with luarock 3.9.0 which uses Windows CMD MKDIR
 # but which cannot make any missing intermediate directories if the
