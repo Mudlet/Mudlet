@@ -198,7 +198,6 @@ else
 fi
 echo "For per-user Lua modules from LuaRocks:"
 echo "- Use '--tree \"user\"' instead of '--local'"
-echo "- This separates modules for different build environments"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
