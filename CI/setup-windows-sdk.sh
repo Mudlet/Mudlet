@@ -197,7 +197,7 @@ else
   echo "  do not end up in the same place"
 fi
 echo "For per-user Lua modules from LuaRocks:"
-echo "- Use '--tree \"user\"' instead of '--local'"
+echo "- Use '--tree \"user\"' (literally) instead of '--local'"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
