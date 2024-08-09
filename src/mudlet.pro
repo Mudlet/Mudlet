@@ -40,6 +40,10 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
     error("Mudlet requires Qt 5.14 or later")
 }
 
+win32 {
+    QMAKE_LFLAGS += -lmimalloc
+}
+
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 
@@ -57,7 +61,6 @@ include(../3rdparty/communi/communi.pri)
 # NOW we can put ours in:
     QMAKE_CXXFLAGS_RELEASE += -O3
     QMAKE_CFLAGS_RELEASE += -O3
-    QMAKE_LFLAGS += -lmimalloc
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
     QMAKE_CXXFLAGS_DEBUG += -O0
@@ -368,7 +371,7 @@ unix:!macx {
             $${MINGW_BASE_DIR_TEST}/include/pugixml
     } else {
         message("Printing entire GitHub Env for build environment debugging...")
-        message($${GITHUB_ENV})
+        message("GITHUB_ENV=$${GITHUB_ENV}")
     
         # For CI building with MSYS2 for Windows in a GH Workflow:
         contains(QMAKE_HOST.arch, x86_64) {
