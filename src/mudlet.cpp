@@ -100,7 +100,7 @@ namespace coreMacOS {
 }
 #endif
 
-#include <mimalloc-new-delete.h>
+//#include <mimalloc-new-delete.h>
 
 // PLACEMARKER: sample benchmarking code
 // #include <nanobench.h>
