@@ -44,7 +44,6 @@ win32 {
     INCLUDEPATH += $${MINGW_PREFIX}/include
     LIBS += -L$${MINGW_PREFIX}/lib \
             -ljemalloc
-    QMAKE_LFLAGS += -Wl,-rpath,$${MINGW_PREFIX}/lib
 }
 
 # Including IRC Library
