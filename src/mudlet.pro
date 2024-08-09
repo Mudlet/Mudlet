@@ -41,10 +41,10 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 win32 {
-    INCLUDEPATH += /clang64/include
-    LIBS += -L/clang64/lib \
+    INCLUDEPATH += $${MINGW_PREFIX}/include
+    LIBS += -L$${MINGW_PREFIX}/lib \
             -ljemalloc
-    QMAKE_LFLAGS += -Wl,-rpath,/clang64/lib
+    QMAKE_LFLAGS += -Wl,-rpath,$${MINGW_PREFIX}/lib
 }
 
 # Including IRC Library
@@ -378,17 +378,23 @@ unix:!macx {
         contains(QMAKE_HOST.arch, x86_64) {
         
             # For Clang builds MINGW_BASE_DIR is wrong, we probably need to use a CLANG_BASE_DIR?
+            
+            #LIBS +=  \
+            #    -LD:\\a\\_temp\\msys64\\clang64/lib \
+            #    -LD:\\a\\_temp\\msys64\\clang64/bin \
+            #    -llua5.1 \
+            #    -llibhunspell-1.7
         
             LIBS +=  \
-                -LD:\\a\\_temp\\msys64\\clang64/lib \
-                -LD:\\a\\_temp\\msys64\\clang64/bin \
+                -L$${RUNNER_TEMP}/msys64$${MINGW_PREFIX}/lib \
+                -L$${RUNNER_TEMP}/msys64$${MINGW_PREFIX}/bin \
                 -llua5.1 \
                 -llibhunspell-1.7
 
             INCLUDEPATH += \
-                D:\\a\\_temp\\msys64\\clang64/include \
-                D:/a/_temp/msys64/clang64/include/lua5.1 \
-                D:/a/_temp/msys64/clang64/include/pugixml
+                $${RUNNER_TEMP}/msys64$${MINGW_PREFIX}/include \
+                $${RUNNER_TEMP}/msys64$${MINGW_PREFIX}/include/lua5.1 \
+                $${RUNNER_TEMP}/msys64$${MINGW_PREFIX}/include/pugixml
         } else {
             LIBS +=  \
                 -LD:\\a\\_temp\\msys64\\mingw32/lib \

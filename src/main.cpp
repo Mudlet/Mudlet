@@ -164,8 +164,6 @@ int main(int argc, char* argv[])
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
     }
-    
-    mi_version();
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Enable leak detection for MSVC debug builds.
