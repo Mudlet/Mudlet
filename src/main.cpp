@@ -47,7 +47,6 @@
 #include "Announcer.h"
 #include "FileOpenHandler.h"
 
-#include <mimalloc-new-delete.h>
 
 using namespace std::chrono_literals;
 

@@ -96,8 +96,6 @@
 // Any other OS?
 #endif
 
-#include <mimalloc.h>
-
 #include "post_guard.h"
 
 class QCloseEvent;

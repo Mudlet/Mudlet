@@ -41,7 +41,10 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 win32 {
-    QMAKE_LFLAGS += -lmimalloc
+    INCLUDEPATH += -I/clang64/include
+    LIBS += -L/clang64/lib \
+            -ljemalloc
+    QMAKE_LFLAGS += -Wl,-rpath,/clang64/lib
 }
 
 # Including IRC Library
@@ -370,8 +373,6 @@ unix:!macx {
             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
             $${MINGW_BASE_DIR_TEST}/include/pugixml
     } else {
-        message("Printing entire GitHub Env for build environment debugging...")
-        message("GITHUB_ENV=$${GITHUB_ENV}")
     
         # For CI building with MSYS2 for Windows in a GH Workflow:
         contains(QMAKE_HOST.arch, x86_64) {
