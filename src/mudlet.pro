@@ -41,7 +41,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 win32 {
-    INCLUDEPATH += -I/clang64/include
+    INCLUDEPATH += /clang64/include
     LIBS += -L/clang64/lib \
             -ljemalloc
     QMAKE_LFLAGS += -Wl,-rpath,/clang64/lib
