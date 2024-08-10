@@ -964,14 +964,7 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 
 void dlgTriggerEditor::readSettings()
 {
-    /* In case sensitive environments, two different config directories
-       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-       Furthermore, we skip the version from the application name to follow the convention.
-       For compatibility with older settings, if no config is loaded
-       from the config directory "mudlet", application "Mudlet", we try to load from the config
-       directory "Mudlet", application "Mudlet 1.0". */
-    const QSettings settings_new("mudlet", "Mudlet");
-    const QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+    QSettings& settings = *mudlet::getQSettings();
 
     const QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
@@ -991,11 +984,7 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    /* In case sensitive environments, two different config directories
-       were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
-       (the organization name) to "mudlet".
-       Furthermore, we skip the version from the application name to follow the convention.*/
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::getQSettings();
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
     settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
@@ -7910,7 +7899,9 @@ void dlgTriggerEditor::showError(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::showInfo(const QString& error)
@@ -7920,7 +7911,9 @@ void dlgTriggerEditor::showInfo(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::showWarning(const QString& error)
@@ -7930,7 +7923,9 @@ void dlgTriggerEditor::showWarning(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::slot_showActions()
