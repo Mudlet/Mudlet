@@ -131,9 +131,7 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
-    auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
-                                   (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
+    QSettings* pSettings = mudlet::getQSettings();
     auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
@@ -246,6 +244,10 @@ int main(int argc, char* argv[])
     } else {
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
+
+    mudlet::start();
+    // Detect config path before any files are read
+    mudlet::self()->setupConfig();
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
@@ -618,7 +620,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    mudlet::start();
+    mudlet::self()->init();
 
 #if defined(Q_OS_WIN)
     // Associate mudlet with .mpackage files
@@ -662,7 +664,10 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfiles);
+    QTimer::singleShot(0, qApp, [cliProfiles]() {
+        // ensure Mudlet singleton is initialised before calling profile loading
+        mudlet::self()->startAutoLogin(cliProfiles);
+    });
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
