@@ -55,6 +55,9 @@ jobs:
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         printenv
+        jemalloc-config --libdir
+        jemalloc-config --includedir
+        jemalloc-config --libs
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
         
     - name: restore ccache
