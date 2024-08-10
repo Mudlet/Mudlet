@@ -691,7 +691,7 @@ int main(int argc, char* argv[])
     int ret = app->exec();
     
     // Dump allocator statistics to stderr.
-    malloc_stats_print(NULL, NULL, NULL);
+    je_malloc_stats_print(NULL, NULL, NULL);
     
     return ret;
 }
