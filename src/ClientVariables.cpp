@@ -93,12 +93,6 @@ QString ClientVariables::getClientVariableSystemType()
     return systemType.isEmpty() ? QString() : systemType;
 }
 
-QString ClientVariables::getClientVariableBoldIsBright()
-{
-    return qsl("1"); // 4.17.2
-    //return qsl("%1").arg(mpHost->mBoldIsBright);
-}
-
 QString ClientVariables::getClientVariableCharset()
 {
     const QString charsetEncoding = mpHost->mTelnet.getEncoding();
@@ -265,7 +259,6 @@ QMap<QString, QPair<bool, QString>> ClientVariables::getClientVariableDataMap()
     clientVariablesDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getClientVariableTruecolor()));
     clientVariablesDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getClientVariableTLS()));
     clientVariablesDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getClientVariableWordWrap()));
-    clientVariablesDataMap.insert(qsl("BOLD_IS_BRIGHT"), qMakePair(isUserVar, getClientVariableBoldIsBright()));
 
     if (mShareFont == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getClientVariableFont()));
@@ -668,25 +661,27 @@ void ClientVariables::sendClientVariablesList() {
         return;
     }
 
-    QJsonObject clientVariablesList;
+    QJsonArray clientVariablesList;
 
     const auto mnesVariables = mnesVariablesMap();
 
     for (auto it = mnesVariables.constBegin(); it != mnesVariables.constEnd(); ++it) {
-        clientVariablesList[it.key()] = QJsonObject{
-            {"available", true},
-            {"updatable", it.value()}
-        };
+        QJsonObject variable;
+        variable["name"] = it.key();
+        variable["available"] = true;
+        variable["updatable"] = it.value();
+        clientVariablesList.append(variable);
     }
 
     if (!mpHost->mEnableMNES) {
         const auto nonMNESVariables = nonMNESVariablesMap();
 
         for (auto it = nonMNESVariables.constBegin(); it != nonMNESVariables.constEnd(); ++it) {
-            clientVariablesList[it.key()] = QJsonObject{
-                {"available", true},
-                {"updatable", it.value()}
-            };
+            QJsonObject variable;
+            variable["name"] = it.key();
+            variable["available"] = true;
+            variable["updatable"] = it.value();
+            clientVariablesList.append(variable);
         }
 
         const auto protectedVariables = protectedVariablesMap();
@@ -695,24 +690,23 @@ void ClientVariables::sendClientVariablesList() {
             const auto &[updatable, behaviour, translation] = it.value();
 
             if (behaviour != ClientVariables::DataSharingBehaviour::Block) {
-                const bool available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
-                clientVariablesList[it.key()] = QJsonObject{
-                    {"available", available},
-                    {"updatable", updatable}
-                };
+                QJsonObject variable;
+                variable["name"] = it.key();
+                variable["available"] = (behaviour == ClientVariables::DataSharingBehaviour::Share);
+                variable["updatable"] = updatable;
+                clientVariablesList.append(variable);
             }
         }
     }
 
     if (!clientVariablesList.isEmpty()) {
         QJsonDocument doc(clientVariablesList);
-        QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
+        QString gmcpMessage = "Client.Variables.List " + doc.toJson(QJsonDocument::Compact);
 
         std::string output;
         output += TN_IAC;
         output += TN_SB;
         output += OPT_GMCP;
-        output += "Client.Variables.List ";
         output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
         output += TN_IAC;
         output += TN_SE;
@@ -764,25 +758,6 @@ bool ClientVariables::updateClientVariable(const QString& key, const QString& va
         if (updated) {
             qDebug() << "Game changed encoding to" << encoding;
         }
-    } else if (key == "BOLD_IS_BRIGHT") {
-        bool updated = false;
-
-        if (value != clientVariablesDataMap[key].second) {
-            if (value.toInt() == Qt::Unchecked) {
-                //mpHost->mBoldIsBright = Qt::Unchecked;
-                updated = true;
-            } else if (value.toInt() == Qt::Checked) {
-                //mpHost->mBoldIsBright = Qt::Checked;
-                updated = true;
-            } else {
-                //mpHost->mBoldIsBright = Qt::PartiallyChecked;
-                updated = true;
-            }
-        }
-
-        if (updated) {
-            qDebug() << "Game changed boldIsBright to" << value;
-        }
     }
 
     return updated;
@@ -793,7 +768,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         return;
     }
 
-    QJsonObject response;
+    QJsonArray response;
     QStringList requested;
 
     const auto nonProtectedVariables = nonProtectedVariablesMap();
@@ -804,8 +779,11 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     auto addResponse = [&](const QString& key, bool available, bool updatable, bool requested = false, const QString& value = QString()) {
         QJsonObject obj{
+            {"name", key},
             {"available", available},
-            {"updatable", updatable}
+            {"updatable", updatable},
+            {"source", sources[source]},
+            {"timestamp", timestamp}
         };
 
         if (source == ClientVariables::SourceRequest) {
@@ -832,106 +810,75 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
             }
         }
 
-        obj["source"] = sources[source];
-        obj["timestamp"] = timestamp;
-        response[key] = obj;
+        response.append(obj);
     };
 
-    const QString process = (source == ClientVariables::SourceClient ? "[ \"" + data + "\" ]" : data);
+    QString process;
+
+    if (source == ClientVariables::SourceClient) {
+        process = "[{\"name\" : \"" + data + "\"}]";
+    } else {
+        process = data;
+    }
+
     auto doc = QJsonDocument::fromJson(process.toUtf8());
 
-    if (doc.isNull()) {
-        qWarning() << "ClientVariables::sendClientVariablesUpdate: Invalid JSON data";
+    if (!doc.isArray()) {
+        qWarning() << "ClientVariables::sendClientVariablesUpdate: Invalid or unsupported JSON data";
         return;
     }
 
-    if (doc.isArray()) {
-        QJsonArray jsonArray = doc.array();
+    QJsonArray jsonArray = doc.array();
 
-        for (const QJsonValue& value : jsonArray) {
-            if (value.isString()) {
-                QString key = value.toString();
-                bool available = !mpHost->mEnableMNES; // Default availability state
-
-                if (source != ClientVariables::SourceRequest && !clientVariablesRequested.contains(key)) {
-                    qDebug() << "We did not update client variable" << key << "because the server did not request it yet";
-                    continue;
-                }
-
-                if (protectedVariables.contains(key)) {
-                    const auto &[updatable, behaviour, translation] = protectedVariables[key];
-
-                    if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
-                        addResponse(key, false, false);
-                    } else {
-                        available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
-
-                        if (!available && source == ClientVariables::SourceRequest) {
-                            requested << translation;
-                        }
-
-                        if (clientVariablesDataMap.contains(key)) {
-                            addResponse(key, available, updatable, !available, clientVariablesDataMap[key].second);
-                        } else {
-                            addResponse(key, available, updatable, !available);
-                        }
-                    }
-                } else if (nonProtectedVariables.contains(key)) {
-                    if (clientVariablesDataMap.contains(key)) {
-                        addResponse(key, true, nonProtectedVariables[key], false, clientVariablesDataMap[key].second);
-                    } else {
-                        addResponse(key, true, nonProtectedVariables[key]);
-                    }
-                } else {
-                    addResponse(key, false, false);
-                }
-            } else {
-                qWarning() << "ClientVariables::sendClientVariablesUpdate: Array element is not a string";
-            }
+    for (const QJsonValue& jsonValue : jsonArray) {
+        if (!jsonValue.isObject()) {
+            qWarning() << "ClientVariables::sendClientVariablesUpdate: Array element is not an object";
+            return;             
         }
-    } else if (doc.isObject()) {
-        QJsonObject jsonObj = doc.object();
 
-        for (QJsonObject::ConstIterator it = jsonObj.constBegin(); it != jsonObj.constEnd(); ++it) {
-            QString key = it.key();
-            QString value = it.value().toString();
-            bool available = !mpHost->mEnableMNES; // Default availability state
+        QJsonObject jsonObj = jsonValue.toObject();
+        QString key = jsonObj.value("name").toString();
+        QString value = jsonObj.value("value").toString();
 
-            if (source != ClientVariables::SourceRequest && !clientVariablesRequested.contains(key)) {
-                qDebug() << "We did not update client variable" << key << "because the server did not request it yet";
-                continue;
-            }
+        if (key.isEmpty()) {
+            qWarning() << "ClientVariables::sendClientVariablesUpdate: Missing or invalid 'name' field";
+            continue;
+        }
 
-            if (protectedVariables.contains(key)) {
-                const auto &[updatable, behaviour, translation] = protectedVariables[key];
+        if (source != ClientVariables::SourceRequest && !clientVariablesRequested.contains(key)) {
+            qDebug() << "We did not update client variable" << key << "because the server did not request it yet";
+            continue;
+        }
 
-                if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
-                    addResponse(key, false, false);
-                } else {
-                    available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
+        bool available = !mpHost->mEnableMNES; // Default availability state
 
-                    if (!available && source == ClientVariables::SourceRequest) {
-                        requested << translation;
-                    }
+        if (protectedVariables.contains(key)) {
+            const auto &[updatable, behaviour, translation] = protectedVariables[key];
 
-                    if (clientVariablesDataMap.contains(key)) {
-                        addResponse(key, available, updatable, !available, value);
-                    } else {
-                        addResponse(key, available, updatable, !available);
-                    }
-                }
-            } else if (nonProtectedVariables.contains(key)) {
-                if (clientVariablesDataMap.contains(key)) {
-                    addResponse(key, true, nonProtectedVariables[key], false, value);
-                } else {
-                    addResponse(key, true, nonProtectedVariables[key]);
-                }
-            } else {
+            if (behaviour == ClientVariables::DataSharingBehaviour::Block) {
                 addResponse(key, false, false);
+            } else {
+                available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
+
+                if (!available && source == ClientVariables::SourceRequest) {
+                    requested << translation;
+                }
+
+                if (clientVariablesDataMap.contains(key)) {
+                    addResponse(key, available, updatable, !available, value);
+                } else {
+                    addResponse(key, available, updatable, !available);
+                }
             }
+        } else if (nonProtectedVariables.contains(key)) {
+            if (clientVariablesDataMap.contains(key)) {
+                addResponse(key, true, nonProtectedVariables[key], false, value);
+            } else {
+                addResponse(key, true, nonProtectedVariables[key]);
+            }
+        } else {
+            addResponse(key, false, false);
         }
-    } else {
-        qWarning() << "ClientVariables::sendClientVariablesUpdate: Unsupported JSON format";
     }
 
     if (source == ClientVariables::SourceClient && response.isEmpty()) {

@@ -3133,15 +3133,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
 
-        /* Uncomment when mBoldIsBright is implemented 
-        const auto priorBoldIsBright = pHost->mBoldIsBright;
-        pHost->mBoldIsBright = checkBox_boldIsBright->checkState();
-
-        if (priorBoldIsBright != pHost->mBoldIsBright) {
-            slot_changeBoldIsBright();
-        }
-        */
-
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
@@ -4507,19 +4498,7 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
 
     qWarning() << "unknown link clicked in profile preferences:" << link;
 }
-/* Uncomment when BoldIsBright is implemented
-void dlgProfilePreferences::slot_changeBoldIsBright()
-{
-    Host* pHost = mpHost;
 
-    if (!pHost) {
-        return;
-    }
-
-    pHost->mpClientVariables->sendClientVariablesUpdate(qsl("BOLD_IS_BRIGHT"), ClientVariables::SourceClient);
-    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("BOLD_IS_BRIGHT"));
-}
-*/
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
     Host* pHost = mpHost;

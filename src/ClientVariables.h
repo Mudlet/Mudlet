@@ -46,7 +46,6 @@ class ClientVariables : public QObject
             SourceServer = 1,
             SourceClient = 2};
 
-        QString getClientVariableBoldIsBright();
         QString getClientVariableCharset();
         QString getClientVariableClientName();
         QString getClientVariableClientVersion();
@@ -127,7 +126,6 @@ class ClientVariables : public QObject
             return {
                 {"256_COLORS", false},
                 {"ANSI", false},
-                {"BOLD_IS_BRIGHT", true},
                 {"OSC_COLOR_PALETTE", false},
                 {"UTF-8", false},
                 {"TLS", false},
