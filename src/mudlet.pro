@@ -41,8 +41,8 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 win32 {
-    INCLUDEPATH += $${MINGW_PREFIX}/include
-    LIBS += -L$${MINGW_PREFIX}/lib \
+    INCLUDEPATH += D:/a/_temp/msys64/clang64/include
+    LIBS += -LD:/a/_temp/msys64/clang64/lib \
             -ljemalloc
     QMAKE_LFLAGS += -ljemalloc
 }

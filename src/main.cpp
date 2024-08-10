@@ -47,6 +47,8 @@
 #include "Announcer.h"
 #include "FileOpenHandler.h"
 
+#include <jemalloc/jemalloc.h>
+
 
 using namespace std::chrono_literals;
 
@@ -686,7 +688,12 @@ int main(int argc, char* argv[])
     // click something in a parent process to the application when you are stuck
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
-    return app->exec();
+    int ret = app->exec();
+    
+    // Dump allocator statistics to stderr.
+    malloc_stats_print(NULL, NULL, NULL);
+    
+    return ret;
 }
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
