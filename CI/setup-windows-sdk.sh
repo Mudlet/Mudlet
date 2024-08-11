@@ -103,7 +103,8 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
+	  "mingw-w64-${BUILDCOMPONENT}-qt6-declarative"; then
         break
     fi
 
