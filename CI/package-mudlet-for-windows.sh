@@ -120,9 +120,9 @@ ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 # Making sure that the WMF backend DLL is being copied
 if [ "${BUILD_BITNESS}" = "64" ]; then
     if [ ! -f "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/windowsmediaplugin.dll" ]; then
-      echo "ERROR: windowsmediaplugin.dll not found - Mudlet will no have sound in windows"
-      echo "Install package mingw-w64-x86_64-qt6-multimedia-wmf to solve"
-      exit 7
+        echo "ERROR: windowsmediaplugin.dll not found - Mudlet will no have sound in windows"
+        echo "Install package mingw-w64-x86_64-qt6-multimedia-wmf to solve"
+        exit 7
     fi
 
     mkdir -p "./multimedia/"
