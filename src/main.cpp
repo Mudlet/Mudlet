@@ -429,7 +429,7 @@ int main(int argc, char* argv[])
         QCoreApplication::removeTranslator(commandLineTranslator);
         commandLineTranslator.clear();
     }
-	
+
     // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #if defined(Q_OS_WIN32)
