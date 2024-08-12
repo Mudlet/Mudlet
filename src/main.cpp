@@ -157,9 +157,6 @@ int main(int argc, char* argv[])
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
 #ifdef Q_OS_WIN32
-#ifdef Q_PROCESSOR_X86_64
-    qputenv("QT_MEDIA_BACKEND", "windows");
-#endif
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
@@ -432,6 +429,23 @@ int main(int argc, char* argv[])
         QCoreApplication::removeTranslator(commandLineTranslator);
         commandLineTranslator.clear();
     }
+	
+	// Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if defined(Q_OS_WIN32)
+    if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        // This variable is not set - and later versions of Qt 6.x need it for
+        // sound to work:
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental varable to: \"windows\".";
+        } else {
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental varable to: \"windows\", sound may not work.";
+        }
+    } else {
+        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental varable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+    }
+#endif
+#endif
 
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
