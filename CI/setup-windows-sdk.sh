@@ -159,7 +159,6 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   mv /msys64/clang64/bin/harfbuzz.bak /msys64/clang64/bin/harfbuzz
   mv /msys64/clang64/lib/libharfbuzz.bak.* /msys64/clang64/lib/libharfbuzz.*
   mv /msys64/clang64/include/harfbuzz_backup /msys64/clang64/include/harfbuzz
-
   
 else
 
