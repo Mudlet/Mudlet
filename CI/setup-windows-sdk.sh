@@ -131,8 +131,8 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   echo "=== Installing Qt6 Packages ==="
   pacman_attempts=1
   while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
-      "--assume-installed=mingw-w64-clang-x86_64-harfbuzz mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+    if /usr/bin/pacman -Su --noconfirm \
+      "--assume-installed=mingw-w64-clang-x86_64-harfbuzz-9.0.0-1 mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
