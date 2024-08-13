@@ -44,7 +44,6 @@
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
 # 6 - No Mudlet.exe file found to work with
-# 7 - Mudlet will not have sound because windowsmediaplugin.dll not found
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
@@ -117,19 +116,7 @@ else
 fi
 ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 
-# Making sure that the WMF backend DLL is being copied
-if [ "${BUILD_BITNESS}" = "64" ]; then
-    if [ ! -f "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/windowsmediaplugin.dll" ]; then
-        echo "ERROR: windowsmediaplugin.dll not found - Mudlet will no have sound in windows"
-        echo "Install package mingw-w64-x86_64-qt6-multimedia-wmf to solve"
-        exit 7
-    fi
 
-    mkdir -p "./multimedia/"
-    cp -v -p -t "./multimedia/" \
-        "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/windowsmediaplugin.dll"
-    echo "Copied ${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/windowsmediaplugin.dll"
-fi
 
 # To determine which system libraries have to be copied in it requires
 # continually trying to run the executable on the target type system
