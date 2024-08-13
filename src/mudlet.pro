@@ -40,13 +40,6 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
     error("Mudlet requires Qt 5.14 or later")
 }
 
-win32 {
-    INCLUDEPATH += D:/a/_temp/msys64/clang64/include
-    LIBS += -LD:/a/_temp/msys64/clang64/lib \
-            -ljemalloc
-    QMAKE_LFLAGS += -ljemalloc
-}
-
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 

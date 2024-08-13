@@ -102,7 +102,6 @@ namespace coreMacOS {
 
 // PLACEMARKER: sample benchmarking code
 // #include <nanobench.h>
-#include <jemalloc/jemalloc.h>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -3094,9 +3093,6 @@ mudlet::~mudlet()
         }
     }
     mudlet::smpSelf = nullptr;
-    
-    // Dump allocator statistics to stderr.
-    je_malloc_stats_print(NULL, NULL, NULL);
 }
 
 void mudlet::slot_toggleFullScreenView()

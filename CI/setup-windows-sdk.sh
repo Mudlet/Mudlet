@@ -96,11 +96,41 @@ echo "    to go and have a cup of tea (other beverages are available) in the mea
 echo ""
 
 if [ "${BUILD_BITNESS}" = "64" ]; then
+  echo "=== Installing Harfbuzz from source ==="
+  pacman_attempts=1
+  while true; do
+    if /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+      "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
+      "mingw-w64-${BUILDCOMPONENT}-meson" \
+      "mingw-w64-${BUILDCOMPONENT}-ninja"; then
+        break
+    fi
+    
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    pacman_attempts=$((pacman_attempts +1))
+    
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
+  
+  git clone https://github.com/harfbuzz/harfbuzz.git
+  cd harfbuzz
+  meson setup build --prefix=/msys64/clang64 --buildtype=release -Dgraphite=disabled
+  meson compile -C build
+  meson install -C build
+  
+fi
+
+
+
+if [ "${BUILD_BITNESS}" = "64" ]; then
   echo "=== Installing Qt6 Packages ==="
   pacman_attempts=1
   while true; do
     if /usr/bin/pacman -Su --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
@@ -154,8 +184,6 @@ while true; do
     man \
     rsync \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
-    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
-    "mingw-w64-${BUILDCOMPONENT}-jemalloc" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
     "mingw-w64-${BUILDCOMPONENT}-ntldd" \
