@@ -49,13 +49,21 @@
 # 6 - One or more Luarocks could not be installed
 # 7 - One of more packages failed to install
 
+# We use this internally - but it is actually the same as ${MINGW_PREFIX}
+export MINGW_BASE_DIR=$MSYSTEM_PREFIX
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+if [ "${MSYSTEM}" = "CLANG64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+  export BUILDCOMPONENT="clang-x86_64"
+  export MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
+  export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="x86_64"
+  export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 elif [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
@@ -68,11 +76,7 @@ else
   exit 2
 fi
 
-# We use this internally - but it is actually the same as ${MINGW_PREFIX}
-export MINGW_BASE_DIR=$MSYSTEM_PREFIX
-# A more compact - but not necessarily understood by other than MSYS/MINGW
-# executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
@@ -91,12 +95,44 @@ echo "    This could take a long time if it is needed to fetch everything, so fe
 echo "    to go and have a cup of tea (other beverages are available) in the meantime...!"
 echo ""
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-  echo "=== Installing Qt6 Packages ==="
+if [ "${BUILD_BITNESS}" = "64" ]; then
+  echo "=== Installing Harfbuzz from source ==="
   pacman_attempts=1
   while true; do
     if /usr/bin/pacman -Su --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+      git \
+      "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+      "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
+      "mingw-w64-${BUILDCOMPONENT}-meson" \
+      "mingw-w64-${BUILDCOMPONENT}-ninja"; then
+        break
+    fi
+    
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    pacman_attempts=$((pacman_attempts +1))
+    
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
+  
+  git clone https://github.com/harfbuzz/harfbuzz.git
+  cd harfbuzz
+  meson setup build --prefix=/msys64/clang64 --buildtype=release -Dgraphite=disabled
+  meson compile -C build
+  meson install -C build
+  
+fi
+
+
+
+if [ "${BUILD_BITNESS}" = "64" ]; then
+  echo "=== Installing Qt6 Packages ==="
+  pacman_attempts=1
+  while true; do
+    if /usr/bin/pacman -Su --noconfirm \
+      "--assume-installed=mingw-w64-clang-x86_64-harfbuzz-9.0.0-1 mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
@@ -145,11 +181,9 @@ fi
 pacman_attempts=1
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
-    git \
     man \
     rsync \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
-    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
     "mingw-w64-${BUILDCOMPONENT}-ntldd" \

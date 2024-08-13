@@ -38,7 +38,7 @@ jobs:
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
 
     - name: (Windows 32) Setup MSYS2
@@ -55,7 +55,7 @@ jobs:
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
-
+        
     - name: restore ccache
       uses: actions/cache@v4
       with:

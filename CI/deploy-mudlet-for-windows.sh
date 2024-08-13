@@ -36,11 +36,9 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   exit 2
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
   export ARCH="x86"
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
+elif [ "${MSYSTEM}" = "MINGW64" ] || [ "${MSYSTEM}" = "CLANG64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
   export ARCH="x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
@@ -208,14 +206,14 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     # Allow public test builds to be installed side by side with the release builds by renaming the app
     # No dots in the <id>: Guidelines by Squirrel
-    if [ "${MSYSTEM}" = "MINGW64" ]; then
+    if [ "${BUILD_BITNESS}" = "64" ]; then
       sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_-PublicTestBuild<\/id>/" "$NuSpec"
     else
       sed -i 's/<id>Mudlet<\/id>/<id>Mudlet-PublicTestBuild<\/id>/' "$NuSpec"
     fi
     sed -i "s/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS} (Public Test Build)<\/title>/" "$NuSpec"
   else
-    if [ "${MSYSTEM}" = "MINGW64" ]; then
+    if [ "${BUILD_BITNESS}" = "64" ]; then
       sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_<\/id>/" "$NuSpec"
     fi
     sed -i "s/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS}<\/title>/" "$NuSpec"
@@ -234,7 +232,7 @@ else
   fi
 
   # Ensure 64 bit build is properly tagged
-  if [ "${MSYSTEM}" = "MINGW64" ]; then
+  if [ "${BUILD_BITNESS}" = "64" ]; then
     TestBuildString="_64_$TestBuildString"
   fi
 

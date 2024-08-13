@@ -95,6 +95,7 @@
 #else
 // Any other OS?
 #endif
+
 #include "post_guard.h"
 
 class QCloseEvent;
