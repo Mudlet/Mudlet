@@ -119,7 +119,7 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   
   git clone https://github.com/harfbuzz/harfbuzz.git
   cd harfbuzz
-  meson setup build --prefix=/msys64/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
+  meson setup build --prefix=/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
   meson compile -C build
   meson install -C build
   
