@@ -95,41 +95,6 @@ echo "    This could take a long time if it is needed to fetch everything, so fe
 echo "    to go and have a cup of tea (other beverages are available) in the meantime...!"
 echo ""
 
-if [ "${BUILD_BITNESS}" = "64" ]; then
-  echo "=== Installing Harfbuzz from source ==="
-  pacman_attempts=1
-  while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
-      git \
-      "mingw-w64-${BUILDCOMPONENT}-toolchain" \
-      "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
-      "mingw-w64-${BUILDCOMPONENT}-meson" \
-      "mingw-w64-${BUILDCOMPONENT}-ninja"; then
-        break
-    fi
-    
-    if [ $pacman_attempts -eq 10 ]; then
-      exit 7
-    fi
-    pacman_attempts=$((pacman_attempts +1))
-    
-    echo "=== Some packages failed to install, waiting and trying again ==="
-    sleep 10
-  done
-  
-  git clone https://github.com/harfbuzz/harfbuzz.git
-  cd harfbuzz
-  meson setup build --prefix=/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
-  meson compile -C build
-  meson install -C build
-  
-  #mv D:/a/_temp/msys64/clang64/bin/harfbuzz D:/a/_temp/msys64/clang64/bin/harfbuzz.bak
-  #mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* D:/a/_temp/msys64/clang64/lib/libharfbuzz.bak.*
-  #mv D:/a/_temp/msys64/clang64/include/harfbuzz D:/a/_temp/msys64/clang64/include/harfbuzz_backup
-  
-fi
-
-
 
 if [ "${BUILD_BITNESS}" = "64" ]; then
   echo "=== Installing Qt6 Packages ==="
@@ -156,16 +121,12 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
     sleep 10
   done
   
-  mv D:/a/_temp/msys64/clang64/bin/harfbuzz /clang64/bin/harfbuzz
-  mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* /clang64/lib/libharfbuzz.*
-  mv D:/a/_temp/msys64/clang64/include/harfbuzz /clang64/include/harfbuzz
-  
 else
 
   echo "=== Installing Qt5 Packages ==="
   pacman_attempts=1
   while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
+    if /usr/bin/pacman -S --needed --noconfirm \
       "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
@@ -188,9 +149,13 @@ fi
 
 pacman_attempts=1
 while true; do
-  if /usr/bin/pacman -Su --needed --noconfirm \
+  if /usr/bin/pacman -S --needed --noconfirm \
+    git \
     man \
     rsync \
+    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+    "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
+    "mingw-w64-${BUILDCOMPONENT}-freetype" \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
@@ -216,6 +181,16 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
+
+git clone https://github.com/harfbuzz/harfbuzz.git
+cd harfbuzz
+meson setup build --prefix=/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson compile -C build
+meson install -C build
+
+#mv D:/a/_temp/msys64/clang64/bin/harfbuzz /clang64/bin/harfbuzz
+#mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* /clang64/lib/libharfbuzz.*
+#mv D:/a/_temp/msys64/clang64/include/harfbuzz /clang64/include/harfbuzz
 
 echo ""
 echo "    Completed"
