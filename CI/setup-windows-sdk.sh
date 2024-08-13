@@ -119,9 +119,13 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   
   git clone https://github.com/harfbuzz/harfbuzz.git
   cd harfbuzz
-  meson setup build --prefix=/msys64/clang64 --buildtype=release -Dgraphite=disabled
+  meson setup build --prefix=/msys64/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
   meson compile -C build
   meson install -C build
+  
+  mv /msys64/clang64/bin/harfbuzz /msys64/clang64/bin/harfbuzz.bak
+  mv /msys64/clang64/lib/libharfbuzz.* /msys64/clang64/lib/libharfbuzz.bak.*
+  mv /msys64/clang64/include/harfbuzz /msys64/clang64/include/harfbuzz_backup
   
 fi
 
@@ -131,8 +135,8 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   echo "=== Installing Qt6 Packages ==="
   pacman_attempts=1
   while true; do
-    if /usr/bin/pacman -Su --noconfirm \
-      "--assume-installed=mingw-w64-clang-x86_64-harfbuzz-9.0.0-1 mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+    if /usr/bin/pacman -S --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
@@ -151,6 +155,11 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
+  
+  mv /msys64/clang64/bin/harfbuzz.bak /msys64/clang64/bin/harfbuzz
+  mv /msys64/clang64/lib/libharfbuzz.bak.* /msys64/clang64/lib/libharfbuzz.*
+  mv /msys64/clang64/include/harfbuzz_backup /msys64/clang64/include/harfbuzz
+
   
 else
 
