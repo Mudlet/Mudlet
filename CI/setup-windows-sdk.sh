@@ -123,9 +123,9 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   meson compile -C build
   meson install -C build
   
-  mv D:/a/_temp/msys64/clang64/bin/harfbuzz D:/a/_temp/msys64/clang64/bin/harfbuzz.bak
-  mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* D:/a/_temp/msys64/clang64/lib/libharfbuzz.bak.*
-  mv D:/a/_temp/msys64/clang64/include/harfbuzz D:/a/_temp/msys64/clang64/include/harfbuzz_backup
+  #mv D:/a/_temp/msys64/clang64/bin/harfbuzz D:/a/_temp/msys64/clang64/bin/harfbuzz.bak
+  #mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* D:/a/_temp/msys64/clang64/lib/libharfbuzz.bak.*
+  #mv D:/a/_temp/msys64/clang64/include/harfbuzz D:/a/_temp/msys64/clang64/include/harfbuzz_backup
   
 fi
 
@@ -156,9 +156,9 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
     sleep 10
   done
   
-  mv D:/a/_temp/msys64/clang64/bin/harfbuzz.bak D:/a/_temp/msys64/clang64/bin/harfbuzz
-  mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.bak.* D:/a/_temp/msys64/clang64/lib/libharfbuzz.*
-  mv D:/a/_temp/msys64/clang64/include/harfbuzz_backup D:/a/_temp/msys64/clang64/include/harfbuzz
+  mv D:/a/_temp/msys64/clang64/bin/harfbuzz /clang64/bin/harfbuzz
+  mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* /clang64/lib/libharfbuzz.*
+  mv D:/a/_temp/msys64/clang64/include/harfbuzz /clang64/include/harfbuzz
   
 else
 
