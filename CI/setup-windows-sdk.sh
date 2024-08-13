@@ -132,7 +132,7 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   pacman_attempts=1
   while true; do
     if /usr/bin/pacman -Su --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+      "--assume-installed=mingw-w64-clang-x86_64-harfbuzz mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
