@@ -236,6 +236,7 @@ public:
 
 
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
@@ -298,6 +299,7 @@ public:
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
+    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
@@ -314,6 +316,8 @@ public:
     void hideEvent(QHideEvent*) override;
 
 
+    void init();
+    void setupConfig();
     void activateProfile(Host*);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
@@ -339,7 +343,6 @@ public:
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
-    QSettings* getQSettings();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }

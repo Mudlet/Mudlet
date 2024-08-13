@@ -120,7 +120,7 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 
 
 # Set Mudlet version (update in CMakeLists.txt as well)
-VERSION = 4.18.3
+VERSION = 4.18.5
 
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
@@ -444,15 +444,13 @@ macx {
 BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_CC
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
-    message("Found ccache, updating QMAKE_CXX and QMAKE_CC")
+
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(C:\msys64\mingw64\bin\ccache.exe)|exists(C:\msys64\mingw32\bin\ccache.exe) {
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_CC = ccache $$BASE_C
 } else {
-    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
+    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, C:\msys64\mingw64\bin\ccache.exe, or C:\msys64\mingw64\bin\ccache.exe")
 }
-
-message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_CC: '"$${QMAKE_CC}"'")
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
