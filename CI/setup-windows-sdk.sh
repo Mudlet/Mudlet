@@ -100,6 +100,7 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   pacman_attempts=1
   while true; do
     if /usr/bin/pacman -Su --needed --noconfirm \
+      git \
       "mingw-w64-${BUILDCOMPONENT}-toolchain" \
       "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
       "mingw-w64-${BUILDCOMPONENT}-meson" \
@@ -180,7 +181,6 @@ fi
 pacman_attempts=1
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
-    git \
     man \
     rsync \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
