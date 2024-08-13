@@ -123,9 +123,9 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
   meson compile -C build
   meson install -C build
   
-  mv /msys64/clang64/bin/harfbuzz /msys64/clang64/bin/harfbuzz.bak
-  mv /msys64/clang64/lib/libharfbuzz.* /msys64/clang64/lib/libharfbuzz.bak.*
-  mv /msys64/clang64/include/harfbuzz /msys64/clang64/include/harfbuzz_backup
+  mv D:/a/_temp/msys64/clang64/bin/harfbuzz D:/a/_temp/msys64/clang64/bin/harfbuzz.bak
+  mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* D:/a/_temp/msys64/clang64/lib/libharfbuzz.bak.*
+  mv D:/a/_temp/msys64/clang64/include/harfbuzz D:/a/_temp/msys64/clang64/include/harfbuzz_backup
   
 fi
 
@@ -155,15 +155,11 @@ if [ "${BUILD_BITNESS}" = "64" ]; then
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
-<<<<<<< HEAD
   
-  mv /msys64/clang64/bin/harfbuzz.bak /msys64/clang64/bin/harfbuzz
-  mv /msys64/clang64/lib/libharfbuzz.bak.* /msys64/clang64/lib/libharfbuzz.*
-  mv /msys64/clang64/include/harfbuzz_backup /msys64/clang64/include/harfbuzz
+  mv D:/a/_temp/msys64/clang64/bin/harfbuzz.bak D:/a/_temp/msys64/clang64/bin/harfbuzz
+  mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.bak.* D:/a/_temp/msys64/clang64/lib/libharfbuzz.*
+  mv D:/a/_temp/msys64/clang64/include/harfbuzz_backup D:/a/_temp/msys64/clang64/include/harfbuzz
   
-=======
-
->>>>>>> d8cd2268857cf33403f56b92ef82ab3856b28970
 else
 
   echo "=== Installing Qt5 Packages ==="
