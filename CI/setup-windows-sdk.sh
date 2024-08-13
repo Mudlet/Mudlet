@@ -169,7 +169,10 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
-    "mingw-w64-${BUILDCOMPONENT}-jq"; then
+    "mingw-w64-${BUILDCOMPONENT}-jq" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
+    ; then
       break
   fi
 
