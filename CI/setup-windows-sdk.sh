@@ -178,7 +178,7 @@ while true; do
 done
 
 echo "Removing harfbuzz installed by qt"
-pacman -Rdd mingw-w64-${BUILDCOMPONENT}-harfbuzz
+pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
 
 echo "Building harfbuzz without graphite2"
 git clone https://github.com/harfbuzz/harfbuzz.git
