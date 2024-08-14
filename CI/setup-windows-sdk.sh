@@ -199,7 +199,7 @@ git clone https://github.com/silnrsi/graphite.git
 cd graphite
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/clang64
+cmake -DCMAKE_INSTALL_PREFIX=/clang64 ..
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
   ninja -C . build -j "${NUMBER_OF_PROCESSORS}"
 else
