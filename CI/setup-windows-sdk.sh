@@ -155,7 +155,6 @@ while true; do
     rsync \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
     "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
-    "mingw-w64-${BUILDCOMPONENT}-freetype" \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
@@ -170,6 +169,7 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
     "mingw-w64-${BUILDCOMPONENT}-jq" \
+    "mingw-w64-${BUILDCOMPONENT}-cmake" \
     "mingw-w64-${BUILDCOMPONENT}-meson" \
     "mingw-w64-${BUILDCOMPONENT}-ninja" \
     ; then
@@ -185,15 +185,28 @@ while true; do
   sleep 10
 done
 
-git clone https://github.com/harfbuzz/harfbuzz.git
-cd harfbuzz
-meson setup build --prefix=/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
-meson compile -C build
-meson install -C build
+#git clone https://github.com/harfbuzz/harfbuzz.git
+#cd harfbuzz
+#meson setup build --prefix=/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
+#meson compile -C build
+#meson install -C build
 
-#mv D:/a/_temp/msys64/clang64/bin/harfbuzz /clang64/bin/harfbuzz
-#mv D:/a/_temp/msys64/clang64/lib/libharfbuzz.* /clang64/lib/libharfbuzz.*
-#mv D:/a/_temp/msys64/clang64/include/harfbuzz /clang64/include/harfbuzz
+echo "Removing graphite2 installed by qt dependency"
+pacman -Rdd mingw-w64-${BUILDCOMPONENT}-graphite2
+
+echo "Compiling and installing graphite2 from source"
+git clone https://github.com/silnrsi/graphite.git
+cd graphite
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/clang64
+if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
+  ninja -C . build -j "${NUMBER_OF_PROCESSORS}"
+else
+  ninja -C . build
+fi
+ninja install
+
 
 echo ""
 echo "    Completed"
