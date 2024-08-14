@@ -183,7 +183,7 @@ pacman -Rdd mingw-w64-${BUILDCOMPONENT}-harfbuzz
 echo "Building harfbuzz without graphite2"
 git clone https://github.com/harfbuzz/harfbuzz.git
 cd harfbuzz
-meson setup build --prefix=/mingw64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
 meson compile -C build
 meson install -C build
 
