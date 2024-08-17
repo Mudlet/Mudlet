@@ -2750,6 +2750,13 @@ void mudlet::doAutoLogin(const QString& profile_name)
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
 
+    const auto it = TGameDetails::findGame(profile_name);
+    if (it != TGameDetails::scmDefaultGames.end()) {
+        pHost->setUrl((*it).hostUrl);
+        pHost->setPort((*it).port);
+        pHost->mSslTsl = (*it).tlsEnabled;
+    }
+
     const QString folder = getMudletPath(profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
@@ -2759,13 +2766,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
     if (entries.isEmpty()) {
         preInstallPackages = true;
         pHost->mLoadedOk = true;
-
-        const auto it = TGameDetails::findGame(profile_name);
-        if (it != TGameDetails::scmDefaultGames.end()) {
-            pHost->setUrl((*it).hostUrl);
-            pHost->setPort((*it).port);
-            pHost->mSslTsl = (*it).tlsEnabled;
-        }
     } else {
         QFile file(qsl("%1%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
