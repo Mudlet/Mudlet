@@ -1555,59 +1555,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
-    HostManager& hostManager = mudlet::self()->getHostManager();
-    Host* pHost = hostManager.getHost(profile_name);
-    if (pHost) {
-        if (alsoConnect) {
-            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
-        }
-        QDialog::accept();
-        return;
-    }
-    // load an old profile if there is any
-    // PLACEMARKER: Host creation (1) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
-        pHost = hostManager.getHost(profile_name);
-        if (!pHost) {
-            return;
-        }
-    } else {
-        return;
-    }
-
-    const QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // pre-install packages when loading this profile for the first time
-    bool preInstallPackages = false;
-    pHost->hideMudletsVariables();
-    if (entries.isEmpty()) {
-        preInstallPackages = true;
-        pHost->mLoadedOk = true;
-    } else {
-        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
-        file.open(QFile::ReadOnly | QFile::Text);
-        XMLimport importer(pHost);
-
-        qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
-            //: %1 is the path and file name (i.e. the location) of the problem fil
-            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
-
-            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
-        } else {
-            pHost->mLoadedOk = true;
-        }
-
-        pHost->refreshPackageFonts();
-
-        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
-        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
-        }
-    }
+    Host *pHost = mudlet::self()->loadProfile(profile_name, alsoConnect);
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
@@ -1650,16 +1598,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
-        pHost->setupIreDriverBugfix();
-    }
-
-    mudlet::self()->updateMultiViewControls();
-
-    emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
-    emit mudlet::self()->signal_adjustAccessibleNames();
     emit signal_load_profile(profile_name, alsoConnect);
+    QDialog::accept();
 }
 
 bool dlgConnectionProfiles::validateProfile()

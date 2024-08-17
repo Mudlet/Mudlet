@@ -2730,73 +2730,10 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host* pHost = mHostManager.getHost(profile_name);
-    if (pHost) {
-        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
-        return;
-    }
+    Host *pHost = loadProfile(profile_name, true);
 
-    // load an old profile if there is any
-    // PLACEMARKER: Host creation (2) - autoload case
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
-        pHost = mHostManager.getHost(profile_name);
-        if (!pHost) {
-            return;
-        }
-    } else {
-        return;
-    }
-
-    LuaInterface* lI = pHost->getLuaInterface();
-    lI->getVars(true);
-
-    const auto it = TGameDetails::findGame(profile_name);
-    if (it != TGameDetails::scmDefaultGames.end()) {
-        pHost->setUrl((*it).hostUrl);
-        pHost->setPort((*it).port);
-        pHost->mSslTsl = (*it).tlsEnabled;
-    }
-
-    const QString folder = getMudletPath(profileXmlFilesPath, profile_name);
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // pre-install packages when loading this profile for the first time
-    bool preInstallPackages = false;
-    if (entries.isEmpty()) {
-        preInstallPackages = true;
-        pHost->mLoadedOk = true;
-    } else {
-        QFile file(qsl("%1%2").arg(folder, entries.at(0)));
-        file.open(QFile::ReadOnly | QFile::Text);
-        XMLimport importer(pHost);
-        qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        if (auto [success, message] = importer.importPackage(&file); !success) {
-            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
-
-            qDebug().nospace().noquote() << "mudlet::doAutoLogin(\"" << profile_name << "\") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
-        } else {
-            pHost->mLoadedOk = true;
-        }
-
-        pHost->refreshPackageFonts();
-
-        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
-        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
-        }
-    }
-
-    if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
-    }
-
-    emit signal_hostCreated(pHost, mHostManager.getHostCount());
-    emit signal_adjustAccessibleNames();
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
-    updateMultiViewControls();
 }
 
 void mudlet::processEventLoopHack()
@@ -3729,6 +3666,82 @@ void mudlet::showChangelogIfUpdated()
     pUpdater->showChangelog();
 }
 #endif // INCLUDE_UPDATER
+
+Host* mudlet::loadProfile(const QString& profile_name, bool playOnline)
+{
+    Host* pHost = mHostManager.getHost(profile_name);
+    if (pHost) {
+        if (playOnline) {
+            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+        }
+        return pHost;
+    }
+
+    // load an old profile if there is any
+    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        pHost = mHostManager.getHost(profile_name);
+        if (!pHost) {
+            return pHost;
+        }
+    } else {
+        return pHost;
+    }
+
+    LuaInterface* lI = pHost->getLuaInterface();
+    lI->getVars(true);
+
+    const auto it = TGameDetails::findGame(profile_name);
+    if (it != TGameDetails::scmDefaultGames.end()) {
+        pHost->setUrl((*it).hostUrl);
+        pHost->setPort((*it).port);
+        pHost->mSslTsl = (*it).tlsEnabled;
+    }
+
+    const QString folder = getMudletPath(profileXmlFilesPath, profile_name);
+    QDir dir(folder);
+    dir.setSorting(QDir::Time);
+    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // pre-install packages when loading this profile for the first time
+    bool preInstallPackages = false;
+    pHost->hideMudletsVariables();
+    if (entries.isEmpty()) {
+        preInstallPackages = true;
+        pHost->mLoadedOk = true;
+    } else {
+        QFile file(qsl("%1%2").arg(folder, entries.at(0)));
+        file.open(QFile::ReadOnly | QFile::Text);
+        XMLimport importer(pHost);
+
+        qDebug() << "[LOADING PROFILE]:" << file.fileName();
+        if (auto [success, message] = importer.importPackage(&file); !success) {
+            //: %1 is the path and file name (i.e. the location) of the problem fil
+            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+            "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+
+            qDebug().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", " << playOnline << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            pHost->mLoadedOk = true;
+        }
+
+        pHost->refreshPackageFonts();
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            preInstallPackages = true;
+        }
+    }
+
+    if (preInstallPackages) {
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+        pHost->setupIreDriverBugfix();
+    }
+
+    emit signal_hostCreated(pHost, mHostManager.getHostCount());
+    emit signal_adjustAccessibleNames();
+    updateMultiViewControls();
+
+    return pHost;
+}
 
 // Can be called from lua sub-system OR from slot_replay(), the presence of a
 // non-NULLPTR pErrMsg indicates the former; also the replayFileName CAN be
