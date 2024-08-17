@@ -216,16 +216,6 @@ QString ClientVariables::getClientVariableLanguage()
     return mudlet::self()->getInterfaceLanguage();
 }
 
-QString ClientVariables::getClientVariableFont()
-{
-    return mpHost->getDisplayFont().family();
-}
-
-QString ClientVariables::getClientVariableFontSize()
-{
-    return qsl("%1").arg(mpHost->getDisplayFont().pointSize());
-}
-
 QString ClientVariables::getClientVariableWordWrap()
 {
     return qsl("%1").arg(mpHost->mWrapAt);
@@ -259,14 +249,6 @@ QMap<QString, QPair<bool, QString>> ClientVariables::getClientVariableDataMap()
     clientVariablesDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getClientVariableTruecolor()));
     clientVariablesDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getClientVariableTLS()));
     clientVariablesDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getClientVariableWordWrap()));
-
-    if (mShareFont == ClientVariables::DataSharingBehaviour::Share) {
-        clientVariablesDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getClientVariableFont()));
-    }
-
-    if (mShareFontSize == ClientVariables::DataSharingBehaviour::Share) {
-        clientVariablesDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getClientVariableFontSize()));
-    }
 
     if (mShareLanguage == ClientVariables::DataSharingBehaviour::Share) {
         clientVariablesDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getClientVariableLanguage()));

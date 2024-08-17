@@ -507,8 +507,6 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_caretModeKey->setEnabled(false);
 
     // ===== tab_sharing =====
-    comboBox_shareFont->setEnabled(false);
-    comboBox_shareFontSize->setEnabled(false);
     comboBox_shareLanguage->setEnabled(false);
     comboBox_shareScreenReader->setEnabled(false);
     comboBox_shareSystemType->setEnabled(false);
@@ -629,8 +627,6 @@ void dlgProfilePreferences::enableHostDetails()
     comboBox_shareSystemType->setEnabled(true);
     comboBox_shareScreenReader->setEnabled(true);
     comboBox_shareLanguage->setEnabled(true);
-    comboBox_shareFont->setEnabled(true);
-    comboBox_shareFontSize->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
@@ -797,10 +793,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
-    comboBox_shareFont->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareFont));
-    connect(comboBox_shareFont, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareFont);
-    comboBox_shareFontSize->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareFontSize));
-    connect(comboBox_shareFontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareFontSize);
     comboBox_shareLanguage->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareLanguage));
     connect(comboBox_shareLanguage, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareLanguage);
     comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareScreenReader));
@@ -1523,8 +1515,6 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_advertiseScreenReader->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
-    comboBox_shareFont->setCurrentIndex(0);
-    comboBox_shareFontSize->setCurrentIndex(0);
     comboBox_shareLanguage->setCurrentIndex(0);
     comboBox_shareScreenReader->setCurrentIndex(0);
     comboBox_shareSystemType->setCurrentIndex(0);
@@ -1902,17 +1892,6 @@ void dlgProfilePreferences::slot_setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
     slot_setDisplayFont();
-
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    if (pHost->mpClientVariables->mShareFontSize == ClientVariables::DataSharingBehaviour::Share) {
-        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
-        pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
-    }
 }
 
 void dlgProfilePreferences::slot_setDisplayFont()
@@ -1960,11 +1939,6 @@ void dlgProfilePreferences::slot_setDisplayFont()
     config->beginChanges();
     config->setFont(newFont);
     config->endChanges();
-
-    if (pHost->mpClientVariables->mShareFont == ClientVariables::DataSharingBehaviour::Share) {
-        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
-        pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
-    }
 }
 
 // Currently UNUSED!
@@ -3123,8 +3097,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
 
-        pHost->mpClientVariables->mShareFont = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareFont->currentIndex());
-        pHost->mpClientVariables->mShareFontSize = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareFontSize->currentIndex());
         pHost->mpClientVariables->mShareLanguage = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareLanguage->currentIndex());
         pHost->mpClientVariables->mShareScreenReader = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareScreenReader->currentIndex());
         pHost->mpClientVariables->mShareSystemType = static_cast<ClientVariables::DataSharingBehaviour>(comboBox_shareSystemType->currentIndex());
@@ -4514,46 +4486,6 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
             comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));
         } else if (pHost->mpClientVariables->mShareScreenReader != ClientVariables::DataSharingBehaviour::Block) {
             comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::DoNotShare));
-        }
-    }
-}
-
-void dlgProfilePreferences::slot_changeShareFont(const int index)
-{
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
-
-    if (pHost->mpClientVariables->mShareFont != newIndex) {
-        pHost->mpClientVariables->mShareFont = newIndex;
-
-        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT"));
-        }
-    }
-}
-
-void dlgProfilePreferences::slot_changeShareFontSize(const int index)
-{
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    ClientVariables::DataSharingBehaviour newIndex = static_cast<ClientVariables::DataSharingBehaviour>(index);
-
-    if (pHost->mpClientVariables->mShareFontSize != newIndex) {
-        pHost->mpClientVariables->mShareFontSize = newIndex;
-
-        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("FONT_SIZE"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("FONT_SIZE"));
         }
     }
 }

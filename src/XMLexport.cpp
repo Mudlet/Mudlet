@@ -470,10 +470,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
-    host.append_attribute("shareFont") = QMetaEnum::fromType<ClientVariables::DataSharingBehaviour>().valueToKey(
-            static_cast<int>(pHost->mpClientVariables->mShareFont));
-    host.append_attribute("shareFontSize") = QMetaEnum::fromType<ClientVariables::DataSharingBehaviour>().valueToKey(
-            static_cast<int>(pHost->mpClientVariables->mShareFontSize));
     host.append_attribute("shareLanguage") = QMetaEnum::fromType<ClientVariables::DataSharingBehaviour>().valueToKey(
             static_cast<int>(pHost->mpClientVariables->mShareLanguage));
     host.append_attribute("shareScreenReader") = QMetaEnum::fromType<ClientVariables::DataSharingBehaviour>().valueToKey(

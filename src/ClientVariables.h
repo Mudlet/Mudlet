@@ -81,8 +81,6 @@ class ClientVariables : public QObject
         };
         Q_ENUM(DataSharingBehaviour)
     
-        DataSharingBehaviour mShareFont = DataSharingBehaviour::DoNotShare;
-        DataSharingBehaviour mShareFontSize = DataSharingBehaviour::DoNotShare;
         DataSharingBehaviour mShareLanguage = DataSharingBehaviour::DoNotShare;
         DataSharingBehaviour mShareScreenReader = DataSharingBehaviour::DoNotShare;
         DataSharingBehaviour mShareSystemType = DataSharingBehaviour::DoNotShare;
@@ -148,8 +146,6 @@ class ClientVariables : public QObject
         QMap<QString, std::tuple<bool, ClientVariables::DataSharingBehaviour, QString>> protectedVariablesMap() {
             // {variable, {updatable, behaviour, translation}}
             return {
-                {"FONT", {false, mShareFont, tr("font")}},
-                {"FONT_SIZE", {false, mShareFontSize, tr("font size")}},
                 {"LANGUAGE", {false, mShareLanguage, tr("language")}},
                 {"SCREEN_READER", {false, mShareScreenReader, tr("screen reader use")}},
                 {"SYSTEMTYPE", {false, mShareSystemType, tr("operating system type")}},
@@ -162,8 +158,6 @@ class ClientVariables : public QObject
         QString getClientVariableSystemType();
         QString getClientVariableScreenReader();
         QString getClientVariableLanguage();
-        QString getClientVariableFont();
-        QString getClientVariableFontSize();
 
         void appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
         void appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);

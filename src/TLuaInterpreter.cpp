@@ -7171,46 +7171,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("shareFont")) {
-        static const QStringList behaviours{"donotshare", "share", "block"};
-        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
-
-        if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        if (behaviour == qsl("donotshare")) {
-            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (behaviour == qsl("share")) {
-            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Share;
-        } else if (behaviour == qsl("block")) {
-            host.mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Block;
-        }
-
-        return success();
-    }
-    if (key == qsl("shareFontSize")) {
-        static const QStringList behaviours{"donotshare", "share", "block"};
-        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
-
-        if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        if (behaviour == qsl("donotshare")) {
-            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (behaviour == qsl("share")) {
-            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Share;
-        } else if (behaviour == qsl("block")) {
-            host.mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Block;
-        }
-
-        return success();
-    }
     if (key == qsl("shareLanguage")) {
         static const QStringList behaviours{"donotshare", "share", "block"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");

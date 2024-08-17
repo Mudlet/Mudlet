@@ -169,8 +169,6 @@ private slots:
     void slot_enableDarkEditor(const QString&);
     void slot_toggleMapDeleteButton(const bool);
     void slot_toggleAdvertiseScreenReader(const bool);
-    void slot_changeShareFont(const int);
-    void slot_changeShareFontSize(const int);
     void slot_changeShareLanguage(const int);
     void slot_changeShareScreenReader(const int);
     void slot_changeShareSystemType(const int);

@@ -848,30 +848,6 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    if (attributes().hasAttribute("shareFont")) {
-        const QStringView shareFont(attributes().value(qsl("shareFont")));
-
-        if (shareFont == qsl("Share")) {
-            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Share;
-        } else if (shareFont == qsl("DoNotShare")) {
-            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (shareFont == qsl("Block")) {
-            pHost->mpClientVariables->mShareFont = ClientVariables::DataSharingBehaviour::Block;
-        }
-    }
-
-    if (attributes().hasAttribute("shareFontSize")) {
-        const QStringView shareFontSize(attributes().value(qsl("shareFontSize")));
-
-        if (shareFontSize == qsl("Share")) {
-            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Share;
-        } else if (shareFontSize == qsl("DoNotShare")) {
-            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (shareFontSize == qsl("Block")) {
-            pHost->mpClientVariables->mShareFontSize = ClientVariables::DataSharingBehaviour::Block;
-        }
-    }
-
     if (attributes().hasAttribute("shareLanguage")) {
         const QStringView shareLanguage(attributes().value(qsl("shareLanguage")));
 

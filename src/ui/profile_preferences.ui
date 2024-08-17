@@ -3775,84 +3775,6 @@ you can use it but there could be issues with aligning columns of text</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_sharing">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_shareFont">
-            <property name="text">
-             <string>FONT</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_shareFont</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QLabel" name="label_detailFont">
-            <property name="text">
-             <string>'Arial', 'Courier New', etc.</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_detailFont</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QComboBox" name="comboBox_shareFont">
-            <item>
-             <property name="text">
-              <string>Do Not Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Block Requests</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_shareFontSize">
-            <property name="text">
-             <string>FONT_SIZE</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_shareFontSize</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1" colspan="2">
-           <widget class="QLabel" name="label_detailFontSize">
-            <property name="text">
-             <string>'8', '12', etc.</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_detailFontSize</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QComboBox" name="comboBox_shareFontSize">
-            <item>
-             <property name="text">
-              <string>Do Not Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Block Requests</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="2" column="0">
            <widget class="QLabel" name="label_shareLanguage">
             <property name="text">
              <string>LANGUAGE</string>
@@ -3862,7 +3784,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1" colspan="2">>
+          <item row="0" column="1" colspan="2">>
            <widget class="QLabel" name="label_detailLanguage">
             <property name="text">
              <string>'en_US' for English (American), 'de' for Deutsch, etc.</string>
@@ -3872,7 +3794,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="3">
+          <item row="0" column="3">
            <widget class="QComboBox" name="comboBox_shareLanguage">
             <item>
              <property name="text">
@@ -3891,7 +3813,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="1" column="0">
            <widget class="QLabel" name="label_shareScreenReader">
             <property name="text">
              <string>SCREEN_READER</string>
@@ -3901,7 +3823,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">>
+          <item row="1" column="1" colspan="2">>
            <widget class="QLabel" name="label_detailScreenReader">
             <property name="text">
              <string>'0' for not advertised, '1' for advertised (see Accessibility tab)</string>
@@ -3911,7 +3833,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="3">
+          <item row="1" column="3">
            <widget class="QComboBox" name="comboBox_shareScreenReader">
             <item>
              <property name="text">
@@ -3930,7 +3852,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item row="2" column="0">
            <widget class="QLabel" name="label_shareSystemType">
             <property name="text">
              <string>SYSTEMTYPE</string>
@@ -3940,7 +3862,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1" colspan="2">>
+          <item row="2" column="1" colspan="2">>
            <widget class="QLabel" name="label_detailSystemType">
             <property name="text">
              <string>'WIN32' for Windows, 'MACOS' for Mac, etc.</string>
@@ -3950,7 +3872,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="3">
+          <item row="2" column="3">
            <widget class="QComboBox" name="comboBox_shareSystemType">
             <item>
              <property name="text">
@@ -3969,7 +3891,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_shareUser">
             <property name="text">
              <string>USER</string>
@@ -3979,7 +3901,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1" colspan="2">
+          <item row="3" column="1" colspan="2">
            <widget class="QLabel" name="label_detailUser">
             <property name="text">
              <string>'Character name' from the Options tab in Connect</string>
@@ -3989,7 +3911,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="3">
+          <item row="3" column="3">
            <widget class="QComboBox" name="comboBox_shareUser">
             <item>
              <property name="text">
@@ -4587,8 +4509,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_advertiseScreenReader</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
-  <tabstop>comboBox_shareFont</tabstop>
-  <tabstop>comboBox_shareFontSize</tabstop>
   <tabstop>comboBox_shareLanguage</tabstop>
   <tabstop>comboBox_shareScreenReader</tabstop>
   <tabstop>comboBox_shareSystemType</tabstop>
