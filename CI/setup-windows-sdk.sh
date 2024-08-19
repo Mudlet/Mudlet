@@ -98,6 +98,7 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
     if /usr/bin/pacman -Su --needed --noconfirm \
       "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
