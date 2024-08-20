@@ -276,6 +276,11 @@ jobs:
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
 
+        # install GDB for analysing core dumps
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get install gdb -y
+        fi
+
         shopt -s expand_aliases
         if [ "${RUNNER_OS}" = "macOS" ]; then
           alias run-luarocks="luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include""
@@ -342,7 +347,12 @@ jobs:
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       # macOS binary is in ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}/Contents/MacOS
-      run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+      run: |
+        cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+        ulimit -c unlimited
+        echo core | sudo tee /proc/sys/kernel/core_pattern
+        echo 0 | sudo tee /proc/sys/kernel/core_uses_pid
+
       shell: bash
 
     - name: (macOS) Prep binary for running tests
@@ -368,7 +378,21 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
       shell: bash
-      run: ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror || rc=$?
+        else
+          ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+        fi
+
+        # credit to https://github.com/wxWidgets/wxWidgets/blob/ad635a406acc9217e2aae8f43b7d171a5119135e/.github/workflows/ci.yml
+        if [ -n "$rc" ]; then
+          if [ -f core ]; then
+            echo '[ERROR] Mudlet crashed, stacktrace is:'
+            gdb --quiet --core=core -ex 'where' -ex 'thread apply all bt' -ex 'q' ${{github.workspace}}/src/mudlet
+          fi
+          exit $rc
+        fi
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
