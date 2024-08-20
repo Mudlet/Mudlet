@@ -553,10 +553,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
+#if defined(DEBUG_UTF8_PROCESSING)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
         mUpperPane->reportCodepointErrors();
     }
+#endif
 }
 
 Host* TConsole::getHost()
@@ -1022,7 +1024,11 @@ void TConsole::scrollUp(int lines)
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
         if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
+#if defined(Q_OS_MACOS)
+            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
+#else
+            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
+#endif
             mpHost->postMessage(infoMsg);
             mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
         }

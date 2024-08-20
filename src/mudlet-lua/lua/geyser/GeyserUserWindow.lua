@@ -50,9 +50,7 @@ end
 
 --Override show to keep the dimensions of the UserWindow
 function Geyser.UserWindow:show()
-  local w,h = self.get_width(),self.get_height()
   self.Parent.show(self)
-  self:resize(w,h)
 end
 
 --- Your UserWindow will be docked at position (pos):

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -5075,7 +5075,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "setBold", TLuaInterpreter::setBold);
-    lua_register(pGlobalLua, "setFaint", TLuaInterpreter::setFaint);
     lua_register(pGlobalLua, "setItalics", TLuaInterpreter::setItalics);
     lua_register(pGlobalLua, "setOverline", TLuaInterpreter::setOverline);
     lua_register(pGlobalLua, "setReverse", TLuaInterpreter::setReverse);
@@ -5468,7 +5467,7 @@ void TLuaInterpreter::initLuaGlobals()
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
@@ -5477,9 +5476,6 @@ void TLuaInterpreter::initLuaGlobals()
     // Luarocks installs rocks locally for developers, even with sudo
     additionalCPaths << qsl("%1/.luarocks/lib/lua/5.1/?.so").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
     additionalLuaPaths << qsl("%1/.luarocks/share/lua/5.1/?.lua;%1/.luarocks/share/lua/5.1/?/init.lua").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
-#elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
-    // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-    additionalCPaths << qsl("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
 #endif
 
     insertNativeSeparatorsFunction(pGlobalLua);
@@ -7251,10 +7247,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
-    if (key == qsl("boldIsBright")) {
-        host.mBoldIsBright = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
     if (key == qsl("logInHTML")) {
         host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7367,7 +7359,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "asis");
             }
         } },
-        { qsl("boldIsBright"), [&](){ lua_pushboolean(L, host.mBoldIsBright); } },
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } } //, <- not needed until another one is added
     };
 

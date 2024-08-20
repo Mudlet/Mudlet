@@ -161,6 +161,7 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mLightWhite(pH->mLightWhite)
 , mWhite(pH->mWhite)
 , mForeGroundColor(pH->mFgColor)
+, mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
 {
@@ -242,6 +243,7 @@ void TBuffer::updateColors()
     mLightWhite = pH->mLightWhite;
     mWhite = pH->mWhite;
     mForeGroundColor = pH->mFgColor;
+    mForeGroundColorLight = pH->mFgColor;
     mBackGroundColor = pH->mBgColor;
 }
 
@@ -576,16 +578,15 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
                         const TChar::AttributeFlags attributeFlags =
-                                ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                                | (mFaint ? TChar::Faint : TChar::None)
-                                | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
+                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
-                                | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
-                                | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
+                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
                                 | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
                                 | (TChar::alternateFontFlag(mAltFont))
-                                | (mConcealed ? TChar::Concealed : TChar::None));
+                                | (mConcealed ? TChar::Concealed : TChar::None);
 
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
@@ -729,19 +730,17 @@ COMMIT_LINE:
                 if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
                     localBufferPosition++;
                     continue;
-                }
-                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
-                            ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                            | (mFaint ? TChar::Faint : TChar::None)
-                            | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
+                            ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold(): false) ? TChar::Bold : TChar::None)
+                            | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                             | (mOverline ? TChar::Overline : TChar::None)
                             | (mReverse ? TChar::Reverse : TChar::None)
-                            | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
-                            | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
+                            | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
                             | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
                             | (TChar::alternateFontFlag(mAltFont))
-                            | (mConcealed ? TChar::Concealed : TChar::None));
+                            | (mConcealed ? TChar::Concealed : TChar::None);
 
                     // Note: we are using the background color for the
                     // foreground color as well so that we are transparent:
@@ -879,21 +878,17 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                | (mFaint ? TChar::Faint : TChar::None)
-                | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
+                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
-                | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
-                | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
+                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
                 | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
                 | (TChar::alternateFontFlag(mAltFont))
-                | (mConcealed ? TChar::Concealed : TChar::None));
+                | (mConcealed ? TChar::Concealed : TChar::None);
 
-        TChar c((mpHost && mpHost->mBoldIsBright && mMayShift8ColorSet && mBold) ? mForeGroundColorLight
-                                                                                     : mForeGroundColor,
-                mBackGroundColor,
-                attributeFlags);
+        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
@@ -926,7 +921,6 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
     qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated <<") INFO - called";
 #endif
     if (parameters.at(1) == QLatin1String("5")) {
-
         int tag = 0;
         if (parameters.count() > 2) {
             bool isOk = false;
@@ -951,29 +945,53 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 #endif
         }
 
-        if (tag >=0 && tag < 16) {
+        if (tag < 16) {
+            if (tag >= 8) {
+                tag -= 8;
+                mBold = true;
+            } else {
+                mBold = false;
+            }
+            mIsDefaultColor = false;
+
             switch (tag) {
-            case 0:     mForeGroundColor = mBlack;          break;
-            case 1:     mForeGroundColor = mRed;            break;
-            case 2:     mForeGroundColor = mGreen;          break;
-            case 3:     mForeGroundColor = mYellow;         break;
-            case 4:     mForeGroundColor = mBlue;           break;
-            case 5:     mForeGroundColor = mMagenta;        break;
-            case 6:     mForeGroundColor = mCyan;           break;
-            case 7:     mForeGroundColor = mWhite;          break;
-            case 8:     mForeGroundColor = mLightBlack;     break;
-            case 9:     mForeGroundColor = mLightRed;       break;
-            case 10:    mForeGroundColor = mLightGreen;     break;
-            case 11:    mForeGroundColor = mLightYellow;    break;
-            case 12:    mForeGroundColor = mLightBlue;      break;
-            case 13:    mForeGroundColor = mLightMagenta;   break;
-            case 14:    mForeGroundColor = mLightCyan;      break;
-            case 15:    mForeGroundColor = mLightWhite;     break;
+            case 0:
+                mForeGroundColor = mBlack;
+                mForeGroundColorLight = mLightBlack;
+                break;
+            case 1:
+                mForeGroundColor = mRed;
+                mForeGroundColorLight = mLightRed;
+                break;
+            case 2:
+                mForeGroundColor = mGreen;
+                mForeGroundColorLight = mLightGreen;
+                break;
+            case 3:
+                mForeGroundColor = mYellow;
+                mForeGroundColorLight = mLightYellow;
+                break;
+            case 4:
+                mForeGroundColor = mBlue;
+                mForeGroundColorLight = mLightBlue;
+                break;
+            case 5:
+                mForeGroundColor = mMagenta;
+                mForeGroundColorLight = mLightMagenta;
+                break;
+            case 6:
+                mForeGroundColor = mCyan;
+                mForeGroundColorLight = mLightCyan;
+                break;
+            case 7:
+                mForeGroundColor = mWhite;
+                mForeGroundColorLight = mLightWhite;
+                break;
             }
 
-        } else if (tag >=15 && tag < 232) {
+        } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
-            tag -= 16;
+           tag -= 16;
             // 6x6x6 RGB color space
             quint8 const r = tag / 36;
             quint8 const g = (tag - (r * 36)) / 6;
@@ -985,15 +1003,15 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             mForeGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
                                       g == 0 ? 0 : (g - 1) * 40 + 95,
                                       b == 0 ? 0 : (b - 1) * 40 + 95);
+            mForeGroundColorLight = mForeGroundColor;
 
-        } else if (tag >=232 && tag < 256) {
+        } else {
             const int value = (tag - 232) * 10 + 8;
             mForeGroundColor = QColor(value, value, value);
+            mForeGroundColorLight = mForeGroundColor;
         }
-        // else ignore it altogether
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-
         if (parameters.count() >= 6) {
             // Have enough for all three colour
             // components
@@ -1027,6 +1045,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 #endif
             }
         }
+        mForeGroundColorLight = mForeGroundColor;
 
     } else if (parameters.at(1) == QLatin1String("4")
             || parameters.at(1) == QLatin1String("3")
@@ -1059,9 +1078,9 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 #if defined(DEBUG_SGR_PROCESSING)
     qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated <<") INFO - called";
 #endif
+    bool useLightColor = false;
 
     if (parameters.at(1) == QLatin1String("5")) {
-
         int tag = 0;
         if (parameters.count() > 2) {
             bool isOk = false;
@@ -1086,27 +1105,55 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 #endif
         }
 
-        if (tag >=0 && tag < 16) {
+        if (tag < 16) {
+            if (tag >= 8) {
+                tag -= 8;
+                useLightColor = true;
+            } else {
+                useLightColor = false;
+            }
+            mIsDefaultColor = false;
+            QColor bgColorLight;
+
             switch (tag) {
-            case 0:     mBackGroundColor = mBlack;          break;
-            case 1:     mBackGroundColor = mRed;            break;
-            case 2:     mBackGroundColor = mGreen;          break;
-            case 3:     mBackGroundColor = mYellow;         break;
-            case 4:     mBackGroundColor = mBlue;           break;
-            case 5:     mBackGroundColor = mMagenta;        break;
-            case 6:     mBackGroundColor = mCyan;           break;
-            case 7:     mBackGroundColor = mWhite;          break;
-            case 8:     mBackGroundColor = mLightBlack;     break;
-            case 9:     mBackGroundColor = mLightRed;       break;
-            case 10:    mBackGroundColor = mLightGreen;     break;
-            case 11:    mBackGroundColor = mLightYellow;    break;
-            case 12:    mBackGroundColor = mLightBlue;      break;
-            case 13:    mBackGroundColor = mLightMagenta;   break;
-            case 14:    mBackGroundColor = mLightCyan;      break;
-            case 15:    mBackGroundColor = mLightWhite;     break;
+            case 0:
+                mBackGroundColor = mBlack;
+                bgColorLight = mLightBlack;
+                break;
+            case 1:
+                mBackGroundColor = mRed;
+                bgColorLight = mLightRed;
+                break;
+            case 2:
+                mBackGroundColor = mGreen;
+                bgColorLight = mLightGreen;
+                break;
+            case 3:
+                mBackGroundColor = mYellow;
+                bgColorLight = mLightYellow;
+                break;
+            case 4:
+                mBackGroundColor = mBlue;
+                bgColorLight = mLightBlue;
+                break;
+            case 5:
+                mBackGroundColor = mMagenta;
+                bgColorLight = mLightMagenta;
+                break;
+            case 6:
+                mBackGroundColor = mCyan;
+                bgColorLight = mLightCyan;
+                break;
+            case 7:
+                mBackGroundColor = mWhite;
+                bgColorLight = mLightWhite;
+                break;
+            }
+            if (useLightColor) {
+                mBackGroundColor = bgColorLight;
             }
 
-        } else if (tag >= 16 && tag < 232) {
+        } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
             tag -= 16;
             // 6x6x6 RGB color space
@@ -1121,14 +1168,12 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
                                       g == 0 ? 0 : (g - 1) * 40 + 95,
                                       b == 0 ? 0 : (b - 1) * 40 + 95);
 
-        } else if (tag >= 232 && tag < 256) {
+        } else {
             const int value = (tag - 232) * 10 + 8;
             mBackGroundColor = QColor(value, value, value);
         }
-        // else ignore it altogether
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-
         if (parameters.count() >= 6) {
             // Have enough for all three colour
             // components
@@ -1475,11 +1520,10 @@ void TBuffer::decodeSGR(const QString& sequence)
             if (isOk) {
                 switch (tag) {
                 case 0:
+                    mIsDefaultColor = true;
                     mForeGroundColor = pHost->mFgColor;
                     mBackGroundColor = pHost->mBgColor;
-                    mMayShift8ColorSet = false;
                     mBold = false;
-                    mFaint = false;
                     mItalics = false;
                     mOverline = false;
                     mReverse = false;
@@ -1494,7 +1538,10 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mBold = true;
                     break;
                 case 2:
-                    mFaint = true;
+                    // Technically this should be faint (i.e. decreased
+                    // intensity compared to normal and 22 should be
+                    // the reset to "normal" intensity):
+                    mBold = false;
                     break;
                 case 3:
                     // There is a proposal by the "VTE" terminal
@@ -1563,12 +1610,10 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 19:
                     mAltFont = 9;
                     break;
-                // case 20: // Fracktur -  a weird gothic Germanic font apparently
                 // case 21: // Double underline according to specs
                 //    break;
-                case 22: // "Neither Bold nor Dim" (Faint)
+                case 22:
                     mBold = false;
-                    mFaint = false;
                     break;
                 case 23:
                     mItalics = false;
@@ -1592,48 +1637,44 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 30:
                     mForeGroundColor = mBlack;
                     mForeGroundColorLight = mLightBlack;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 31:
                     mForeGroundColor = mRed;
                     mForeGroundColorLight = mLightRed;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 32:
                     mForeGroundColor = mGreen;
                     mForeGroundColorLight = mLightGreen;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 33:
                     mForeGroundColor = mYellow;
                     mForeGroundColorLight = mLightYellow;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 34:
                     mForeGroundColor = mBlue;
                     mForeGroundColorLight = mLightBlue;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 35:
                     mForeGroundColor = mMagenta;
                     mForeGroundColorLight = mLightMagenta;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 36:
                     mForeGroundColor = mCyan;
                     mForeGroundColorLight = mLightCyan;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 37:
                     mForeGroundColor = mWhite;
                     mForeGroundColorLight = mLightWhite;
-                    mMayShift8ColorSet = true;
+                    mIsDefaultColor = false;
                     break;
                 case 38: {
-                    // We are not now using the basic 8 colors so we won't
-                    // attempt to use the Bold attribute to shift those to the
-                    // next 8 out of the first 16:
-                    mMayShift8ColorSet = false;
                     // We only have single elements so we will need to steal the
                     // needed number from the remainder:
                     if (paraIndex + 1 >= total) {
@@ -1727,7 +1768,6 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 39: //default foreground color
                     mForeGroundColor = pHost->mFgColor;
-                    mMayShift8ColorSet = false;
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
@@ -1873,35 +1913,43 @@ void TBuffer::decodeSGR(const QString& sequence)
                 //    break;
                 case 90:
                     mForeGroundColor = mLightBlack;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightBlack;
+                    mIsDefaultColor = false;
                     break;
                 case 91:
                     mForeGroundColor = mLightRed;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightRed;
+                    mIsDefaultColor = false;
                     break;
                 case 92:
                     mForeGroundColor = mLightGreen;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightGreen;
+                    mIsDefaultColor = false;
                     break;
                 case 93:
                     mForeGroundColor = mLightYellow;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightYellow;
+                    mIsDefaultColor = false;
                     break;
                 case 94:
                     mForeGroundColor = mLightBlue;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightBlue;
+                    mIsDefaultColor = false;
                     break;
                 case 95:
                     mForeGroundColor = mLightMagenta;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightMagenta;
+                    mIsDefaultColor = false;
                     break;
                 case 96:
                     mForeGroundColor = mLightCyan;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightCyan;
+                    mIsDefaultColor = false;
                     break;
                 case 97:
                     mForeGroundColor = mLightWhite;
-                    mMayShift8ColorSet = false;
+                    mForeGroundColorLight = mLightWhite;
+                    mIsDefaultColor = false;
                     break;
                 case 100:
                     mBackGroundColor = mLightBlack;
@@ -3318,21 +3366,10 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             // clang-format off
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); font-weight: %7;%8%9\">")
+                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
-                              // Whilst we could skip an entry altogether if the weight is "normal" (400) we can't if the constant is set differently:
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                              QString::number(currentFlags & TChar::Bold ? (currentFlags & TChar::Faint ? csmCssFontWeight_boldAndFaint
-                                                                                                        : csmCssFontWeight_bold)
-                                                                         : (currentFlags & TChar::Faint ? csmCssFontWeight_faint
-                                                                                                        : csmCssFontWeight_normal)), // arg 7
-#else
-                              QString::number(currentFlags & TChar::Bold ? (currentFlags & TChar::Faint ? csmFontWeight_boldAndFaint
-                                                                                                        : csmFontWeight_bold)
-                                                                         : (currentFlags & TChar::Faint ? csmFontWeight_faint
-                                                                                                        : csmFontWeight_normal)), // arg 7
-#endif
+                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
                               ? qsl(" text-decoration:%1%2%3")
@@ -3341,20 +3378,10 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
                               : QString()));
             } else {
-                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); font-weight: %7;%8%9\">")
+                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                              QString::number(currentFlags & TChar::Bold ? (currentFlags & TChar::Faint ? csmCssFontWeight_boldAndFaint
-                                                                                                        : csmCssFontWeight_bold)
-                                                                         : (currentFlags & TChar::Faint ? csmCssFontWeight_faint
-                                                                                                        : csmCssFontWeight_normal)), // arg 7
-#else
-                              QString::number(currentFlags & TChar::Bold ? (currentFlags & TChar::Faint ? csmFontWeight_boldAndFaint
-                                                                                                        : csmFontWeight_bold)
-                                                                         : (currentFlags & TChar::Faint ? csmFontWeight_faint
-                                                                                                        : csmFontWeight_normal)), // arg 7
-#endif
+                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
                               ? qsl(" text-decoration:%1%2%3")
