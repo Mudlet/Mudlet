@@ -241,7 +241,7 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         # enable for a debug build (1/2)
-        # buildWithCMakeArgs: --config RelWithDebInfo
+        buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
@@ -380,7 +380,7 @@ jobs:
           if [ -f core ]; then
             echo '[ERROR] Mudlet crashed, stacktrace is:'
             echo "[DEBUG] Core dump file found, running gdb"
-            gdb --quiet --core=core -ex 'where' -ex 'thread apply all bt' -ex 'q' ${{github.workspace}}/src/mudlet
+            gdb --quiet --core=core -ex 'where' -ex 'bt full' -ex 'q' ${{github.workspace}}/src/mudlet
             echo "[DEBUG] GDB analysis completed"
           else
             echo "[DEBUG] No core dump file found"
