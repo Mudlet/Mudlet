@@ -367,15 +367,25 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
       run: |
+        echo "[DEBUG] Starting Mudlet self-test"
         xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror || rc=$?
+        echo "[DEBUG] Mudlet self-test finished with exit code: $rc"
 
         # credit to https://github.com/wxWidgets/wxWidgets/blob/ad635a406acc9217e2aae8f43b7d171a5119135e/.github/workflows/ci.yml
         if [ -n "$rc" ]; then
+          echo "[DEBUG] Non-zero exit code detected: $rc"
           if [ -f core ]; then
             echo '[ERROR] Mudlet crashed, stacktrace is:'
+            echo "[DEBUG] Core dump file found, running gdb"
             gdb --quiet --core=core -ex 'where' -ex 'thread apply all bt' -ex 'q' ${{github.workspace}}/src/mudlet
+            echo "[DEBUG] GDB analysis completed"
+          else
+            echo "[DEBUG] No core dump file found"
           fi
+          echo "[DEBUG] Exiting with code $rc"
           exit $rc
+        else
+          echo "[DEBUG] Test completed successfully"
         fi
       env:
         AUTORUN_BUSTED_TESTS: 'true'
