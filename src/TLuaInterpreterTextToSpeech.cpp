@@ -137,7 +137,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         case QTextToSpeech::State::Ready:
             event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
             break;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
         // The Qt documentation is not clear exactly when this change was made
         // (it says nothing!) but it isn't present in 5.15.13 but is in 6.6.2
         case QTextToSpeech::State::Synthesizing:
