@@ -366,24 +366,8 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.6
-      with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
-      env:
-        AUTORUN_BUSTED_TESTS: 'true'
-        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
-        QUIT_MUDLET_AFTER_TESTS: 'true'
-
-    - name: (macOS) Run Lua tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      shell: bash
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror || rc=$?
-        else
-          ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
-        fi
+        xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror || rc=$?
 
         # credit to https://github.com/wxWidgets/wxWidgets/blob/ad635a406acc9217e2aae8f43b7d171a5119135e/.github/workflows/ci.yml
         if [ -n "$rc" ]; then
@@ -393,6 +377,16 @@ jobs:
           fi
           exit $rc
         fi
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+
+    - name: (macOS) Run Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
