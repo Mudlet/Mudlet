@@ -235,6 +235,7 @@ public:
 
 
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
@@ -297,6 +298,7 @@ public:
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
+    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
@@ -313,6 +315,8 @@ public:
     void hideEvent(QHideEvent*) override;
 
 
+    void init();
+    void setupConfig();
     void activateProfile(Host*);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
@@ -338,7 +342,6 @@ public:
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
-    QSettings* getQSettings();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }
@@ -411,10 +414,9 @@ public:
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
-    bool muteMCMP() const { return mMuteMCMP; }
-    bool muteMSP() const { return mMuteMSP; }
-    bool mediaMuted() const { return mMuteAPI && mMuteMCMP && mMuteMSP; }
-    bool mediaUnmuted() const { return !mMuteAPI && !mMuteMCMP && !mMuteMSP; }
+    bool muteGame() const { return mMuteGame; }
+    bool mediaMuted() const { return mMuteAPI && mMuteGame; }
+    bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -511,8 +513,7 @@ public slots:
     void slot_multiView(const bool);
     void slot_muteMedia();
     void slot_muteAPI(const bool);
-    void slot_muteMCMP(const bool);
-    void slot_muteMSP(const bool);
+    void slot_muteGame(const bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
     void slot_openMappingScriptsPage();
@@ -611,7 +612,7 @@ private:
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
     void reshowRequiredMainConsoles();
-    void toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText);
+    void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
 
     inline static QPointer<mudlet> smpSelf = nullptr;
@@ -653,8 +654,7 @@ private:
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
     bool mMuteAPI = false;
-    bool mMuteMCMP = false;
-    bool mMuteMSP = false;
+    bool mMuteGame = false;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -673,8 +673,7 @@ private:
     QPointer<QAction> mpActionMultiView;
     QPointer<QAction> mpActionMuteMedia;
     QPointer<QAction> mpActionMuteAPI;
-    QPointer<QAction> mpActionMuteMCMP;
-    QPointer<QAction> mpActionMuteMSP;
+    QPointer<QAction> mpActionMuteGame;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
     QPointer<QAction> mpActionPackageExporter;

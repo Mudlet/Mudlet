@@ -381,7 +381,7 @@ end
 --   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible
 --   security issues with database names.
 function db:safe_name(name)
-  name = name:gsub("[^%a%d]", "")
+  name = name:gsub("[^%ad]", "")
   name = name:lower()
   return name
 end
@@ -440,8 +440,6 @@ function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
   end
-
-  assert(db_name == db:safe_name(db_name), "Database name contains illegal characters.  Only alphanumeric characters are valid.  Database not created or loaded.")
 
   db_name = db:safe_name(db_name)
 
