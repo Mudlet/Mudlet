@@ -349,9 +349,7 @@ jobs:
       # macOS binary is in ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}/Contents/MacOS
       run: |
         cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
-        ulimit -c unlimited
-        echo core | sudo tee /proc/sys/kernel/core_pattern
-        echo 0 | sudo tee /proc/sys/kernel/core_uses_pid
+
 
       shell: bash
 
@@ -367,6 +365,11 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
       run: |
+        # Generate core dumps on crash in a file named './core'
+        ulimit -c unlimited
+        echo core | sudo tee /proc/sys/kernel/core_pattern
+        echo 0 | sudo tee /proc/sys/kernel/core_uses_pid
+
         echo "[DEBUG] Starting Mudlet self-test"
         xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror || rc=$?
         echo "[DEBUG] Mudlet self-test finished with exit code: $rc"
