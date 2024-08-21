@@ -73,7 +73,7 @@ public:
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
-    bool setArea(int, bool isToDeferAreaRelatedRecalculations = false);
+    bool setArea(int, bool deferAreaRecalculations = false);
     int getExitWeight(const QString& cmd);
 
     int getWeight() const { return weight; }

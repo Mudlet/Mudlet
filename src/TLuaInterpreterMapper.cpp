@@ -579,7 +579,12 @@ int TLuaInterpreter::addRoom(lua_State* L)
     const bool added = host.mpMap->addRoom(id);
     lua_pushboolean(L, added);
     if (added) {
-        host.mpMap->setRoomArea(id, -1, false);
+        int areaID = -1;
+        if (lua_gettop(L) >= 2) {
+            areaID = getVerifiedInt(L, __func__, 2, "areaID");
+        }
+        // defer area calculations as all new rooms are initialised at 0,0,0 anyway
+        host.mpMap->setRoomArea(id, areaID, true);
         host.mpMap->setUnsaved(__func__);
         host.mpMap->update();
         host.mpMap->mMapGraphNeedsUpdate = true;
@@ -3476,12 +3481,32 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    QVector<int> roomIds;
+    if (lua_isnumber(L, 1)) {
+        const int id = getVerifiedInt(L, __func__, 1, "roomID");
+        if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+            return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+        }
+        roomIds.append(id);
+    } else if (lua_istable(L, 1)) {
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            const int id = getVerifiedInt(L, __func__, -1, "roomID");
+            if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+                return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+            }
+            roomIds.append(id);
+            lua_pop(L, 1);
+        }
+    } else {
+        lua_pushfstring(L,
+                        "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs\n"
+                        "expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
 
-    int areaId;
+    int areaId = -1;
     QString areaName;
     if (lua_isnumber(L, 2)) {
         areaId = lua_tonumber(L, 2);
@@ -3511,9 +3536,11 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return lua_error(L);
     }
 
-    // Can set the room to an area which does not have a TArea instance but does
-    // appear in the TRoomDB::areaNamesMap...
-    const bool result = host.mpMap->setRoomArea(id, areaId, false);
+    const bool result = std::all_of(roomIds.begin(), roomIds.end(), [&](int id) {
+        // defer area recalculation on all rooms until the last room (.back())
+        return host.mpMap->setRoomArea(id, areaId, id != roomIds.back());
+    });
+
     if (result) {
         host.mpMap->update();
     }
