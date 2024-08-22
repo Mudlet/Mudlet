@@ -49,13 +49,21 @@
 # 6 - One or more Luarocks could not be installed
 # 7 - One of more packages failed to install
 
+# We use this internally - but it is actually the same as ${MINGW_PREFIX}
+export MINGW_BASE_DIR=$MSYSTEM_PREFIX
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+if [ "${MSYSTEM}" = "CLANG64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+  export BUILDCOMPONENT="clang-x86_64"
+  export MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
+  export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="x86_64"
+  export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 elif [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
@@ -68,11 +76,7 @@ else
   exit 2
 fi
 
-# We use this internally - but it is actually the same as ${MINGW_PREFIX}
-export MINGW_BASE_DIR=$MSYSTEM_PREFIX
-# A more compact - but not necessarily understood by other than MSYS/MINGW
-# executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
@@ -91,11 +95,12 @@ echo "    This could take a long time if it is needed to fetch everything, so fe
 echo "    to go and have a cup of tea (other beverages are available) in the meantime...!"
 echo ""
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+
+if [ "${BUILD_BITNESS}" = "64" ]; then
   echo "=== Installing Qt6 Packages ==="
   pacman_attempts=1
   while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
+    if /usr/bin/pacman -S --noconfirm \
       "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
@@ -116,13 +121,13 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
   done
-
+  
 else
 
   echo "=== Installing Qt5 Packages ==="
   pacman_attempts=1
   while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
+    if /usr/bin/pacman -S --needed --noconfirm \
       "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
       "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
@@ -145,12 +150,13 @@ fi
 
 pacman_attempts=1
 while true; do
-  if /usr/bin/pacman -Su --needed --noconfirm \
+  if /usr/bin/pacman -S --needed --noconfirm \
     git \
     man \
     rsync \
-    "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+    "mingw-w64-${BUILDCOMPONENT}-gcc-compat" \
+    "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
     "mingw-w64-${BUILDCOMPONENT}-ntldd" \
@@ -163,7 +169,11 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
-    "mingw-w64-${BUILDCOMPONENT}-jq"; then
+    "mingw-w64-${BUILDCOMPONENT}-jq" \
+    "mingw-w64-${BUILDCOMPONENT}-cmake" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
+    ; then
       break
   fi
 
@@ -175,6 +185,29 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
+
+#git clone https://github.com/harfbuzz/harfbuzz.git
+#cd harfbuzz
+#meson setup build --prefix=/clang64 --buildtype=release -Dgraphite=disabled -Dtests=disabled
+#meson compile -C build
+#meson install -C build
+
+echo "Removing graphite2 installed by qt dependency"
+pacman -Rdd mingw-w64-${BUILDCOMPONENT}-graphite2
+
+echo "Compiling and installing graphite2 from source"
+git clone https://github.com/silnrsi/graphite.git
+cd graphite
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/clang64 ..
+if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
+  ninja -C . build -j "${NUMBER_OF_PROCESSORS}"
+else
+  ninja -C . build
+fi
+ninja install
+
 
 echo ""
 echo "    Completed"

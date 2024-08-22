@@ -52,10 +52,16 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   exit 2
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
+  MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+  export MINGW_INTERNAL_BASE_DIR
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
+  MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+  export MINGW_INTERNAL_BASE_DIR
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  export BUILD_BITNESS="64"
+  MINGW_INTERNAL_BASE_DIR="/clang${BUILD_BITNESS}"
+  export MINGW_INTERNAL_BASE_DIR
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
   echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
@@ -64,8 +70,7 @@ else
 fi
 
 BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
+
 GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
@@ -109,7 +114,7 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+if [ "${BUILD_BITNESS}" = "64" ]; then
     "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
 else
     "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt" ./mudlet.exe
@@ -133,9 +138,16 @@ ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 #
 echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+if [ "${MSYSTEM}" = "CLANG64" ]; then
     NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-      | /usr/bin/grep -v "Qt5" \
+      | /usr/bin/grep -v "Qt6" \
+      | /usr/bin/grep -i "clang" \
+      | /usr/bin/cut -d ">" -f2 \
+      | /usr/bin/cut -d "(" -f1 \
+      | /usr/bin/sort)
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+    NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
+      | /usr/bin/grep -v "Qt6" \
       | /usr/bin/grep -i "mingw" \
       | /usr/bin/cut -d ">" -f2 \
       | /usr/bin/cut -d "(" -f1 \
@@ -171,12 +183,12 @@ cp -v -p -t . \
 echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness:
-if [ "${MSYSTEM}" = "MINGW32" ]; then
+if [ "${BUILD_BITNESS}" = "32" ]; then
     cp -v -p -t . \
         "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3.dll" \
         "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3.dll"
 
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
+elif [ "${BUILD_BITNESS}" = "64" ]; then
     cp -v -p -t . \
         "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
         "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
@@ -185,9 +197,9 @@ fi
 
 echo ""
 echo "Copying discord-rpc library in..."
-if [ "${MSYSTEM}" = "MINGW32" ]; then
+if [ "${BUILD_BITNESS}" = "32" ]; then
     cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc32.dll"  .
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
+elif [ "${BUILD_BITNESS}" = "64" ]; then
     cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
 fi
 echo ""
