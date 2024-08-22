@@ -4714,8 +4714,10 @@ void dlgTriggerEditor::saveTimer()
         if (pT->state()) {
             clearEditorNotification();
 
+            // don't activate new timers by default - might be annoying
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
+
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
@@ -5430,6 +5432,7 @@ void dlgTriggerEditor::saveKey()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
+        const QString old_name = pT->getName();
         pItem->setText(0, name);
         pT->setName(name);
         pT->setCommand(command);
@@ -5487,8 +5490,22 @@ void dlgTriggerEditor::saveKey()
 
         if (pT->state()) {
             clearEditorNotification();
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
+            if (old_name == tr("New key")) {
+                QIcon _icon;
+                if (pT->isFolder()) {
+                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descActiveFolder;
+                } else {
+                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descActive;
+                }
+                pItem->setIcon(0, _icon);
+                pItem->setText(0, name);
+                pT->setIsActive(true);
+            } else {
+                pItem->setIcon(0, icon);
+                pItem->setText(0, name);
+            }
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
