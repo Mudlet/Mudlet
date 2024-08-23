@@ -163,6 +163,8 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
@@ -175,6 +177,16 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
+
+echo "Removing harfbuzz installed by qt"
+pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
+
+echo "Building harfbuzz without graphite2"
+git clone https://github.com/harfbuzz/harfbuzz.git
+cd harfbuzz
+meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson compile -C build
+meson install -C build
 
 echo ""
 echo "    Completed"
