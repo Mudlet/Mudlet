@@ -66,14 +66,10 @@ fi
 BUILD_CONFIG="release"
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
-PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
-export PATH
 GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
 echo "MSYSTEM is: ${MSYSTEM}"
-echo "PATH is now:"
-echo "${PATH}"
 echo ""
 
 cd $GITHUB_WORKSPACE_UNIX_PATH || exit 1
@@ -236,6 +232,7 @@ echo "Copying Lua translation files in..."
 mkdir -p ./translations/lua/translated
 cp -v -p -t ./translations/lua/translated \
     ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/translated/mudlet-lua_??_??.json
+cp -v -p -t ./translations/lua ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/mudlet-lua.json
 echo ""
 
 echo "Copying Hunspell dictionaries in..."

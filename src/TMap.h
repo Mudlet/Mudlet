@@ -111,7 +111,7 @@ public:
                        std::optional<QString> fontName = std::nullopt);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
-    bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);
+    bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(QString& msg);
