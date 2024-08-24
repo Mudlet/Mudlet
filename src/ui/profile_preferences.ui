@@ -3763,178 +3763,331 @@ you can use it but there could be issues with aligning columns of text</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_sharing">
+     <widget class="QWidget" name="tab_data">
       <attribute name="title">
-       <string>Sharing</string>
+       <string>Data</string>
       </attribute>
-      <layout class="QVBoxLayout" name="vBoxLayout_tab_sharing">
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_data">
        <item>
         <widget class="QGroupBox" name="groupBox_sharing">
          <property name="title">
-          <string>Given consent, the game or a script may request then receive the following data via NEW-ENVIRON, MNES, MTTS, and GMCP protocols</string>
+          <string>Sharing</string>
          </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+        </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_sharing">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_shareLanguage">
+           <widget class="QLabel" name="label_sharing_description">
             <property name="text">
-             <string>LANGUAGE</string>
+             <string>Given consent, the game or a script may request then receive the following data:</string>
             </property>
             <property name="buddy">
-             <cstring>label_shareLanguage</cstring>
+             <cstring>label_sharing_description</cstring>
             </property>
            </widget>
           </item>
-          <item row="0" column="1" colspan="2">>
-           <widget class="QLabel" name="label_detailLanguage">
-            <property name="text">
-             <string>'en_US' for English (American), 'de' for Deutsch, etc.</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_detailLanguage</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QComboBox" name="comboBox_shareLanguage">
-            <item>
-             <property name="text">
-              <string>Do Not Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Block Requests</string>
-             </property>
-            </item>
-           </widget>
-          </item>
+
           <item row="1" column="0">
-           <widget class="QLabel" name="label_shareScreenReader">
-            <property name="text">
-             <string>SCREEN_READER</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_shareScreenReader</cstring>
+           <widget class="Line" name="line_separator_sharing">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="1" column="1" colspan="2">>
-           <widget class="QLabel" name="label_detailScreenReader">
-            <property name="text">
-             <string>'0' for not advertised, '1' for advertised (see Accessibility tab)</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_detailScreenReader</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QComboBox" name="comboBox_shareScreenReader">
-            <item>
-             <property name="text">
-              <string>Do Not Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Block Requests</string>
-             </property>
-            </item>
-           </widget>
-          </item>
+
           <item row="2" column="0">
-           <widget class="QLabel" name="label_shareSystemType">
-            <property name="text">
-             <string>SYSTEMTYPE</string>
+           <widget class="QGroupBox" name="groupBox_shareLanguage">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <property name="buddy">
-             <cstring>label_shareSystemType</cstring>
+            <property name="title">
+             <string>Language</string>
             </property>
+            <layout class="QGridLayout" name="gridLayout_groupBox_shareLanguage" columnstretch="0,1">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_purpose_shareLanguage">
+               <property name="text">
+                <string>Purpose:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_purpose_shareLanguage</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_shareLanguagePurpose">
+               <property name="text">
+                <string>Match client language to adjust game and user interface content</string>
+               </property>
+               <property name="buddy">
+                <cstring>label_shareLanguagePurpose</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_option_shareLanguage">
+               <property name="text">
+                <string>Option:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_option_shareLanguage</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="comboBox_shareLanguage">
+               <item>
+                <property name="text">
+                 <string>Do not share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Block Requests</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
-          <item row="2" column="1" colspan="2">>
-           <widget class="QLabel" name="label_detailSystemType">
-            <property name="text">
-             <string>'WIN32' for Windows, 'MACOS' for Mac, etc.</string>
-            </property>
-            <property name="buddy">
-             <cstring>label_detailSystemType</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="3">
-           <widget class="QComboBox" name="comboBox_shareSystemType">
-            <item>
-             <property name="text">
-              <string>Do Not Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Block Requests</string>
-             </property>
-            </item>
-           </widget>
-          </item>
+
           <item row="3" column="0">
-           <widget class="QLabel" name="label_shareUser">
-            <property name="text">
-             <string>USER</string>
+           <widget class="QGroupBox" name="groupBox_shareScreenReader">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <property name="buddy">
-             <cstring>label_shareUser</cstring>
+            <property name="title">
+             <string>Screen Reader</string>
             </property>
+            <layout class="QGridLayout" name="gridLayout_groupBox_shareScreenReader" columnstretch="0,1">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_purpose_shareScreenReader">
+               <property name="text">
+                <string>Purpose:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_purpose_shareScreenReader</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_shareScreenReaderPurpose">
+               <property name="text">
+                <string>Enable accessible features to adjust game and user interface content</string>
+               </property>
+               <property name="buddy">
+                <cstring>label_shareScreenReaderPurpose</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_option_shareScreenReader">
+               <property name="text">
+                <string>Option:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_option_shareScreenReader</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="comboBox_shareScreenReader">
+               <item>
+                <property name="text">
+                 <string>Do not share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Block Requests</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
-           <widget class="QLabel" name="label_detailUser">
-            <property name="text">
-             <string>'Character name' from the Options tab in Connect</string>
+
+          <item row="4" column="0">
+           <widget class="QGroupBox" name="groupBox_shareSystemType">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <property name="buddy">
-             <cstring>label_detailUser</cstring>
+            <property name="title">
+             <string>System Type</string>
             </property>
+            <layout class="QGridLayout" name="gridLayout_groupBox_shareSystemType" columnstretch="0,1">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_purpose_shareSystemType">
+               <property name="text">
+                <string>Purpose:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_purpose_shareSystemType</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_shareSystemTypePurpose">
+               <property name="text">
+                <string>Consider client operating system to adjust game and user interface elements</string>
+               </property>
+               <property name="buddy">
+                <cstring>label_shareSystemTypePurpose</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_option_shareSystemType">
+               <property name="text">
+                <string>Option:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_option_shareSystemType</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="comboBox_shareSystemType">
+               <item>
+                <property name="text">
+                 <string>Do not share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Block Requests</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
-          <item row="3" column="3">
-           <widget class="QComboBox" name="comboBox_shareUser">
-            <item>
-             <property name="text">
-              <string>Do Not Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Share</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Block Requests</string>
-             </property>
-            </item>
+
+          <item row="5" column="0">
+           <widget class="QGroupBox" name="groupBox_shareUser">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string>User</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_groupBox_shareUser" columnstretch="0,1">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_purpose_shareUser">
+               <property name="text">
+                <string>Purpose:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_purpose_shareUser</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_shareUserPurpose">
+               <property name="text">
+                <string>Indicate client account:character name to the game server</string>
+               </property>
+               <property name="buddy">
+                <cstring>label_shareUserPurpose</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_option_shareUser">
+               <property name="text">
+                <string>Option:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="buddy">
+                <cstring>label_option_shareUser</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="comboBox_shareUser">
+               <item>
+                <property name="text">
+                 <string>Do not share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Share</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Block Requests</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
+
          </layout>
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer_sharing">
+        <spacer name="verticalSpacer_data">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>

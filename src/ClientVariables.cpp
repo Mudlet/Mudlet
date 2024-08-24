@@ -884,13 +884,13 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     // Post message about client variable settings
     if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
-        const QString text = tr("\n        --> Control sharing preferences by clicking here for the Sharing tab in Settings <--\n\n\n");
+        const QString text = tr("\n        --> Control sharing preferences by clicking here for the Data tab in Settings <--\n\n\n");
         QStringList commandList;
         QStringList hintList;
         bool useCurrentFormat = true;
 
-        commandList << "showSettingsTab(\"tab_sharing\")";
-        hintList << tr("Open the Sharing tab of the Settings menu");
+        commandList << "showSettingsTab(\"tab_data\")";
+        hintList << tr("Open the Data tab of the Settings menu");
 
         const QString info1 = tr("[ INFO ]  - To customize the experience, the game or a script requests you consent to share:");
         mpHost->mTelnet.postMessage(info1);

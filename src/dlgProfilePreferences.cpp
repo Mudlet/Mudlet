@@ -506,11 +506,15 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
-    // ===== tab_sharing =====
+    // ===== tab_data =====
     comboBox_shareLanguage->setEnabled(false);
+    label_shareLanguagePurpose->setEnabled(false);
     comboBox_shareScreenReader->setEnabled(false);
+    label_shareScreenReaderPurpose->setEnabled(false);
     comboBox_shareSystemType->setEnabled(false);
+    label_shareSystemTypePurpose->setEnabled(false);
     comboBox_shareUser->setEnabled(false);
+    label_shareUserPurpose->setEnabled(false);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
@@ -622,11 +626,15 @@ void dlgProfilePreferences::enableHostDetails()
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
-    // ===== tab_sharing =====
+    // ===== tab_data =====
     comboBox_shareUser->setEnabled(true);
+    label_shareUserPurpose->setEnabled(true);
     comboBox_shareSystemType->setEnabled(true);
+    label_shareSystemTypePurpose->setEnabled(true);
     comboBox_shareScreenReader->setEnabled(true);
+    label_shareScreenReaderPurpose->setEnabled(true);
     comboBox_shareLanguage->setEnabled(true);
+    label_shareLanguagePurpose->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
