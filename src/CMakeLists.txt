@@ -126,11 +126,11 @@ set(mudlet_SRCS
     TKey.cpp
     TLabel.cpp
     TLinkStore.cpp
-
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
+    TLuaInterpreterMMCP.cpp
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
