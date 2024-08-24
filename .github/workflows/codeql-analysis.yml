@@ -48,7 +48,7 @@ jobs:
         submodules: true
 
     - name: (Windows) Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
@@ -57,7 +57,7 @@ jobs:
         cache: true
 
     - name: (Linux/macOS) Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}

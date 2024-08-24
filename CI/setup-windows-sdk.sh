@@ -47,6 +47,7 @@
 # 2 - Unsupported MSYS2/MINGGW shell type
 # 5 - Invalid command line argument
 # 6 - One or more Luarocks could not be installed
+# 7 - One of more packages failed to install
 
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
@@ -91,31 +92,64 @@ echo "    to go and have a cup of tea (other beverages are available) in the mea
 echo ""
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
-/usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
+  echo "=== Installing Qt6 Packages ==="
+  pacman_attempts=1
+  while true; do
+    if /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
+        break
+    fi
+
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    pacman_attempts=$((pacman_attempts +1))
+
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
+
 else
-/usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-tools"
+
+  echo "=== Installing Qt5 Packages ==="
+  pacman_attempts=1
+  while true; do
+    if /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-tools"; then
+        break
+    fi
+
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    pacman_attempts=$((pacman_attempts +1))
+
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
 fi
 
-/usr/bin/pacman -Su --needed --noconfirm \
+pacman_attempts=1
+while true; do
+  if /usr/bin/pacman -Su --needed --noconfirm \
     git \
     man \
     rsync \
-    ccache \
+    "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
@@ -128,51 +162,63 @@ fi
     "mingw-w64-${BUILDCOMPONENT}-zlib" \
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
-    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" 
+    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
+    "mingw-w64-${BUILDCOMPONENT}-jq"; then
+      break
+  fi
+
+  if [ $pacman_attempts -eq 10 ]; then
+    exit 7
+  fi
+  pacman_attempts=$((pacman_attempts +1))
+
+  echo "=== Some packages failed to install, waiting and trying again ==="
+  sleep 10
+done
+
+echo "Removing harfbuzz installed by qt"
+pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
+
+echo "Building harfbuzz without graphite2"
+git clone https://github.com/harfbuzz/harfbuzz.git
+cd harfbuzz
+meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson compile -C build
+meson install -C build
 
 echo ""
 echo "    Completed"
 echo ""
 
 
-if [ $(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua) -eq 0 ]; then
+if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
   # a location that is different for each different MSYS2 environment
   echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
   echo "  not end up in the same place when --tree \"user\" is used..."
   echo ""
-  
+
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
   cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
   /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
-  echo "    Completed" 
+  echo "    Completed"
 else
   echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
   echo "  do not end up in the same place"
 fi
-echo ""
-echo "  When using lua modules from luarocks and you wish to use a per-user one"
-echo "rather than sharing them with other users on this PC it is recommended that"
-echo "you avoid using the --local option to luarocks but instead use"
-echo "--tree \"user\" {the word user, NOT your username). This is so that if you"
-echo "are building things for other PC systems and are working with more than"
-echo "one 'bitness' or are investigating the different Mingw-w64 environments"
-echo "the rocks compiled for each variant do not end up in the same set of"
-echo "directories - which will break things!"
-echo ""
-echo "You will probably have to tweak the LUA_PATH and LUA_CPATH environmental"
-echo "variables before running Mudlet so that it can find the per-user modules"
-echo "You will likely want to review the output from 'luarocks path --help'"
-echo "for more information (remembering to include the '--lua-version 5.1'"
-echo "command line argument to get the right details when using it!)"
-echo ""
+echo "For per-user Lua modules from LuaRocks:"
+echo "- Use '--tree \"user\"' (literally) instead of '--local'"
+echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
+echo "- See 'luarocks path --help' for details"
 
 # Need to overcome a problem with luarock 3.9.0 which uses Windows CMD MKDIR
 # but which cannot make any missing intermediate directories if the
 # luafilesystem module for Lua 5.4 is not present, see:
 # https://github.com/msys2/MINGW-packages/pull/12002
-if [ $(luarocks --lua-version 5.4 list | grep -c "luafilesystem") -eq 0 ]; then
+if [ "$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")" -eq 0 ]; then
   # Need to install the 5.4 luafilesystem rock
   echo "  Improving the luarocks operation by installing the 5.4 luafilesystem rock."
   neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
@@ -190,29 +236,20 @@ fi
 # itself runs in a Lua 5.4 environment) - otherwise one has to do the same thing
 # for EVERY luarock!
 
-# Save the wanted Luarocks 5.1 command so it can be used repeatedly next
-# this uses the "system" (shared between all users) tree, using the --local
-# option does NOT work, but the alternative --tree "user" (the literal string
-# user NOT the user's name) does for "per user" luarocks as the previous use
-# of sed above has "fixed" things:
 ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
-# CHECKCOMMAND=$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")
-# FIXME: Only install if needed - this whole script is safe to be rerun
-# (idempotent) but it is an unnecessary delay to reinstall the same things over
-# again:
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
-WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3" "argparse")
+WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3" "argparse" "lunajson")
 
 success="true"
 for ROCK in "${WANTED_ROCKS[@]}"; do
-  if [ $(luarocks --lua-version 5.1 list | grep -c "${ROCK}") -eq 0 ]; then
+  if [ "$(luarocks --lua-version 5.1 list | grep -c "${ROCK}")" -eq 0 ]; then
     # This rock is not present
     echo "    ${ROCK}..."
     echo ""
     ${ROCKCOMMAND} install "${ROCK}"
-	if [ $(luarocks --lua-version 5.1 list | grep -c "${ROCK}") -eq 0 ]; then
+	if [ "$(luarocks --lua-version 5.1 list | grep -c "${ROCK}")" -eq 0 ]; then
 	    echo "    ${ROCK} didn't get installed - try rerunning this script..."
 		success="false"
 	else

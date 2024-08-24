@@ -3,7 +3,7 @@
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] || [[ "$GITHUB_EVENT_NAME" = "schedule" ]]; then
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] || [[ "$GITHUB_EVENT_NAME" = "schedule" ]] || [[ "$GITHUB_EVENT_INPUTS_SCHEDULED" = "true" ]]; then
     MUDLET_VERSION_BUILD="-ptb"
   else
     MUDLET_VERSION_BUILD="-testing"
@@ -19,7 +19,7 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     # state onto the development branch and the ^2 to that returns the HEAD
     # of the PR before that happened.
     BUILD_COMMIT=$(git rev-parse --short "${GITHUB_SHA}^2")
-    PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/refs\///' |sed 's/pull\///' | sed 's/\/merge//')
+    PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/refs\///' | sed 's/pull\///' | sed 's/\/merge//')
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}"
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
   else
