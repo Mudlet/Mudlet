@@ -820,7 +820,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
         QJsonObject jsonObj = jsonValue.toObject();
         QString key = jsonObj.value("name").toString();
-        QString purpose = jsonObj.value("purpose").toString();
+        QString purpose = jsonObj.value("purpose").toString().left(250); // Trim purpose to 250 characters
         QString value = jsonObj.value("value").toString();
 
         if (key.isEmpty()) {
