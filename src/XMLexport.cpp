@@ -215,12 +215,12 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { 
-        if(!mpHost) {
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        if (!mpHost) {
             return;
         }
         mpHost->xmlSaved(qsl("profile"));
-     });
+    });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
