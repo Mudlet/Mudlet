@@ -4506,9 +4506,14 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         pHost->mAdvertiseScreenReader = state;
 
         if (pHost->mAdvertiseScreenReader) {
-            comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));
-        } else if (pHost->mpClientVariables->mShareScreenReader != ClientVariables::DataSharingBehaviour::Block) {
-            comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::DoNotShare));
+            if (comboBox_shareScreenReader->currentIndex() != static_cast<int>(ClientVariables::DataSharingBehaviour::Share)) {
+                comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));
+            }
+        }
+
+        if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share) {
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
+            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
         }
     }
 }
@@ -4544,11 +4549,15 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
 
     if (pHost->mpClientVariables->mShareScreenReader != newIndex) {
         pHost->mpClientVariables->mShareScreenReader = newIndex;
-        checkBox_advertiseScreenReader->setChecked(pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share ? true : false);
 
         if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
+
+            if (checkBox_advertiseScreenReader->checkState() != Qt::Checked) {
+                const QString info1 = tr("[ INFO ]  - Control screen reader advertising preferences from the Accessibility tab in Settings");
+                pHost->mTelnet.postMessage(info1);
+            }
         }
     }
 }

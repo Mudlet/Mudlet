@@ -897,19 +897,19 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         commandList << "showSettingsTab(\"tab_data\")";
         hintList << tr("Open the Data tab of the Settings menu");
 
-        const QString info1 = tr("[ ACTION ]- The server or a script is requesting the following information");
-        mpHost->mTelnet.postMessage(info1);
-        const QString info2 = tr("[ ACTION ]- be shared to enhance your gameplay experience:");
-        mpHost->mTelnet.postMessage(info2);
+        const QString action1 = tr("[ ACTION ]- The server or a script is requesting the following information");
+        mpHost->mTelnet.postMessage(action1);
+        const QString action2 = tr("[ ACTION ]- be shared to enhance your gameplay experience:");
+        mpHost->mTelnet.postMessage(action2);
         mpHost->mTelnet.postMessage("\n");
 
         for (auto i = requested.cbegin(), end = requested.cend(); i != end; ++i) {
-            const QString info3 = tr("[ ACTION ]-    Data: %1").arg(i.key());
-            mpHost->mTelnet.postMessage(info3);
+            const QString action3 = tr("[ ACTION ]-    Data: %1").arg(i.key());
+            mpHost->mTelnet.postMessage(action3);
 
             if (!i.value().isEmpty()) {
-                const QString info4 = tr("[ ACTION ]- Purpose: %1").arg(i.value());
-                mpHost->mTelnet.postMessage(info4);
+                const QString action4 = tr("[ ACTION ]- Purpose: %1").arg(i.value());
+                mpHost->mTelnet.postMessage(action4);
             }
         }
 
