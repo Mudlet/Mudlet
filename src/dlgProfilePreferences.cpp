@@ -4256,7 +4256,6 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
 
     if (pHost->mpClientVariables->mShareLanguage == ClientVariables::DataSharingBehaviour::Share) {
         pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
-        pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
     }
 }
 
@@ -4529,7 +4528,6 @@ void dlgProfilePreferences::slot_changeShareLanguage(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("LANGUAGE"));
         }
     }
 }
@@ -4550,9 +4548,7 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SCREEN_READER"));
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("MTTS"));
         }
     }
 }
@@ -4572,7 +4568,6 @@ void dlgProfilePreferences::slot_changeShareSystemType(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("SYSTEMTYPE"));
         }
     }
 }
@@ -4592,7 +4587,6 @@ void dlgProfilePreferences::slot_changeShareUser(const int index)
 
         if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
             pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("USER"));
         }
     }
 }
@@ -4606,7 +4600,6 @@ void dlgProfilePreferences::slot_changeWrapAt()
     }
 
     pHost->mpClientVariables->sendClientVariablesUpdate(qsl("WORD_WRAP"), ClientVariables::SourceClient);
-    pHost->mpClientVariables->sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
 void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)

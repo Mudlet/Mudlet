@@ -746,6 +746,10 @@ bool ClientVariables::updateClientVariable(const QString& key, const QString& va
 }
 
 void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVariables::Source source) {
+    if (source == ClientVariables::SourceClient) {
+        sendInfoNewEnvironValue(data);
+    }
+
     if (!mpHost->mEnableGMCP) {
         return;
     }
