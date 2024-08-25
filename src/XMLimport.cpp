@@ -848,53 +848,24 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    if (attributes().hasAttribute("shareLanguage")) {
-        const QStringView shareLanguage(attributes().value(qsl("shareLanguage")));
+    auto setSharingBehaviour = [&](const QString& attributeName, auto& variable) {
+        if (attributes().hasAttribute(attributeName)) {
+            const QStringView attributeValue(attributes().value(attributeName));
 
-        if (shareLanguage == qsl("Share")) {
-            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Share;
-        } else if (shareLanguage == qsl("DoNotShare")) {
-            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (shareLanguage == qsl("Block")) {
-            pHost->mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Block;
+            if (attributeValue == qsl("Share")) {
+                variable = ClientVariables::DataSharingBehaviour::Share;
+            } else if (attributeValue == qsl("DoNotShare")) {
+                variable = ClientVariables::DataSharingBehaviour::DoNotShare;
+            } else if (attributeValue == qsl("Block")) {
+                variable = ClientVariables::DataSharingBehaviour::Block;
+            }
         }
-    }
+    };
 
-    if (attributes().hasAttribute("shareScreenReader")) {
-        const QStringView shareScreenReader(attributes().value(qsl("shareScreenReader")));
-
-        if (shareScreenReader == qsl("Share")) {
-            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Share;
-        } else if (shareScreenReader == qsl("DoNotShare")) {
-            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (shareScreenReader == qsl("Block")) {
-            pHost->mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Block;
-        }
-    }
-
-    if (attributes().hasAttribute("shareSystemType")) {
-        const QStringView shareSystemType(attributes().value(qsl("shareSystemType")));
-
-        if (shareSystemType == qsl("Share")) {
-            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Share;
-        } else if (shareSystemType == qsl("DoNotShare")) {
-            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (shareSystemType == qsl("Block")) {
-            pHost->mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Block;
-        }
-    }
-
-    if (attributes().hasAttribute("shareUser")) {
-        const QStringView shareUser(attributes().value(qsl("shareUser")));
-
-        if (shareUser == qsl("Share")) {
-            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Share;
-        } else if (shareUser == qsl("DoNotShare")) {
-            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (shareUser == qsl("Block")) {
-            pHost->mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Block;
-        }
-    }
+    setSharingBehaviour(qsl("shareLanguage"), pHost->mpClientVariables->mShareLanguage);
+    setSharingBehaviour(qsl("shareScreenReader"), pHost->mpClientVariables->mShareScreenReader);
+    setSharingBehaviour(qsl("shareSystemType"), pHost->mpClientVariables->mShareSystemType);
+    setSharingBehaviour(qsl("shareUser"), pHost->mpClientVariables->mShareUser);
 
     if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();

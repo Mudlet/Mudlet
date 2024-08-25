@@ -7171,86 +7171,39 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+
+    static const QStringList behaviours{"donotshare", "share", "block"};
+
+    auto setBehaviour = [&](const QString& key, auto& variable) {
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                            __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);
+        }
+
+        if (behaviour == qsl("donotshare")) {
+            variable = ClientVariables::DataSharingBehaviour::DoNotShare;
+        } else if (behaviour == qsl("share")) {
+            variable = ClientVariables::DataSharingBehaviour::Share;
+        } else if (behaviour == qsl("block")) {
+            variable = ClientVariables::DataSharingBehaviour::Block;
+        }
+
+        return success();
+    };
+
     if (key == qsl("shareLanguage")) {
-        static const QStringList behaviours{"donotshare", "share", "block"};
-        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
-
-        if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        if (behaviour == qsl("donotshare")) {
-            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (behaviour == qsl("share")) {
-            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Share;
-        } else if (behaviour == qsl("block")) {
-            host.mpClientVariables->mShareLanguage = ClientVariables::DataSharingBehaviour::Block;
-        }
-
-        return success();
+        return setBehaviour(key, host.mpClientVariables->mShareLanguage);
+    } else if (key == qsl("shareScreenReader")) {
+        return setBehaviour(key, host.mpClientVariables->mShareScreenReader);
+    } else if (key == qsl("shareSystemType")) {
+        return setBehaviour(key, host.mpClientVariables->mShareSystemType);
+    } else if (key == qsl("shareUser")) {
+        return setBehaviour(key, host.mpClientVariables->mShareUser);
     }
-    if (key == qsl("shareScreenReader")) {
-        static const QStringList behaviours{"donotshare", "share", "block"};
-        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
-        if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        if (behaviour == qsl("donotshare")) {
-            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (behaviour == qsl("share")) {
-            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Share;
-        } else if (behaviour == qsl("block")) {
-            host.mpClientVariables->mShareScreenReader = ClientVariables::DataSharingBehaviour::Block;
-        }
-
-        return success();
-    }
-    if (key == qsl("shareSystemType")) {
-        static const QStringList behaviours{"donotshare", "share", "block"};
-        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
-
-        if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        if (behaviour == qsl("donotshare")) {
-            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (behaviour == qsl("share")) {
-            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Share;
-        } else if (behaviour == qsl("block")) {
-            host.mpClientVariables->mShareSystemType = ClientVariables::DataSharingBehaviour::Block;
-        }
-
-        return success();
-    }
-    if (key == qsl("shareUser")) {
-        static const QStringList behaviours{"donotshare", "share", "block"};
-        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
-
-        if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
-        }
-
-        if (behaviour == qsl("donotshare")) {
-            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::DoNotShare;
-        } else if (behaviour == qsl("share")) {
-            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Share;
-        } else if (behaviour == qsl("block")) {
-            host.mpClientVariables->mShareUser = ClientVariables::DataSharingBehaviour::Block;
-        }
-
-        return success();
-    }
     if (key == qsl("blankLinesBehaviour")) {
         static const QStringList behaviours{"show", "hide", "replacewithspace"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");

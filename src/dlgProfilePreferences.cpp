@@ -508,13 +508,13 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab_data =====
     comboBox_shareLanguage->setEnabled(false);
-    label_shareLanguagePurpose->setEnabled(false);
+    label_shareLanguagePurposeDetail->setEnabled(false);
     comboBox_shareScreenReader->setEnabled(false);
-    label_shareScreenReaderPurpose->setEnabled(false);
+    label_shareScreenReaderPurposeDetail->setEnabled(false);
     comboBox_shareSystemType->setEnabled(false);
-    label_shareSystemTypePurpose->setEnabled(false);
+    label_shareSystemTypePurposeDetail->setEnabled(false);
     comboBox_shareUser->setEnabled(false);
-    label_shareUserPurpose->setEnabled(false);
+    label_shareUserPurposeDetail->setEnabled(false);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
@@ -628,13 +628,13 @@ void dlgProfilePreferences::enableHostDetails()
 
     // ===== tab_data =====
     comboBox_shareUser->setEnabled(true);
-    label_shareUserPurpose->setEnabled(true);
+    label_shareUserPurposeDetail->setEnabled(true);
     comboBox_shareSystemType->setEnabled(true);
-    label_shareSystemTypePurpose->setEnabled(true);
+    label_shareSystemTypePurposeDetail->setEnabled(true);
     comboBox_shareScreenReader->setEnabled(true);
-    label_shareScreenReaderPurpose->setEnabled(true);
+    label_shareScreenReaderPurposeDetail->setEnabled(true);
     comboBox_shareLanguage->setEnabled(true);
-    label_shareLanguagePurpose->setEnabled(true);
+    label_shareLanguagePurposeDetail->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
@@ -821,10 +821,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(comboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, slot);
     };
 
-    setupSharingLabelAndComboBox(groupBox_shareLanguage, label_purpose_shareLanguage, label_shareLanguagePurpose, comboBox_shareLanguage, "LANGUAGE", static_cast<int>(pHost->mpClientVariables->mShareLanguage), &dlgProfilePreferences::slot_changeShareLanguage);
-    setupSharingLabelAndComboBox(groupBox_shareScreenReader, label_purpose_shareScreenReader, label_shareScreenReaderPurpose, comboBox_shareScreenReader, "SCREEN_READER", static_cast<int>(pHost->mpClientVariables->mShareScreenReader), &dlgProfilePreferences::slot_changeShareScreenReader);
-    setupSharingLabelAndComboBox(groupBox_shareSystemType, label_purpose_shareSystemType, label_shareSystemTypePurpose, comboBox_shareSystemType, "SYSTEMTYPE", static_cast<int>(pHost->mpClientVariables->mShareSystemType), &dlgProfilePreferences::slot_changeShareSystemType);
-    setupSharingLabelAndComboBox(groupBox_shareUser, label_purpose_shareUser, label_shareUserPurpose, comboBox_shareUser, "USER", static_cast<int>(pHost->mpClientVariables->mShareUser), &dlgProfilePreferences::slot_changeShareUser);
+    setupSharingLabelAndComboBox(groupBox_shareLanguage, label_shareLanguagePurpose, label_shareLanguagePurposeDetail, comboBox_shareLanguage, "LANGUAGE", static_cast<int>(pHost->mpClientVariables->mShareLanguage), &dlgProfilePreferences::slot_changeShareLanguage);
+    setupSharingLabelAndComboBox(groupBox_shareScreenReader, label_shareScreenReaderPurpose, label_shareScreenReaderPurposeDetail, comboBox_shareScreenReader, "SCREEN_READER", static_cast<int>(pHost->mpClientVariables->mShareScreenReader), &dlgProfilePreferences::slot_changeShareScreenReader);
+    setupSharingLabelAndComboBox(groupBox_shareSystemType, label_shareSystemTypePurpose, label_shareSystemTypePurposeDetail, comboBox_shareSystemType, "SYSTEMTYPE", static_cast<int>(pHost->mpClientVariables->mShareSystemType), &dlgProfilePreferences::slot_changeShareSystemType);
+    setupSharingLabelAndComboBox(groupBox_shareUser, label_shareUserPurpose, label_shareUserPurposeDetail, comboBox_shareUser, "USER", static_cast<int>(pHost->mpClientVariables->mShareUser), &dlgProfilePreferences::slot_changeShareUser);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
