@@ -4585,15 +4585,14 @@ void dlgTriggerEditor::saveTrigger()
             clearEditorNotification();
 
             if (old_name == tr("New trigger") || old_name == tr("New trigger group")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActiveFolder;
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActive;
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -4830,25 +4829,24 @@ void dlgTriggerEditor::saveAlias()
             clearEditorNotification();
 
             if (old_name == tr("New alias")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -5134,26 +5132,25 @@ void dlgTriggerEditor::saveScript()
         }
 
         if (old_name == tr("New script") || old_name == tr("New script group")) {
-            QIcon _icon;
             if (pT->isFolder()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descActive;
-                _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 if (pT->ancestorsActive()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             }
-            pItem->setIcon(0, _icon);
+            pItem->setIcon(0, icon);
             pItem->setText(0, name);
             pT->setIsActive(true);
         } else {
@@ -5491,15 +5488,14 @@ void dlgTriggerEditor::saveKey()
         if (pT->state()) {
             clearEditorNotification();
             if (old_name == tr("New key")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActiveFolder;
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActive;
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -7993,7 +7989,7 @@ void dlgTriggerEditor::slot_saveEdits()
         saveVar();
         break;
     default:
-        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view, not sure what to save";
     }
 
     // There was a mpHost->serialize() call here, but that code was
@@ -9327,7 +9323,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                 break;
 
             default:
-                key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
+                keyGrabCallback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
                 setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
@@ -9378,7 +9374,7 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
     }
 }
 
-void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
+void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
     if (!pKeyUnit) {
@@ -9397,13 +9393,6 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
         }
     }
 }
-
-// Not used:
-//void dlgTriggerEditor::slot_choseActionIcon()
-//{
-//    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
-//    mpActionsMainArea->lineEdit_action_icon->setText(fileName);
-//}
 
 void dlgTriggerEditor::slot_toggleIsPushDownButton(const int state)
 {
