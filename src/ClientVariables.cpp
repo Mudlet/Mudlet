@@ -897,9 +897,9 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         commandList << "showSettingsTab(\"tab_data\")";
         hintList << tr("Open the Data tab of the Settings menu");
 
-        const QString action1 = tr("[ ACTION ]- The server or a script is requesting the following information");
+        const QString action1 = tr("[ ACTION ]- To enhance your gameplay experience, the server or script");
         mpHost->mTelnet.postMessage(action1);
-        const QString action2 = tr("[ ACTION ]- be shared to enhance your gameplay experience:");
+        const QString action2 = tr("[ ACTION ]- is requesting the following information for sharing");
         mpHost->mTelnet.postMessage(action2);
         mpHost->mTelnet.postMessage("\n");
 
