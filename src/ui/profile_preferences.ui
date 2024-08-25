@@ -3790,7 +3790,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-
           <item row="1" column="0">
            <widget class="Line" name="line_separator_sharing">
             <property name="orientation">
@@ -3798,7 +3797,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-
           <item row="2" column="0">
            <widget class="QGroupBox" name="groupBox_shareLanguage">
             <property name="sizePolicy">
@@ -3827,7 +3825,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <item row="0" column="1">
               <widget class="QLabel" name="label_shareLanguagePurpose">
                <property name="text">
-                <string>Match client language to adjust game and user interface content</string>
+                <string />
                </property>
                <property name="buddy">
                 <cstring>label_shareLanguagePurpose</cstring>
@@ -3844,6 +3842,9 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
                <property name="buddy">
                 <cstring>label_option_shareLanguage</cstring>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -3869,7 +3870,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-
           <item row="3" column="0">
            <widget class="QGroupBox" name="groupBox_shareScreenReader">
             <property name="sizePolicy">
@@ -3893,12 +3893,15 @@ you can use it but there could be issues with aligning columns of text</string>
                <property name="buddy">
                 <cstring>label_purpose_shareScreenReader</cstring>
                </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
               </widget>
              </item>
              <item row="0" column="1">
               <widget class="QLabel" name="label_shareScreenReaderPurpose">
                <property name="text">
-                <string>Enable accessible features to adjust game and user interface content</string>
+                <string />
                </property>
                <property name="buddy">
                 <cstring>label_shareScreenReaderPurpose</cstring>
@@ -3915,6 +3918,9 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
                <property name="buddy">
                 <cstring>label_option_shareScreenReader</cstring>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -3940,7 +3946,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-
           <item row="4" column="0">
            <widget class="QGroupBox" name="groupBox_shareSystemType">
             <property name="sizePolicy">
@@ -3964,12 +3969,15 @@ you can use it but there could be issues with aligning columns of text</string>
                <property name="buddy">
                 <cstring>label_purpose_shareSystemType</cstring>
                </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
               </widget>
              </item>
              <item row="0" column="1">
               <widget class="QLabel" name="label_shareSystemTypePurpose">
                <property name="text">
-                <string>Consider client operating system to adjust game and user interface elements</string>
+                <string />
                </property>
                <property name="buddy">
                 <cstring>label_shareSystemTypePurpose</cstring>
@@ -4011,7 +4019,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-
           <item row="5" column="0">
            <widget class="QGroupBox" name="groupBox_shareUser">
             <property name="sizePolicy">
@@ -4040,7 +4047,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <item row="0" column="1">
               <widget class="QLabel" name="label_shareUserPurpose">
                <property name="text">
-                <string>Indicate client account:character name to the game server</string>
+                <string />
                </property>
                <property name="buddy">
                 <cstring>label_shareUserPurpose</cstring>
@@ -4082,7 +4089,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-
          </layout>
         </widget>
        </item>

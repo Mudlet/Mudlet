@@ -63,6 +63,17 @@ class ClientVariables : public QObject
         QMap<QString, QPair<bool, QString>> getClientVariableDataMap();
         void resetClientVariablesRequested() { clientVariablesRequested.clear(); }
         void resetNewEnvironVariablesRequested() { newEnvironVariablesRequested.clear(); }
+        QString getClientVariablesRequestedPurpose(const QString& key) { return clientVariablesRequested.contains(key) ? clientVariablesRequested[key] : QString(); }
+        QString getClientVariablesTranslation(const QString& key) { 
+            const auto protectedVariables = protectedVariablesMap();
+
+            if (protectedVariables.contains(key)) {
+                const auto &[updatable, behaviour, translation] = protectedVariables[key];
+                return translation;
+            }
+
+            return QString(); 
+        }
 
         bool isMNESVariable(const QString&);
         void sendIsNewEnvironValues(const QByteArray&);
@@ -146,10 +157,10 @@ class ClientVariables : public QObject
         QMap<QString, std::tuple<bool, ClientVariables::DataSharingBehaviour, QString>> protectedVariablesMap() {
             // {variable, {updatable, behaviour, translation}}
             return {
-                {"LANGUAGE", {false, mShareLanguage, tr("language")}},
-                {"SCREEN_READER", {false, mShareScreenReader, tr("screen reader use")}},
-                {"SYSTEMTYPE", {false, mShareSystemType, tr("operating system type")}},
-                {"USER", {false, mShareUser, tr("character name")}}
+                {"LANGUAGE", {false, mShareLanguage, tr("Language")}},
+                {"SCREEN_READER", {false, mShareScreenReader, tr("Screen Reader Use")}},
+                {"SYSTEMTYPE", {false, mShareSystemType, tr("Operating System Type")}},
+                {"USER", {false, mShareUser, tr("Character Name")}}
             };
         }
         QByteArray prepareNewEnvironData(const QString&);
@@ -165,6 +176,6 @@ class ClientVariables : public QObject
         bool updateClientVariable(const QString&, const QString&, QMap<QString, QPair<bool, QString>>&);
 
         Host* mpHost;
-        QSet<QString> clientVariablesRequested;
+        QMap<QString, QString> clientVariablesRequested;
         QSet<QString> newEnvironVariablesRequested;
     };

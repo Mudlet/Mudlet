@@ -801,14 +801,30 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
-    comboBox_shareLanguage->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareLanguage));
-    connect(comboBox_shareLanguage, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareLanguage);
-    comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareScreenReader));
-    connect(comboBox_shareScreenReader, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareScreenReader);
-    comboBox_shareSystemType->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareSystemType));
-    connect(comboBox_shareSystemType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareSystemType);
-    comboBox_shareUser->setCurrentIndex(static_cast<int>(pHost->mpClientVariables->mShareUser));
-    connect(comboBox_shareUser, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareUser);
+    auto setupSharingLabelAndComboBox = [&](QGroupBox* groupBox, QLabel* label1, QLabel* label2, QComboBox* comboBox, const QString& variableKey, int currentIndex, void (dlgProfilePreferences::*slot)(int)) {
+        label1->hide();
+        label2->hide();
+
+        const QString variableTitle = pHost->mpClientVariables->getClientVariablesTranslation(variableKey);
+
+        groupBox->setTitle(variableTitle);
+
+        const QString purpose = pHost->mpClientVariables->getClientVariablesRequestedPurpose(variableKey);
+
+        if (!purpose.isEmpty()) {
+            label2->setText(purpose);
+            label1->show();
+            label2->show();
+        }
+
+        comboBox->setCurrentIndex(currentIndex);
+        connect(comboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, slot);
+    };
+
+    setupSharingLabelAndComboBox(groupBox_shareLanguage, label_purpose_shareLanguage, label_shareLanguagePurpose, comboBox_shareLanguage, "LANGUAGE", static_cast<int>(pHost->mpClientVariables->mShareLanguage), &dlgProfilePreferences::slot_changeShareLanguage);
+    setupSharingLabelAndComboBox(groupBox_shareScreenReader, label_purpose_shareScreenReader, label_shareScreenReaderPurpose, comboBox_shareScreenReader, "SCREEN_READER", static_cast<int>(pHost->mpClientVariables->mShareScreenReader), &dlgProfilePreferences::slot_changeShareScreenReader);
+    setupSharingLabelAndComboBox(groupBox_shareSystemType, label_purpose_shareSystemType, label_shareSystemTypePurpose, comboBox_shareSystemType, "SYSTEMTYPE", static_cast<int>(pHost->mpClientVariables->mShareSystemType), &dlgProfilePreferences::slot_changeShareSystemType);
+    setupSharingLabelAndComboBox(groupBox_shareUser, label_purpose_shareUser, label_shareUserPurpose, comboBox_shareUser, "USER", static_cast<int>(pHost->mpClientVariables->mShareUser), &dlgProfilePreferences::slot_changeShareUser);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();

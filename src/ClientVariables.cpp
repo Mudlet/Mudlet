@@ -751,7 +751,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
     }
 
     QJsonArray response;
-    QStringList requested;
+    QMap<QString, QString> requested;
 
     const auto nonProtectedVariables = nonProtectedVariablesMap();
     const auto protectedVariables = protectedVariablesMap();
@@ -759,7 +759,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
     QStringList sources = {"request", "server", "client"};  // initiated by
     qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();  // current timestamp
 
-    auto addResponse = [&](const QString& key, bool available, bool updatable, bool requested = false, const QString& value = QString()) {
+    auto addResponse = [&](const QString& key, bool available, bool updatable, bool requested = false, const QString& value = QString(), const QString& purpose = QString()) {
         QJsonObject obj{
             {"name", key},
             {"available", available},
@@ -769,7 +769,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         };
 
         if (source == ClientVariables::SourceRequest) {
-            clientVariablesRequested.insert(key);
+            clientVariablesRequested.insert(key, purpose);
             obj["requested"] = requested;
         }
 
@@ -820,6 +820,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
         QJsonObject jsonObj = jsonValue.toObject();
         QString key = jsonObj.value("name").toString();
+        QString purpose = jsonObj.value("purpose").toString();
         QString value = jsonObj.value("value").toString();
 
         if (key.isEmpty()) {
@@ -843,13 +844,13 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
                 available = (behaviour == ClientVariables::DataSharingBehaviour::Share);
 
                 if (!available && source == ClientVariables::SourceRequest) {
-                    requested << translation;
+                    requested.insert(translation, purpose);
                 }
 
                 if (clientVariablesDataMap.contains(key)) {
                     addResponse(key, available, updatable, !available, value);
                 } else {
-                    addResponse(key, available, updatable, !available);
+                    addResponse(key, available, updatable, !available, value, purpose);
                 }
             }
         } else if (nonProtectedVariables.contains(key)) {
@@ -884,7 +885,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     // Post message about client variable settings
     if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
-        const QString text = tr("\n        --> Control sharing preferences by clicking here for the Data tab in Settings <--\n\n\n");
+        const QString text = tr("\n          --> Control sharing preferences by clicking here for the Data tab in Settings <--\n\n");
         QStringList commandList;
         QStringList hintList;
         bool useCurrentFormat = true;
@@ -892,10 +893,22 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         commandList << "showSettingsTab(\"tab_data\")";
         hintList << tr("Open the Data tab of the Settings menu");
 
-        const QString info1 = tr("[ INFO ]  - To customize the experience, the game or a script requests you consent to share:");
+        const QString info1 = tr("[ ACTION ]- The server or a script is requesting the following information");
         mpHost->mTelnet.postMessage(info1);
-        const QString info2 = tr("[ INFO ]  - %1").arg(requested.join(", "));
+        const QString info2 = tr("[ ACTION ]- be shared to enhance your gameplay experience:");
         mpHost->mTelnet.postMessage(info2);
+        mpHost->mTelnet.postMessage("\n");
+
+        for (auto i = requested.cbegin(), end = requested.cend(); i != end; ++i) {
+            const QString info3 = tr("[ ACTION ]-    Data: %1").arg(i.key());
+            mpHost->mTelnet.postMessage(info3);
+
+            if (!i.value().isEmpty()) {
+                const QString info4 = tr("[ ACTION ]- Purpose: %1").arg(i.value());
+                mpHost->mTelnet.postMessage(info4);
+            }
+        }
+
         mpHost->mpConsole->echoLink(text, commandList, hintList, useCurrentFormat);
     }
 }
