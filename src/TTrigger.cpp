@@ -1497,3 +1497,19 @@ void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCo
         bgColorCode = scmIgnored;
     }
 }
+
+QString TTrigger::packageName(TTrigger* pTrigger) {
+    if (!pTrigger) {
+        return QString();
+    }
+
+    if (!pTrigger->mPackageName.isEmpty()) {
+        return pTrigger->mPackageName;
+    }
+
+    if (pTrigger->getParent()) {
+        return packageName(pTrigger->getParent());
+    }
+
+    return QString();
+}

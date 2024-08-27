@@ -310,6 +310,7 @@ private slots:
     void slot_floatingChangedEditorItemsToolbar();
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
+    void slot_triggerEdited();
 
 public:
     TConsole* mpErrorConsole = nullptr;
