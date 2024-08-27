@@ -693,7 +693,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
     connect(mpTriggersMainArea->lineEdit_trigger_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
-    connect(mpTriggersMainArea->spinBox_stayOpen, &QSpinBox::valueChanged, this, &dlgTriggerEditor::slot_triggerEdited);
+    // connect(mpTriggersMainArea->spinBox_stayOpen, &QSpinBox::valueChanged, this, &dlgTriggerEditor::slot_triggerEdited);
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_triggerEdited);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_triggerEdited);
 
@@ -860,7 +860,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
         connect(pItem->lineEdit_pattern, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
         connect(pItem->lineEdit_pattern, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
-        connect(pItem->comboBox_patternType, &QComboBox::activated, this, &dlgTriggerEditor::slot_triggerEdited);
+        // connect(pItem->comboBox_patternType, &QComboBox::activated, this, &dlgTriggerEditor::slot_triggerEdited);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
