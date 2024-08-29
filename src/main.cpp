@@ -245,6 +245,9 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
 
+    int* nullPointer = nullptr;
+    *nullPointer = 42;
+
     mudlet::start();
     // Detect config path before any files are read
     mudlet::self()->setupConfig();
@@ -449,7 +452,7 @@ int main(int argc, char* argv[])
 
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-    
+
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
