@@ -691,11 +691,30 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
     connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_itemSelectedInSearchResults);
 
+    // triggers
     connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
     connect(mpTriggersMainArea->lineEdit_trigger_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
-    // connect(mpTriggersMainArea->spinBox_stayOpen, &QSpinBox::valueChanged, this, &dlgTriggerEditor::slot_triggerEdited);
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_triggerEdited);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_triggerEdited);
+    // aliases
+    connect(mpAliasMainArea->lineEdit_alias_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpAliasMainArea->lineEdit_alias_pattern, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpAliasMainArea->lineEdit_alias_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    // scripts
+    connect(mpScriptsMainArea->lineEdit_script_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    // timers
+    connect(mpTimersMainArea->lineEdit_timer_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpTimersMainArea->lineEdit_timer_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    // keys
+    connect(mpKeysMainArea->lineEdit_key_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpKeysMainArea->lineEdit_key_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_triggerEdited);
+    // buttons
+    connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+    connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_triggerEdited);
+
+
 
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search
@@ -4448,11 +4467,11 @@ void dlgTriggerEditor::slot_triggerEdited()
     TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(triggerID);
 
     const auto packageName = trigger->packageName(trigger);
-    if (packageName.isEmpty()) {
+    if (packageName.isEmpty() || mpHost->mModuleInfo.contains(packageName)) {
         return;
     }
 
-    showWarning(tr("Note: any changes you made to the package will be lost during the upgrade. Consider making a copy of the trigger outside the package first."));
+    showWarning(tr("Note: any changes you make to the package will be lost during the upgrade. Consider making a copy of the trigger outside the package first."));
 }
 
 void dlgTriggerEditor::saveTrigger()
