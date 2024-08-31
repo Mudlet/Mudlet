@@ -36,6 +36,7 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "GifTracker.h"
 
 #include "pre_guard.h"
 #include <QLineEdit>
@@ -51,7 +52,7 @@
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
-: TConsole(pH, TConsole::MainConsole, parent)
+: TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
 , mClipboard(pH)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
@@ -157,7 +158,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
     const auto loggingPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
-    QDateTime const logDateTime = QDateTime::currentDateTime();
+    const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file);
@@ -259,7 +260,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
             // put the charset as early as possible as the parser MUST restart when it
             // switches away from the ASCII default
-            logStream << "  <meta name='generator' content='" << tr("Mudlet MUD Client version: %1%2").arg(APP_VERSION, APP_BUILD) << "'>\n";
+            logStream << "  <meta name='generator' content='" << tr("Mudlet MUD Client version: %1%2").arg(APP_VERSION, mudlet::self()->mAppBuild) << "'>\n";
             // Nice to identify what made the file!
             logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(mProfileName) << "</title>\n";
             // Web-page title
@@ -428,16 +429,15 @@ QString TMainConsole::getCurrentLine(std::string& buf)
 TConsole* TMainConsole::createBuffer(const QString& name)
 {
     if (!mSubConsoleMap.contains(name)) {
-        auto pC = new TConsole(mpHost, Buffer);
+        auto pC = new TConsole(mpHost, name, Buffer);
         mSubConsoleMap[name] = pC;
-        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pC->hide();
         pC->layerCommandLine->hide();
         return pC;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 void TMainConsole::resetMainConsole()
@@ -489,18 +489,17 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
         if (pS) {
-            pC = new TConsole(mpHost, SubConsole, pS->widget());
+            pC = new TConsole(mpHost, name, SubConsole, pS->widget());
         } else if (pW) {
-            pC = new TConsole(mpHost, SubConsole, pW->widget());
+            pC = new TConsole(mpHost, name, SubConsole, pW->widget());
         } else {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+            pC = new TConsole(mpHost, name, SubConsole, mpMainFrame);
         }
         if (!pC) {
             return nullptr;
         }
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
-        pC->mConsoleName = name;
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
@@ -583,6 +582,11 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
 
     auto pL = mLabelMap.take(name);
     if (pL) {
+
+        if (pL->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
+        }
+
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -653,11 +657,11 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 
     auto pL = mLabelMap.value(name);
     if (pL) {
-        QPixmap const cursor_pixmap = QPixmap(pixMapLocation);
+        const QPixmap cursor_pixmap = QPixmap(pixMapLocation);
         if (cursor_pixmap.isNull()) {
             return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
         }
-        QCursor const custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        const QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
         pL->setCursor(custom_cursor);
         return {true, QString()};
     }
@@ -692,7 +696,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
         mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
-        QDateTime const now(QDateTime::currentDateTime());
+        const QDateTime now(QDateTime::currentDateTime());
 
         if (mpHost->mpMap->restore(QString())) {
             mpHost->mpMap->audit();
@@ -761,7 +765,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
-        QPixmap const bgPixmap(path);
+        const QPixmap bgPixmap(path);
         pL->setPixmap(bgPixmap);
         return true;
     } else {
@@ -922,7 +926,7 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
     if (pW){
-        QSize const windowSize = pW->widget()->size();
+        const QSize windowSize = pW->widget()->size();
         QSize userWindowSize(windowSize.width(), windowSize.height());
         return userWindowSize;
     }
@@ -1161,7 +1165,7 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
     }
 
-    double const processT = mProcessingTimer.elapsed() / 1000.0;
+    const double processT = mProcessingTimer.elapsed() / 1000.0;
     if (mpHost->mTelnet.mGA_Driver) {
         /*:
         The first argument 'N' represents the 'N'etwork latency; the second 'S' the
@@ -1275,7 +1279,7 @@ bool TMainConsole::loadMap(const QString& location)
 
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
-    QDateTime const now(QDateTime::currentDateTime());
+    const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
     if (pHost->mpMap->restore(location)) {
@@ -1339,7 +1343,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
     // been logged...
     qDebug() << "TMainConsole::importingMap() - importing map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
-    QDateTime const now(QDateTime::currentDateTime());
+    const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
 
@@ -1515,6 +1519,11 @@ void TMainConsole::showStatistics()
     itemMsg = std::get<0>(mpHost->getScriptUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Gif Report:")));
+    itemMsg = std::get<0>(mpHost->getGifTracker()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
     // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
     const QString footer = qsl("\n+--------------------------------------------------------------+\n");
     mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
@@ -1522,4 +1531,114 @@ void TMainConsole::showStatistics()
     mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));
 
     mpHost->mpConsole->raise();
+}
+
+void TMainConsole::closeEvent(QCloseEvent* event)
+{
+    qDebug().nospace().noquote() << "TMainConsole::closeEvent(...) INFO - received by \"" << mpHost->getName() << "\".";
+    TEvent conCloseEvent{};
+    conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
+    conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(conCloseEvent);
+
+    if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
+        mudlet::self()->saveWindowLayout();
+        mpHost->modulesToWrite.clear();
+        // We are not checking the status result from here!
+        mpHost->saveProfile();
+
+        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
+            // There is a map loaded - but it *could* have no rooms at all!
+            const QDir dir_map;
+            const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+            const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
+            if (!dir_map.exists(directory_map)) {
+                dir_map.mkpath(directory_map);
+            }
+            QSaveFile file(filename_map);
+            if (file.open(QIODevice::WriteOnly)) {
+                QDataStream out(&file);
+                if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+                    out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+                }
+                // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
+                mpHost->mpMap->serialize(out);
+                if (!file.commit()) {
+                    qWarning() << "TMainConsole::closeEvent(...) WARNING - error saving map: " << file.errorString();
+                }
+            }
+        }
+        mpHost->waitForProfileSave();
+        event->accept();
+        return;
+    }
+
+    if (!mEnableClose) {
+    ASK:
+        const int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        if (choice == QMessageBox::Cancel) {
+            event->ignore();
+            return;
+        }
+
+        if (choice == QMessageBox::Yes) {
+            mudlet::self()->saveWindowLayout();
+
+            mpHost->modulesToWrite.clear();
+            auto [ok, filename, error] = mpHost->saveProfile();
+
+            if (!ok) {
+                QMessageBox::critical(this,
+                                      tr("Could not save profile"),
+                                      tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".")
+                                              .arg(filename, error),
+                                      QMessageBox::Retry);
+                goto ASK;
+            }
+
+            if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
+                // There is a map loaded - but it *could* have no rooms at all!
+                const QDir dir_map;
+                const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+                const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+                if (!dir_map.exists(directory_map)) {
+                    dir_map.mkpath(directory_map);
+                }
+
+                QSaveFile file(filename_map);
+                if (file.open(QIODevice::WriteOnly)) {
+                    QDataStream out(&file);
+                    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+                        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+                    }
+                    // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
+                    mpHost->mpMap->serialize(out);
+                    if (!file.commit()) {
+                        qDebug() << "TConsole::closeEvent: error saving map: " << file.errorString();
+                    }
+                }
+            }
+
+            mpHost->waitForProfileSave();
+            mEnableClose = true;
+            event->accept();
+            return;
+        }
+
+        if (choice == QMessageBox::No) {
+            mudlet::self()->saveWindowLayout();
+            mEnableClose = true;
+            event->accept();
+            return;
+        }
+
+        if (!mudlet::self()->isGoingDown()) {
+            QMessageBox::warning(this, "Aborting exit", "Session exit aborted on user request.");
+            event->ignore();
+            return;
+        }
+
+        mEnableClose = true;
+        event->accept();
+    }
 }

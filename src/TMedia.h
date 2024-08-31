@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2019, 2022. 2024 by Stephen Lyons                  *
  *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,6 +28,7 @@
 #include "TEvent.h"
 #include "mudlet.h"
 #include "TMediaData.h"
+#include "TMediaPlaylist.h"
 
 #include "pre_guard.h"
 #include <QAudioOutput>
@@ -51,6 +52,7 @@ public:
     : mpHost(pHost)
     , mMediaData(mediaData)
     , mMediaPlayer(new QMediaPlayer(pHost))
+    , mPlaylist(new TMediaPlaylist())
     , initialized(true)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -77,11 +79,21 @@ public:
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
 #endif
     }
+    TMediaPlaylist* playlist() const {
+        return mPlaylist;
+    }
+    void setPlaylist(TMediaPlaylist* playlist) {
+        if (mPlaylist != playlist) {
+            delete mPlaylist;
+            mPlaylist = playlist;
+        }
+    }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
+    TMediaPlaylist* mPlaylist = nullptr;
     bool initialized = false;
 };
 
@@ -95,15 +107,19 @@ public:
     ~TMedia() = default;
 
     void playMedia(TMediaData& mediaData);
+    QList<TMediaData> playingMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+    void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
+    void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
     void stopAllMediaPlayers();
+    void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
@@ -115,6 +131,7 @@ private:
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
+    void connectMediaPlayer(TMediaPlayer& player);
     void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
@@ -130,12 +147,14 @@ private:
     static int parseJSONByMediaFadeIn(QJsonObject& json);
     static int parseJSONByMediaFadeOut(QJsonObject& json);
     static int parseJSONByMediaStart(QJsonObject& json);
+    static int parseJSONByMediaFinish(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
     static QString parseJSONByMediaTag(QJsonObject& json);
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
+    static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);

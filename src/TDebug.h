@@ -86,8 +86,8 @@ public:
     explicit TDebug(const QColor&, const QColor&);
     ~TDebug() = default;
 
-    static void addHost(Host*);
-    static void removeHost(Host*);
+    static void addHost(Host*, const QString); // Might need to NOLINT this to prevent a warning about not using a reference
+    static void removeHost(Host*, const QString); // Might need to NOLINT this to prevent a warning about not using a reference
     static void changeHostName(const Host*, const QString&);
     static void flushMessageQueue();
     static QString getTag(Host*);

@@ -99,8 +99,8 @@ public:
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
-    ~TConsole();
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole() override;
 
     void reset();
     void resizeConsole();
@@ -286,7 +286,6 @@ public:
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
-    bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
@@ -318,6 +317,7 @@ public slots:
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
@@ -344,7 +344,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
-    QDebugStateSaver const saver(debug);
+    const QDebugStateSaver saver(debug);
     switch (type) {
     case TConsole::UnknownType:           text = qsl("Unknown"); break;
     case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;

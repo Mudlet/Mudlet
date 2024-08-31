@@ -15,6 +15,10 @@
     "message": "Bloquear",
     "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
   },
+  "AdjustableContainer.light": {
+    "message": "claro",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
   "AdjustableContainer.full": {
     "message": "completo",
     "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."

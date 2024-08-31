@@ -43,7 +43,7 @@ class TArea
 
     friend bool TMap::serialize(QDataStream&, int);
     friend bool TMap::restore(QString, bool);
-    friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
+    friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
 
 public:
     TArea(TMap*, TRoomDB*);
@@ -57,7 +57,7 @@ public:
     void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
-    void removeRoom(int, bool isToDeferAreaRelatedRecalculations = false);
+    void removeRoom(int, bool deferAreaRecalculations = false);
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();

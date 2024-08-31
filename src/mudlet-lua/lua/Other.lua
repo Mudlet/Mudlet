@@ -562,6 +562,10 @@ function _comp(a, b)
   return true
 end
 
+--- exposes _comp as compare as it's a global, has been for years, and is also
+--- extremely useful. But documenting it as _comp is inconsistent with the rest
+--- of the API
+compare = _comp
 
 
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
@@ -1052,6 +1056,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
   folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../../translations/lua") and luaGlobalPath.."/../../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
   assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
@@ -1107,6 +1112,26 @@ function verbosePackageInstall(fileName)
   end
 end
 
+function verboseModuleInstall(fileName)
+  local ok, err = installModule(fileName)
+  local moduleName = fileName
+  -- That is all for installing, now to announce the result to the user:
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  if ok then
+    local successText = mudlet.Locale.moduleInstallSuccess.message
+    successText = string.format(successText, moduleName)
+    local okPrefix = mudlet.Locale.prefixOk.message
+    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
+  else
+    local failureText = mudlet.Locale.moduleInstallFail.message
+    failureText = string.format(failureText, moduleName, err)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    -- Cyan and Orange; see cTelnet::postMessage for color comparison
+  end
+end
+
 local oldInstallPackage = installPackage
 
 -- Override of original installPackage to allow installs from URL
@@ -1155,7 +1180,11 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  verbosePackageInstall(fileName)
+  if holdingModifiers(mudlet.keymodifier.Control) then
+    verboseModuleInstall(fileName)
+  else
+    verbosePackageInstall(fileName)
+  end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 
@@ -1202,32 +1231,38 @@ function getConfig(...)
   local result = {}
 
   if #args == 0 then
+    -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
     local list = {
-      "mapRoomSize", 
-      "mapExitSize", 
-      "mapRoundRooms", 
-      "showRoomIdsOnMap", 
-      "show3dMapView", 
-      "mapperPanelVisible", 
-      "mapShowRoomBorders", 
-      "enableGMCP", 
-      "enableMSDP", 
-      "enableMSSP", 
-      "enableMSP", 
-      "askTlsAvailable", 
-      "inputLineStrictUnixEndings", 
-      "autoClearInputLine", 
-      "showSentText", 
-      "fixUnnecessaryLinebreaks", 
-      "specialForceCompressionOff", 
-      "specialForceGAOff", 
-      "specialForceCharsetNegotiationOff", 
-      "specialForceMxpNegotiationOff", 
-      "compactInputLine", 
-      "announceIncomingText", 
-      "blankLinesBehaviour", 
-      "caretShortcut", 
-      "commandLineHistorySaveSize", 
+      "announceIncomingText",
+      "askTlsAvailable",
+      "autoClearInputLine",
+      "blankLinesBehaviour",
+      "caretShortcut",
+      "commandLineHistorySaveSize",
+      "compactInputLine",
+      "controlCharacterHandling",
+      "enableGMCP",
+      "enableMNES",
+      "enableMSDP",
+      "enableMSP",
+      "enableMSSP",
+      "enableMTTS",
+      "fixUnnecessaryLinebreaks",
+      "forceNewEnvironNegotiationOff",
+      "inputLineStrictUnixEndings",
+      "logInHTML",
+      "mapExitSize",
+      "mapperPanelVisible",
+      "mapRoomSize",
+      "mapRoundRooms",
+      "mapShowRoomBorders",
+      "show3dMapView",
+      "showRoomIdsOnMap",
+      "showSentText",
+      "specialForceCompressionOff",
+      "specialForceCharsetNegotiationOff",
+      "specialForceGAOff",
+      "specialForceMxpNegotiationOff",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

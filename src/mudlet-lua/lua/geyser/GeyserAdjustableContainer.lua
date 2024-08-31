@@ -1,20 +1,15 @@
---Adjustable Container
---Just use it like a normal Geyser Container with some extras like:
---moveable, adjustable size, attach to borders, minimizeable, save/load...
---right click on top border for menu
---Inspired heavily by Adjustable Label (by Jor'Mox ) and EMCO (by demonnic )
---by Edru 2020
+--- Just like a normal container, only adjustable.
+-- Just use it like a normal Geyser Container with some extras like:
+-- moveable, adjustable size, attach to borders, minimizeable, save/load.
+-- Right click on top border for menu.<br/>
+-- Inspired heavily by Adjustable Label (by Jor'Mox) and EMCO (by demonnic)
+-- <br/>See: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Adjustable.Container">Mudlet Manual</a>
+-- @author guy
+-- @author Edru
+-- @module Adjustable.Container
 
 Adjustable = Adjustable or {}
 
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
--- Adjustable Container by Edru     --
---                                  --
---------------------------------------
--- Adjustable Container
--- @module AdjustableContainer
 Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "AdjustableContainerClass"})
 
 local adjustInfo = {}
@@ -1068,12 +1063,11 @@ function Adjustable.Container:new(cons,container)
 
     me.adjLabelstyle = me.adjLabelstyle or [[
     background-color: rgba(0,0,0,100%);
-    border: 4px double green;
-    border-radius: 4px;]]
+    border: 2px groove white;]]
     me.menuStyleMode = "light"
     me.buttonstyle= me.buttonstyle or [[
-    QLabel{ border-radius: 7px; background-color: rgba(255,30,30,100%);}
-    QLabel::hover{ background-color: rgba(255,0,0,50%);}
+    QLabel{ border-color: rgba(255,255,255,100%); background-color: rgba(0,0,0,100%); }
+    QLabel::hover{ background-color: rgba(160,160,160,50%); }
     ]]
 
     me:createContainers()
@@ -1111,7 +1105,7 @@ function Adjustable.Container:new(cons,container)
     me.minimizeLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.attLabel:setOnEnter("Adjustable.Container.onEnterAtt", me)
     me.goInside = true
-    me.titleTxtColor = me.titleTxtColor or "green"
+    me.titleTxtColor = me.titleTxtColor or "grey"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
     me:setTitle()
     me.lockStyle = me.lockStyle or "standard"

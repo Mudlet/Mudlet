@@ -9,7 +9,7 @@ Project structure:
             LuaGlobal.lua     loader for all Lua code used by Mudlet
 
         tests/                unit tests for mudlet-lua 
-        mudlet-lua-doc/       generated documentation (depreciated)
+        mudlet-lua-doc/       generated documentation
 
         CONTRIBS
         genDoc.sh             script for generation documentation

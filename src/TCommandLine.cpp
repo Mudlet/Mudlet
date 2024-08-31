@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2024 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -64,7 +64,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setPalette(mRegularPalette);
     //style subCommandLines by stylesheet
     if (mType != MainCommandLine) {
-        QColor const c = mpHost->mCommandLineBgColor;
+        const QColor c = mpHost->mCommandLineBgColor;
         const QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
     }
@@ -623,7 +623,7 @@ void TCommandLine::adjustHeight()
         mpConsole->layerCommandLine->setMaximumHeight(_height);
         const int x = mpConsole->width();
         const int y = mpConsole->height();
-        QSize const s = QSize(x, y);
+        const QSize s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpConsole, &event);
     }
@@ -704,25 +704,27 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         action_removeWord->setEnabled(false);
         // }
         if (mudlet::self()->mUsingMudletDictionaries) {
-            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                    // Intentional separator
-                                                                    "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                    "line context menu to clearly divide up where the suggestions for correct "
-                                                                    "spellings are coming from.  The precise format might be modified as long as it "
-                                                                    "is clear that the entries below this line in the menu come from the spelling "
-                                                                    "dictionary that the user has chosen in the profile setting which we have "
-                                                                    "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                    "has personally added."));
+            /*:
+            This line is shown in the list of spelling suggestions on the profile's command
+            line context menu to clearly divide up where the suggestions for correct
+            spellings are coming from.  The precise format might be modified as long as it
+            is clear that the entries below this line in the menu come from the spelling
+            dictionary that the user has chosen in the profile setting which we have
+            bundled with Mudlet; the entries about this line are the ones that the user
+            has personally added.
+            */
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
         } else {
-            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                    // Intentional separator
-                                                                    "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                    "line context menu to clearly divide up where the suggestions for correct "
-                                                                    "spellings are coming from.  The precise format might be modified as long as it "
-                                                                    "is clear that the entries below this line in the menu come from the spelling "
-                                                                    "dictionary that the user has chosen in the profile setting which is provided "
-                                                                    "as part of the OS; the entries about this line are the ones that the user has "
-                                                                    "personally added."));
+            /*:
+            This line is shown in the list of spelling suggestions on the profile's command
+            line context menu to clearly divide up where the suggestions for correct
+            spellings are coming from.  The precise format might be modified as long as it
+            is clear that the entries below this line in the menu come from the spelling
+            dictionary that the user has chosen in the profile setting which is provided
+            as part of the OS; the entries about this line are the ones that the user has
+            personally added.
+            */
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
         }
         action_dictionarySeparatorLine->setEnabled(false);
     }
@@ -788,9 +790,11 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         }
 
     } else {
-        auto pA = new QAction(tr("no suggestions (system)",
-                                    // Intentional comment
-                                    "used when the command spelling checker using the selected system dictionary has no words to suggest"));
+        /*:
+        Used when the command spelling checker using the selected system dictionary has
+        no words to suggest.
+        */
+        auto pA = new QAction(tr("no suggestions (system)"));
         pA->setEnabled(false);
         spellings_system << pA;
     }
@@ -815,13 +819,17 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             QAction* pA = nullptr;
             auto mainConsole = mpConsole->mpHost->mpConsole;
             if (mainConsole->isUsingSharedDictionary()) {
-                pA = new QAction(tr("no suggestions (shared)",
-                                            // Intentional comment
-                                            "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
+                /*:
+                Used when the command spelling checker using the dictionary shared between
+                profile has no words to suggest.
+                */
+                pA = new QAction(tr("no suggestions (shared)"));
             } else {
-                pA = new QAction(tr("no suggestions (profile)",
-                                            // Intentional comment
-                                            "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+                /*:
+                Used when the command spelling checker using the profile's own dictionary has
+                no words to suggest.
+                */
+                pA = new QAction(tr("no suggestions (profile)"));
             }
             pA->setEnabled(false);
             spellings_profile << pA;
@@ -1005,12 +1013,12 @@ void TCommandLine::handleTabCompletion(bool direction)
     const QStringList blacklist = tabCompleteBlacklist.values();
     QStringList toDelete;
 
-    for (const QString& wstr : qAsConst(wordList)) {
+    for (const QString& wstr : std::as_const(wordList)) {
         if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
             toDelete += wstr;
         }
     }
-    for (const QString& dstr : qAsConst(toDelete)) {
+    for (const QString& dstr : std::as_const(toDelete)) {
         wordList.removeAll(dstr);
     }
 
@@ -1024,8 +1032,8 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegularExpression const reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
-        QRegularExpressionMatch const match = reg.match(mTabCompletionTyped);
+        const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+        const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
         const int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
@@ -1056,9 +1064,11 @@ void TCommandLine::handleTabCompletion(bool direction)
             if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
             }
+
             const QString proposal = filterList[mTabCompletionCount];
             const QString userWords = mTabCompletionTyped.left(typePosition);
             setPlainText(QString(userWords + proposal));
+            mudlet::self()->announce(proposal);
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
         }
@@ -1076,6 +1086,7 @@ void TCommandLine::handleAutoCompletion()
     QString neu = toPlainText();
     neu.chop(textCursor().selectedText().size());
     setPlainText(neu);
+    mudlet::self()->announce(neu);
     mTabCompletionOld = neu;
     const int oldLength = toPlainText().size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
@@ -1090,6 +1101,7 @@ void TCommandLine::handleAutoCompletion()
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
+            mudlet::self()->announce(mHistoryList[i]);
             moveCursor(QTextCursor::Start);
             for (int k = 0; k < oldLength; k++) {
                 moveCursor(QTextCursor::Right, QTextCursor::MoveAnchor);
@@ -1122,6 +1134,7 @@ void TCommandLine::historyMove(MoveDirection direction)
             mHistoryBuffer = 0;
         }
         setPlainText(mHistoryList[mHistoryBuffer]);
+        mudlet::self()->announce(mHistoryList[mHistoryBuffer]);
         if (mpHost->mHighlightHistory) {
             selectAll();
         } else {
@@ -1259,7 +1272,7 @@ void TCommandLine::recheckWholeLine()
     }
 
     // Save the current position
-    QTextCursor const oldCursor = textCursor();
+    const QTextCursor oldCursor = textCursor();
 
     QTextCursor c = textCursor();
     // Move Cursor AND selection anchor to start:

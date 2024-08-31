@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -129,7 +129,7 @@ void TMap::logError(QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations)
+bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
@@ -155,7 +155,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
+    const bool result = pR->setArea(area, deferAreaRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
@@ -219,7 +219,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     }
 
     const int reverseDir = scmReverseDirections.value(dirType);
-    QVector3D const unitVector = scmUnitVectors.value(dirType);
+    const QVector3D unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!
     const int ux = qRound(unitVector.x());
@@ -1059,9 +1059,9 @@ bool TMap::findPath(int from, int to)
                 mWeightList.clear(); // Reset any partial results...
                 return false;
             }
-            unsigned const int previousRoomId = (locations.at(previousVertex)).id;
+            const unsigned int previousRoomId = (locations.at(previousVertex)).id;
             QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
-            route const r = edgeHash.value(edgeRoomIdPair);
+            const route r = edgeHash.value(edgeRoomIdPair);
             mPathList.prepend(currentRoomId);
             Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
             // Above was found to be triggered by the situation described in:
@@ -1071,21 +1071,30 @@ bool TMap::findPath(int from, int to)
             // the do{} loop - added a test for this so should bail out if it
             // happens - Slysven
             mWeightList.prepend(r.cost);
-            switch (r.direction) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
-            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
-            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!" ) );       break;
-            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!" ) );        break;
-            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!" ) );    break;
-            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!" ) );        break;
-            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
-            default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
+            switch (r.direction) {
+                /*
+                 * Do not translate the directions into the user's locale here,
+                 * that is to be done in the profile specific doSpeedwalk()
+                 * function of the mapper package as the language of the MUD
+                 * need not be the native language of the user - translating
+                 * them here makes the mapper harder to code as it has to
+                 * accommodate all the possible languages the GUI of Mudlet was
+                 * configured to support!
+                 */
+            case DIR_NORTH:        mDirList.prepend(qsl("n"));             break;
+            case DIR_NORTHEAST:    mDirList.prepend(qsl("ne"));            break;
+            case DIR_EAST:         mDirList.prepend(qsl("e"));             break;
+            case DIR_SOUTHEAST:    mDirList.prepend(qsl("se"));            break;
+            case DIR_SOUTH:        mDirList.prepend(qsl("s"));             break;
+            case DIR_SOUTHWEST:    mDirList.prepend(qsl("sw"));            break;
+            case DIR_WEST:         mDirList.prepend(qsl("w"));             break;
+            case DIR_NORTHWEST:    mDirList.prepend(qsl("nw"));            break;
+            case DIR_UP:           mDirList.prepend(qsl("up"));            break;
+            case DIR_DOWN:         mDirList.prepend(qsl("down"));          break;
+            case DIR_IN:           mDirList.prepend(qsl("in"));            break;
+            case DIR_OUT:          mDirList.prepend(qsl("out"));           break;
+            case DIR_OTHER:        mDirList.prepend(r.specialExitName);    break;
+            default:            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
             }
             currentVertex = previousVertex;
             currentRoomId = previousRoomId;
@@ -1106,7 +1115,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                              "for this version of Mudlet. Supported are only formats up to version %2.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
@@ -1159,7 +1168,11 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mIsOnlyMapSymbolFontToBeUsed;
     }
 
-    ofs << mpRoomDB->getAreaMap().size();
+    // Qt 6 changed the return type of QMap<T1, T2>::size() to qsizetype which
+    // is an int64 rather than the int32 of Qt5 - but we need to use the latter
+    // to retain compatibility:
+    ofs << static_cast<qint32>(mpRoomDB->getAreaMap().size());
+
     // serialize area table
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
     while (itAreaList.hasNext()) {
@@ -1203,7 +1216,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             // Also we now have temporary labels, so we need to count the
             // permanent ones first to use as the count for ones to store:
             const auto permanentLabelsList{pA->getPermanentLabelIds()};
-            ofs << permanentLabelsList.size();
+            ofs << static_cast<qint32>(permanentLabelsList.size());
             QListIterator<int> itMapLabelId(permanentLabelsList);
             while (itMapLabelId.hasNext()) {
                 const auto labelID = itMapLabelId.next();
@@ -1246,14 +1259,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 areasWithPermanentLabels.insert(itArea.key(), itArea.value());
             }
         }
-        ofs << areasWithPermanentLabels.count();
+        ofs << static_cast<qint32>(areasWithPermanentLabels.count());
         QMapIterator<int, TArea*> itAreaWithLabels(areasWithPermanentLabels);
         while (itAreaWithLabels.hasNext()) {
             itAreaWithLabels.next();
             auto pArea = itAreaWithLabels.value();
             auto permanentLabelIdsList = pArea->getPermanentLabelIds();
             // number of (permanent) labels in this area:
-            ofs << permanentLabelIdsList.size();
+            ofs << static_cast<qint32>(permanentLabelIdsList.size());
+
             // only used to assign labels to the area:
             ofs << itAreaWithLabels.key();
             QListIterator<int> itPerminentMapLabelIds(permanentLabelIdsList);
@@ -1330,7 +1344,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             qint8 oldCharacterCode = 0;
             if (pR->mSymbol.length()) {
                 // There is something for a symbol
-                QChar const firstChar = pR->mSymbol.at(0);
+                const QChar firstChar = pR->mSymbol.at(0);
                 if (pR->mSymbol.length() == 1 && firstChar.row() == 0 && firstChar.cell() > 32) {
                     // It is something that can be represented by the past unsigned short
                     oldCharacterCode = firstChar.toLatin1();
@@ -1754,7 +1768,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                     ifs >> pA->mUserData;
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
-                    qreal const fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
+                    const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
                     pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
                 }
                 if (mVersion >= 21) {
@@ -1893,12 +1907,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 // Reads the newest map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
-// copied across (if the room STILL exists!  This is to avoid a replacement map
+// copied across (if the room STILL exists)!  This is to avoid a replacement map
 // (copied/shared) from one profile to another from repositioning the other
 // player location. Though this is written as a member function it is intended
 // also for use to retrieve details from maps from OTHER profiles, importantly
 // it does (or should) NOT interact with this TMap instance...!
-bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, int* areaCount = nullptr, int* roomCount = nullptr)
+bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, qsizetype* areaCount = nullptr, qsizetype* roomCount = nullptr)
 {
     if (profile.isEmpty()) {
         return false;
@@ -1942,7 +1956,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
+        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
             // This is a release/public test version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
@@ -1999,13 +2013,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 14) {
-        int areaSize;
-        ifs >> areaSize;
+        int readAreaSize;
+        ifs >> readAreaSize;
+        qsizetype areaSize = static_cast<qsizetype>(readAreaSize);
         if (areaCount) {
             *areaCount = areaSize;
         }
         // read each area
-        for (int i = 0; i < areaSize; i++) {
+        for (qsizetype i = 0; i < areaSize; ++i) {
             TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
@@ -2164,14 +2179,14 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    QRectF const lr = QRectF(0, 0, 1000, 1000);
+    const QRectF lr = QRectF(0, 0, 1000, 1000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
     lp.fillRect(lr, label.bgColor);
     QPen lpen;
     lpen.setColor(label.fgColor);
-    QFont const font(fontName.has_value() ? fontName.value() : QString(), fontSize);
+    const QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setRenderHint(QPainter::TextAntialiasing, true);
     lp.setPen(lpen);
     lp.setFont(font);
@@ -2180,7 +2195,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
 
     label.size = br.normalized().size();
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
-    QSizeF const s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
+    const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
 
@@ -2214,8 +2229,8 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.noScaling = false;
     label.temporary = temporary;
 
-    QRectF const drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
-    QPixmap const imagePixmap = QPixmap(imagePath);
+    const QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    const QPixmap imagePixmap = QPixmap(imagePath);
     QPixmap pix = QPixmap(drawRect.size().toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
@@ -2997,7 +3012,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
     // Convert the array of all the mCustomEnvColors into a QJsonValue so we
     // can add it to the map object:
-    QJsonValue const mCustomEnvColorsValue{customEnvColorArray};
+    const QJsonValue mCustomEnvColorsValue{customEnvColorArray};
     mapObj.insert(QLatin1String("customEnvColors"), mCustomEnvColorsValue);
 
     mapObj.insert(QLatin1String("mapSymbolFontDetails"), mMapSymbolFont.toString());
@@ -3009,11 +3024,11 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QJsonObject playerRoomInnerColorObj;
     writeJsonColor(playerRoomOuterColorObj, mPlayerRoomOuterColor);
     writeJsonColor(playerRoomInnerColorObj, mPlayerRoomInnerColor);
-    QJsonValue const playerRoomOuterColorValue{playerRoomOuterColorObj};
-    QJsonValue const playerRoomInnerColorValue{playerRoomInnerColorObj};
+    const QJsonValue playerRoomOuterColorValue{playerRoomOuterColorObj};
+    const QJsonValue playerRoomInnerColorValue{playerRoomInnerColorObj};
     playerRoomColorsArray.append(playerRoomOuterColorValue);
     playerRoomColorsArray.append(playerRoomInnerColorValue);
-    QJsonValue const playerRoomColorsValue{playerRoomColorsArray};
+    const QJsonValue playerRoomColorsValue{playerRoomColorsArray};
     mapObj.insert(QLatin1String("playerRoomColors"), playerRoomColorsValue);
     mapObj.insert(QLatin1String("playerRoomStyle"), static_cast<double>(mPlayerRoomStyle));
     mapObj.insert(QLatin1String("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
@@ -3059,10 +3074,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                     : qsl("could not open file \"%1\"").arg(source))};
     }
 
-    QByteArray const mapData = file.readAll();
+    const QByteArray mapData = file.readAll();
     file.close();
     QJsonParseError jsonErr;
-    QJsonDocument const doc(QJsonDocument::fromJson(mapData, &jsonErr));
+    const QJsonDocument doc(QJsonDocument::fromJson(mapData, &jsonErr));
     if (jsonErr.error != QJsonParseError::NoError) {
         return {false, (translatableTexts
                     ? tr("could not parse file, reason: \"%1\" at offset %2")
@@ -3150,7 +3165,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     QColor playerRoomInnerColor;
 
     if (mapObj.contains(QLatin1String("playerRoomColors")) && mapObj.value(QLatin1String("playerRoomColors")).isArray()) {
-        QJsonArray const playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
+        const QJsonArray playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
         if (playerRoomColorArray.size() == 2 && playerRoomColorArray.at(0).isObject() && playerRoomColorArray.at(1).isObject()) {
             playerRoomOuterColor = readJsonColor(playerRoomColorArray.at(0).toObject());
             playerRoomInnerColor = readJsonColor(playerRoomColorArray.at(1).toObject());
@@ -3176,7 +3191,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
         const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
         if (!customEnvColorArray.isEmpty()) {
-            for (const auto& customEnvColorValue : qAsConst(customEnvColorArray)) {
+            for (const auto& customEnvColorValue : std::as_const(customEnvColorArray)) {
                 const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
                 if (customEnvColorObj.contains(QLatin1String("id"))
                     && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
@@ -3307,10 +3322,10 @@ void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
     colorRGBAArray.append(static_cast<double>(color.blue()));
     if (color.alpha() < 255) {
         colorRGBAArray.append(static_cast<double>(color.alpha()));
-        QJsonValue const colorRGBAValue{colorRGBAArray};
+        const QJsonValue colorRGBAValue{colorRGBAArray};
         obj.insert(QLatin1String("color32RGBA"), colorRGBAValue);
     } else {
-        QJsonValue const colorRGBAValue{colorRGBAArray};
+        const QJsonValue colorRGBAValue{colorRGBAArray};
         obj.insert(QLatin1String("color24RGB"), colorRGBAValue);
     }
 }
@@ -3390,21 +3405,34 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     return mpProgressDialog->wasCanceled();
 }
 
+/**
+ * Update the the 2D and 3D map visually.
+ *
+ * It ensures debouncing internally to ensure that bulk calls are efficient.
+ */
 void TMap::update()
 {
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        mpM->update();
-    }
-#endif
-    if (mpMapper) {
-        mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+    static bool debounce;
+    if (!debounce) {
+        debounce = true;
+        QTimer::singleShot(0, this, [this]() {
+            debounce = false;
 
-        if (mpMapper->mp2dMap) {
-            mpMapper->mp2dMap->mNewMoveAction = true;
-            mpMapper->mp2dMap->update();
-        }
+#if defined(INCLUDE_3DMAPPER)
+            if (mpM) {
+                mpM->update();
+            }
+#endif
+            if (mpMapper) {
+                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+
+                if (mpMapper->mp2dMap) {
+                    mpMapper->mp2dMap->mNewMoveAction = true;
+                    mpMapper->mp2dMap->update();
+                }
+            }
+        });
     }
 }
 

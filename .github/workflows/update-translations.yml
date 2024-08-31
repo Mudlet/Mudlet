@@ -14,7 +14,7 @@ jobs:
       pull-requests: write  # for gr2m/create-or-update-pull-request-action to create a PR
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         ref: development
         submodules: true
@@ -35,7 +35,7 @@ jobs:
         echo ::set-output name=lines_changed::$lines_changed
 
     - name: send in a pull request
-      uses: peter-evans/create-pull-request@v5
+      uses: peter-evans/create-pull-request@v6
       if: steps.getdiff.outputs.lines_changed > 0
       with:
         token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}

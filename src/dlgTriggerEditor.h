@@ -226,6 +226,7 @@ public:
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
+    void showIDLabels(const bool);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -299,6 +300,7 @@ private slots:
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
+    void slot_changedPattern();
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
@@ -438,7 +440,7 @@ private:
     void runScheduledCleanReset();
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
-    void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
+    void keyGrabCallback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
@@ -467,6 +469,8 @@ private:
         {tr("Statistics"), tr("Ctrl+9")},
         {tr("Debug"),      tr("Ctrl+0")}
     };
+
+    std::unordered_map<QLineEdit*, bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;

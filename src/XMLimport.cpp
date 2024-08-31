@@ -73,7 +73,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
         }
-        mpKey->setPackageName(mPackageName);
+        mpKey->mPackageName = mPackageName;
         mpKey->setIsActive(true);
         mpKey->setName(mPackageName);
         mpKey->setIsFolder(true);
@@ -83,7 +83,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
         }
-        mpTrigger->setPackageName(mPackageName);
+        mpTrigger->mPackageName = mPackageName;
         mpTrigger->setIsActive(true);
         mpTrigger->setName(mPackageName);
         mpTrigger->setIsFolder(true);
@@ -93,7 +93,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
         }
-        mpTimer->setPackageName(mPackageName);
+        mpTimer->mPackageName = mPackageName;
         mpTimer->setIsActive(true);
         mpTimer->setName(mPackageName);
         mpTimer->setIsFolder(true);
@@ -103,7 +103,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
         }
-        mpAlias->setPackageName(mPackageName);
+        mpAlias->mPackageName = mPackageName;
         mpAlias->setIsActive(true);
         mpAlias->setName(mPackageName);
         mpAlias->setScript(QString());
@@ -115,7 +115,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
         }
-        mpAction->setPackageName(mPackageName);
+        mpAction->mPackageName = mPackageName;
         mpAction->setIsActive(true);
         mpAction->setName(mPackageName);
         mpAction->setIsFolder(true);
@@ -125,7 +125,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
         }
-        mpScript->setPackageName(mPackageName);
+        mpScript->mPackageName = mPackageName;
         mpScript->setIsActive(true);
         mpScript->setName(mPackageName);
         mpScript->setIsFolder(true);
@@ -715,17 +715,85 @@ void XMLimport::readHostPackage()
 
 void XMLimport::readHost(Host* pHost)
 {
-    pHost->mAutoClearCommandLineAfterSend = attributes().value(qsl("autoClearCommandLineAfterSend")) == YES;
-    pHost->mPrintCommand = attributes().value(qsl("printCommand")) == YES;
+    auto setBoolAttributeWithDefault = [&](const QString& attribute, bool& target, const bool defaultsTo) {
+        target = attributes().hasAttribute(attribute) ? attributes().value(attribute) == YES : defaultsTo;
+    };
+
+    auto setBoolAttribute = [&](const QString& attribute, bool& target) {
+        target = attributes().value(attribute) == YES;
+    };
+
+    setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
+    setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
+    setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
+    setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
+
+    setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
+    setBoolAttribute(qsl("printCommand"), pHost->mPrintCommand);
+    setBoolAttribute(qsl("mUSE_FORCE_LF_AFTER_PROMPT"), pHost->mUSE_FORCE_LF_AFTER_PROMPT);
+    setBoolAttribute(qsl("mUSE_UNIX_EOL"), pHost->mUSE_UNIX_EOL);
+    setBoolAttribute(qsl("runAllKeyMatches"), pHost->getKeyUnit()->mRunAllKeyMatches);
+    setBoolAttribute(qsl("mNoAntiAlias"), pHost->mNoAntiAlias);
+    setBoolAttribute(qsl("mEchoLuaErrors"), pHost->mEchoLuaErrors);
+    setBoolAttribute(qsl("mRawStreamDump"), pHost->mIsNextLogFileInHtmlFormat);
+    setBoolAttribute(qsl("mIsLoggingTimestamps"), pHost->mIsLoggingTimestamps);
+    setBoolAttribute(qsl("mAlertOnNewData"), pHost->mAlertOnNewData);
+    setBoolAttribute(qsl("mFORCE_NO_COMPRESSION"), pHost->mFORCE_NO_COMPRESSION);
+    setBoolAttribute(qsl("mFORCE_GA_OFF"), pHost->mFORCE_GA_OFF);
+    setBoolAttribute(qsl("mEnableGMCP"), pHost->mEnableGMCP);
+    setBoolAttribute(qsl("mEnableMSSP"), pHost->mEnableMSSP);
+    setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
+    setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
+    setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
+    setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
+    setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
+    setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
+    setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
+    setBoolAttribute(qsl("mFORCE_MXP_NEGOTIATION_OFF"), pHost->mFORCE_MXP_NEGOTIATION_OFF);
+    setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
+    setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
+    setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);
+    setBoolAttribute(qsl("mShowRoomIDs"), pHost->mShowRoomID);
+    setBoolAttribute(qsl("mShowPanel"), pHost->mShowPanel);
+    setBoolAttribute(qsl("mHaveMapperScript"), pHost->mHaveMapperScript);
+    setBoolAttribute(qsl("mSslTsl"), pHost->mSslTsl);
+    setBoolAttribute(qsl("mSslIgnoreExpired"), pHost->mSslIgnoreExpired);
+    setBoolAttribute(qsl("mSslIgnoreSelfSigned"), pHost->mSslIgnoreSelfSigned);
+    setBoolAttribute(qsl("mSslIgnoreAll"), pHost->mSslIgnoreAll);
+    setBoolAttribute(qsl("mAskTlsAvailable"), pHost->mAskTlsAvailable);
+    setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
+
+    pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
+
+    if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
+        pHost->mProxyPort = attributes().value(qsl("mProxyPort")).toInt();
+    } else {
+        pHost->mProxyPort = 0;
+    }
+
+    pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
+    pHost->mProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
-    pHost->mUSE_FORCE_LF_AFTER_PROMPT = attributes().value(qsl("mUSE_FORCE_LF_AFTER_PROMPT")) == YES;
-    pHost->mUSE_UNIX_EOL = attributes().value(qsl("mUSE_UNIX_EOL")) == YES;
-    pHost->getKeyUnit()->mRunAllKeyMatches = attributes().value(qsl("runAllKeyMatches")) == YES;
-    pHost->mNoAntiAlias = attributes().value(qsl("mNoAntiAlias")) == YES;
-    pHost->mEchoLuaErrors = attributes().value(qsl("mEchoLuaErrors")) == YES;
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
+    pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
+    pHost->mFORCE_SAVE_ON_EXIT = readDefaultTrueBool(qsl("mFORCE_SAVE_ON_EXIT"));
+    const bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
+    const bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
+    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
+    pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
+    pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
+    pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
+    pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
+    pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
+
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
+
         if (ambiguousWidthSetting == YES) {
             pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
         } else if (ambiguousWidthSetting == qsl("auto")) {
@@ -740,9 +808,7 @@ void XMLimport::readHost(Host* pHost)
         // which is just as well as it is needed for the automatic case...
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
-    pHost->mIsNextLogFileInHtmlFormat = attributes().value(qsl("mRawStreamDump")) == YES;
-    pHost->mIsLoggingTimestamps = attributes().value(qsl("mIsLoggingTimestamps")) == YES;
-    pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
+
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
         // which is slightly different {always use 24-hour clock even if AM/PM is
@@ -751,34 +817,13 @@ void XMLimport::readHost(Host* pHost)
         pHost->mLogFileNameFormat = attributes().value(qsl("logFileNameFormat")).toString().replace(QLatin1String("hh"), QLatin1String("HH"), Qt::CaseSensitive);
         pHost->mLogFileName = attributes().value(qsl("logFileName")).toString();
     }
-    pHost->mAlertOnNewData = attributes().value(qsl("mAlertOnNewData")) == YES;
-    pHost->mFORCE_NO_COMPRESSION = attributes().value(qsl("mFORCE_NO_COMPRESSION")) == YES;
-    pHost->mFORCE_GA_OFF = attributes().value(qsl("mFORCE_GA_OFF")) == YES;
-    pHost->mFORCE_SAVE_ON_EXIT = readDefaultTrueBool(qsl("mFORCE_SAVE_ON_EXIT"));
-    pHost->mEnableGMCP = attributes().value(qsl("mEnableGMCP")) == YES;
-    pHost->mEnableMSDP = attributes().value(qsl("mEnableMSDP")) == YES;
-    pHost->mEnableMSSP = attributes().value(qsl("mEnableMSSP")) == YES;
-    pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
-    pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
-    pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
-    const bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
-    const bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
-    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
-    pHost->mAcceptServerGUI = attributes().value(qsl("mAcceptServerGUI")) == YES;
-    pHost->mAcceptServerMedia = attributes().value(qsl("mAcceptServerMedia")) == YES;
-    pHost->mMapperUseAntiAlias = attributes().value(qsl("mMapperUseAntiAlias")) == YES;
-    pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
-    pHost->mEditorAutoComplete = (attributes().value(qsl("mEditorAutoComplete")) == YES);
+
     if (attributes().hasAttribute("mEditorShowBidi")) {
         pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
     } else {
         pHost->setEditorShowBidi(true);
     }
-    if (attributes().hasAttribute("announceIncomingText")) {
-        pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
-    } else {
-        pHost->mAnnounceIncomingText = true;
-    }
+
     if (attributes().hasAttribute("caretShortcut")) {
         const QStringView caretShortcut(attributes().value(qsl("caretShortcut")));
         if (caretShortcut == qsl("None")) {
@@ -791,6 +836,7 @@ void XMLimport::readHost(Host* pHost)
             pHost->mCaretShortcut = Host::CaretShortcut::F6;
         }
     }
+
     if (attributes().hasAttribute("blankLineBehaviour")) {
         const QStringView blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
         if (blankLineBehaviour == qsl("Hide")) {
@@ -801,10 +847,7 @@ void XMLimport::readHost(Host* pHost)
             pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
         }
     }
-    pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
-    pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
-    pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
-    pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
+
     if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
     } else {
@@ -832,8 +875,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
-    pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
-    pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
         quint8 styleCode = 0;
@@ -847,10 +888,17 @@ void XMLimport::readHost(Host* pHost)
         styleCode = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomStyle")).toInt(), 255));
         outerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomOuterDiameter")).toInt(), 255));
         innerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomInnerDiameter")).toInt(), 255));
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+        // QColor::setNamedColor(...) is depracated since Qt 6.6
         outerColor.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
         innerColor.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
+#else
+        outerColor = QColor::fromString(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
+        innerColor = QColor::fromString(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
+#endif
         // Store all the settings in the Host instance:
         pHost->setPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+
         if (pHost->mpMap) {
             // And the TMap instance:
             pHost->mpMap->mPlayerRoomStyle = styleCode;
@@ -861,52 +909,39 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    pHost->mFORCE_MXP_NEGOTIATION_OFF = attributes().value(qsl("mFORCE_MXP_NEGOTIATION_OFF")) == YES;
-    pHost->mFORCE_CHARSET_NEGOTIATION_OFF = attributes().value(qsl("mFORCE_CHARSET_NEGOTIATION_OFF")) == YES;
-    pHost->mEnableTextAnalyzer = attributes().value(qsl("enableTextAnalyzer")) == YES;
     pHost->mRoomSize = attributes().value(qsl("mRoomSize")).toString().toDouble();
+
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
         // The value is a float/double and the prior code using "== 0" is a BAD
         // THING to do with non-integer number types!
         pHost->mRoomSize = 0.5; // Same value as is in Host class initializer list
     }
+
     pHost->mLineSize = attributes().value(qsl("mLineSize")).toString().toDouble();
+
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
     }
-    pHost->mBubbleMode = attributes().value(qsl("mBubbleMode")) == YES;
-    pHost->mMapViewOnly = attributes().value(qsl("mMapViewOnly")) == YES;
-    pHost->mShowRoomID = attributes().value(qsl("mShowRoomIDs")) == YES;
-    pHost->mShowPanel = attributes().value(qsl("mShowPanel")) == YES;
-    pHost->mHaveMapperScript = attributes().value(qsl("mHaveMapperScript")) == YES;
-    QStringView const ignore(attributes().value(qsl("mDoubleClickIgnore")));
+
+    const QStringView ignore(attributes().value(qsl("mDoubleClickIgnore")));
+
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
         pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
     }
-    pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
-    pHost->mUseProxy = attributes().value(qsl("mUseProxy")) == YES;
-    pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
-    if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
-        pHost->mProxyPort = attributes().value(qsl("mProxyPort")).toInt();
-    } else {
-        pHost->mProxyPort = 0;
-    }
-    pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
-    pHost->mProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
 
-    pHost->mSslTsl = attributes().value(qsl("mSslTsl")) == YES;
-    pHost->mSslIgnoreExpired = attributes().value(qsl("mSslIgnoreExpired")) == YES;
-    pHost->mSslIgnoreSelfSigned = attributes().value(qsl("mSslIgnoreSelfSigned")) == YES;
-    pHost->mSslIgnoreAll = attributes().value(qsl("mSslIgnoreAll")) == YES;
-    pHost->mAskTlsAvailable = attributes().value(qsl("mAskTlsAvailable")) == YES;
+    pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
+
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
+
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
+
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
     } else {
@@ -937,10 +972,16 @@ void XMLimport::readHost(Host* pHost)
         default:
             pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
         }
-
     } else {
         // The default value, also used up to Mudlet 4.14.1:
         pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
+    }
+
+    if (attributes().hasAttribute(qsl("ShowIDsInEditor"))) {
+        pHost->setShowIdsInEditor(attributes().value(qsl("ShowIDsInEditor")) == YES);
+    } else {
+        // The default (and for profile files from before 4.18.0):
+        pHost->setShowIdsInEditor(false);
     }
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
@@ -955,6 +996,7 @@ void XMLimport::readHost(Host* pHost)
     }
 
     QMargins borders;
+
     while (!atEnd()) {
         readNext();
 
@@ -975,6 +1017,7 @@ void XMLimport::readHost(Host* pHost)
                 readModulesDetailsMap(entry);
 
                 QMapIterator<QString, QStringList> it(entry);
+
                 while (it.hasNext()) {
                     it.next();
                     QStringList moduleList;
@@ -1021,6 +1064,7 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 pHost->mCommandLineFgColor.setNamedColor(readElementText());
             } else if (name() == qsl("mCommandLineBgColor")) {
                 pHost->mCommandLineBgColor.setNamedColor(readElementText());
@@ -1064,6 +1108,51 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWhite.setNamedColor(readElementText());
             } else if (name() == qsl("mLightWhite")) {
                 pHost->mLightWhite.setNamedColor(readElementText());
+#else
+                pHost->mCommandLineFgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mCommandLineBgColor")) {
+                pHost->mCommandLineBgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mFgColor")) {
+                pHost->mFgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mBgColor")) {
+                pHost->mBgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mCommandFgColor")) {
+                pHost->mCommandFgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mCommandBgColor")) {
+                pHost->mCommandBgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mBlack")) {
+                pHost->mBlack = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightBlack")) {
+                pHost->mLightBlack = QColor::fromString(readElementText());
+            } else if (name() == qsl("mRed")) {
+                pHost->mRed = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightRed")) {
+                pHost->mLightRed = QColor::fromString(readElementText());
+            } else if (name() == qsl("mBlue")) {
+                pHost->mBlue = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightBlue")) {
+                pHost->mLightBlue = QColor::fromString(readElementText());
+            } else if (name() == qsl("mGreen")) {
+                pHost->mGreen = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightGreen")) {
+                pHost->mLightGreen = QColor::fromString(readElementText());
+            } else if (name() == qsl("mYellow")) {
+                pHost->mYellow = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightYellow")) {
+                pHost->mLightYellow = QColor::fromString(readElementText());
+            } else if (name() == qsl("mCyan")) {
+                pHost->mCyan = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightCyan")) {
+                pHost->mLightCyan = QColor::fromString(readElementText());
+            } else if (name() == qsl("mMagenta")) {
+                pHost->mMagenta = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightMagenta")) {
+                pHost->mLightMagenta = QColor::fromString(readElementText());
+            } else if (name() == qsl("mWhite")) {
+                pHost->mWhite = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightWhite")) {
+                pHost->mLightWhite = QColor::fromString(readElementText());
+#endif
             } else if (name() == qsl("mDisplayFont")) {
                 pHost->setDisplayFontFromString(readElementText());
 #if defined(Q_OS_LINUX)
@@ -1081,6 +1170,7 @@ void XMLimport::readHost(Host* pHost)
                 // readUnknownElement(...) for "anything not otherwise parsed"
                 Q_UNUSED(readElementText())
             } else if (name() == qsl("mFgColor2")) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
                 pHost->mBgColor_2.setNamedColor(readElementText());
@@ -1122,6 +1212,49 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWhite_2.setNamedColor(readElementText());
             } else if (name() == qsl("mLightWhite2")) {
                 pHost->mLightWhite_2.setNamedColor(readElementText());
+#else
+                pHost->mFgColor_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mBgColor2")) {
+                pHost->mBgColor_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mRoomBorderColor")) {
+                pHost->mRoomBorderColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mMapInfoBg")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
+                pHost->mMapInfoBg = QColor::fromString(readElementText());
+                pHost->mMapInfoBg.setAlpha(alpha);
+            } else if (name() == qsl("mBlack2")) {
+                pHost->mBlack_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightBlack2")) {
+                pHost->mLightBlack_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mRed2")) {
+                pHost->mRed_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightRed2")) {
+                pHost->mLightRed_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mBlue2")) {
+                pHost->mBlue_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightBlue2")) {
+                pHost->mLightBlue_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mGreen2")) {
+                pHost->mGreen_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightGreen2")) {
+                pHost->mLightGreen_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mYellow2")) {
+                pHost->mYellow_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightYellow2")) {
+                pHost->mLightYellow_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mCyan2")) {
+                pHost->mCyan_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightCyan2")) {
+                pHost->mLightCyan_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mMagenta2")) {
+                pHost->mMagenta_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightMagenta2")) {
+                pHost->mLightMagenta_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mWhite2")) {
+                pHost->mWhite_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLightWhite2")) {
+                pHost->mLightWhite_2 = QColor::fromString(readElementText());
+#endif
             } else if (name() == qsl("mSpellDic")) {
                 pHost->setSpellDic(readElementText());
             } else if (name() == qsl("mLineSize") || name() == qsl("mRoomSize")) {
@@ -1148,6 +1281,7 @@ void XMLimport::readHost(Host* pHost)
             }
         }
     }
+
     pHost->setBorders(borders);
     pHost->loadPackageInfo();
 }
@@ -1228,6 +1362,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
             } else if (name() == qsl("mCommand")) {
                 pT->mCommand = readElementText();
             } else if (name() == qsl("mFgColor")) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 pT->mFgColor.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor")) {
                 pT->mBgColor.setNamedColor(readElementText());
@@ -1235,6 +1370,15 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 pT->mColorTriggerFgColor.setNamedColor(readElementText());
             } else if (name() == qsl("colorTriggerBgColor")) {
                 pT->mColorTriggerBgColor.setNamedColor(readElementText());
+#else
+                pT->mFgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mBgColor")) {
+                pT->mBgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("colorTriggerFgColor")) {
+                pT->mColorTriggerFgColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("colorTriggerBgColor")) {
+                pT->mColorTriggerBgColor = QColor::fromString(readElementText());
+#endif
             } else if (name() == qsl("mSoundFile")) {
                 pT->mSoundFile = readElementText();
             } else if (name() == qsl("regexCodeList")) {
@@ -1793,12 +1937,12 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
     // it to capture a '-' sign as part of the color numbers as we use -2 for
     // ignored which was/is/will not handled by code before Mudlet 3.17.x (and
     // we might have more  negative numbers in the future!)
-    QRegularExpression const regex = QRegularExpression(qsl("FG(-?\\d+)BG(-?\\d+)"));
+    const QRegularExpression regex = QRegularExpression(qsl("FG(-?\\d+)BG(-?\\d+)"));
     QMutableStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {
         if (itType.next() == REGEX_COLOR_PATTERN) {
-            QRegularExpressionMatch const match = regex.match(itPattern.next());
+            const QRegularExpressionMatch match = regex.match(itPattern.next());
             // Although we define two '('...')' capture groups the count/size is
             // 3 (0 is the whole string)!
             if (match.capturedTexts().size() == 3) {

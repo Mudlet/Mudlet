@@ -85,7 +85,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 // Should be the same as the size of the timeStampFormat constant in the TBuffer
 // class:
 , mTimeStampWidth(13)
+#if defined(DEBUG_UTF8_PROCESSING)
 , mShowAllCodepointIssues(false)
+#endif
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -97,6 +99,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mpHost->setDisplayFontFixedPitch(true);
         setFont(hostFont);
 
+#if defined(DEBUG_UTF8_PROCESSING)
         // There is no point in setting this option on the Central Debug Console
         // as A) it is shared and B) any codepoints that it can't handle will
         // probably have already cropped up on another TConsole:
@@ -104,6 +107,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
             mShowAllCodepointIssues = mpHost->debugShowAllProblemCodepoints();
             connect(mpHost, &Host::signal_changeDebugShowAllProblemCodepoints, this, &TTextEdit::slot_changeDebugShowAllProblemCodepoints);
         }
+#endif
     } else {
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
@@ -703,10 +707,16 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    const bool isItalics = attributes & TChar::Italic;
+    // At present we cannot display flashing text - and we just make it italic
+    // (we ought to eventually add knobs for them so they can be shown in a user
+    // preferred style - which might be static for some users) - anyhow Mudlet
+    // will still detect the difference between the options:
+    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
+    // const bool isConcealed = attributes & TChar::Concealed;
+    // const int altFontIndex = charStyle.alternateFont();
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
@@ -745,11 +755,12 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
     case 2: // Draw as wide
         return 2;
     case widechar_nonprint:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -1 = The character is not printable - so put in a replacement
         // character instead - and so it can be seen it need a space:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -760,14 +771,16 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 0;
     case widechar_non_character:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -7 = The character is a non-character - we might make use of some of them for
         // internal purposes in the future (in which case we might need additional code here
         // or elsewhere) but we don't right now:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a non-character that Mudlet is not itself using, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -777,15 +790,17 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
-     }
+        }
+#endif
         return 0;
     case widechar_combining:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -2 = The character is a zero-width combiner - and should not be
         // present as the FIRST codepoint in a grapheme so this indicates an
         // error somewhere - so put in the replacement character
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -796,16 +811,18 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 0;
     case widechar_ambiguous:
         // -3 = The character is East-Asian ambiguous width.
         return mWideAmbigousWidthGlyphs ? 2 : 1;
     case widechar_private_use:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -4 = The character is for private use - we cannot know for certain
         // what width to used - let's assume 1 for the moment:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -816,13 +833,15 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 1;
     case widechar_unassigned:
+#if defined(DEBUG_UTF8_PROCESSING)
         // -5 = The character is unassigned - at least for the Unicode version
         // that our widechar_wcwidth(...) was built for - assume 1:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
                                                << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -833,6 +852,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+    #endif
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
         return 2;
@@ -1098,10 +1118,19 @@ void TTextEdit::expandSelectionToWords()
 {
     int yind = mPA.y();
     int xind = mPA.x();
-    for (; xind >= 0; --xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Check if yind is within the valid range of lineBuffer
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind >= 0; --xind) {
+            // Ensure xind is within the valid range for the current line
+            if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
+                break; // xind is out of bounds, break the loop
+            }
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragStart.setX(xind + 1);
@@ -1109,15 +1138,22 @@ void TTextEdit::expandSelectionToWords()
 
     yind = mPB.y();
     xind = mPB.x();
-    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Repeat the check for yind and xind for the second part
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
+
+
 
 void TTextEdit::expandSelectionToLine(int y)
 {
@@ -1341,16 +1377,16 @@ void TTextEdit::slot_popupMenu()
     if (!pA) {
         return;
     }
-    QString cmd;
-    int luaReference{0};
-    if (mPopupCommands.contains(pA->text())) {
-        cmd = mPopupCommands[pA->text()].first;
-        luaReference = mPopupCommands[pA->text()].second;
-    }
-    if (!luaReference) {
-        mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
-    } else {
-        mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
+    // index is set to be greater than zero for every possible sender():
+    const int index = pA->data().toInt();
+    if (index && mPopupCommands.contains(index)) {
+        const QString cmd = mPopupCommands.value(index).first;
+        const int luaReference = mPopupCommands.value(index).second;
+        if (!luaReference) {
+            mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+        } else {
+            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
+        }
     }
 }
 
@@ -1574,7 +1610,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // switches away from the ASCII default
     text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
     text.append(APP_VERSION);
-    text.append(APP_BUILD);
+    text.append(mudlet::self()->mAppBuild);
     text.append("'>\n");
     // Nice to identify what made the file!
     text.append("  <title>");
@@ -1854,27 +1890,49 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         int x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
-            if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
-                if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
-                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
+            if (x < static_cast<int>(mpBuffer->buffer.at(static_cast<size_t>(y)).size()) && !isOutOfbounds) {
+                if (mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex()) {
+                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
+                    QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
                     if (command.size() > 1) {
-                        // skip a special tooltip hint, if one was given
-                        int hint_offset = hint.size() > command.size() ? 1 : 0;
+                        // This is a popup menu rather than a link as it has
+                        // more than one item.
+
+                        // Skip a special tooltip hint (at the start of the
+                        // hints), if one was given, i.e. there is (at least)
+                        // an extra one:
+                        int hint_offset = (hint.size() > command.size()) ? 1 : 0;
 
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
+                        mPopupCommands.clear();
                         for (int i = 0, total = command.size(); i < total; ++i) {
-                            QAction* pA;
-                            if (i + hint_offset < hint.size()) {
-                                pA = popup->addAction(hint[i + hint_offset]);
-                                mPopupCommands[hint[i + hint_offset]] = {command[i], luaReference.value(i, 0)};
+                            QAction* pA = nullptr;
+                            // Check to see if this item has a command/function
+                            // so we can disable it if not:
+                            const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
+                            // A safety flag in case we have too few hints:
+                            const bool useHintNotCommand = (i + hint_offset) < hint.size();
+                            // If it doesn't have a hint either then make it
+                            // into a separator in the context menu:
+                            const bool makeASeparator = !doesSomething && hint.at(i + hint_offset).isEmpty();
+                            const QString actionText = useHintNotCommand ? hint.at(i + hint_offset) : command.at(i);
+                            if (makeASeparator) {
+                                pA = popup->addSeparator();
                             } else {
-                                pA = popup->addAction(command[i]);
-                                mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
+                                pA = popup->addAction(actionText);
                             }
-                            connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
+                            mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
+                            // We now use this to index into mPopupCommands
+                            // when the action is triggered - but we do offset
+                            // it by one so that the first one is NOT zero:
+                            pA->setData(i + 1);
+                            if (doesSomething) {
+                                connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
+                            } else {
+                                pA->setEnabled(false);
+                            }
                         }
                         popup->popup(eventGlobalPos);
                     }
@@ -2747,12 +2805,14 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
+#if defined(DEBUG_UTF8_PROCESSING)
 void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 {
     if (mShowAllCodepointIssues != state) {
         mShowAllCodepointIssues = state;
     }
 }
+#endif
 
 void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
@@ -2777,6 +2837,8 @@ void TTextEdit::slot_mouseAction(const QString &uniqueName)
     mpHost->raiseEvent(event);
 }
 
+
+#if defined(DEBUG_UTF8_PROCESSING)
 // Originally this was going to be part of the destructor - but it was unable
 // to get the parent Console and Profile names at that point:
 void TTextEdit::reportCodepointErrors()
@@ -2814,6 +2876,7 @@ void TTextEdit::reportCodepointErrors()
         qDebug().nospace().noquote() << " ";
     }
 }
+#endif
 
 void TTextEdit::setCaretPosition(int line, int column)
 {
