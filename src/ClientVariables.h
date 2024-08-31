@@ -183,3 +183,4 @@ class ClientVariables : public QObject
     };
 
     #endif // MUDLET_CLIENTVARIABLES_H
+    
