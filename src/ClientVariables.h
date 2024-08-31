@@ -1,3 +1,6 @@
+#ifndef MUDLET_CLIENTVARIABLES_H
+#define MUDLET_CLIENTVARIABLES_H
+
 /***************************************************************************
  *   Copyright (C) 2024 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
@@ -17,7 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#pragma once
 
 #include "Host.h"
 #include "utils.h"
@@ -123,24 +125,24 @@ class ClientVariables : public QObject
         QMap<QString, bool> mnesVariablesMap() const {
             // {variable, updatable}
             return {
-                {"CHARSET", true},
-                {"CLIENT_NAME", false},
-                {"CLIENT_VERSION", false},
-                {"MTTS", false},
-                {"TERMINAL_TYPE", false}
+                {qsl("CHARSET"), true},
+                {qsl("CLIENT_NAME"), false},
+                {qsl("CLIENT_VERSION"), false},
+                {qsl("MTTS"), false},
+                {qsl("TERMINAL_TYPE"), false}
             };
         }
         QMap<QString, bool> nonMNESVariablesMap() const {
             // {variable, updatable}
             return {
-                {"256_COLORS", false},
-                {"ANSI", false},
-                {"OSC_COLOR_PALETTE", false},
-                {"UTF-8", false},
-                {"TLS", false},
-                {"TRUECOLOR", false},
-                {"VT100", false},
-                {"WORD_WRAP", false}
+                {qsl("256_COLORS"), false},
+                {qsl("ANSI"), false},
+                {qsl("OSC_COLOR_PALETTE"), false},
+                {qsl("UTF-8"), false},
+                {qsl("TLS"), false},
+                {qsl("TRUECOLOR"), false},
+                {qsl("VT100"), false},
+                {qsl("WORD_WRAP"), false}
             };
         }
         QMap<QString, bool> nonProtectedVariablesMap() const {
@@ -157,10 +159,10 @@ class ClientVariables : public QObject
         QMap<QString, std::tuple<bool, ClientVariables::DataSharingBehaviour, QString>> protectedVariablesMap() {
             // {variable, {updatable, behaviour, translation}}
             return {
-                {"LANGUAGE", {false, mShareLanguage, tr("Language")}},
-                {"SCREEN_READER", {false, mShareScreenReader, tr("Screen Reader Use")}},
-                {"SYSTEMTYPE", {false, mShareSystemType, tr("Operating System Type")}},
-                {"USER", {false, mShareUser, tr("Character Name")}}
+                {qsl("LANGUAGE"), {false, mShareLanguage, tr("Language")}},
+                {qsl("SCREEN_READER"), {false, mShareScreenReader, tr("Screen Reader Use")}},
+                {qsl("SYSTEMTYPE"), {false, mShareSystemType, tr("Operating System Type")}},
+                {qsl("USER"), {false, mShareUser, tr("Character Name")}}
             };
         }
         QByteArray prepareNewEnvironData(const QString&);
@@ -179,3 +181,5 @@ class ClientVariables : public QObject
         QMap<QString, QString> clientVariablesRequested;
         QSet<QString> newEnvironVariablesRequested;
     };
+
+    #endif // MUDLET_CLIENTVARIABLES_H

@@ -7172,7 +7172,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
 
-    static const QStringList behaviours{"donotshare", "share", "block"};
+    static const QStringList behaviours{qsl("donotshare"), qsl("share"), qsl("block")};
 
     auto setBehaviour = [&](const QString& key, auto& variable) {
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");

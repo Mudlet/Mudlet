@@ -4509,10 +4509,8 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     if (pHost->mAdvertiseScreenReader != state) {
         pHost->mAdvertiseScreenReader = state;
 
-        if (pHost->mAdvertiseScreenReader) {
-            if (comboBox_shareScreenReader->currentIndex() != static_cast<int>(ClientVariables::DataSharingBehaviour::Share)) {
-                comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));
-            }
+        if (pHost->mAdvertiseScreenReader && (comboBox_shareScreenReader->currentIndex() != static_cast<int>(ClientVariables::DataSharingBehaviour::Share))) {  
+            comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));  
         }
 
         if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share) {

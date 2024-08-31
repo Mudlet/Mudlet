@@ -889,7 +889,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     // Post message about client variable settings
     if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
-        const QString text = tr("\n          --> Control sharing preferences by clicking here for the Data tab in Settings <--\n\n");
+        const QString text = tr("\nControl sharing preferences by clicking here for the Data tab in Settings\n\n");
         QStringList commandList;
         QStringList hintList;
         bool useCurrentFormat = true;
@@ -897,22 +897,19 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         commandList << "showSettingsTab(\"tab_data\")";
         hintList << tr("Open the Data tab of the Settings menu");
 
-        const QString action1 = tr("[ ACTION ]- To enhance your gameplay experience, the server or script");
-        mpHost->mTelnet.postMessage(action1);
-        const QString action2 = tr("[ ACTION ]- is requesting the following information for sharing");
-        mpHost->mTelnet.postMessage(action2);
-        mpHost->mTelnet.postMessage("\n");
+        QStringList actionList;
+
+        actionList << tr("[ ALERT ] - To enhance your gameplay experience, the server or script is requesting the following information for sharing\n");
 
         for (auto i = requested.cbegin(), end = requested.cend(); i != end; ++i) {
-            const QString action3 = tr("[ ACTION ]-    Data: %1").arg(i.key());
-            mpHost->mTelnet.postMessage(action3);
+            actionList << tr("Data: %1").arg(i.key());
 
             if (!i.value().isEmpty()) {
-                const QString action4 = tr("[ ACTION ]- Purpose: %1").arg(i.value());
-                mpHost->mTelnet.postMessage(action4);
+                actionList << tr("Purpose: %1").arg(i.value());
             }
         }
 
+        mpHost->mTelnet.postMessage(actionList.join("\n"));
         mpHost->mpConsole->echoLink(text, commandList, hintList, useCurrentFormat);
     }
 }

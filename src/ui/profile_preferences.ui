@@ -3779,8 +3779,8 @@ you can use it but there could be issues with aligning columns of text</string>
            <verstretch>0</verstretch>
           </sizepolicy>
         </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_sharing">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="vBoxLayout_groupBox_sharing"> 
+          <item>
            <widget class="QLabel" name="label_sharing_description">
             <property name="text">
              <string>Given consent, the game or a script may request then receive the following data:</string>
@@ -3790,14 +3790,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item>
            <widget class="Line" name="line_separator_sharing">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item>
            <widget class="QGroupBox" name="groupBox_shareLanguage">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -3870,7 +3870,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item>
            <widget class="QGroupBox" name="groupBox_shareScreenReader">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -3946,7 +3946,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item>
            <widget class="QGroupBox" name="groupBox_shareSystemType">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -4019,7 +4019,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item>
            <widget class="QGroupBox" name="groupBox_shareUser">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
