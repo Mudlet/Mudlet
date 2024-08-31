@@ -4851,7 +4851,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code-v4.xml"),    {qsl("*")}},
+        {qsl(":/run-lua-code.xml"),    {qsl("*")}},
         {qsl(":/echo.xml"),               {qsl("*")}},
         {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
