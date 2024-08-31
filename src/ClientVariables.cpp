@@ -889,7 +889,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     // Post message about client variable settings
     if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
-        const QString text = tr("\nControl sharing preferences by clicking here for the Data tab in Settings\n\n");
+        const QString text = tr(">> Click here for the Data tab in Settings to control sharing preferences");
         QStringList commandList;
         QStringList hintList;
         bool useCurrentFormat = true;
@@ -899,10 +899,10 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
         QStringList actionList;
 
-        actionList << tr("[ ALERT ] - To enhance your gameplay experience, the server or script is requesting the following information for sharing\n");
+        actionList << tr("[ ALERT ] - To enhance gameplay, the server or script is requesting the following:\n");
 
         for (auto i = requested.cbegin(), end = requested.cend(); i != end; ++i) {
-            actionList << tr("Data: %1").arg(i.key());
+            actionList << tr("   Data: %1").arg(i.key());
 
             if (!i.value().isEmpty()) {
                 actionList << tr("Purpose: %1").arg(i.value());
@@ -910,7 +910,9 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         }
 
         mpHost->mTelnet.postMessage(actionList.join("\n"));
+        mpHost->mTelnet.postMessage("\n");
         mpHost->mpConsole->echoLink(text, commandList, hintList, useCurrentFormat);
+        mpHost->mTelnet.postMessage("\n ");
     }
 }
 
