@@ -172,7 +172,7 @@ int ClientVariables::clientVariableMTTS() const
 {
     int terminalStandards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUECOLOR;
 
-    if (mpHost->mTelnet.getEncoding() == "UTF-8") {
+    if (mpHost->mTelnet.getEncoding() == qsl("UTF-8")) {
         terminalStandards |= MTTS_STD_UTF_8;
     }
 
@@ -245,6 +245,12 @@ int ClientVariables::clientVariableWordWrap() const
     return mpHost->mWrapAt;
 }
 
+/*
+ * Retrieves the current state of all client variables.
+ * This function is used to generate the data map that reflects the current values and states
+ * of client variables as per the GMCP Client Variables standard. It is crucial for synchronizing
+ * the client's state with the server.
+ */
 QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::clientVariablesDataMap()
 {
     QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData;
@@ -282,16 +288,16 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::client
 
 QString ClientVariables::convertVariableValueToString(const QString &type, const QVariant &variableValue) const
 {
-    if (variableValue.isNull() || type == "null") {
+    if (variableValue.isNull() || type == qsl("null")) {
         return QString();
-    } else if (type == "string" || type == "number" || type == "integer") {
+    } else if (type == qsl("string") || type == qsl("number") || type == qsl("integer")) {
         return variableValue.toString();
-    } else if (type == "boolean") {
+    } else if (type == qsl("boolean")) {
         return variableValue.toBool() ? qsl("1") : qsl("0");
-    } else if (type == "array") {
+    } else if (type == qsl("array")) {
         QJsonArray jsonArray = variableValue.toJsonArray();
         return QString(QJsonDocument(jsonArray).toJson(QJsonDocument::Compact));
-    } else if (type == "object") {
+    } else if (type == qsl("object")) {
         QJsonObject jsonObject = variableValue.toJsonObject();
         return QString(QJsonDocument(jsonObject).toJson(QJsonDocument::Compact));
     }
@@ -662,6 +668,12 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
     sendAllMNESValues(); // No list specified or only a VAR, send the entire list of defined VAR variables
 }
 
+/*
+ * Sends a list of all client variables to the server as required by the GMCP Client Variables standard.
+ * This function is typically called during the initialization phase or when the server requests the list
+ * of variables currently available on the client. The list includes the name, type, availability, and
+ * updatability of each variable.
+ */
 void ClientVariables::sendClientVariablesList() {
     if (!mpHost->mEnableGMCP) {
         return;
@@ -681,19 +693,19 @@ void ClientVariables::sendClientVariablesList() {
                 }
 
                 QJsonObject variable;
-                variable["name"] = key;
-                variable["type"] = type;
-                variable["available"] = (checkBehaviour ? (behaviour == ClientVariables::DataSharingBehaviour::Share) : true);
-                variable["updatable"] = updatable;
+                variable[qsl("name")] = key;
+                variable[qsl("type")] = type;
+                variable[qsl("available")] = (checkBehaviour ? (behaviour == ClientVariables::DataSharingBehaviour::Share) : true);
+                variable[qsl("updatable")] = updatable;
                 clientVariablesList.append(variable);
             } else {
                 // Tuple without behaviour
                 const auto &[type, updatable, userVar, variableValue] = variables[key];
                 QJsonObject variable;
-                variable["name"] = key;
-                variable["type"] = type;
-                variable["available"] = true;
-                variable["updatable"] = updatable;
+                variable[qsl("name")] = key;
+                variable[qsl("type")] = type;
+                variable[qsl("available")] = true;
+                variable[qsl("updatable")] = updatable;
                 clientVariablesList.append(variable);
             }
         }
@@ -757,6 +769,11 @@ QJsonValue ClientVariables::convertValueToJson(const QVariant& value) {
     return QJsonValue();
 }
 
+/*
+ * Sends updates of client variables to the server as specified by the GMCP Client Variables standard.
+ * This function is called when client variables have been modified and need to be synchronized with the server.
+ * It constructs a GMCP-compliant message containing the updated variables, their values, and additional metadata.
+ */
 void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVariables::Source source) {
     if (source == ClientVariables::SourceClient) {
         sendInfoNewEnvironValue(data);
@@ -772,21 +789,21 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
     const auto nonProtectedVariables = nonProtectedVariablesMap();
     const auto protectedVariables = protectedVariablesMap();
     auto clientVariablesData = clientVariablesDataMap(); // client variable values
-    QStringList sources = {"request", "server", "client"};  // initiated by
+    QStringList sources = {qsl("request"), qsl("server"), qsl("client")};  // initiated by
     qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();  // current timestamp
 
     auto addResponse = [&](const QString& key, bool available, bool updatable, bool requested = false, const QVariant& value = QVariant(), const QString& purpose = QString()) {
         QJsonObject obj{
-            {"name", key},
-            {"available", available},
-            {"updatable", updatable},
-            {"source", sources[source]},
-            {"timestamp", timestamp}
+            {qsl("name"), key},
+            {qsl("available"), available},
+            {qsl("updatable"), updatable},
+            {qsl("source"), sources[source]},
+            {qsl("timestamp"), timestamp}
         };
 
         if (source == ClientVariables::SourceRequest) {
             clientVariablesRequested.insert(key, purpose);
-            obj["requested"] = requested;
+            obj[qsl("requested")] = requested;
         }
 
         if (!value.isNull()) {
@@ -801,10 +818,10 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
                 successful = (available && updatable && value == variableValue);
 
-                obj["success"] = successful;
-                obj["value"] = successful ? convertValueToJson(variableValue) : convertValueToJson(value);
+                obj[qsl("success")] = successful;
+                obj[qsl("value")] = successful ? convertValueToJson(variableValue) : convertValueToJson(value);
             } else if (available) {
-                obj["value"] = convertValueToJson(variableValue);             
+                obj[qsl("value")] = convertValueToJson(variableValue);             
             }
         }
 
