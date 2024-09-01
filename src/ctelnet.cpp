@@ -1961,7 +1961,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         default: {
-                            const QString mttsTerminalStandards = mpHost->mpClientVariables->getClientVariableMTTS();
+                            const int mttsTerminalStandards = mpHost->mpClientVariables->getClientVariableMTTS();
                             cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toStdString(); // Example: MTTS 2349
 
                             if (mCycleCountMTTS == 2) {
