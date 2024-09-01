@@ -577,52 +577,29 @@ int TLuaInterpreter::addRoom(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const Host& host = getHostFromLua(L);
     const bool added = host.mpMap->addRoom(id);
+    bool issueBadAreaWarning = false;
     if (added) {
         int areaID = -1;
         if (lua_gettop(L) > 1) {
             areaID = getVerifiedInt(L, __func__, 2, "areaID");
         }
         // defer area calculations as all new rooms are initialised at 0,0,0 anyway
-        bool setArea = false;
-        if (areaID != -1) {
-            // The TMap::addRoom(...) call will have put the room in the -1 area
-            if (host.mpMap->setRoomArea(id, areaID, true)) {
-                setArea = true;
-            } else {
-                // However setRoomArea(...) fails when the area does not exist
-                // so force the area to -1 as a failback - though this happens
-                // automatically merely by creating the room we need to call
-                // the setRoomArea(...) WITHOUT deferring the area
-                // recalculations otherwise the room becomes a ghost that is not
-                // revealed without reloading the map or running the auditArea()
-                // Lua API function:
-                areaID = -1;
-            }
-
-        } else {
-            // setting the Area to the default area always works but we need to
-            // set the flag that says we managed it to avoid returning the nil +
-            // error message in the other case where we failed to set another
-            // area:
-            setArea = true;
+        if (!host.mpMap->setRoomArea(id, areaID, true)) {
+            // The above will fail if the areaID does not exist (given that
+            // "added" is true then the room now exists - so that isn't the
+            // failure reason) so stuff the room in the "Default Area" instead
+            host.mpMap->setRoomArea(id, -1, true);
+            issueBadAreaWarning = true;
         }
+        host.mpMap->update();
 
-        if (!setArea) {
+        if (issueBadAreaWarning) {
             lua_pushnil(L);
-            lua_pushfstring(L, "addRoom: created roomID %d but failed to place it in areaID %d, does that area actually exist?", id, areaID);
+            lua_pushfstring(L, "addRoom: created roomID %d but failed to place it in areaID %d, does that area actually exist? (Room has been placed in areaID -1 instead.)", id, areaID);
             return 2;
         }
-
-        // in testing it was found that deferring the recalcualation for
-        // the default area ended up hiding the rooms even if (as it is by
-        // default) the default area is viewable - they only became visible
-        // after saving and reloading the map or by running auditAreas()
-        host.mpMap->setRoomArea(id, areaID, false);
-
-        // a previous version had calls to functions that would be done anyway
-        // so they do not need repeating here
-        host.mpMap->update();
     }
+
     lua_pushboolean(L, added);
     return 1;
 }
