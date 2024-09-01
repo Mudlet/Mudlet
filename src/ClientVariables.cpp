@@ -225,17 +225,17 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::getCli
 {
     QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData;
 
-    auto insertVariables = [&](const auto& variables, bool checkBehavior = false) {
+    auto insertVariables = [&](const auto& variables, bool checkBehaviour = false) {
         for (const auto &key : variables.keys()) {
             if constexpr (std::tuple_size_v<std::decay_t<decltype(variables[key])>> == 6) {
-                // Tuple with behavior
+                // Tuple with behaviour
                 const auto &[type, updatable, userVar, variableFunction, behaviour, translation] = variables[key];
 
-                if (checkBehavior && behaviour == ClientVariables::DataSharingBehaviour::Share) {
+                if (checkBehaviour && behaviour == ClientVariables::DataSharingBehaviour::Share) {
                     clientVariablesData.insert(key, {type, updatable, userVar, variableFunction()});
                 }
             } else {
-                // Tuple without behavior
+                // Tuple without behaviour
                 const auto &[type, updatable, userVar, variableFunction] = variables[key];
                 clientVariablesData.insert(key, {type, updatable, userVar, variableFunction()});
             }
@@ -249,7 +249,7 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::getCli
         // Insert non-MNES variables
         insertVariables(nonMNESVariablesMap());
 
-        // Insert protected variables, checking behavior
+        // Insert protected variables, checking behaviour
         insertVariables(protectedVariablesMap(), true);
     }
 
@@ -682,7 +682,7 @@ void ClientVariables::sendClientVariablesList() {
         // Add non-MNES variables
         addVariablesToList(nonMNESVariablesMap());
 
-        // Add protected variables, checking behavior
+        // Add protected variables, checking behaviour
         addVariablesToList(protectedVariablesMap(), true);
     }
 
