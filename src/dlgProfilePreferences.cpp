@@ -805,11 +805,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         label1->hide();
         label2->hide();
 
-        const QString variableTitle = pHost->mpClientVariables->getClientVariablesTranslation(variableKey);
+        const QString variableTitle = pHost->mpClientVariables->clientVariablesTranslation(variableKey);
 
         groupBox->setTitle(variableTitle);
 
-        const QString purpose = pHost->mpClientVariables->getClientVariablesRequestedPurpose(variableKey);
+        const QString purpose = pHost->mpClientVariables->clientVariablesRequestedPurpose(variableKey);
 
         if (!purpose.isEmpty()) {
             label2->setText(purpose);

@@ -44,12 +44,12 @@ QByteArray ClientVariables::prepareNewEnvironData(const QString &arg)
     return ret.toLatin1().constData();
 }
 
-QString ClientVariables::getClientVariableUser() const
+QString ClientVariables::clientVariableUser() const
 {
     return !mpHost->getLogin().isEmpty() ? mpHost->getLogin().trimmed() : QString();
 }
 
-QString ClientVariables::getClientVariableSystemType() const
+QString ClientVariables::clientVariableSystemType() const
 {
     QString systemType;
 
@@ -93,19 +93,43 @@ QString ClientVariables::getClientVariableSystemType() const
     return systemType.isEmpty() ? QString() : systemType;
 }
 
-QString ClientVariables::getClientVariableCharset() const
+QString ClientVariables::clientVariableCharset() const
 {
     const QString charsetEncoding = mpHost->mTelnet.getEncoding();
 
     return !charsetEncoding.isEmpty() ? charsetEncoding : qsl("ASCII");
 }
 
-QString ClientVariables::getClientVariableClientName() const
+bool ClientVariables::setClientVariableCharset(const QVariant& value, const QVariant& currentValue) {
+    QByteArray byteValue = value.toString().toUtf8();
+    QByteArray encoding;
+    bool updated = false;
+
+    if (byteValue.contains("ASCII")) {
+        encoding = "ASCII";
+    } else if (byteValue.startsWith("ISO-")) {
+        encoding = "ISO " + byteValue.mid(4);
+    } else if (byteValue.startsWith("ISO") && !value.toString().startsWith("ISO ")) {
+        encoding = "ISO " + byteValue.mid(3);
+    } else {
+        encoding = byteValue;
+    }
+
+    if (encoding != currentValue.toString().toUtf8()) {
+        mpHost->mTelnet.setEncoding(encoding, true);
+        updated = true;
+        qDebug() << "Game changed encoding to" << encoding;
+    }
+
+    return updated;
+}
+
+QString ClientVariables::clientVariableClientName() const
 {
     return qsl("MUDLET");
 }
 
-QString ClientVariables::getClientVariableClientVersion() const
+QString ClientVariables::clientVariableClientVersion() const
 {
     QString clientVersion = APP_VERSION;
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
@@ -139,12 +163,12 @@ QString ClientVariables::getClientVariableClientVersion() const
     return clientVersion;
 }
 
-QString ClientVariables::getClientVariableTerminalType() const
+QString ClientVariables::clientVariableTerminalType() const
 {
     return qsl("ANSI-TRUECOLOR");
 }
 
-int ClientVariables::getClientVariableMTTS() const
+int ClientVariables::clientVariableMTTS() const
 {
     int terminalStandards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUECOLOR;
 
@@ -167,42 +191,42 @@ int ClientVariables::getClientVariableMTTS() const
     return terminalStandards;
 }
 
-bool ClientVariables::getClientVariableANSI() const
+bool ClientVariables::clientVariableANSI() const
 {
     return true;
 }
 
-bool ClientVariables::getClientVariableVT100() const
+bool ClientVariables::clientVariableVT100() const
 {
     return false;
 }
 
-bool ClientVariables::getClientVariable256Colors() const
+bool ClientVariables::clientVariable256Colors() const
 {
     return true;
 }
 
-bool ClientVariables::getClientVariableUTF8() const
+bool ClientVariables::clientVariableUTF8() const
 {
     return mpHost->mTelnet.getEncoding() == "UTF-8";
 }
 
-bool ClientVariables::getClientVariableOSCColorPalette() const
+bool ClientVariables::clientVariableOSCColorPalette() const
 {
     return true;
 }
 
-bool ClientVariables::getClientVariableScreenReader() const
+bool ClientVariables::clientVariableScreenReader() const
 {
     return mpHost->mAdvertiseScreenReader;
 }
 
-bool ClientVariables::getClientVariableTruecolor() const
+bool ClientVariables::clientVariableTruecolor() const
 {
     return true;
 }
 
-bool ClientVariables::getClientVariableTLS() const
+bool ClientVariables::clientVariableTLS() const
 {
 #if !defined(QT_NO_SSL)
     return true;
@@ -211,17 +235,17 @@ bool ClientVariables::getClientVariableTLS() const
 #endif
 }
 
-QString ClientVariables::getClientVariableLanguage() const
+QString ClientVariables::clientVariableLanguage() const
 {
     return mudlet::self()->getInterfaceLanguage();
 }
 
-int ClientVariables::getClientVariableWordWrap() const
+int ClientVariables::clientVariableWordWrap() const
 {
     return mpHost->mWrapAt;
 }
 
-QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::getClientVariablesDataMap()
+QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::clientVariablesDataMap()
 {
     QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData;
 
@@ -229,15 +253,15 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::getCli
         for (const auto &key : variables.keys()) {
             if constexpr (std::tuple_size_v<std::decay_t<decltype(variables[key])>> == 6) {
                 // Tuple with behaviour
-                const auto &[type, updatable, userVar, variableFunction, behaviour, translation] = variables[key];
+                const auto &[type, updatable, userVar, valueFunction, behaviour, translation] = variables[key];
 
                 if (checkBehaviour && behaviour == ClientVariables::DataSharingBehaviour::Share) {
-                    clientVariablesData.insert(key, {type, updatable, userVar, variableFunction()});
+                    clientVariablesData.insert(key, {type, updatable, userVar, valueFunction()});
                 }
             } else {
                 // Tuple without behaviour
-                const auto &[type, updatable, userVar, variableFunction] = variables[key];
-                clientVariablesData.insert(key, {type, updatable, userVar, variableFunction()});
+                const auto &[type, updatable, userVar, valueFunction] = variables[key];
+                clientVariablesData.insert(key, {type, updatable, userVar, valueFunction()});
             }
         }
     };
@@ -292,7 +316,7 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
         return;
     }
 
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = getClientVariablesDataMap();
+    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
 
     if (clientVariablesData.contains(var)) {
         qDebug() << "We updated NEW_ENVIRON" << var;
@@ -433,7 +457,7 @@ void ClientVariables::appendNewEnvironValue(std::string &output, const QString &
 // SEND IS per https://www.rfc-editor.org/rfc/rfc1572
 void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
 {
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = getClientVariablesDataMap();
+    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
 
     QString transcodedMsg;
 
@@ -512,7 +536,7 @@ void ClientVariables::sendAllMNESValues()
         return;
     }
 
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = getClientVariablesDataMap();
+    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
 
     std::string output;
     output += TN_IAC;
@@ -597,7 +621,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
         return;
     }
 
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = getClientVariablesDataMap();
+    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
 
     QString transcodedMsg;
 
@@ -704,48 +728,12 @@ void ClientVariables::sendClientVariablesList() {
     }
 }
 
-bool ClientVariables::updateClientVariable(const QString& key, const QVariant& value, QMap<QString, std::tuple<QString, bool, bool, QVariant>>& clientVariablesData) {
+bool ClientVariables::setClientVariable(const QString& key, const QVariant& value, QMap<QString, std::tuple<QString, bool, bool, QVariant>>& clientVariablesData) {
     bool updated = false;
 
     if (key == qsl("CHARSET")) {
-        const auto &[type, updatable, userVar, variableValue] = clientVariablesData[key];
-        bool updated = false;
-        QByteArray byteValue = value.toString().toUtf8();
-        QByteArray encoding;
-
-        if (byteValue.contains(QByteArray("ASCII"))) {
-            encoding = QByteArray("ASCII");
-
-            if (encoding != variableValue.toString().toUtf8()) {
-                mpHost->mTelnet.setEncoding(encoding, true); // Force variants of ASCII to ASCII
-                updated = true;
-            }
-        } else if (byteValue.startsWith("ISO-")) {
-            encoding = QByteArray("ISO " + byteValue.mid(4));
-
-            if (encoding != variableValue.toString().toUtf8()) {
-                mpHost->mTelnet.setEncoding(encoding, true); // Align with TEncodingTable::csmEncodings
-                updated = true;
-            }
-        } else if (byteValue.startsWith("ISO") && !value.toString().startsWith("ISO ")) {
-            encoding = QByteArray("ISO " + byteValue.mid(3));
-
-            if (encoding != variableValue.toString().toUtf8()) {
-                mpHost->mTelnet.setEncoding(encoding, true); // Align with TEncodingTable::csmEncodings
-                updated = true;
-            }
-        } else {
-            encoding = byteValue;
-
-            if (encoding != variableValue.toString().toUtf8()) {
-                mpHost->mTelnet.setEncoding(encoding, true);
-                updated = true;
-            }
-        }
-
-        if (updated) {
-            qDebug() << "Game changed encoding to" << encoding;
-        }
+        const auto variableValue = std::get<ClientVariables::TupleValue>(clientVariablesData[key]);
+        updated = setClientVariableCharset(value, variableValue);
     }
 
     return updated;
@@ -783,7 +771,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
 
     const auto nonProtectedVariables = nonProtectedVariablesMap();
     const auto protectedVariables = protectedVariablesMap();
-    auto clientVariablesData = getClientVariablesDataMap(); // client variable values
+    auto clientVariablesData = clientVariablesDataMap(); // client variable values
     QStringList sources = {"request", "server", "client"};  // initiated by
     qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();  // current timestamp
 
@@ -802,13 +790,13 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         }
 
         if (!value.isNull()) {
-            const auto variableValue = std::get<3>(clientVariablesData[key]);
+            const auto variableValue = std::get<ClientVariables::TupleValue>(clientVariablesData[key]);
     
             if (source == ClientVariables::SourceServer) {
                 bool successful = false;
 
-                if (updateClientVariable(key, value, clientVariablesData)) {
-                    clientVariablesData = getClientVariablesDataMap(); // refresh
+                if (setClientVariable(key, value, clientVariablesData)) {
+                    clientVariablesData = clientVariablesDataMap(); // refresh
                 }
 
                 successful = (available && updatable && value == variableValue);

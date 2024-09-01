@@ -1938,7 +1938,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientName = mpHost->mpClientVariables->getClientVariableClientName();
+                            const QString clientName = mpHost->mpClientVariables->clientVariableClientName();
                             cmd += clientName.toStdString();
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
@@ -1953,7 +1953,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         case 1: {
-                            const QString mttsTerminalType = mpHost->mpClientVariables->getClientVariableTerminalType();
+                            const QString mttsTerminalType = mpHost->mpClientVariables->clientVariableTerminalType();
                             cmd += mttsTerminalType.toStdString(); // Example: ANSI-TRUECOLOR
                             mCycleCountMTTS++;
                             qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << mttsTerminalType;
@@ -1961,7 +1961,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         default: {
-                            const int mttsTerminalStandards = mpHost->mpClientVariables->getClientVariableMTTS();
+                            const int mttsTerminalStandards = mpHost->mpClientVariables->clientVariableMTTS();
                             cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toStdString(); // Example: MTTS 2349
 
                             if (mCycleCountMTTS == 2) {

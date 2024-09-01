@@ -48,30 +48,37 @@ class ClientVariables : public QObject
         SourceServer = 1,
         SourceClient = 2};
 
-    QString getClientVariableCharset() const;
-    QString getClientVariableClientName() const;
-    QString getClientVariableClientVersion() const;
-    QString getClientVariableTerminalType() const;
-    int getClientVariableMTTS() const;
-    bool getClientVariableANSI() const;
-    bool getClientVariableVT100() const;
-    bool getClientVariable256Colors() const;
-    bool getClientVariableUTF8() const;
-    bool getClientVariableOSCColorPalette() const;
-    bool getClientVariableTruecolor() const;
-    bool getClientVariableTLS() const;
-    int getClientVariableWordWrap() const;
+    enum TupleIndex {
+        TupleType = 0,
+        TupleUpdatable = 1,
+        TupleUserVar = 2,
+        TupleValue = 3,
+        TupleBehaviour = 4,
+        TupleTranslation = 5};
+    
+    QString clientVariableCharset() const;
+    QString clientVariableClientName() const;
+    QString clientVariableClientVersion() const;
+    QString clientVariableTerminalType() const;
+    int clientVariableMTTS() const;
+    bool clientVariableANSI() const;
+    bool clientVariableVT100() const;
+    bool clientVariable256Colors() const;
+    bool clientVariableUTF8() const;
+    bool clientVariableOSCColorPalette() const;
+    bool clientVariableTruecolor() const;
+    bool clientVariableTLS() const;
+    int clientVariableWordWrap() const;
 
-    QMap<QString, std::tuple<QString, bool, bool, QVariant>> getClientVariablesDataMap();
+    QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesDataMap();
     void resetClientVariablesRequested() { clientVariablesRequested.clear(); }
     void resetNewEnvironVariablesRequested() { newEnvironVariablesRequested.clear(); }
-    QString getClientVariablesRequestedPurpose(const QString& key) { return clientVariablesRequested.contains(key) ? clientVariablesRequested[key] : QString(); }
-    QString getClientVariablesTranslation(const QString& key) { 
+    QString clientVariablesRequestedPurpose(const QString& key) { return clientVariablesRequested.contains(key) ? clientVariablesRequested[key] : QString(); }
+    QString clientVariablesTranslation(const QString& key) { 
         const auto protectedVariables = protectedVariablesMap();
 
         if (protectedVariables.contains(key)) {
-            // {variable, {type, updatable, userVar, variableFunction, behaviour, translation}}
-            return std::get<5>(protectedVariables[key]);
+            return std::get<ClientVariables::TupleTranslation>(protectedVariables[key]);
         }
 
         return QString(); 
@@ -129,29 +136,29 @@ class ClientVariables : public QObject
         // * "IPADDRESS" Intentionally not implemented by Mudlet Makers
         // * These will be used by NEW_ENVIRON as well and be requested with NEW_ENVIRON_USERVAR
 
-        // {variable, {type, updatable, userVar, variableFunction}}
+        // {variable, {type, updatable, userVar, valueFunction}}
         return {
-            {qsl("CHARSET"), {qsl("string"), true, false, [this]() { return QVariant(getClientVariableCharset()); }}},
-            {qsl("CLIENT_NAME"), {qsl("string"), false, false, [this]() { return QVariant(getClientVariableClientName()); }}},
-            {qsl("CLIENT_VERSION"), {qsl("string"), false, false, [this]() { return QVariant(getClientVariableClientVersion()); }}},
-            {qsl("MTTS"), {qsl("integer"), false, false, [this]() { return QVariant(getClientVariableMTTS()); }}},
-            {qsl("TERMINAL_TYPE"), {qsl("string"), false, false, [this]() { return QVariant(getClientVariableTerminalType()); }}}
+            {qsl("CHARSET"), {qsl("string"), true, false, [this]() { return QVariant(clientVariableCharset()); }}},
+            {qsl("CLIENT_NAME"), {qsl("string"), false, false, [this]() { return QVariant(clientVariableClientName()); }}},
+            {qsl("CLIENT_VERSION"), {qsl("string"), false, false, [this]() { return QVariant(clientVariableClientVersion()); }}},
+            {qsl("MTTS"), {qsl("integer"), false, false, [this]() { return QVariant(clientVariableMTTS()); }}},
+            {qsl("TERMINAL_TYPE"), {qsl("string"), false, false, [this]() { return QVariant(clientVariableTerminalType()); }}}
         };
     }
 
     QMap<QString, std::tuple<QString, bool, bool, std::function<QVariant()>>> nonMNESVariablesMap() const {
         // Per https://www.rfc-editor.org/rfc/rfc1572.txt, these will be requested with NEW_ENVIRON_USERVAR
 
-        // {variable, {type, updatable, userVar, variableFunction}}
+        // {variable, {type, updatable, userVar, valueFunction}}
         return {
-            {qsl("256_COLORS"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariable256Colors()); }}},
-            {qsl("ANSI"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableANSI()); }}},
-            {qsl("OSC_COLOR_PALETTE"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableOSCColorPalette()); }}},
-            {qsl("UTF-8"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableUTF8()); }}},
-            {qsl("TLS"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableTLS()); }}},
-            {qsl("TRUECOLOR"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableTruecolor()); }}},
-            {qsl("VT100"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableVT100()); }}},
-            {qsl("WORD_WRAP"), {qsl("integer"), false, false, [this]() { return QVariant(getClientVariableWordWrap()); }}}
+            {qsl("256_COLORS"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariable256Colors()); }}},
+            {qsl("ANSI"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableANSI()); }}},
+            {qsl("OSC_COLOR_PALETTE"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableOSCColorPalette()); }}},
+            {qsl("UTF-8"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableUTF8()); }}},
+            {qsl("TLS"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableTLS()); }}},
+            {qsl("TRUECOLOR"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableTruecolor()); }}},
+            {qsl("VT100"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableVT100()); }}},
+            {qsl("WORD_WRAP"), {qsl("integer"), false, false, [this]() { return QVariant(clientVariableWordWrap()); }}}
         };
     }
 
@@ -163,7 +170,7 @@ class ClientVariables : public QObject
             nonProtectedVariables.insert(it.key(), it.value());
         }
 
-        // {variable, {type, updatable, userVar, variableFunction}}
+        // {variable, {type, updatable, userVar, valueFunction}}
         return nonProtectedVariables;
     }
 
@@ -171,27 +178,30 @@ class ClientVariables : public QObject
         // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "SYSTEMTYPE" is well-known and will be requested with NEW_ENVIRON_VAR
         // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" is well-known and will be requested with NEW_ENVIRON_VAR
 
-        // {variable, {type, updatable, userVar, variableFunction, behaviour, translation}}
+        // {variable, {type, updatable, userVar, valueFunction, behaviour, translation}}
         return {
-            {qsl("LANGUAGE"), {qsl("string"), false, false, [this]() { return QVariant(getClientVariableLanguage()); }, mShareLanguage, tr("Language")}},
-            {qsl("SCREEN_READER"), {qsl("boolean"), false, false, [this]() { return QVariant(getClientVariableScreenReader()); }, mShareScreenReader, tr("Screen Reader Use")}},
-            {qsl("SYSTEMTYPE"), {qsl("string"), false, true, [this]() { return QVariant(getClientVariableSystemType()); }, mShareSystemType, tr("Operating System Type")}},
-            {qsl("USER"), {qsl("string"), false, true, [this]() { return QVariant(getClientVariableUser()); }, mShareUser, tr("Character Name")}}
+            {qsl("LANGUAGE"), {qsl("string"), false, false, [this]() { return QVariant(clientVariableLanguage()); }, mShareLanguage, tr("Language")}},
+            {qsl("SCREEN_READER"), {qsl("boolean"), false, false, [this]() { return QVariant(clientVariableScreenReader()); }, mShareScreenReader, tr("Screen Reader Use")}},
+            {qsl("SYSTEMTYPE"), {qsl("string"), false, true, [this]() { return QVariant(clientVariableSystemType()); }, mShareSystemType, tr("Operating System Type")}},
+            {qsl("USER"), {qsl("string"), false, true, [this]() { return QVariant(clientVariableUser()); }, mShareUser, tr("Character Name")}}
         };
     }
 
     QString convertVariableValueToString(const QString &, const QVariant &) const;
     QByteArray prepareNewEnvironData(const QString&);
+    bool setClientVariableCharset(const QVariant&, const QVariant&);
+
     // Protected Client Variables
-    QString getClientVariableUser() const;
-    QString getClientVariableSystemType() const;
-    bool getClientVariableScreenReader() const;
-    QString getClientVariableLanguage() const;
+    QString clientVariableUser() const;
+    QString clientVariableSystemType() const;
+    bool clientVariableScreenReader() const;
+    QString clientVariableLanguage() const;
 
     void appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, std::tuple<QString, bool, bool, QVariant>>&);
     void appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, std::tuple<QString, bool, bool, QVariant>>&);
     void sendClientVariablesList();
-    bool updateClientVariable(const QString&, const QVariant&, QMap<QString, std::tuple<QString, bool, bool, QVariant>>&);
+
+    bool setClientVariable(const QString&, const QVariant&, QMap<QString, std::tuple<QString, bool, bool, QVariant>>&);
     QJsonValue convertValueToJson(const QVariant&);
 
     Host* mpHost;
