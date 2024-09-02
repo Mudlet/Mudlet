@@ -70,20 +70,28 @@ class ClientVariables : public QObject
     bool clientVariableTLS() const;
     int clientVariableWordWrap() const;
 
-    QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesDataMap();
+    QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesMap();
     void resetClientVariablesRequested() { clientVariablesRequested.clear(); }
     void resetNewEnvironVariablesRequested() { newEnvironVariablesRequested.clear(); }
     QString clientVariablesRequestedPurpose(const QString& key) { return clientVariablesRequested.contains(key) ? clientVariablesRequested[key] : QString(); }
-    QString clientVariablesTranslation(const QString& key) { 
-        const auto protectedVariables = protectedVariablesMap();
-
+    QString protectedVariablesTranslation(const QString& key) { 
+        const auto& protectedVariables = protectedVariablesMap();
+    
         if (protectedVariables.contains(key)) {
             return std::get<ClientVariables::TupleTranslation>(protectedVariables[key]);
         }
 
-        return QString(); 
+        return QString();
     }
+    bool isClientVariableNotAvailable(const QString& key) {
+        const auto& protectedVariables = protectedVariablesMap();
+    
+        if (protectedVariables.contains(key)) {
+            return std::get<ClientVariables::TupleBehaviour>(protectedVariables[key]) != DataSharingBehaviour::Share;
+        }
 
+        return false;
+    }
     bool isMNESVariable(const QString&);
     void sendIsNewEnvironValues(const QByteArray&);
     void sendAllMNESValues();

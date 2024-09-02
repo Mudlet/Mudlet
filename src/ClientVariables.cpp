@@ -251,23 +251,20 @@ int ClientVariables::clientVariableWordWrap() const
  * of client variables as per the GMCP Client Variables standard. It is crucial for synchronizing
  * the client's state with the server.
  */
-QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::clientVariablesDataMap()
+QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::clientVariablesMap()
 {
-    QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData;
+    QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariables;
 
     auto insertVariables = [&](const auto& variables, bool checkBehaviour = false) {
         for (const auto &key : variables.keys()) {
             if constexpr (std::tuple_size_v<std::decay_t<decltype(variables[key])>> == 6) {
                 // Tuple with behaviour
                 const auto &[type, updatable, userVar, valueFunction, behaviour, translation] = variables[key];
-
-                if (checkBehaviour && behaviour == ClientVariables::DataSharingBehaviour::Share) {
-                    clientVariablesData.insert(key, {type, updatable, userVar, valueFunction()});
-                }
+                clientVariables.insert(key, {type, updatable, userVar, valueFunction()});
             } else {
                 // Tuple without behaviour
                 const auto &[type, updatable, userVar, valueFunction] = variables[key];
-                clientVariablesData.insert(key, {type, updatable, userVar, valueFunction()});
+                clientVariables.insert(key, {type, updatable, userVar, valueFunction()});
             }
         }
     };
@@ -283,7 +280,7 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::client
         insertVariables(protectedVariablesMap(), true);
     }
 
-    return clientVariablesData;
+    return clientVariables;
 }
 
 QString ClientVariables::convertVariableValueToString(const QString &type, const QVariant &variableValue) const
@@ -322,14 +319,15 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
         return;
     }
 
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
+    const auto& clientVariables = clientVariablesMap();
 
-    if (clientVariablesData.contains(var)) {
+    if (clientVariables.contains(var)) {
         qDebug() << "We updated NEW_ENVIRON" << var;
 
-        const auto &[type, updatable, userVar, variableValue] = clientVariablesData.value(var);
+        const auto &[type, updatable, userVar, variableValue] = clientVariables.value(var);
         const bool isUserVar = !mpHost->mEnableMNES && userVar;
         const QString val = convertVariableValueToString(type, variableValue);
+        const bool isNotEmptyAndAvailable = !isClientVariableNotAvailable(var) && !val.isEmpty();
 
         std::string output;
         output += TN_IAC;
@@ -342,7 +340,7 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
-        if (!val.isEmpty()) {
+        if (isNotEmptyAndAvailable) {
             output += prepareNewEnvironData(val).toStdString();
         }
 
@@ -351,18 +349,18 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
         mpHost->mTelnet.socketOutRaw(output);
 
         if (mpHost->mEnableMNES) {
-            if (!val.isEmpty()) {
+            if (isNotEmptyAndAvailable) {
                 qDebug() << "WE inform NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
             } else {
                 qDebug() << "WE inform NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
             }
         } else if (!isUserVar) {
-            if (!val.isEmpty()) {
+            if (isNotEmptyAndAvailable) {
                 qDebug() << "WE inform NEW_ENVIRON VAR" << var << "VAL" << val;
             } else {
                 qDebug() << "WE inform NEW_ENVIRON VAR" << var << "as an empty VAL";
             }
-        } else if (!val.isEmpty()) {
+        } else if (isNotEmptyAndAvailable) {
             qDebug() << "WE inform NEW_ENVIRON USERVAR" << var << "VAL" << val;
         } else {
             qDebug() << "WE inform NEW_ENVIRON USERVAR" << var << "as an empty VAL";
@@ -370,9 +368,9 @@ void ClientVariables::sendInfoNewEnvironValue(const QString &var)
     }
 }
 
-void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool isUserVar, const QMap<QString, std::tuple<QString, bool, bool, QVariant>> &clientVariablesData)
+void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool isUserVar, const QMap<QString, std::tuple<QString, bool, bool, QVariant>> &clientVariables)
 {
-    for (auto it = clientVariablesData.begin(); it != clientVariablesData.end(); ++it) {
+    for (auto it = clientVariables.begin(); it != clientVariables.end(); ++it) {
         const auto &[type, updatable, userVar, variableValue] = it.value();
 
         if (isUserVar != userVar) {
@@ -380,6 +378,7 @@ void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool 
         }
 
         const QString val = convertVariableValueToString(type, variableValue);
+        const bool isNotEmptyAndAvailable = !isClientVariableNotAvailable(it.key()) && !val.isEmpty();
 
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
         output += prepareNewEnvironData(it.key()).toStdString();
@@ -388,17 +387,17 @@ void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool 
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
-        if (!val.isEmpty()) {
+        if (isNotEmptyAndAvailable) {
             output += prepareNewEnvironData(val).toStdString();
         }
 
         if (!isUserVar) {
-            if (!val.isEmpty()) {
+            if (isNotEmptyAndAvailable) {
                 qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "VAL" << val;
             } else {
                 qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an empty VAL";
             }
-        } else if (!val.isEmpty()) {
+        } else if (isNotEmptyAndAvailable) {
             qDebug() << "WE send NEW_ENVIRON USERVAR" << it.key() << "VAL" << val;
         } else {
             qDebug() << "WE send NEW_ENVIRON USERVAR" << it.key() << "as an empty VAL";
@@ -406,11 +405,12 @@ void ClientVariables::appendAllNewEnvironValues(std::string &output, const bool 
     }
 }
 
-void ClientVariables::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, std::tuple<QString, bool, bool, QVariant>> &clientVariablesData)
+void ClientVariables::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, std::tuple<QString, bool, bool, QVariant>> &clientVariables)
 {
-    if (clientVariablesData.contains(var)) {
-        const auto &[type, updatable, userVar, variableValue] = clientVariablesData[var];
+    if (clientVariables.contains(var)) {
+        const auto &[type, updatable, userVar, variableValue] = clientVariables[var];
         const QString val = convertVariableValueToString(type, variableValue);
+        const bool isNotEmptyAndAvailable = !isClientVariableNotAvailable(var) && !val.isEmpty();
 
         if (isUserVar != userVar) {
             // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
@@ -432,7 +432,7 @@ void ClientVariables::appendNewEnvironValue(std::string &output, const QString &
 
             // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
             // variable is defined, but has no value.
-            if (!val.isEmpty()) {
+            if (isNotEmptyAndAvailable) {
                 output += prepareNewEnvironData(val).toStdString();
 
                 if (!isUserVar) {
@@ -463,7 +463,7 @@ void ClientVariables::appendNewEnvironValue(std::string &output, const QString &
 // SEND IS per https://www.rfc-editor.org/rfc/rfc1572
 void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
 {
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
+    const auto& clientVariables = clientVariablesMap();
 
     QString transcodedMsg;
 
@@ -494,20 +494,20 @@ void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
 
         if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
-                appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariablesData);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariables);
                 var = QString();
             } else if (is_var || is_uservar) {
-                appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariablesData);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariables);
             }
 
             is_uservar = false;
             is_var = true;
         } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
             if (!var.isEmpty()) {
-                appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariablesData);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariables);
                 var = QString();
             } else if (is_var || is_uservar) {
-                appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariablesData);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariables);
             }
 
             is_var = false;
@@ -518,12 +518,12 @@ void ClientVariables::sendIsNewEnvironValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last on the stack variable
-        appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariablesData);
+        appendNewEnvironValue(output, var, (is_uservar ? true : false), clientVariables);
     } else if (is_var || is_uservar) { // Last on the stack VAR or USERVAR with no name
-        appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariablesData);
+        appendAllNewEnvironValues(output, (is_uservar ? true : false), clientVariables);
     } else { // No list specified, send the entire list of defined VAR and USERVAR variables
-        appendAllNewEnvironValues(output, false, clientVariablesData);
-        appendAllNewEnvironValues(output, true, clientVariablesData);
+        appendAllNewEnvironValues(output, false, clientVariables);
+        appendAllNewEnvironValues(output, true, clientVariables);
     }
 
     output += TN_IAC;
@@ -542,7 +542,7 @@ void ClientVariables::sendAllMNESValues()
         return;
     }
 
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
+    const auto& clientVariables = clientVariablesMap();
 
     std::string output;
     output += TN_IAC;
@@ -550,7 +550,7 @@ void ClientVariables::sendAllMNESValues()
     output += OPT_NEW_ENVIRON;
     output += NEW_ENVIRON_IS;
 
-    for (auto it = clientVariablesData.begin(); it != clientVariablesData.end(); ++it) {
+    for (auto it = clientVariables.begin(); it != clientVariables.end(); ++it) {
         const auto &[type, updatable, userVar, variableValue] = it.value();
         const QString val = convertVariableValueToString(type, variableValue);
 
@@ -574,7 +574,7 @@ void ClientVariables::sendAllMNESValues()
     mpHost->mTelnet.socketOutRaw(output);
 }
 
-void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, std::tuple<QString, bool, bool, QVariant>> &clientVariablesData)
+void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, std::tuple<QString, bool, bool, QVariant>> &clientVariables)
 {
     if (!mpHost->mEnableMNES) {
         return;
@@ -591,8 +591,8 @@ void ClientVariables::sendMNESValue(const QString &var, const QMap<QString, std:
     output += NEW_ENVIRON_IS;
     output += NEW_ENVIRON_VAR;
 
-    if (clientVariablesData.contains(var)) {
-        const auto &[type, updatable, userVar, variableValue] = clientVariablesData[var];
+    if (clientVariables.contains(var)) {
+        const auto &[type, updatable, userVar, variableValue] = clientVariables[var];
         const QString val = convertVariableValueToString(type, variableValue);
 
         output += prepareNewEnvironData(var).toStdString();
@@ -627,7 +627,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
         return;
     }
 
-    const QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariablesData = clientVariablesDataMap();
+    const auto& clientVariables = clientVariablesMap();
 
     QString transcodedMsg;
 
@@ -650,7 +650,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
 
         if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
-                sendMNESValue(var, clientVariablesData);
+                sendMNESValue(var, clientVariables);
                 var = QString();
             }
 
@@ -661,7 +661,7 @@ void ClientVariables::sendIsMNESValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last variable on the stack
-        sendMNESValue(var, clientVariablesData);
+        sendMNESValue(var, clientVariables);
         return;
     }
 
@@ -740,11 +740,11 @@ void ClientVariables::sendClientVariablesList() {
     }
 }
 
-bool ClientVariables::setClientVariable(const QString& key, const QVariant& value, QMap<QString, std::tuple<QString, bool, bool, QVariant>>& clientVariablesData) {
+bool ClientVariables::setClientVariable(const QString& key, const QVariant& value, QMap<QString, std::tuple<QString, bool, bool, QVariant>>& clientVariables) {
     bool updated = false;
 
     if (key == qsl("CHARSET")) {
-        const auto variableValue = std::get<ClientVariables::TupleValue>(clientVariablesData[key]);
+        const auto variableValue = std::get<ClientVariables::TupleValue>(clientVariables[key]);
         updated = setClientVariableCharset(value, variableValue);
     }
 
@@ -775,20 +775,12 @@ QJsonValue ClientVariables::convertValueToJson(const QVariant& value) {
  * It constructs a GMCP-compliant message containing the updated variables, their values, and additional metadata.
  */
 void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVariables::Source source) {
-    if (source == ClientVariables::SourceClient) {
-        sendInfoNewEnvironValue(data);
-    }
-
-    if (!mpHost->mEnableGMCP) {
-        return;
-    }
-
     QJsonArray response;
     QMap<QString, QString> requested;
 
     const auto nonProtectedVariables = nonProtectedVariablesMap();
     const auto protectedVariables = protectedVariablesMap();
-    auto clientVariablesData = clientVariablesDataMap(); // client variable values
+    auto clientVariables = clientVariablesMap(); // client variable values
     QStringList sources = {qsl("request"), qsl("server"), qsl("client")};  // initiated by
     qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();  // current timestamp
 
@@ -807,13 +799,13 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         }
 
         if (!value.isNull()) {
-            const auto variableValue = std::get<ClientVariables::TupleValue>(clientVariablesData[key]);
+            const auto variableValue = std::get<ClientVariables::TupleValue>(clientVariables[key]);
     
             if (source == ClientVariables::SourceServer) {
                 bool successful = false;
 
-                if (setClientVariable(key, value, clientVariablesData)) {
-                    clientVariablesData = clientVariablesDataMap(); // refresh
+                if (setClientVariable(key, value, clientVariables)) {
+                    clientVariables = clientVariablesMap(); // refresh
                 }
 
                 successful = (available && updatable && value == variableValue);
@@ -880,7 +872,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
                     requested.insert(translation, purpose);
                 }
 
-                if (clientVariablesData.contains(key)) {
+                if (clientVariables.contains(key)) {
                     addResponse(key, available, updatable, !available, value);
                 } else {
                     addResponse(key, available, updatable, !available, value, purpose);
@@ -889,7 +881,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         } else if (nonProtectedVariables.contains(key)) {
             const auto &[type, updatable, userVar, variableValue] = nonProtectedVariables[key];
 
-            if (clientVariablesData.contains(key)) {
+            if (clientVariables.contains(key)) {
                 addResponse(key, true, updatable, false, value);
             } else {
                 addResponse(key, true, updatable);
@@ -903,47 +895,54 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
         return;
     }
 
-    QJsonDocument doc2(response);
-    QString gmcpMessage = doc2.toJson(QJsonDocument::Compact);
+    if (mpHost->mEnableGMCP) {
+        QJsonDocument doc2(response);
+        QString gmcpMessage = doc2.toJson(QJsonDocument::Compact);
 
-    std::string output;
-    output += TN_IAC;
-    output += TN_SB;
-    output += OPT_GMCP;
-    output += "Client.Variables.Update ";
-    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
-    output += TN_IAC;
-    output += TN_SE;
+        std::string output;
+        output += TN_IAC;
+        output += TN_SB;
+        output += OPT_GMCP;
+        output += "Client.Variables.Update ";
+        output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
+        output += TN_IAC;
+        output += TN_SE;
 
-    // Send response to server
-    mpHost->mTelnet.socketOutRaw(output);
+        // Send response to server
+        mpHost->mTelnet.socketOutRaw(output);
 
-    // Post message about client variable settings
-    if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
-        const QString text = tr(">> Click here for the Data tab in Settings to control sharing preferences");
-        QStringList commandList;
-        QStringList hintList;
-        bool useCurrentFormat = true;
+        // Post message about client variable settings
+        if (source == ClientVariables::SourceRequest && !requested.isEmpty()) {
+            const QString text = tr(">> Click here for the Data tab in Settings to control sharing preferences");
+            QStringList commandList;
+            QStringList hintList;
+            bool useCurrentFormat = true;
 
-        commandList << "showSettingsTab(\"tab_data\")";
-        hintList << tr("Open the Data tab of the Settings menu");
+            commandList << "showSettingsTab(\"tab_data\")";
+            hintList << tr("Open the Data tab of the Settings menu");
 
-        QStringList actionList;
+            QStringList actionList;
 
-        actionList << tr("[ ALERT ] - To enhance gameplay, the server or script is requesting the following:\n");
+            actionList << tr("[ ALERT ] - To enhance gameplay, the server or script is requesting the following:\n");
 
-        for (auto i = requested.cbegin(), end = requested.cend(); i != end; ++i) {
-            actionList << tr("   Data: %1").arg(i.key());
+            for (auto i = requested.cbegin(), end = requested.cend(); i != end; ++i) {
+                actionList << tr("   Data: %1").arg(i.key());
 
-            if (!i.value().isEmpty()) {
-                actionList << tr("Purpose: %1").arg(i.value());
+                if (!i.value().isEmpty()) {
+                    actionList << tr("Purpose: %1").arg(i.value());
+                }
             }
-        }
 
-        mpHost->mTelnet.postMessage(actionList.join("\n"));
-        mpHost->mTelnet.postMessage("\n");
-        mpHost->mpConsole->echoLink(text, commandList, hintList, useCurrentFormat);
-        mpHost->mTelnet.postMessage("\n ");
+            mpHost->mTelnet.postMessage(actionList.join("\n"));
+            mpHost->mTelnet.postMessage("\n");
+            mpHost->mpConsole->echoLink(text, commandList, hintList, useCurrentFormat);
+            mpHost->mTelnet.postMessage("\n ");
+        }
+    }
+
+    // Execute here, as updates occur above with protected variables that influence NEW-ENVIRON output.
+    if (source == ClientVariables::SourceClient) {
+        sendInfoNewEnvironValue(data);
     }
 }
 

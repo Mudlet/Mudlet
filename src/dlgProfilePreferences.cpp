@@ -805,7 +805,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         label1->hide();
         label2->hide();
 
-        const QString variableTitle = pHost->mpClientVariables->clientVariablesTranslation(variableKey);
+        const QString variableTitle = pHost->mpClientVariables->protectedVariablesTranslation(variableKey);
 
         groupBox->setTitle(variableTitle);
 
@@ -4513,10 +4513,8 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
             comboBox_shareScreenReader->setCurrentIndex(static_cast<int>(ClientVariables::DataSharingBehaviour::Share));  
         }
 
-        if (pHost->mpClientVariables->mShareScreenReader == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
-        }
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
     }
 }
 
@@ -4532,10 +4530,7 @@ void dlgProfilePreferences::slot_changeShareLanguage(const int index)
 
     if (pHost->mpClientVariables->mShareLanguage != newIndex) {
         pHost->mpClientVariables->mShareLanguage = newIndex;
-
-        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
-        }
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("LANGUAGE"), ClientVariables::SourceClient);
     }
 }
 
@@ -4551,15 +4546,12 @@ void dlgProfilePreferences::slot_changeShareScreenReader(const int index)
 
     if (pHost->mpClientVariables->mShareScreenReader != newIndex) {
         pHost->mpClientVariables->mShareScreenReader = newIndex;
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
 
-        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SCREEN_READER"), ClientVariables::SourceClient);
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("MTTS"), ClientVariables::SourceClient);
-
-            if (checkBox_advertiseScreenReader->checkState() != Qt::Checked) {
-                const QString info1 = tr("[ INFO ]  - Control screen reader advertising preferences from the Accessibility tab in Settings");
-                pHost->mTelnet.postMessage(info1);
-            }
+        if (newIndex == ClientVariables::DataSharingBehaviour::Share && checkBox_advertiseScreenReader->checkState() != Qt::Checked) {
+            const QString info1 = tr("[ INFO ]  - Control screen reader advertising preferences from the Accessibility tab in Settings");
+            pHost->mTelnet.postMessage(info1);
         }
     }
 }
@@ -4576,10 +4568,7 @@ void dlgProfilePreferences::slot_changeShareSystemType(const int index)
 
     if (pHost->mpClientVariables->mShareSystemType != newIndex) {
         pHost->mpClientVariables->mShareSystemType = newIndex;
-
-        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
-        }
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("SYSTEMTYPE"), ClientVariables::SourceClient);
     }
 }
 
@@ -4595,10 +4584,7 @@ void dlgProfilePreferences::slot_changeShareUser(const int index)
 
     if (pHost->mpClientVariables->mShareUser != newIndex) {
         pHost->mpClientVariables->mShareUser = newIndex;
-
-        if (newIndex == ClientVariables::DataSharingBehaviour::Share) {
-            pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
-        }
+        pHost->mpClientVariables->sendClientVariablesUpdate(qsl("USER"), ClientVariables::SourceClient);
     }
 }
 
