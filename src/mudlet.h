@@ -418,6 +418,7 @@ public:
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
+    bool profileExists(const QString& profileName);
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)

@@ -2619,3 +2619,51 @@ int TLuaInterpreter::getProfiles(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadProfile
+int TLuaInterpreter::loadProfile(lua_State* L)
+{
+    auto& hostManager = mudlet::self()->getHostManager();
+    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    bool offline = false;
+
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "loadProfile: bad argument #2 type (offline mode as boolean expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        offline = lua_toboolean(L, 2);
+    }
+
+    Host& host = getHostFromLua(L);
+
+    if (profileName.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "loadProfile: profile name cannot be empty");
+        return 2;
+    }
+
+    if (!mudlet::self()->profileExists(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    if (hostManager.hostLoaded(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "loadProfile: profile '%s' is already loaded", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    bool success = mudlet::self()->loadProfile(profileName, !offline);
+    mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
+    mudlet::self()->enableToolbarButtons();
+
+    if (success) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
+        return 2;
+    }
+}
