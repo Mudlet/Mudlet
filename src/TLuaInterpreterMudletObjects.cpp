@@ -2555,3 +2555,35 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfiles
+int TLuaInterpreter::getProfiles(lua_State* L)
+{
+    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    lua_newtable(L);
+
+    for (const auto& profile : profiles) {
+        lua_pushstring(L, profile.toUtf8().constData());
+        lua_newtable(L);
+
+        const QString url = mudlet::self()->readProfileData(profile, qsl("url"));
+        const QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+
+        if (!url.isEmpty()) {
+            lua_pushstring(L, "hostname");
+            lua_pushstring(L, url.toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        if (!port.isEmpty()) {
+            lua_pushstring(L, "port");
+            lua_pushstring(L, port.toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
