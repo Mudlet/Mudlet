@@ -54,6 +54,7 @@
 #include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
+#include "TGameDetails.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
@@ -2558,6 +2559,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfiles
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
+    auto& hostManager = mudlet::self()->getHostManager();
     const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -2567,8 +2569,23 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        const QString url = mudlet::self()->readProfileData(profile, qsl("url"));
-        const QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+        QString url = mudlet::self()->readProfileData(profile, qsl("url"));
+        QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+
+        // if url/port haven't been written to disk yet (which is what happens
+        // when a default profile is opened for the first time), fetch this data from game details
+        if (url.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                url = (*it).hostUrl;
+            }
+        }
+        if (port.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                port = QString::number((*it).port);
+            }
+        }
 
         if (!url.isEmpty()) {
             lua_pushstring(L, "hostname");
@@ -2581,6 +2598,10 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_pushstring(L, port.toUtf8().constData());
             lua_settable(L, -3);
         }
+
+        lua_pushstring(L, "loaded");
+        lua_pushboolean(L, hostManager.hostLoaded(profile));
+        lua_settable(L, -3);
 
         lua_settable(L, -3);
     }
