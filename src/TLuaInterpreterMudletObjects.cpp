@@ -2588,7 +2588,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         }
 
         if (!url.isEmpty()) {
-            lua_pushstring(L, "hostname");
+            lua_pushstring(L, "host");
             lua_pushstring(L, url.toUtf8().constData());
             lua_settable(L, -3);
         }
