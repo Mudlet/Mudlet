@@ -392,8 +392,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         }
     }
 
-    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
+    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -1023,14 +1023,14 @@ void TConsole::scrollUp(int lines)
 
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
-        if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
+        if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
 #endif
             mpHost->postMessage(infoMsg);
-            mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
+            mudlet::self()->showedSplitscreenTutorial();
         }
     }
     mUpperPane->scrollUp(lines);
