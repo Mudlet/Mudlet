@@ -577,18 +577,30 @@ int TLuaInterpreter::addRoom(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const Host& host = getHostFromLua(L);
     const bool added = host.mpMap->addRoom(id);
-    lua_pushboolean(L, added);
+    bool issueBadAreaWarning = false;
     if (added) {
         int areaID = -1;
-        if (lua_gettop(L) >= 2) {
+        if (lua_gettop(L) > 1) {
             areaID = getVerifiedInt(L, __func__, 2, "areaID");
         }
         // defer area calculations as all new rooms are initialised at 0,0,0 anyway
-        host.mpMap->setRoomArea(id, areaID, true);
-        host.mpMap->setUnsaved(__func__);
+        if (!host.mpMap->setRoomArea(id, areaID, true)) {
+            // The above will fail if the areaID does not exist (given that
+            // "added" is true then the room now exists - so that isn't the
+            // failure reason) so stuff the room in the "Default Area" instead
+            host.mpMap->setRoomArea(id, -1, true);
+            issueBadAreaWarning = true;
+        }
         host.mpMap->update();
-        host.mpMap->mMapGraphNeedsUpdate = true;
+
+        if (issueBadAreaWarning) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "addRoom: created roomID %d but failed to place it in areaID %d, does that area actually exist? (Room has been placed in areaID -1 instead.)", id, areaID);
+            return 2;
+        }
     }
+
+    lua_pushboolean(L, added);
     return 1;
 }
 
