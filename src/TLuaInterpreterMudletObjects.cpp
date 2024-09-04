@@ -2599,12 +2599,23 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_settable(L, -3);
         }
 
+        auto host = hostManager.getHost(profile);
+        const bool loaded = host != nullptr;
         lua_pushstring(L, "loaded");
-        lua_pushboolean(L, hostManager.hostLoaded(profile));
+        lua_pushboolean(L, loaded);
         lua_settable(L, -3);
+
+        if (loaded) {
+            auto [hostName, hostPort, connected] = host->mTelnet.getConnectionInfo();
+
+            lua_pushstring(L, "connected");
+            lua_pushboolean(L, connected);
+            lua_settable(L, -3);
+        }
 
         lua_settable(L, -3);
     }
 
     return 1;
 }
+
