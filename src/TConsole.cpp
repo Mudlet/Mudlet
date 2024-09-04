@@ -392,8 +392,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         }
     }
 
-    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
+    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);

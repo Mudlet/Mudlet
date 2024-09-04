@@ -2037,7 +2037,7 @@ Locked</string>
 or LUA script</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with "script:").&lt;/p&gt;</string>
+          <string>&lt;p&gt;Some mapper scripts may require prefixing the keyword "script:".&lt;/p&gt;</string>
          </property>
         </column>
        </widget>
