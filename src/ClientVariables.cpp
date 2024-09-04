@@ -255,7 +255,7 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::client
 {
     QMap<QString, std::tuple<QString, bool, bool, QVariant>> clientVariables;
 
-    auto insertVariables = [&](const auto& variables, bool checkBehaviour = false) {
+    auto insertVariables = [&](const auto& variables) {
         for (const auto &key : variables.keys()) {
             if constexpr (std::tuple_size_v<std::decay_t<decltype(variables[key])>> == 6) {
                 // Tuple with behaviour
@@ -276,8 +276,8 @@ QMap<QString, std::tuple<QString, bool, bool, QVariant>> ClientVariables::client
         // Insert non-MNES variables
         insertVariables(nonMNESVariablesMap());
 
-        // Insert protected variables, checking behaviour
-        insertVariables(protectedVariablesMap(), true);
+        // Insert protected variables
+        insertVariables(protectedVariablesMap());
     }
 
     return clientVariables;
@@ -872,11 +872,7 @@ void ClientVariables::sendClientVariablesUpdate(const QString& data, ClientVaria
                     requested.insert(translation, purpose);
                 }
 
-                if (clientVariables.contains(key)) {
-                    addResponse(key, available, updatable, !available, value);
-                } else {
-                    addResponse(key, available, updatable, !available, value, purpose);
-                }
+                addResponse(key, available, updatable, !available, value, purpose);
             }
         } else if (nonProtectedVariables.contains(key)) {
             const auto &[type, updatable, userVar, variableValue] = nonProtectedVariables[key];
