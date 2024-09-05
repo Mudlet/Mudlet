@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>760</width>
-    <height>682</height>
+    <width>930</width>
+    <height>500</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>760</width>
-    <height>0</height>
+    <width>930</width>
+    <height>500</height>
    </size>
   </property>
   <property name="font">
@@ -24,7 +24,7 @@
   <property name="windowTitle">
    <string>Select a profile to connect with</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_connection_profiles">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -41,20 +41,14 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_top" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_top">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -71,20 +65,14 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QWidget" name="widget_5" native="true">
+       <widget class="QWidget" name="widget_topLeft" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <layout class="QVBoxLayout" name="verticalLayout_widget_topLeft">
          <property name="spacing">
           <number>0</number>
          </property>
@@ -98,37 +86,22 @@
           <widget class="QListWidget" name="profiles_tree_widget">
            <property name="minimumSize">
             <size>
-             <width>365</width>
-             <height>0</height>
+             <width>420</width>
+             <height>120</height>
             </size>
            </property>
            <property name="accessibleName">
             <string>profiles list</string>
-           </property>
-           <property name="resizeMode">
-            <enum>QListView::Adjust</enum>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QFrame" name="notificationArea">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>70</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
            </property>
            <property name="font">
             <font>
@@ -154,7 +127,7 @@
            <property name="midLineWidth">
             <number>3</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <layout class="QHBoxLayout" name="horizontalLayout_notificationArea">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -323,21 +296,9 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>50</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <layout class="QHBoxLayout" name="horizontalLayout_profileAdminArea" stretch="1,0,0,0">
             <item>
-             <spacer name="horizontalSpacer_4">
+             <spacer name="horizontalSpacer_profileAdminArea">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
@@ -419,26 +380,14 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="widget_2" native="true">
+       <widget class="QWidget" name="widget_topRight" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="minimumSize">
-         <size>
-          <width>340</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>300</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
+        <layout class="QVBoxLayout" name="verticalLayout_widget_topRight" stretch="0,0,1">
          <item>
           <widget class="QTextBrowser" name="welcome_message">
            <property name="enabled">
@@ -456,12 +405,6 @@
              <height>140</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="accessibleName">
             <string>welcome message</string>
            </property>
@@ -473,7 +416,7 @@
          <item>
           <widget class="QTabWidget" name="tabWidget_connectionInfo">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -481,12 +424,12 @@
            <property name="currentIndex">
             <number>0</number>
            </property>
-           <widget class="QWidget" name="tab_connection_info">
+           <widget class="QWidget" name="tab_connectionInfo">
             <attribute name="title">
              <string>Connect to</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout">
-             <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_connectionInfo">
+             <item row="0" column="0" alignment="Qt::AlignRight">
               <widget class="QLabel" name="label_profileName">
                <property name="text">
                 <string>Profile name:</string>
@@ -496,7 +439,7 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="1" colspan="2">
+             <item row="0" column="1">
               <widget class="QLineEdit" name="profile_name_entry">
                <property name="font">
                 <font>
@@ -514,7 +457,7 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="1" column="0" alignment="Qt::AlignRight">
               <widget class="QLabel" name="label_serverUrl">
                <property name="text">
                 <string>Server address:</string>
@@ -524,14 +467,8 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="1" colspan="2">
+             <item row="1" column="1">
               <widget class="QLineEdit" name="host_name_entry">
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
                <property name="font">
                 <font>
                  <pointsize>9</pointsize>
@@ -545,7 +482,7 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="0">
+             <item row="2" column="0" alignment="Qt::AlignRight">
               <widget class="QLabel" name="label_port">
                <property name="text">
                 <string>Port:</string>
@@ -557,18 +494,6 @@
              </item>
              <item row="2" column="1">
               <widget class="QLineEdit" name="port_entry">
-               <property name="minimumSize">
-                <size>
-                 <width>40</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
                <property name="font">
                 <font>
                  <pointsize>9</pointsize>
@@ -578,7 +503,7 @@
                 <string>Game server port</string>
                </property>
                <property name="accessibleDescription">
-                <string>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for "Telnet" connections is used. Secure connections may require a different port number.</string>
+                <string>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</string>
                </property>
                <property name="text">
                 <string/>
@@ -594,7 +519,7 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="2">
+             <item row="3" column="0" colspan="2">
               <widget class="QCheckBox" name="port_ssl_tsl">
                <property name="accessibleName">
                 <string>Connect via a secure protocol</string>
@@ -602,24 +527,15 @@
                <property name="accessibleDescription">
                 <string>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</string>
                </property>
-               <property name="layoutDirection">
-                <enum>Qt::RightToLeft</enum>
-               </property>
                <property name="text">
-                <string>Secure:</string>
+                <string>Secure</string>
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
-              <spacer name="verticalSpacer">
+             <item row="4" column="1">
+              <spacer name="verticalSpacer_tab_connectionInfo">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
                </property>
               </spacer>
              </item>
@@ -629,8 +545,8 @@
             <attribute name="title">
              <string>Options</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout_2">
-             <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_tab_options">
+             <item row="0" column="0" alignment="Qt::AlignRight">
               <widget class="QLabel" name="label_characterName">
                <property name="text">
                 <string>Character name:</string>
@@ -656,7 +572,7 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="1" column="0" alignment="Qt::AlignRight">
               <widget class="QLabel" name="label_password">
                <property name="text">
                 <string>Password:</string>
@@ -682,7 +598,7 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="0">
+             <item row="2" column="0" alignment="Qt::AlignRight">
               <widget class="QLabel" name="label_profileHistory">
                <property name="text">
                 <string>Profile history:</string>
@@ -700,12 +616,6 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
                <item>
                 <property name="text">
                  <string>load newest profile</string>
@@ -718,7 +628,7 @@
                </item>
               </widget>
              </item>
-             <item row="3" column="0">
+             <item row="3" column="0" colspan="2">
               <widget class="QCheckBox" name="discord_optin_checkBox">
                <property name="enabled">
                 <bool>false</bool>
@@ -730,7 +640,7 @@
                 <string>Discord integration</string>
                </property>
                <property name="accessibleDescription">
-                <string>Allow this profile to use Mudlet's Discord "Rich Presence"  features</string>
+                <string>Allow this profile to use Mudlet's Discord &quot;Rich Presence&quot;  features</string>
                </property>
                <property name="text">
                 <string/>
@@ -750,12 +660,6 @@
              </item>
              <item row="4" column="0" colspan="2">
               <widget class="QCheckBox" name="autologin_checkBox">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
                <property name="toolTip">
                 <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
                </property>
@@ -801,16 +705,10 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
            <property name="title">
             <string>Informational</string>
            </property>
-           <layout class="QVBoxLayout" name="vBoxLayout_4">
+           <layout class="QVBoxLayout" name="vBoxLayout_informationalArea">
             <property name="leftMargin">
              <number>0</number>
             </property>
@@ -852,18 +750,6 @@
             </item>
             <item>
              <widget class="QPlainTextEdit" name="mud_description_textedit">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>Game description or your notes</string>
               </property>
@@ -889,9 +775,9 @@
    </item>
    <item>
     <widget class="QWidget" name="widget_bottom" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
       <item>
-       <spacer name="horizontalSpacer">
+       <spacer name="horizontalSpacer_widget_bottom">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -913,14 +799,8 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>50</width>
+          <width>200</width>
           <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>340</width>
-          <height>16777215</height>
          </size>
         </property>
         <property name="orientation">

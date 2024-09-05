@@ -94,6 +94,23 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
     profiles_tree_widget->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    // The default is TopToBottom
+    profiles_tree_widget->setFlow(QListView::LeftToRight);
+    profiles_tree_widget->setViewMode(QListView::IconMode);
+    // The default movement mode is QListView::Static
+    profiles_tree_widget->setMovement(QListView::Free);
+
+    // We do not want InternalMove for this option as it causes an immediate
+    // redraw after a drop and that is not wanted when the icons are "Unlocked"
+    // whereas this choice does not
+    profiles_tree_widget->setDragDropMode(QAbstractItemView::DragDrop);
+
+    // The default is QListView::Fixed - the items are only laid out the first
+    // time the view is shown - whereas Adjust means they are relaid every time
+    // the view is resized:
+    profiles_tree_widget->setResizeMode(QListView::Adjust);
+
     connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
@@ -270,8 +287,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mOKPalette.setColor(QPalette::Base, QColor(150, 255, 150, 50));
     mErrorPalette.setColor(QPalette::Base, QColor(255, 150, 150, 50));
 
-    profiles_tree_widget->setViewMode(QListView::IconMode);
-
     btn_load_enabled_accessDesc = tr("Click to load but not connect the selected profile.");
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
     btn_connOrLoad_disabled_accessDesc = tr("Need to have a valid profile name, game server address and port before this button can be enabled.");
@@ -291,8 +306,14 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     mSearchTextTimer.setInterval(1s);
     mSearchTextTimer.setSingleShot(true);
-    QCoreApplication::instance()->installEventFilter(this);
+    mAlignItemsInLayoutTimer.setInterval(200);
+    mAlignItemsInLayoutTimer.setSingleShot(true);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+    connect(&mAlignItemsInLayoutTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reorderItems);
+    fillout_form();
+
+    profiles_tree_widget->setSpacing(3);
+    QCoreApplication::instance()->installEventFilter(this);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
@@ -309,7 +330,6 @@ void dlgConnectionProfiles::accept()
         // This is needed to make the above take effect as fast as possible:
         qApp->processEvents();
         loadProfile(true);
-        QDialog::accept();
     }
 }
 
@@ -331,7 +351,6 @@ void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList package
         return;
     }
 
-    QWidget widget;
     QGroupBox* packageGroupBox = new QGroupBox("Select and load a profile to install the following package(s) into:", this);
     QVBoxLayout* packageInfoLayout = new QVBoxLayout(packageGroupBox);
 
@@ -1005,6 +1024,8 @@ void dlgConnectionProfiles::updateDiscordStatus()
 // (re-)creates the dialogs profile list
 void dlgConnectionProfiles::fillout_form()
 {
+    // Use this to accumulate all the items to go into the QListWidget:
+    QMap<QString, QListWidgetItem*> nameToItemMap;
     profiles_tree_widget->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
@@ -1033,8 +1054,6 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
-    QString description;
-    QListWidgetItem* pItem;
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
@@ -1043,36 +1062,83 @@ void dlgConnectionProfiles::fillout_form()
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
-                pItem = new QListWidgetItem();
                 auto details = TGameDetails::findGame(game);
+                auto pItem = new QListWidgetItem();
+                reduceFontSize(pItem);
                 setupMudProfile(pItem, game, (*details).description, (*details).icon);
+                nameToItemMap.insert(pItem->data(csmNameRole).toString(), pItem);
             }
         }
 
 #if defined(QT_DEBUG)
-        const QString mudServer = qsl("Mudlet self-test");
-        if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-            mProfileList.append(mudServer);
-            pItem = new QListWidgetItem();
+        const QString profileName = qsl("Mudlet self-test");
+        if (!deletedDefaultMuds.contains(profileName) && !mProfileList.contains(profileName)) {
+            mProfileList.append(profileName);
+            auto pItem = new QListWidgetItem();
+            reduceFontSize(pItem);
             // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-            setItemName(pItem, mudServer);
-
-            profiles_tree_widget->addItem(pItem);
-            description = getDescription(qsl("mudlet.org"));
-            if (!description.isEmpty()) {
-                pItem->setToolTip(utils::richText(description));
-            }
+            setItemName(pItem, profileName);
+            nameToItemMap.insert(pItem->data(csmNameRole).toString(), pItem);
         }
 #endif
     } else {
-        pItem = new QListWidgetItem();
         for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
             auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
+            auto pItem = new QListWidgetItem();
+            reduceFontSize(pItem);
             setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
+            nameToItemMap.insert(pItem->data(csmNameRole).toString(), pItem);
         }
     }
 
-    setProfileIcon();
+    setProfileIcon(nameToItemMap);
+
+    // Now read the stored order - and the size we stored for this dialog:
+    QSize desiredDialogSize{};
+    QStringList existingProfilesOrderedList = loadProfilesOrderAndDlgSize(&desiredDialogSize);
+    // Make two passes through the profiles - the first to identify new ones so
+    // we can place them first:
+    QMutableMapIterator<QString, QListWidgetItem*> itProfile(nameToItemMap);
+    while (itProfile.hasNext()) {
+        itProfile.next();
+        if (!existingProfilesOrderedList.contains(itProfile.key())) {
+            // This is a new one that we don't know about so add it straight
+            // into the listWiget - and give it a green background!
+            auto pItem = itProfile.value();
+            pItem->setBackground(QColorConstants::Green);
+            profiles_tree_widget->addItem(pItem);
+            // Remove it so there are less to deal with - and so the second pass
+            // is simpler:
+            itProfile.remove();
+        }
+    }
+
+    // Now iterate through the list to pick out the order of items we want
+    QStringListIterator itExistingProfile(existingProfilesOrderedList);
+    while (itExistingProfile.hasNext()) {
+        auto existingProfileName = itExistingProfile.next();
+        if (nameToItemMap.contains(existingProfileName)) {
+            // Transfer the item from the QMap to the QListWidget
+            auto pItem = nameToItemMap.take(existingProfileName);
+            // A default constructed brush will clear any existing set colour:
+            pItem->setBackground(QBrush());
+            profiles_tree_widget->addItem(pItem);
+        }
+    }
+
+    // Check whether we've processed ALL the profiles we had created
+    // QListWidgetItems for:
+    if (!nameToItemMap.isEmpty()) {
+        qDebug().nospace().noquote() << "dlgConnectionProfiles::fillout_form() INFO - we have " << nameToItemMap.count() << "QListWidgetItem(s) that are neither NEW nor which have a recorded position in the list, this might be a problem, ...";
+        itProfile.toFront();
+        while (itProfile.hasNext()) {
+            itProfile.next();
+            auto pItem = itProfile.value();
+            pItem->setBackground(QColorConstants::Red);
+            profiles_tree_widget->addItem(pItem);
+            itProfile.remove();
+        }
+    }
 
     QDateTime test_date;
     QString toselectProfileName;
@@ -1081,6 +1147,7 @@ void dlgConnectionProfiles::fillout_form()
     int predefined_profile_row = -1;
     bool firstMudletLaunch = true;
 
+    // This is to find the most recently used profile - so we can preselect it:
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
         const auto profile = profiles_tree_widget->item(i);
         const auto profileName = profile->data(csmNameRole).toString();
@@ -1125,9 +1192,13 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     updateDiscordStatus();
+
+    if (desiredDialogSize.isValid()) {
+        resize(desiredDialogSize);
+    }
 }
 
-void dlgConnectionProfiles::setProfileIcon() const
+void dlgConnectionProfiles::setProfileIcon(QMap<QString, QListWidgetItem*>& profilesMap) const
 {
     const QStringList defaultGames = TGameDetails::keys();
 
@@ -1138,7 +1209,9 @@ void dlgConnectionProfiles::setProfileIcon() const
         }
 
         if (hasCustomIcon(profileName)) {
-            loadCustomProfile(profileName);
+            // This generates a new QListWidgetItem for the profile - and adds
+            // it to the profilesMap:
+            loadCustomProfile(profileName, profilesMap);
         } else {
             // mProfileList is derived from a filesystem directory, but MacOS is not
             // necessarily case preserving for file names so any tests on them
@@ -1149,7 +1222,7 @@ void dlgConnectionProfiles::setProfileIcon() const
             }
 
             // This will instantiate a new QListWidgetItem for the profile:
-            generateCustomProfile(profileName);
+            generateCustomProfile(profileName, profilesMap);
         }
     }
 }
@@ -1159,17 +1232,13 @@ bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
     return QFileInfo::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profileicon")));
 }
 
-void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
+void dlgConnectionProfiles::loadCustomProfile(const QString& profileName, QMap<QString, QListWidgetItem*>& profilesMap) const
 {
     auto pItem = new QListWidgetItem();
+    reduceFontSize(pItem);
     setItemName(pItem, profileName);
-
     setCustomIcon(profileName, pItem);
-    auto description = getDescription(profileName);
-    if (!description.isEmpty()) {
-        pItem->setToolTip(utils::richText(description));
-    }
-    profiles_tree_widget->addItem(pItem);
+    profilesMap.insert(profileName, pItem);
 }
 
 void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
@@ -1236,35 +1305,58 @@ std::optional<QColor> getCustomColor(const QString& profileName)
     return std::nullopt;
 }
 
-void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) const
+void dlgConnectionProfiles::generateCustomProfile(const QString& profileName, QMap<QString, QListWidgetItem*>& profilesMap) const
 {
     auto pItem = new QListWidgetItem();
+    reduceFontSize(pItem);
     setItemName(pItem, profileName);
     pItem->setIcon(customIcon(profileName, getCustomColor(profileName)));
-    profiles_tree_widget->addItem(pItem);
+    profilesMap.insert(profileName, pItem);
 }
 
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
     const QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
-    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    auto pItem = profiles_tree_widget->currentItem();
+    QString profileName;
+    if (pItem) {
+        profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    }
 
     QMenu menu;
-    if (hasCustomIcon(profileName)) {
-        //: Reset the custom picture for this profile in the connection dialog and show the default one instead
-        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
-    } else {
-        menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       //: Set a custom picture to show for the profile in the connection dialog
-                       tr("Set custom icon"),
-                       this,
-                       &dlgConnectionProfiles::slot_setCustomIcon);
-        menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       //: Set a custom color to show for the profile in the connection dialog
-                       tr("Set custom color"),
-                       this,
-                       &dlgConnectionProfiles::slot_setCustomColor);
+    // The default is not visible so we have to enable them:
+    menu.setToolTipsVisible(true);
+    if (!profileName.isEmpty()) {
+        if (hasCustomIcon(profileName)) {
+            //: Reset the custom picture for this profile in the connection dialog and show the default one instead
+            menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
+        } else {
+            menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
+                           //: Set a custom picture to show for the profile in the connection dialog
+                           tr("Set custom icon"),
+                           this,
+                           &dlgConnectionProfiles::slot_setCustomIcon);
+            menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
+                           //: Set a custom color to show for the profile in the connection dialog
+                           tr("Set custom color"),
+                           this,
+                           &dlgConnectionProfiles::slot_setCustomColor);
+        }
+        menu.addSeparator();
     }
+
+    auto pAction_toggleAutoIconAlignment = menu.addAction(tr("Auto-align icons"),
+                                                          this,
+                                                          &dlgConnectionProfiles::slot_toggleAutoAlignIcons);
+    pAction_toggleAutoIconAlignment->setCheckable(true);
+    pAction_toggleAutoIconAlignment->setChecked(mAutoAlignIcons);
+    pAction_toggleAutoIconAlignment->setToolTip(utils::richText(tr("Uncheck this option to temporarily enable the icons to be dragged and rearranged without "
+                                                                   "them immediately snapping back into a grid layout without any gaps.</p>"
+                                                                   "<p>Rechecking the option afterward will reestablish a grid layout on the basis of the "
+                                                                   "vertical position (top to bottom) of each item with the horizontal (left to right) "
+                                                                   "position being used to order those on the same vertical position.</p>"
+                                                                   "<p>The new order will be saved if a profile is then loaded or connected but lost if "
+                                                                   "this dialog is cancelled.")));
 
     menu.exec(globalPos);
 }
@@ -1544,14 +1636,19 @@ void dlgConnectionProfiles::slot_load()
     // This is needed to make the above take effect as fast as possible:
     qApp->processEvents();
     loadProfile(false);
-    QDialog::accept();
 }
 
+// This fires the underlying QDialog::accept so a caller to this method is not
+// required to:
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
+    storeProfilesOrderAndDlgSize();
+
     const QString profile_name = profile_name_entry->text().trimmed();
 
     if (profile_name.isEmpty()) {
+        // Since this is a fail shouldn't we be calling this here:
+        // QDialog::reject();
         return;
     }
 
@@ -1599,6 +1696,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     emit signal_load_profile(profile_name, alsoConnect);
+    // This is now the only place this is called:
     QDialog::accept();
 }
 
@@ -1855,28 +1953,24 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
     pI->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
 }
 
-void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QString& mudServer, const QString& serverDescription, const QString& iconFileName)
+void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QString& profileName, const QString& serverDescription, const QString& iconFileName)
 {
-    pItem = new QListWidgetItem();
-    setItemName(pItem, mudServer);
+    Q_UNUSED(serverDescription)
+    setItemName(pItem, profileName);
 
-    profiles_tree_widget->addItem(pItem);
-    if (!hasCustomIcon(mudServer)) {
-        const QPixmap pixmap(iconFileName);
+    if (!hasCustomIcon(profileName)) {
+        QPixmap pixmap(iconFileName);
         if (pixmap.isNull()) {
-            qWarning() << mudServer << "doesn't have a valid icon";
-            return;
+            qWarning().noquote().nospace() << "dlgConnectionProfiles::setupMudProfile(...) WARNING - \"" << profileName << "\" does not have a valid icon - using a default one.";
+            pixmap = QPixmap(":/icons/generic_mud.jpg");
         }
-        if (pixmap.width() != 120) {
-            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-        } else {
+        if (pixmap.size() == QSize(120, 30)) {
             pItem->setIcon(QIcon(iconFileName));
+        } else {
+            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         }
     } else {
-        setCustomIcon(mudServer, pItem);
-    }
-    if (!serverDescription.isEmpty()) {
-        pItem->setToolTip(utils::richText(serverDescription));
+        setCustomIcon(profileName, pItem);
     }
 }
 
@@ -1934,85 +2028,93 @@ void dlgConnectionProfiles::slot_reenableAllProfileItems()
 
 bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
 {
-    if (obj == profiles_tree_widget && event->type() == QEvent::KeyPress) {
-        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-        switch (keyEvent->key()) {
-            // Process all the keys that could be used in a profile name
-            // fortunately we limit this to a sub-set of ASCII because we also use
-            // it for a directory name - based on "allowedChars" list in
-            // validateProfile() i.e.:
-            // ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"
-        default:
-            // For other keys handle them as normal:
-            return QObject::eventFilter(obj, event);
-
-        case Qt::Key_Escape:
-            // Clear the search:
-            mSearchText.clear();
-            slot_reenableAllProfileItems();
-            // Eat (filter) this event so it goes no further:
-            return true;
-
-        case Qt::Key_Period:
-        case Qt::Key_Space:
-        case Qt::Key_Underscore:
-        case Qt::Key_0:
-        case Qt::Key_1:
-        case Qt::Key_2:
-        case Qt::Key_3:
-        case Qt::Key_4:
-        case Qt::Key_5:
-        case Qt::Key_6:
-        case Qt::Key_7:
-        case Qt::Key_8:
-        case Qt::Key_9:
-        case Qt::Key_Minus:
-        case Qt::Key_NumberSign:
-        case Qt::Key_Ampersand:
-        case Qt::Key_A:
-        case Qt::Key_B:
-        case Qt::Key_C:
-        case Qt::Key_D:
-        case Qt::Key_E:
-        case Qt::Key_F:
-        case Qt::Key_G:
-        case Qt::Key_H:
-        case Qt::Key_I:
-        case Qt::Key_J:
-        case Qt::Key_K:
-        case Qt::Key_L:
-        case Qt::Key_M:
-        case Qt::Key_N:
-        case Qt::Key_O:
-        case Qt::Key_P:
-        case Qt::Key_Q:
-        case Qt::Key_R:
-        case Qt::Key_S:
-        case Qt::Key_T:
-        case Qt::Key_U:
-        case Qt::Key_V:
-        case Qt::Key_W:
-        case Qt::Key_X:
-        case Qt::Key_Y:
-        case Qt::Key_Z:
-            if (keyEvent->modifiers() & ~(Qt::ShiftModifier)) {
-                // There is a modifier in play OTHER than the shift one so treat
-                // it as normal:
+    if (obj == profiles_tree_widget) {
+        if (event->type() == QEvent::KeyPress) {
+            QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+            switch (keyEvent->key()) {
+                // Process all the keys that could be used in a profile name
+                // fortunately we limit this to a sub-set of ASCII because we also use
+                // it for a directory name - based on "allowedChars" list in
+                // validateProfile() i.e.:
+                // ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"
+            default:
+                // For other keys handle them as normal:
                 return QObject::eventFilter(obj, event);
-            }
 
-            if (!mSearchTextTimer.isActive()) {
-                // Too long since the last keypress so forget any previously
-                // entered keypresses:
+            case Qt::Key_Escape:
+                // Clear the search:
                 mSearchText.clear();
+                slot_reenableAllProfileItems();
+                // Eat (filter) this event so it goes no further:
+                return true;
+
+            case Qt::Key_Period:
+            case Qt::Key_Space:
+            case Qt::Key_Underscore:
+            case Qt::Key_0:
+            case Qt::Key_1:
+            case Qt::Key_2:
+            case Qt::Key_3:
+            case Qt::Key_4:
+            case Qt::Key_5:
+            case Qt::Key_6:
+            case Qt::Key_7:
+            case Qt::Key_8:
+            case Qt::Key_9:
+            case Qt::Key_Minus:
+            case Qt::Key_NumberSign:
+            case Qt::Key_Ampersand:
+            case Qt::Key_A:
+            case Qt::Key_B:
+            case Qt::Key_C:
+            case Qt::Key_D:
+            case Qt::Key_E:
+            case Qt::Key_F:
+            case Qt::Key_G:
+            case Qt::Key_H:
+            case Qt::Key_I:
+            case Qt::Key_J:
+            case Qt::Key_K:
+            case Qt::Key_L:
+            case Qt::Key_M:
+            case Qt::Key_N:
+            case Qt::Key_O:
+            case Qt::Key_P:
+            case Qt::Key_Q:
+            case Qt::Key_R:
+            case Qt::Key_S:
+            case Qt::Key_T:
+            case Qt::Key_U:
+            case Qt::Key_V:
+            case Qt::Key_W:
+            case Qt::Key_X:
+            case Qt::Key_Y:
+            case Qt::Key_Z:
+                if (keyEvent->modifiers() & ~(Qt::ShiftModifier)) {
+                    // There is a modifier in play OTHER than the shift one so treat
+                    // it as normal:
+                    return QObject::eventFilter(obj, event);
+                }
+
+                if (!mSearchTextTimer.isActive()) {
+                    // Too long since the last keypress so forget any previously
+                    // entered keypresses:
+                    mSearchText.clear();
+                }
+                mSearchTextTimer.stop();
+                addLetterToProfileSearch(keyEvent->key());
+                // Restart the timeout for another keypress:
+                mSearchTextTimer.start();
+                // Eat (filter) this event so it goes no further:
+                return true;
             }
-            mSearchTextTimer.stop();
-            addLetterToProfileSearch(keyEvent->key());
-            // Restart the timeout for another keypress:
-            mSearchTextTimer.start();
-            // Eat (filter) this event so it goes no further:
-            return true;
         }
+
+    }
+
+    if (event->type() == QEvent::Drop && obj == profiles_tree_widget->viewport() && mAutoAlignIcons) {
+        // Start a timer to reorder the items:
+        mAlignItemsInLayoutTimer.start();
     }
 
     // standard event processing
@@ -2050,4 +2152,152 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     }
 
     profiles_tree_widget->setCurrentRow(indexes.first());
+}
+
+QStringList dlgConnectionProfiles::loadProfilesOrderAndDlgSize(QSize* dialogSize) const
+{
+    QStringList results;
+    QSettings& settings = *mudlet::getQSettings();
+    if (dialogSize && settings.contains(qsl("ConnectionDialogSize"))) {
+        auto readSize = settings.value(qsl("ConnectionDialogSize")).toSize();
+        if (readSize.isValid()) {
+            *dialogSize = readSize;
+        }
+    }
+    settings.beginGroup(qsl("Profiles"));
+    qsizetype total = settings.beginReadArray(qsl("Order"));
+    for (qsizetype i = 0; i < total; ++i) {
+        settings.setArrayIndex(i);
+        results.append(settings.value(qsl("name")).toString());
+    }
+    settings.endArray();
+    settings.endGroup();
+
+    return results;
+}
+
+void dlgConnectionProfiles::storeProfilesOrderAndDlgSize() const
+{
+    QSettings& settings = *mudlet::getQSettings();
+    settings.setValue(qsl("ConnectionDialogSize"), size());
+
+    settings.beginGroup(qsl("Profiles"));
+    settings.beginGroup(qsl("Order"));
+    // This should remove all the items in the Order array - which makes it
+    // clearer when inspecting the .ini file after a deletion - which otherwise
+    // leaves a surplus "Order/size" entry and the last "Order/#/name" value in
+    // the previous list:
+    settings.remove(QString());
+    settings.endGroup();
+
+    settings.beginWriteArray(qsl("Order"));
+    for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+        settings.setArrayIndex(i);
+        const auto item = profiles_tree_widget->item(i);
+        settings.setValue(qsl("name"), item->data(csmNameRole).toString());
+    }
+    settings.endArray();
+    settings.endGroup();
+}
+
+void dlgConnectionProfiles::slot_toggleAutoAlignIcons()
+{
+    mAutoAlignIcons = !mAutoAlignIcons;
+    if (mAutoAlignIcons) {
+        // Ensure that enabling the auto aligning starts the timer to do that:
+        mAlignItemsInLayoutTimer.start();
+    }
+    // When icons are unlocked do not re-lay them out if the window is resized
+    // so it can be enlarged to make it easier to juggle items without them
+    // immediately jumping back into the space made:
+    profiles_tree_widget->setResizeMode(mAutoAlignIcons ? QListView::Adjust : QListView::Fixed);
+}
+
+// Is to be run whenever an icon has finished being dragged...
+void dlgConnectionProfiles::slot_reorderItems()
+{
+    profiles_tree_widget->setUpdatesEnabled(false);
+    // key.first = y-coordinate
+    // key.second = x-coordinate
+    // value = item index
+    /*
+     * Because there IS a value operator<() for key (it sorts on key.first and
+     * then on ties in that it uses key.second) the QMap will automagically
+     * sort items by their position - however since it is theoretically possible
+     * for items to be positioned on top of each other we'll need to arrange to
+     * check for ties and then offset duplicates by a deltaX...
+     * This could be improved so that the y-coordinate is "binned" (say by half
+     * the distance between rows) so that successive (left to right) manually
+     * moved items do not have to be successively further down the screen to
+     * ensure they do not get misplaced when the "snap to grid" is reenabled.
+     *
+     * +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+
+     * |       | |       | |       | |       | |       | |       | |       |
+     * |  A1   | |  A2   | |  A3   | |  A4   | |  A5   | |  A6   | |  A7   |
+     * |       | |       | |       | |       | |       | |       | |       |
+     * +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+
+     *
+     * +-------+         / No reorder        / This will become B3
+     * |       | +-------+  <--------+-------+
+     * |  B1   | |       | +-------+ |       | +-------+ +-------+ +-------+
+     * |       | |  B2   | |       | |  B4   | |       | |       | |       |
+     * +-------+ |       | |  B3   | |       | |  B5   | |  B6   | |  B8   |
+     *           +-------+ |       | +-------+ |       | |       | |       |
+     *                     +-------+-------->  +-------+ +-------+ +-------+
+     *                    /                            \----------\---------\ These will not reorder
+     * This will become B4
+     */
+
+    QMap<QPair<int, int>, int> positionMap;
+    for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+        auto pItem = profiles_tree_widget->item(i);
+        auto itemRect = profiles_tree_widget->visualItemRect(pItem);
+        QPair<int, int> itemInvertPos = qMakePair(itemRect.topLeft().y(), itemRect.topLeft().x());
+        while (Q_UNLIKELY(positionMap.contains(itemInvertPos))) {
+            itemInvertPos.second += 1;
+        }
+        positionMap.insert(itemInvertPos, i);
+    }
+    // Now we have a sorted (by top-to-bottom, left-to-right) map where the
+    // values are the indexes into the current QListWidget's items - we just
+    // need to interate through that list BACKWARDS and put each ones pointer
+    // into a QList and then iterate through that list also BACKWARDS and put
+    // them back into the QListWidget in the right order
+    QMapIterator<QPair<int, int>, int> itItemPosition(positionMap);
+    if (Q_LIKELY(!positionMap.isEmpty())) {
+        itItemPosition.toBack();
+    }
+    QList<QListWidgetItem*> items;
+    while (itItemPosition.hasPrevious()) {
+        itItemPosition.previous();
+        auto itemCurrentIndex = itItemPosition.value();
+        auto pItem = profiles_tree_widget->item(itemCurrentIndex);
+        items.append(pItem);
+    }
+    // We have a sorted list of pointers to all the items now so we take them
+    // all (which does not delete them - QListWidget::clear() is no good for
+    // this as it would delete/destroy them).
+    while (profiles_tree_widget->count()) {
+        Q_UNUSED(profiles_tree_widget->takeItem(0));
+    }
+    QListIterator<QListWidgetItem*> itItem(items);
+    if (!items.isEmpty()) {
+        itItem.toBack();
+    }
+    qsizetype index=-1;
+    while (itItem.hasPrevious()) {
+        profiles_tree_widget->insertItem(++index, itItem.previous());
+    }
+    profiles_tree_widget->setUpdatesEnabled(true);
+    profiles_tree_widget->update();
+}
+
+void dlgConnectionProfiles::reduceFontSize(QListWidgetItem* pItem) const
+{
+    if (!pItem) {
+        return;
+    }
+    auto font = pItem->font();
+    font.setPointSize(1);
+    pItem->setFont(font);
 }

@@ -111,9 +111,9 @@ private:
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
     bool hasCustomIcon(const QString&) const;
-    void setProfileIcon() const;
-    void loadCustomProfile(const QString&) const;
-    void generateCustomProfile(const QString&) const;
+    void setProfileIcon(QMap<QString, QListWidgetItem*>&) const;
+    void loadCustomProfile(const QString&, QMap<QString, QListWidgetItem*>&) const;
+    void generateCustomProfile(const QString&, QMap<QString, QListWidgetItem*>&) const;
     void setCustomIcon(const QString&, QListWidgetItem*) const;
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
@@ -126,6 +126,10 @@ private:
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
+    QStringList loadProfilesOrderAndDlgSize(QSize* dialogSize = nullptr) const;
+    void storeProfilesOrderAndDlgSize() const;
+    void reduceFontSize(QListWidgetItem*) const;
+
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -153,6 +157,8 @@ private:
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
     QString mSearchText;
+    QTimer mAlignItemsInLayoutTimer;
+    bool mAutoAlignIcons = true;
 
 
 private slots:
@@ -164,6 +170,8 @@ private slots:
     void slot_passwordSaved(QKeychain::Job* job);
     void slot_passwordDeleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
+    void slot_toggleAutoAlignIcons();
+    void slot_reorderItems();
 };
 
 

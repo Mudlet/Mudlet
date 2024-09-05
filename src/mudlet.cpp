@@ -2147,7 +2147,6 @@ void mudlet::slot_showConnectionDialog()
     }
     mpConnectionDialog = new dlgConnectionProfiles(this);
     connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
-    mpConnectionDialog->fillout_form();
 
     QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
@@ -2824,7 +2823,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host *pHost = loadProfile(profile_name, true);
+    loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
