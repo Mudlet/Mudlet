@@ -785,6 +785,10 @@ void mudlet::setupConfig()
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // This will ensure compatibility going forward and backward
+    mpSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     migrateConfig(*mpSettings);
 }
 
