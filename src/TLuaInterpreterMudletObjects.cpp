@@ -2654,12 +2654,12 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
     mudlet::self()->enableToolbarButtons();
 
-    if (success) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
+    if (!success) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
         return 2;
     }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
