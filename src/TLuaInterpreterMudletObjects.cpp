@@ -2627,11 +2627,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     bool offline = false;
 
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "loadProfile: bad argument #2 type (offline mode as boolean expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        offline = lua_toboolean(L, 2);
+        offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
     Host& host = getHostFromLua(L);
