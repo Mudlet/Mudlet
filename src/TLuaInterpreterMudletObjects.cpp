@@ -2600,7 +2600,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         }
 
         auto host = hostManager.getHost(profile);
-        const bool loaded = host != nullptr;
+        const auto loaded = static_cast<bool>(host);
         lua_pushstring(L, "loaded");
         lua_pushboolean(L, loaded);
         lua_settable(L, -3);
