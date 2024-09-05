@@ -2904,7 +2904,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         //add our actions
         QMapIterator<QString, QStringList> it2(mUserActions);
         auto mapper = new QSignalMapper(popup);
-        mapper->setObjectName(qsl("T2DMap_userActionsMapper_%1").arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
+        
         while (it2.hasNext()) {
             it2.next();
             QStringList actionInfo = it2.value();
