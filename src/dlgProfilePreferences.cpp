@@ -821,10 +821,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(comboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, slot);
     };
 
-    setupSharingLabelAndComboBox(groupBox_shareLanguage, label_shareLanguagePurpose, label_shareLanguagePurposeDetail, comboBox_shareLanguage, "LANGUAGE", static_cast<int>(pHost->mpClientVariables->mShareLanguage), &dlgProfilePreferences::slot_changeShareLanguage);
-    setupSharingLabelAndComboBox(groupBox_shareScreenReader, label_shareScreenReaderPurpose, label_shareScreenReaderPurposeDetail, comboBox_shareScreenReader, "SCREEN_READER", static_cast<int>(pHost->mpClientVariables->mShareScreenReader), &dlgProfilePreferences::slot_changeShareScreenReader);
-    setupSharingLabelAndComboBox(groupBox_shareSystemType, label_shareSystemTypePurpose, label_shareSystemTypePurposeDetail, comboBox_shareSystemType, "SYSTEMTYPE", static_cast<int>(pHost->mpClientVariables->mShareSystemType), &dlgProfilePreferences::slot_changeShareSystemType);
-    setupSharingLabelAndComboBox(groupBox_shareUser, label_shareUserPurpose, label_shareUserPurposeDetail, comboBox_shareUser, "USER", static_cast<int>(pHost->mpClientVariables->mShareUser), &dlgProfilePreferences::slot_changeShareUser);
+    setupSharingLabelAndComboBox(groupBox_shareLanguage, label_shareLanguagePurpose, label_shareLanguagePurposeDetail, comboBox_shareLanguage, qsl("LANGUAGE"), static_cast<int>(pHost->mpClientVariables->mShareLanguage), &dlgProfilePreferences::slot_changeShareLanguage);
+    setupSharingLabelAndComboBox(groupBox_shareScreenReader, label_shareScreenReaderPurpose, label_shareScreenReaderPurposeDetail, comboBox_shareScreenReader, qsl("SCREEN_READER"), static_cast<int>(pHost->mpClientVariables->mShareScreenReader), &dlgProfilePreferences::slot_changeShareScreenReader);
+    setupSharingLabelAndComboBox(groupBox_shareSystemType, label_shareSystemTypePurpose, label_shareSystemTypePurposeDetail, comboBox_shareSystemType, qsl("SYSTEMTYPE"), static_cast<int>(pHost->mpClientVariables->mShareSystemType), &dlgProfilePreferences::slot_changeShareSystemType);
+    setupSharingLabelAndComboBox(groupBox_shareUser, label_shareUserPurpose, label_shareUserPurposeDetail, comboBox_shareUser, qsl("USER"), static_cast<int>(pHost->mpClientVariables->mShareUser), &dlgProfilePreferences::slot_changeShareUser);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
