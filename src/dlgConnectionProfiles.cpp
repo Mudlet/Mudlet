@@ -2284,7 +2284,7 @@ void dlgConnectionProfiles::slot_reorderItems()
     if (!items.isEmpty()) {
         itItem.toBack();
     }
-    qsizetype index=-1;
+    qsizetype index = -1;
     while (itItem.hasPrevious()) {
         profiles_tree_widget->insertItem(++index, itItem.previous());
     }
