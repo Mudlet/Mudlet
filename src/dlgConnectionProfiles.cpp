@@ -685,18 +685,25 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
     reallyDeleteProfile(profile);
 }
 
+// This gets called for both predefined AND user-created profiles
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 {
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
     dir.removeRecursively();
 
-    // record the deleted default profile so it does not get re-created in the future
-    auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
-    if (!deletedDefaultMuds.contains(profile)) {
-        deletedDefaultMuds.append(profile);
+    // record the deleted predefined profile so it does not get re-shown in the
+    // future - but do NOT do this for user-created one
+    auto it = TGameDetails::findGame(profile);
+    if (it != TGameDetails::scmDefaultGames.end()) {
+        // This is a predefined MUD - so remember we've deleted it:
+
+        auto& settings = *mudlet::self()->mpSettings;
+        auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
+        if (!deletedDefaultMuds.contains(profile)) {
+            deletedDefaultMuds.append(profile);
+        }
+        settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
     }
-    settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
 
     fillout_form();
     profiles_tree_widget->setFocus();
