@@ -163,7 +163,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     }
 }
 
-/* static */ void TDebug::addHost(Host* pHost)
+/* static */ void TDebug::addHost(Host* pHost, const QString hostName)
 {
     if (!initialised) {
         smAvailableIdentifiers << qsl("[A] ") << qsl("[B] ") << qsl("[C] ") << qsl("[D] ") << qsl("[E] ")
@@ -179,12 +179,6 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         return;
     }
 
-    QString hostName = pHost->getName();
-    // Take a deep-copy to prevent RVO of the Host::getName() method from
-    // stopping deleting the 'Host::mHostName` when the profile is destroyed
-    // - so this copy can persist independently of the original when the latter
-    // goes away:
-    hostName.detach();
     QPair<QString, QString> newIdentifier;
     if (TDebug::smAvailableIdentifiers.isEmpty()) {
         // Run out of identifiers - use fall-back one:
@@ -209,7 +203,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     }
 }
 
-/* static */ void TDebug::removeHost(Host* pHost)
+/* static */ void TDebug::removeHost(Host* pHost, const QString hostName)
 {
     auto identifier = TDebug::smIdentifierMap.take(pHost);
     // Check for the use of non-profile specific tags:
@@ -218,7 +212,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         smAvailableIdentifiers.enqueue(identifier.second);
     }
     TDebug localMessage(Qt::darkGray, Qt::white);
-    localMessage << qsl("Profile '%1' ended.\n").arg(pHost->getName()) >> nullptr;
+    localMessage << qsl("Profile '%1' ended.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
 }
@@ -273,7 +267,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
             // for it - this will also cause a pair of new TDebug messages to
             // be created and processed prior to the call to this method being
             // completed:
-            addHost(pHost);
+            addHost(pHost, pHost->getName());
         }
         // By now smIdentifierMap WILL contain something for pHost - but use an
         // the "fault" mark (a bang/exclaimation point) if something is really
