@@ -34,8 +34,13 @@ TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMx
         return MXP_TAG_HANDLED;
     }
 
-    // version can contain ' ' which would break MXP/xml syntax. Also, usually the actual
-    // version number follows the last space (if any), so we use this:
+    // version (aka client.getVersion()) starts with the client name 'mudlet' which
+    // is already in scmVersionString as the CLIENT attribute. We just need the version
+    // number here which follows after a space in version.
+    //
+    // As an attribute/version number with spaces probably should be quoted following
+    // MXP/XML syntax we just take everything after the last space to be on the safe side.
+
     QString payload = scmVersionString.arg(version.section(' ', -1));
 
     // Add the style, if it had been set
