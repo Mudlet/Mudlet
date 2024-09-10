@@ -296,7 +296,7 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_profileAdminArea" stretch="1,0,0,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_profileAdminArea" stretch="1,0,0,0,0">
             <item>
              <spacer name="horizontalSpacer_profileAdminArea">
               <property name="orientation">
@@ -309,6 +309,31 @@
                </size>
               </property>
              </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="restore_profiles_button">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string extracomment="Please ensure the word &quot;Remove&quot; inside the &lt;tt&gt;...&lt;/tt&gt; tags is the same as the text assigned to that button which is next to this one.">&lt;p&gt;This is enabled only if one or more of the default MUDs has been removed by the &lt;tt&gt;Remove&lt;/tt&gt; button. Clicking this one will restore all of them so they can be used.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Note: this will not restore any game data from those predefined MUDs, that was deleted when each one was removed!&lt;/i&gt;&lt;/p&gt;</string>
+              </property>
+              <property name="text">
+               <string>Restore</string>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QPushButton" name="remove_profile_button">
@@ -834,6 +859,7 @@
   <tabstop>autologin_checkBox</tabstop>
   <tabstop>auto_reconnect</tabstop>
   <tabstop>mud_description_textedit</tabstop>
+  <tabstop>restore_profiles_button</tabstop>
   <tabstop>remove_profile_button</tabstop>
   <tabstop>copy_profile_toolbutton</tabstop>
   <tabstop>new_profile_button</tabstop>

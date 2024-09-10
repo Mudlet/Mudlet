@@ -253,6 +253,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
+    connect(restore_profiles_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_restoreDefaultProfiles);
     connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateName);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateUrl);
@@ -703,6 +704,8 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             deletedDefaultMuds.append(profile);
         }
         settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
+        // Also enable the "Restore" button
+        restore_profiles_button->setEnabled(true);
     }
 
     fillout_form();
@@ -1056,6 +1059,9 @@ void dlgConnectionProfiles::fillout_form()
     // even the "deleted" ones:
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
+    // Also dis/enable the "Restore" button appropriately:
+    restore_profiles_button->setEnabled(!deletedDefaultMuds.isEmpty());
+
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showAllPredefinedMuds = onlyShownPredefinedProfiles.isEmpty();
     const auto defaultGames = TGameDetails::keys();
@@ -1585,6 +1591,15 @@ void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, cons
     if (extractSettingsFromProfile(newProfileXml, copySettingsFromFile)) {
         saveProfileCopy(newProfiledir, newProfileXml);
     }
+}
+
+void dlgConnectionProfiles::slot_restoreDefaultProfiles()
+{
+    auto& settings = *mudlet::self()->mpSettings;
+    settings.setValue(qsl("deletedDefaultMuds"), QStringList());
+    settings.sync();
+    restore_profiles_button->setEnabled(false);
+    fillout_form();
 }
 
 bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom)

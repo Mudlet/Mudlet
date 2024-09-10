@@ -173,6 +173,7 @@ private slots:
     void slot_reenableAllProfileItems();
     void slot_toggleAutoAlignIcons();
     void slot_reorderItems();
+    void slot_restoreDefaultProfiles();
 };
 
 
