@@ -1044,18 +1044,8 @@ void dlgConnectionProfiles::fillout_form()
         welcome_message->show();
         tabWidget_connectionInfo->hide();
         informationalArea->hide();
-
-// collapse the width as the default is too big and set the height to a reasonable default
-// to fit all of the 'Welcome' message
-#if defined(Q_OS_MACOS)
-        // macOS requires 15px more width to get 3 columns of MUD listings in
-        resize(minimumSize().width() + 15, 300);
-#else
-        resize(minimumSize().width(), 300);
-#endif
     } else {
         welcome_message->hide();
-
         tabWidget_connectionInfo->show();
         informationalArea->show();
     }
@@ -1261,11 +1251,11 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName, QMap<Q
     profilesMap.insert(profileName, pItem);
 }
 
-void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
+void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* pItem) const
 {
     auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profileicon"));
     auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    profile->setIcon(icon);
+    pItem->setIcon(icon);
 }
 
 // When a profile is renamed, migrate password storage to the new profile
@@ -1962,16 +1952,16 @@ QList<int> dlgConnectionProfiles::findProfilesBeginningWith(const QString& what)
     return results;
 }
 
-void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name) const
+void dlgConnectionProfiles::setItemName(QListWidgetItem* pItem, const QString& name) const
 {
-    if (!pI) {
+    if (!pItem) {
         // Avoid any problems should the supplied argument be a nullptr:
         return;
     }
 
-    pI->setData(csmNameRole, name);
-    pI->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(name));
-    pI->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+    pItem->setData(csmNameRole, name);
+    pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(name));
+    pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
 }
 
 void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QString& profileName, const QString& serverDescription, const QString& iconFileName)
