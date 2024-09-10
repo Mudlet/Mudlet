@@ -58,6 +58,7 @@ public:
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
+    static const int csmHiddenRole{Qt::UserRole+1};
 
     QString btn_connect_enabled_accessDesc;
     QString btn_load_enabled_accessDesc;

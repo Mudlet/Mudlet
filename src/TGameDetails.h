@@ -439,7 +439,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              23,
              false,
              qsl("<a href='https://www.mudlet.org'>www.mudlet.org"),
-             QString(), // TODO: https://github.com/Mudlet/Mudlet/issues/6443
+             qsl(":/icons/mudlet_self_test.png"),
              qsl("This isn't a game profile, but a special one for testing Mudlet itself using "
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},

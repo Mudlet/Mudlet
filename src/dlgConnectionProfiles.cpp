@@ -1062,88 +1062,95 @@ void dlgConnectionProfiles::fillout_form()
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
 
+    // Populate the nameToItemMap with all the predefined MUDs we know about
+    // even the "deleted" ones:
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
-    if (onlyShownPredefinedProfiles.isEmpty()) {
-        const auto defaultGames = TGameDetails::keys();
-        for (auto& game : defaultGames) {
-            if (!deletedDefaultMuds.contains(game)) {
-                auto details = TGameDetails::findGame(game);
-                auto pItem = new QListWidgetItem();
-                reduceFontSize(pItem);
-                setupMudProfile(pItem, game, (*details).description, (*details).icon);
-                nameToItemMap.insert(pItem->data(csmNameRole).toString(), pItem);
+    const bool showAllPredefinedMuds = onlyShownPredefinedProfiles.isEmpty();
+    const auto defaultGames = TGameDetails::keys();
+    for (auto& game : defaultGames) {
+        auto details = TGameDetails::findGame(game);
+        auto pItem = new QListWidgetItem();
+        if (!game.compare(qsl("Mudlet self-test"), Qt::CaseInsensitive)) {
+            // We NEVER show this one - but we need it to be "in" the system
+            // so we can invoked it from the command-line with the "-p"
+            // option for tests
+            pItem->setData(csmHiddenRole, true);
+        } else {
+            if ((deletedDefaultMuds.contains(game))
+                ||(!showAllPredefinedMuds && !onlyShownPredefinedProfiles.contains(game, Qt::CaseInsensitive))) {
+                // We do not want this profile to show but we still need to
+                // keep track of it:
+                pItem->setData(csmHiddenRole, true);
+            } else {
+                pItem->setData(csmHiddenRole, false);
             }
-        }
-
-#if defined(QT_DEBUG)
-        const QString profileName = qsl("Mudlet self-test");
-        if (!deletedDefaultMuds.contains(profileName) && !mProfileList.contains(profileName)) {
-            mProfileList.append(profileName);
-            auto pItem = new QListWidgetItem();
+            setupMudProfile(pItem, game, (*details).description, (*details).icon);
             reduceFontSize(pItem);
-            // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-            setItemName(pItem, profileName);
-            nameToItemMap.insert(pItem->data(csmNameRole).toString(), pItem);
-        }
-#endif
-    } else {
-        for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
-            auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
-            auto pItem = new QListWidgetItem();
-            reduceFontSize(pItem);
-            setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
             nameToItemMap.insert(pItem->data(csmNameRole).toString(), pItem);
         }
     }
 
+    // This badly named method actually creates icons for all the
+    // profiles found - and adds them to the nameToItemMap passed (by reference):
     setProfileIcon(nameToItemMap);
 
     // Now read the stored order - and the size we stored for this dialog:
     QSize desiredDialogSize{};
     QStringList existingProfilesOrderedList = loadProfilesOrderAndDlgSize(&desiredDialogSize);
-    // Make two passes through the profiles - the first to identify new ones so
-    // we can place them first:
+    // First make a pass through the QMap of QListWidgetItems - and identify
+    // those whose name is NOT in the stored, ordered, list of profiles, so we
+    // can place them first:
     QMutableMapIterator<QString, QListWidgetItem*> itProfile(nameToItemMap);
     while (itProfile.hasNext()) {
         itProfile.next();
-        if (!existingProfilesOrderedList.contains(itProfile.key())) {
-            // This is a new one that we don't know about so add it straight
-            // into the listWiget - and give it a green background!
+        if (!existingProfilesOrderedList.contains(itProfile.key(), Qt::CaseInsensitive)) {
+            // This is a new one that we don't have an order position for, so
+            // add it straight into the listWiget so it will be above the
+            // "known" ones - and give it a green background to highlight that
+            // it is a new one:
             auto pItem = itProfile.value();
-            pItem->setBackground(QColorConstants::Green);
-            profiles_tree_widget->addItem(pItem);
-            // Remove it so there are less to deal with - and so the second pass
-            // is simpler:
+            // Remove it from the QMap so there are less to deal with - so the
+            // second pass is simpler:
             itProfile.remove();
+            // Insert it into the QListWidget
+            profiles_tree_widget->addItem(pItem);
+            // Now that it is owned by the QListWidget the setHidden(bool)
+            // method will operate to hide it if requested:
+            pItem->setHidden(pItem->data(csmHiddenRole).toBool());
+            pItem->setBackground(QColorConstants::Green);
         }
     }
 
-    // Now iterate through the list to pick out the order of items we want
-    QStringListIterator itExistingProfile(existingProfilesOrderedList);
-    while (itExistingProfile.hasNext()) {
-        auto existingProfileName = itExistingProfile.next();
+    // Now iterate through the ordered list of profile names to pick out the
+    // items we do have a QListWidgetIrem for, in the stored order:
+    QStringListIterator itOrderedProfile(existingProfilesOrderedList);
+    while (itOrderedProfile.hasNext()) {
+        auto existingProfileName = itOrderedProfile.next();
         if (nameToItemMap.contains(existingProfileName)) {
             // Transfer the item from the QMap to the QListWidget
             auto pItem = nameToItemMap.take(existingProfileName);
+            profiles_tree_widget->addItem(pItem);
+            pItem->setHidden(pItem->data(csmHiddenRole).toBool());
             // A default constructed brush will clear any existing set colour:
             pItem->setBackground(QBrush());
-            profiles_tree_widget->addItem(pItem);
         }
     }
 
     // Check whether we've processed ALL the profiles we had created
     // QListWidgetItems for:
     if (!nameToItemMap.isEmpty()) {
-        qDebug().nospace().noquote() << "dlgConnectionProfiles::fillout_form() INFO - we have " << nameToItemMap.count() << "QListWidgetItem(s) that are neither NEW nor which have a recorded position in the list, this might be a problem, ...";
         itProfile.toFront();
         while (itProfile.hasNext()) {
             itProfile.next();
             auto pItem = itProfile.value();
-            pItem->setBackground(QColorConstants::Red);
-            profiles_tree_widget->addItem(pItem);
             itProfile.remove();
+            profiles_tree_widget->addItem(pItem);
+            pItem->setHidden(pItem->data(csmHiddenRole).toBool());
+            if (!pItem->isHidden()) {
+                pItem->setBackground(QColorConstants::Red);
+            }
         }
     }
 
@@ -1156,9 +1163,13 @@ void dlgConnectionProfiles::fillout_form()
 
     // This is to find the most recently used profile - so we can preselect it:
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
-        const auto profile = profiles_tree_widget->item(i);
-        const auto profileName = profile->data(csmNameRole).toString();
-        if (profileName == qsl("Mudlet self-test")) {
+        auto pItem = profiles_tree_widget->item(i);
+        if (pItem && pItem->data(csmHiddenRole).toBool()) {
+            continue;
+        }
+
+        const auto profileName = pItem->data(csmNameRole).toString();
+        if (!profileName.compare(qsl("Mudlet self-test"), Qt::CaseInsensitive)) {
             test_profile_row = i;
         }
         const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
@@ -1217,13 +1228,14 @@ void dlgConnectionProfiles::setProfileIcon(QMap<QString, QListWidgetItem*>& prof
 
         if (hasCustomIcon(profileName)) {
             // This generates a new QListWidgetItem for the profile - and adds
-            // it to the profilesMap:
+            // it to the profilesMap with an icon generated from a file:
             loadCustomProfile(profileName, profilesMap);
+
         } else {
-            // mProfileList is derived from a filesystem directory, but MacOS is not
-            // necessarily case preserving for file names so any tests on them
-            // should be case insensitive
-            // skip creating icons for default MUDs as they are already created above
+            // mProfileList is derived from a filesystem directory, but MacOS is
+            // not necessarily case preserving for file names so any tests on
+            // them should be case insensitive - skip creating icons for default
+            // MUDs as they are already created above
             if (defaultGames.contains(profileName, Qt::CaseInsensitive)) {
                 continue;
             }
@@ -1242,6 +1254,7 @@ bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
 void dlgConnectionProfiles::loadCustomProfile(const QString& profileName, QMap<QString, QListWidgetItem*>& profilesMap) const
 {
     auto pItem = new QListWidgetItem();
+    pItem->setData(csmHiddenRole, false);
     reduceFontSize(pItem);
     setItemName(pItem, profileName);
     setCustomIcon(profileName, pItem);
@@ -1315,6 +1328,7 @@ std::optional<QColor> getCustomColor(const QString& profileName)
 void dlgConnectionProfiles::generateCustomProfile(const QString& profileName, QMap<QString, QListWidgetItem*>& profilesMap) const
 {
     auto pItem = new QListWidgetItem();
+    pItem->setData(csmHiddenRole, false);
     reduceFontSize(pItem);
     setItemName(pItem, profileName);
     pItem->setIcon(customIcon(profileName, getCustomColor(profileName)));
@@ -2165,17 +2179,22 @@ QStringList dlgConnectionProfiles::loadProfilesOrderAndDlgSize(QSize* dialogSize
 {
     QStringList results;
     QSettings& settings = *mudlet::getQSettings();
-    if (dialogSize && settings.contains(qsl("ConnectionDialogSize"))) {
-        auto readSize = settings.value(qsl("ConnectionDialogSize")).toSize();
+    if (dialogSize && settings.contains(qsl("connectionDialogSize"))) {
+        auto readSize = settings.value(qsl("connectionDialogSize")).toSize();
         if (readSize.isValid()) {
             *dialogSize = readSize;
         }
     }
     settings.beginGroup(qsl("Profiles"));
-    qsizetype total = settings.beginReadArray(qsl("Order"));
+    qsizetype total = settings.beginReadArray(qsl("order"));
     for (qsizetype i = 0; i < total; ++i) {
         settings.setArrayIndex(i);
-        results.append(settings.value(qsl("name")).toString());
+        // It is necessary to create a QString from the return from the
+        // QSettings::value().toString() as the value "disappears" when we move
+        // to the next array index if we just append it directly to the results
+        // QStringList. At least it does for Qt 5.15 on Linux - SlySven 09/2024:
+        auto profileName = settings.value(qsl("name")).toString();
+        results.append(profileName);
     }
     settings.endArray();
     settings.endGroup();
@@ -2186,10 +2205,10 @@ QStringList dlgConnectionProfiles::loadProfilesOrderAndDlgSize(QSize* dialogSize
 void dlgConnectionProfiles::storeProfilesOrderAndDlgSize() const
 {
     QSettings& settings = *mudlet::getQSettings();
-    settings.setValue(qsl("ConnectionDialogSize"), size());
+    settings.setValue(qsl("connectionDialogSize"), size());
 
     settings.beginGroup(qsl("Profiles"));
-    settings.beginGroup(qsl("Order"));
+    settings.beginGroup(qsl("order"));
     // This should remove all the items in the Order array - which makes it
     // clearer when inspecting the .ini file after a deletion - which otherwise
     // leaves a surplus "Order/size" entry and the last "Order/#/name" value in
@@ -2197,7 +2216,7 @@ void dlgConnectionProfiles::storeProfilesOrderAndDlgSize() const
     settings.remove(QString());
     settings.endGroup();
 
-    settings.beginWriteArray(qsl("Order"));
+    settings.beginWriteArray(qsl("order"));
     for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
         settings.setArrayIndex(i);
         const auto item = profiles_tree_widget->item(i);
@@ -2293,7 +2312,13 @@ void dlgConnectionProfiles::slot_reorderItems()
     }
     qsizetype index = -1;
     while (itItem.hasPrevious()) {
-        profiles_tree_widget->insertItem(++index, itItem.previous());
+        auto pItem = itItem.previous();
+        profiles_tree_widget->insertItem(++index, pItem);
+        // We also need to reapply our stored idea of whether the icon is hidden
+        // as the isHidden()/setHidden() being true does not survive the
+        // QListWidgetItem being pulled from a QListWidget, being stored
+        // elsewhere and then being reinserted.
+        pItem->setHidden(pItem->data(csmHiddenRole).toBool());
     }
     profiles_tree_widget->setUpdatesEnabled(true);
     profiles_tree_widget->update();
