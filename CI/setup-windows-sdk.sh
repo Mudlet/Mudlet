@@ -163,6 +163,8 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
@@ -175,6 +177,16 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
+
+echo "Removing harfbuzz installed by qt"
+pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
+
+echo "Building harfbuzz without graphite2"
+git clone https://github.com/harfbuzz/harfbuzz.git
+cd harfbuzz
+meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson compile -C build
+meson install -C build
 
 echo ""
 echo "    Completed"
@@ -263,5 +275,13 @@ fi
 cd ~ || exit 1
 echo "  ... setup-windows-sdk.sh shell script finished."
 echo ""
+
+echo "Copy the following lines into the build environment for a project in Qt Creator:"
+echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
+echo ""
+MSYS_ROOT=$(cygpath -aw /)
+echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo ${MSYSTEM_PREFIX} | sed 's/\//\\/g')"
+echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
+echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 
 exit 0

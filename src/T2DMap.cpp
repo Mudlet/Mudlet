@@ -2895,7 +2895,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             it.next();
             QStringList menuInfo = it.value();
             const QString menuParent = menuInfo[0];
-            if (menuParent == "") { //parentless
+            if (menuParent.isEmpty()) { //parentless
                 popup->addMenu(userMenus[it.key()]);
             } else { //has a parent
                 userMenus[menuParent]->addMenu(userMenus[it.key()]);
@@ -2903,7 +2903,8 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         }
         //add our actions
         QMapIterator<QString, QStringList> it2(mUserActions);
-        auto mapper = new QSignalMapper(this);
+        auto mapper = new QSignalMapper(popup);
+        
         while (it2.hasNext()) {
             it2.next();
             QStringList actionInfo = it2.value();

@@ -785,6 +785,10 @@ void mudlet::setupConfig()
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // This will ensure compatibility going forward and backward
+    mpSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     migrateConfig(*mpSettings);
 }
 
@@ -1960,6 +1964,7 @@ void mudlet::readLateSettings(const QSettings& settings)
         setToolBarIconSize(settings.value(qsl("mainiconsize")).toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
+    mScrollbackTutorialsShown = settings.value("scrollbackTutorialsShown", QVariant(0)).toInt();
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -2109,6 +2114,7 @@ void mudlet::writeSettings()
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mToolbarIconSize);
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
+    settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
     settings.setValue("showMenuBar", mMenuBarVisibility != visibleNever);
@@ -4851,7 +4857,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code-v4.xml"),    {qsl("*")}},
+        {qsl(":/run-lua-code.xml"),    {qsl("*")}},
         {qsl(":/echo.xml"),               {qsl("*")}},
         {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
@@ -4981,6 +4987,40 @@ void mudlet::armForceClose()
     });
 }
 
+bool mudlet::showSplitscreenTutorial()
+{
+    return !experiencedMudletPlayer() && mScrollbackTutorialsShown < mScrollbackTutorialsMax;
+}
+
+void mudlet::showedSplitscreenTutorial()
+{
+    mScrollbackTutorialsShown++;
+}
+
+// returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic
+// tutorial tips, such as splitscreen cancel shortcut
+bool mudlet::experiencedMudletPlayer()
+{
+    static std::optional<bool> cachedResult;
+    if (cachedResult.has_value()) {
+        return cachedResult.value();
+    }
+
+    // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
+    QDir profilesDir(mudlet::getMudletPath(mudlet::profilesPath));
+    QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+    QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
+
+    for (const QFileInfo &entry : entries) {
+        if (entry.lastModified() < sixMonthsAgo) {
+            cachedResult = true;
+            return true;
+        }
+    }
+    cachedResult = false;
+    return false;
+}
+  
 dlgTriggerEditor* mudlet::createMudletEditor()
 {
     Host* pHost = getActiveHost();
