@@ -57,13 +57,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 게임에 로그인할 수 없습니다, 로그인 정보가 정확한가요?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 게임에 로그인할 수 없습니다: %1</translation>
     </message>
   </context>
   <context>
@@ -76,7 +76,7 @@
     <message>
       <location filename="../src/Host.cpp" line="487"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ 알림 ] - 이 프로필은 이제 저장되고 닫힙니다.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="747"/>
@@ -1242,12 +1242,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1028"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[정보] - 화면이동 롤백이 활성화되었습니다. 취소하려면 &lt;⌘&gt;+&lt;ENTER&gt;를 누르십시오.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1030"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[정보] - 분할 화면 스크롤백이 활성화되었습니다. 취소하려면 &lt;CTRL&gt;+&lt;ENTER&gt;를 누르세요.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2057"/>
@@ -1910,22 +1910,22 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1578"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>프로필을 저장하시겠습니까?</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1578"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>%1 프로필을 저장하시겠습니까?</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필을 저장할 수 없습니다.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>죄송합니다. &quot;%1&quot; 프로필을 다른 이름으로 저장할 수 없습니다. - 다음과 같은 오류가 발생했습니다. : &quot;%2&quot;</translation>
     </message>
   </context>
   <context>
