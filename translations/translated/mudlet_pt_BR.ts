@@ -32,12 +32,12 @@
     <message>
       <location filename="../src/glwidget.cpp" line="280"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Não há quartos no mapa - carregue outra, ou comece a mapear do zero para começar.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="285"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Você ainda não possui um mapa - carregue um ou comece a mapear do zero para começar.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="2110"/>
@@ -47,7 +47,10 @@
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Você tem um mapa carregado (%n sala(s)), mas o Mudlet não sabe onde você está no momento.</numerusform>
+        <numerusform>Você tem um mapa carregado (%n sala(s)), mas o Mudlet não sabe onde você está no momento.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -55,13 +58,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Não foi possível fazer login no jogo, as informações de login estão corretas?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Não foi possível fazer login no jogo: %1</translation>
     </message>
   </context>
   <context>
@@ -69,24 +72,24 @@
     <message>
       <location filename="../src/Host.cpp" line="442"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Texto a enviar para o jogo</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="487"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Este perfil será agora salvo e fechado.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="747"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao abrir o arquivo xml "%1" módulo interno %2 para atualizá-lo. A mensagem de erro foi: "%3".</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="758"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a module is saved as package but cannot be done for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao salvar "%1" no módulo "%2". A mensagem de erro foi: "%3".</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1058"/>
@@ -144,12 +147,12 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/Host.cpp" line="4104"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Relatório de Pré-Carregamento do Mapa(3)</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="4114"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(3) em %1 reportar</translation>
     </message>
   </context>
   <context>
@@ -157,12 +160,12 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation type="unfinished"/>
+      <translation>Notificação Invisível</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Um widget invisível usado como uma solução alternativa para anunciar texto ao leitor de tela</translation>
     </message>
   </context>
   <context>
@@ -171,7 +174,7 @@ Por favor aguarde...</translation>
       <location filename="../src/KeyUnit.cpp" line="352"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1chave indefinida (código: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -580,7 +583,7 @@ Por favor aguarde...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="142"/>
       <location filename="../src/dlgRoomExits.cpp" line="222"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>O número inserido é inválido. Se deixado assim, essa saída será excluída quando &lt;tt>salvar&lt;/tt> for clicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="143"/>
@@ -588,13 +591,13 @@ Por favor aguarde...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="227"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número do quarto para o qual esta saída especial vai.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="151"/>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>O ID da sala para a qual essa saída especial leva é esperado aqui. Se deixado assim, essa saída será excluída quando for clicado em &lt;tt>salvar&lt;/tt>.</translation>
     </message>
   </context>
   <context>
@@ -663,7 +666,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Create new room here</source>
       <extracomment>Menu option to create a new room in the mapper</extracomment>
-      <translation type="unfinished"/>
+      <translation>Criar nova sala aqui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2687"/>
@@ -678,25 +681,25 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2694"/>
       <source>Configure room...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Configurar sala...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Definir sala&apos;s nome e cor do ícone, peso e cadeado para caminhadas rápidas, e um símbolo para marcar salas especiais</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2703"/>
       <source>Set exits...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Definir saídas...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2710"/>
       <source>Create exit line...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Criar linha de saída...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2713"/>
@@ -714,7 +717,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Spread...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Espalhar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2729"/>
@@ -726,7 +729,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2736"/>
       <source>Shrink...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Encolher ...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2738"/>
@@ -747,55 +750,55 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2752"/>
       <source>Move to position...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mover para a posição...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mover sala selecionada ou grupo de salas para as coordenadas fornecidas nesta área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2761"/>
       <source>Move to area...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mover para área...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2766"/>
       <source>Create label...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Criar etiqueta...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2768"/>
       <source>Create label to show text or an image</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Criar etiqueta para mostrar texto ou imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2775"/>
       <source>Set player location</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Definir localização do jogador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2777"/>
       <source>Set the player&apos;s current location to here</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Definir a posição atual do jogador para aqui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Switch to editing mode</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Alternar para o modo de edição</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2788"/>
       <source>Switch to viewing mode</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Alternar para o modo de visualização</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
@@ -914,7 +917,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="3674"/>
       <source>Move the selection, centered on the highlighted room (%1) to:</source>
       <comment>%1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Mover a seleção, centralizado no espaço destacado (%1) para:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3680"/>
@@ -954,7 +957,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="5078"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Clique esquerdo e arraste um quadrado para definir o tamanho e posição do seu rótulo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="579"/>
@@ -964,7 +967,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1225"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Você ainda não tem um mapa - carregue um ou comece a mapear do zero para começar.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1222"/>
@@ -984,7 +987,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1220"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Não há salas no mapa - carregue outro, ou comece a mapear do zero para começar.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1363"/>
@@ -1002,12 +1005,12 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="96"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Clique em uma linha para selecionar ou cancelar a seleção desse número da sala (com o nome dado se as salas forem nomeadas) para incluir ou remover a sala da seleção.  Clique no cabeçalho relevante para classificar por esse método.  Observe que a coluna do nome só mostrará se pelo menos uma das salas tem um nome.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3936"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Espalhar os quartos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3937"/>
@@ -1016,12 +1019,15 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento
+dos quartos selecionados,
+centralizados no quarto
+destacado por um fator de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3997"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Encolher nos quartos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3998"/>
@@ -1030,7 +1036,7 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Reduza o espaçamento das salas selecionadas, centralizadas na sala destacada por um fator de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4068"/>
@@ -1041,12 +1047,12 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="4070"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa do Mudlet (*.dat);;Dados do mapa em XML (*.xml);;Qualquer arquivo (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4161"/>
       <source>This will create new area: %1</source>
-      <translation type="unfinished"/>
+      <translation>Isso irá criar uma nova área: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4177"/>
@@ -1054,12 +1060,13 @@ factor of:</source>
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não foi possível adicionar "%1" como uma área ao mapa.
+Consulte a mensagem de "[ERRO NO MAPA:]" para o motivo.&quot;.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4185"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Adicionada área "%1" (%2) ao mapa.</translation>
     </message>
   </context>
   <context>
@@ -1068,12 +1075,12 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TAlias.cpp" line="127"/>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Erro de Apelido:] limite de grupo de captura %1 excedido, capturar menos grupos.</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="272"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: em "Padrão:", expressão regular com defeito, motivo: "%1".</translation>
     </message>
   </context>
   <context>
@@ -1136,7 +1143,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="1376"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linha de entrada para o perfil "%1".</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1383"/>
@@ -2153,102 +2160,112 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3092"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>arquivo Json vazio, nenhum dado de mapa detectado</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3107"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>versão de formato inválida "%1" detectada</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3113"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>versão sem formatação detectada</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3119"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>nenhuma área detectada</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3244"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>Cancelado pelo usuário</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3129"/>
       <location filename="../src/TMap.cpp" line="3394"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Importando dados do mapa JSON para %1
+Áreas: %2 de: %3   Salas: %4 de: %5   Marcadores: %6 de: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1118"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - A versão de formato "%1" que você está tentando salvar o mapa é muito nova
+para esta versão do Mudlet. Apenas formatos até a versão %2 são suportados.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1134"/>
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Salvando o mapa na versão de formato "%1", que é diferente da versão "%2" na qual ele foi carregado. Isso pode causar problemas se você quiser compartilhar o mapa resultante com outras pessoas que dependem do formato original.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1144"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ] - Salvando mapa na versão de formato "%1" diferente da
+versão de mapa recomendada %2 para esta versão do Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1499"/>
       <location filename="../src/TMap.cpp" line="1936"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não é possível abrir o arquivo de mapa para leitura: "%1"!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O arquivo não parece ser um arquivo de mapa do Mudlet. A parte que indica
+sua versão de formato parece ser "%1" e isso não faz sentido. O arquivo é:
+"%2".</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1536"/>
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O arquivo de mapa é muito novo. Sua versão de formato "%1" é mais alta do que esta versão do Mudlet pode lidar (%2)! O arquivo é:
+"%3".</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1543"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Você precisará atualizar seu Mudlet para ler o arquivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1552"/>
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O arquivo do mapa está muito antigo. Sua versão de formato "%1" é tão antiga que
+esta versão do Mudlet pode não obter informações suficientes dele,
+mas irá tentar! O arquivo é: "%2".</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Lendo mapa. Versão do formato: %1. Arquivo:
+"%2",
+por favor, aguarde...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1569"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Lendo mapa. Versão do formato: %1. Arquivo: "%2".</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1952"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Verificando arquivo de mapa "%1", versão de formato "%2".</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2516"/>
@@ -2266,7 +2283,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1528"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignorando esse arquivo de mapa improvável.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2519"/>
@@ -2278,59 +2295,65 @@ please wait...</source>
       <location filename="../src/TMap.cpp" line="2550"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: incapaz de realizar a solicitação, um mapa já está sendo baixado ou
+importado a pedido do usuário.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2581"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Baixando arquivo de mapa para uso em %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2583"/>
       <source>Map import</source>
       <extracomment>This is a title of a progress window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Importação de Mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2611"/>
       <location filename="../src/TMap.cpp" line="2618"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: falha ao importar arquivo de mapa XML, mais informações podem estar disponíveis
+no console principal!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2655"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O download do mapa foi cancelado, a pedido do usuário.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2713"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Falha no download do mapa, impossível abrir o arquivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2720"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Falha no download do mapa, incapaz de gravar o arquivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2736"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - ... mapa baixado e armazenado, agora fazendo a análise...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2772"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Problema ao baixar o mapa, falha na análise do arquivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2752"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Problema ao baixar o mapa, impossível ler o arquivo de destino:
+%1.</translation>
     </message>
   </context>
   <context>
@@ -2416,12 +2439,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="310"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Nenhuma área criada! ID da área solicitada=%1. Observação: IDs das áreas devem ser > 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="332"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>Aviso: Ao definir a área para o Quarto (ID: %1), ele não tinha uma área atual!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="981"/>
@@ -2446,24 +2469,25 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1142"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - No quarto ID:%1 removendo saída inválida (especial) para %2 {sem nome!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1146"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - O quarto possuía uma saída inválida (especial) para %1 {sem nome!} e foi removida.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1155"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 corrigindo saída especial "%2" que
+ia para uma sala inválida: %3 para agora ir para: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto precisou corrigir a saída especial "%1" que estava para um quarto com uma saída inválida para o quarto: %2 para agora ir para: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1190"/>
@@ -2472,12 +2496,15 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - O quarto com ID: %1 tem uma saída especial "%2" com uma
+saída para: %3, mas esse quarto não existe. A saída será
+removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto sob uma chave:
+"%4").</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1203"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - O quarto possui uma saída especial "%1" com uma saída para: %2, mas esse quarto não existe. A saída será removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto sob a chave: "%3").</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1242"/>
@@ -2486,12 +2513,16 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 saída especial "%2"
+que estava para uma sala inválida: %3 que não existe.
+A saída será removida (o ID da sala de destino incorreta será armazenado
+nos dados do usuário da sala sob a chave:
+"%4").</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1255"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto tinha uma saída especial "%1" que levava a um quarto inválido: %2 que não existe. A saída será removida (o ID do quarto de destino inválido será armazenado nos dados do usuário do quarto sob a chave "%3").</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1288"/>
@@ -2522,56 +2553,59 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1304"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 foram encontrados um ou mais itens de porta excedentes que foram removidos:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1311"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto tinha um ou mais itens de porta excedentes que foram removidos:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1327"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 encontrou um ou mais itens com peso excedente que foram removidos:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1334"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto tinha um ou mais itens de peso excedente que foram retirados: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1350"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 foram encontrados um ou mais itens de bloqueio de saída excedentes que foram removidos:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1357"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto tinha um ou mais itens de travamento de saída em excesso que foram removidos: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1436"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 foram encontrados um ou mais elementos personalizados em excesso que foram removidos: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1442"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto tinha um ou mais elementos de linha personalizados excedentes que foram removidos: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1465"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 corrigindo saída "%2" que ia para uma sala inválida: %3 para agora ir para: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1474"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Corrigindo saída "%1" que estava para um ID de sala inválido: %2 para agora ir para: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1485"/>
@@ -2580,24 +2614,24 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Sala com ID: %1 possui uma saída "%2" para: %3, mas essa sala não existe. A saída será removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto sob a chave: "%4") e a saída será transformada em um stub.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1498"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - O quarto tem uma saída "%1" para: %2, mas esse quarto não existe. A saída será removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto com a chave: "%4") e a saída será transformada em um stub.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1542"/>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O cômodo com ID: %1 possui uma saída " %2 " para: %3, mas também possui uma saída incompleta! Como uma saída real exclui uma saída incompleta, esta última será removida.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1552"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O quarto tem uma saída "%1" para: %2, mas também tem uma saída falsa na mesma direção! Como uma saída real impede uma saída falsa, esta última será removida.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1608"/>
@@ -2606,45 +2640,52 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com ID: %1 saída especial "%2"
+que estava para uma sala inválida: %3 que não existe.
+A saída será removida (o ID da sala de destino incorreta será armazenado
+nos dados do usuário da sala sob a chave:
+"%4").</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1619"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O quarto tinha uma saída especial "%1" que levava a um quarto inválido: %2 que não existe. A saída será removida (o ID do quarto de destino inválido será armazenado nos dados do usuário do quarto sob a chave "%3").</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1637"/>
       <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Estava trancado, isso está registrado como dados do usuário com a chave:
+"%1".</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1640"/>
       <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Estava trancado, isso é registrado como dados do usuário com a chave: "%1".</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
       <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ele tinha um peso, isso é registrado como dados do usuário com a chave:
+"%1".</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1653"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ele tinha um peso, isso é registrado como dados do usuário com a chave: "%1".</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1664"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Havia uma linha de saída personalizada associada à saída inválida, mas
+não foi possível recuperá-la, ela foi perdida!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1669"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Havia uma linha de saída personalizada associada à saída inválida, mas não foi possível recuperá-la, ela foi perdida!</translation>
     </message>
   </context>
   <context>
@@ -2652,17 +2693,17 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="504"/>
       <source>Area with ID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Área com ID=%1 já existe!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Uma área sem nome (não) é permitida!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="527"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Uma área chamada %1 já existe!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="626"/>
@@ -2670,22 +2711,25 @@ it has not been possible to salvage this, it has been lost!</source>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[WARN]-Problema com a estrutura de dados associada ao id do quarto: %1 -que os dados da
+sala&apos;foram perdidos para que o id agora esteja sendo excluído.  Este
+sugere sérios problemas com a versão atualmente em execução de
+Mudlet-é o seu sistema ficando sem memória?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="634"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Problema com a estrutura de dados associada a esta sala. Os dados da sala foram perdidos, então o ID está sendo excluído. Isso sugere problemas graves com a versão atual do Mudlet - o seu sistema está com falta de memória?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="683"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Área com ID: %1 esperada, mas não encontrada, será criada.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="686"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT]-Área com este id esperado mas não encontrada, será criada.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
@@ -2693,64 +2737,79 @@ Mudlet - is your system running out of memory?</source>
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ALERT]- %n área (s) detectada como ausente no mapa: adicionando-as / elas em.
+Procure mais mensagens relacionadas aos quartos que são supostos
+para estar neste / essas (s) área (s) ...</numerusform>
+        <numerusform>[ALERT]- %n área (s) detectada como ausente no mapa: adicionando-as / elas em.
+Procure mais mensagens relacionadas aos quartos que são supostos
+para estar neste / essas (s) área (s) ...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[INFO]-A (s) área (s) desaparecida (s) agora são chamadas:
+(ID) ==&gt; &quot;nome&quot;</numerusform>
+        <numerusform>[ INFO ]  - As área(s) faltante(s) agora são chamada(s):
+(ID) ==> "name"</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="766"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - IDs de área ruins, (menos de +1 e não o reservado -1) encontrados (contagem: %1)
+no mapa, agora calculando quais novos números de ID usar...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Os IDs das áreas renumeradas serão:
+Antigo ==> Novo</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="796"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - A área com esse ID inválido foi renumerada para: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="797"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Esta área foi renumerada do ID incorreto: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="834"/>
       <location filename="../src/TRoomDB.cpp" line="837"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - A numeração de ID da área está satisfatória.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="845"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Foram encontrados IDs de sala ruins (menos de +1) no mapa (quantidade: %1), agora estou trabalhando para determinar quais novos números de ID usar.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="857"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Os quartos renumerados serão:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - As alterações feitas são:
+(ID) "nome antigo" ==> "novo nome"</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="771"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - IDs de área inválidos encontrados (menos que +1 e diferentes de -1) no mapa! Procure por mensagens adicionais relacionadas a cada área afetada...</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="722"/>
@@ -2758,55 +2817,61 @@ out what new id numbers to use.</source>
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERTA ] - %n área(s) detectada(s) como ausente(s) no mapa: adicionando ela(s).
+Procure por mensagens adicionais relacionadas às salas que deve(m)
+estar nesta(s) área(s)...</numerusform>
+        <numerusform>[ ALERTA ] - %n área(s) detectada(s) como faltante(s) no mapa: adicionando ela(s) nele.
+Procure por mensagens adicionais relacionadas aos quartos que devem estar nesta(s) área(s)...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - IDs de sala ruins (menores que +1) encontrados (contagem: %1) no mapa! Procure por mensagens adicionais relacionadas a cada sala afetada ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="873"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este quarto com o ID incorreto foi renumerado para: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="874"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este quarto foi renumerado do ID incorreto: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="910"/>
       <location filename="../src/TRoomDB.cpp" line="913"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - A numeração de ID dos quartos está satisfatória.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="933"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificadores duplicados de saída encontrados no ID do quarto: %1, isso é uma anomalia, mas foi facilmente corrigido.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="938"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificadores duplicados de saída de stub encontrados no quarto, isso é uma anomalia, mas foi facilmente corrigido.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="947"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificadores de bloqueio de saída duplicados encontrados no id do quarto: %1, isso é uma anomalia, mas foi resolvido facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="952"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificadores de bloqueio de saída duplicados encontrados no quarto, isso é uma anomalia, mas foi resolvido facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este quarto afirma estar na área de id: %1, mas não havia um registro dele. A área foi atualizada para incluir este quarto.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1031"/>
@@ -2814,17 +2879,19 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na área com ID: %1 estavam faltando %2 quartos daqueles que deveriam estar sendo registrados como possuindo, eles são:
+%3
+eles foram adicionados.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1039"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nesta área faltavam %1 quartos dos quais deveriam ser registrados como possuindo. Eles são: %2. Eles foram adicionados.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1060"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este quarto foi reivindicado pelo ID da área: %1, mas não pertence a ela. A área foi atualizada para não incluir este quarto.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1066"/>
@@ -2832,32 +2899,35 @@ they have been added.</source>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Em área com id: %1 havia %2 quartos extras em comparação com aqueles que ele
+deveria estar gravando como possuidor, eles foram:
+%3
+eles foram removidos.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1074"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Nessa área havia %1 quartos extras que não deve ser registrado como possuidor.  Eles eram: %2.  Eles foram removidos.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1173"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Foi detectado que &quot;_###&quot; Sufixos de formulário já foram usados, para simplicidade no algoritmo de renomeação estes terão sido removidos e possivelmente alterados como Mudlet classifica este assunto para fora, se um número atribuído desta forma &lt;b&gt;é&lt;/b&gt; importante para você, você pode alterá-lo de volta, desde que renomee a área que foi alocada o sufixo que foi desejado primeiro ...!&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1184"/>
       <source>&lt;nothing&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;nada></translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1187"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Nome da área alterado para evitar duplicatas ou não nomeadas; nome antigo: &quot;%1&quot;, novo nome: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1196"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ALERTA]-Nomes de área vazia e duplicada detectados no arquivo do Mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1197"/>
@@ -2867,12 +2937,17 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Mudlet já havia permitido que o mapa tivesse mais de uma área
+com o mesmo ou nenhum nome. Para resolver esses casos, uma área sem um nome
+aqui (ou criada no futuro) será automaticamente atribuído o nome &quot;%1&quot;.
+Nomes de área duplicada causarão tudo, mas o primeiro encontrou um para ganhar um sufixo de estilo
+&quot;_###&quot; .
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1205"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT]-Nomes de área duplicada detectados no arquivo do Mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1206"/>
@@ -2888,12 +2963,23 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Devido a algumas situações que não foram verificadas no passado, o Mudlet permitia
+que o usuário tivesse mais de uma área com o mesmo nome.
+Isso torna algumas coisas confusas e agora está proibido.
+  Nomes de área duplicados farão com que todos, exceto o primeiro encontrado,
+ganhem um sufixo no estilo "_###" onde cada "###" é um número crescente;
+você pode querer alterá-los, talvez substituindo-os por
+um "(nome de subárea)", mas cabe inteiramente a você como fazer isso,
+exceto que você não poderá definir o nome de uma área para o mesmo nome
+de outra que já exista.
+  Se houver mais de uma área sem nome, todas, exceto a primeira, também
+ganharão um sufixo dessa maneira.
+%1)</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1221"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT]-Nomes de área duplicada detectados no arquivo do Mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1224"/>
@@ -2908,13 +2994,16 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Devido a algumas situações que não foram verificadas no passado, o Mudlet permitia que o mapa tivesse uma área sem nome. Isso pode causar confusão em algumas coisas e agora isso não é mais permitido.
+  Para resolver esse caso, a área sem nome aqui (ou uma criada no futuro) será automaticamente atribuída o nome "%1".
+  Se isso acontecer mais de uma vez, a duplicação dos nomes das áreas fará com que todas, exceto a primeira encontrada, ganhem um sufixo "_###" onde cada "###" é um número crescente; você pode optar por alterar esses nomes, talvez adicionando nomes de área mais significativos, mas é totalmente sua decisão o que será usado, exceto que você não poderá definir o nome de uma área para o mesmo nome de outra que já exista.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1248"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nome da área padrão (redefinida) (para salas que não foram atribuídas a uma
+área) não encontrado, adicionando "%1" contra o ID reservado -1.</translation>
     </message>
   </context>
   <context>
@@ -2922,17 +3011,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1947"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copiar</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1958"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Copiar HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1962"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Copiar como imagem</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1965"/>
@@ -2942,119 +3031,119 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1970"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Pesquisar no %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1989"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Analisar personagens</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1998"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Passe o mouse neste item para exibir os pontos de código Unicode na seleção &lt;i>(apenas a primeira linha!)&lt;/i></translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2007"/>
       <source>restore Main menu</source>
-      <translation type="unfinished"/>
+      <translation>restaurar Menu Principal</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2009"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Use isto para restaurar o menu Principal para obter acesso aos controles.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2011"/>
       <source>restore Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>restaurar barra de ferramentas principal</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2013"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Use isso para restaurar a barra de ferramentas principal para obter acesso a controles.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2021"/>
       <source>Clear console</source>
-      <translation type="unfinished"/>
+      <translation>Limpar Console</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2024"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** Iniciando nova sessão ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2236"/>
       <source>{tab}</source>
       <extracomment>Unicode U+0009 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2238"/>
       <source>{line-feed}</source>
       <extracomment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{line-feed}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2240"/>
       <source>{carriage-return}</source>
       <extracomment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{carriage-return}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2242"/>
       <source>{space}</source>
       <extracomment>Unicode U+0020 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2244"/>
       <source>{non-breaking space}</source>
       <extracomment>Unicode U+00A0 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2246"/>
       <source>{soft hyphen}</source>
       <extracomment>Unicode U+00AD codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{soft hyphen}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2248"/>
       <source>{combining grapheme joiner}</source>
       <extracomment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</extracomment>
-      <translation type="unfinished"/>
+      <translation>{combining grapheme joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2250"/>
       <source>{ogham space mark}</source>
       <extracomment>Unicode U+1680 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{ogham space mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2252"/>
       <source>{&apos;n&apos; quad}</source>
       <extracomment>Unicode U+2000 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2254"/>
       <source>{&apos;m&apos; quad}</source>
       <extracomment>Unicode U+2001 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2256"/>
       <source>{&apos;n&apos; space}</source>
       <extracomment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; espaço}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2258"/>
       <source>{&apos;m&apos; space}</source>
       <extracomment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; espaço}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2260"/>
@@ -3072,127 +3161,127 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2264"/>
       <source>{6-per-em space}</source>
       <extracomment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{6-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2266"/>
       <source>{digit space}</source>
       <extracomment>Unicode U+2007 codepoint - figure (digit) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{digit space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2268"/>
       <source>{punctuation wide space}</source>
       <extracomment>Unicode U+2008 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{punctuation wide space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2270"/>
       <source>{5-per-em space}</source>
       <extracomment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{5-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2272"/>
       <source>{hair width space}</source>
       <extracomment>Unicode U+200A codepoint - thinnest space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{hair width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2274"/>
       <source>{zero width space}</source>
       <extracomment>Unicode U+200B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2276"/>
       <source>{Zero width non-joiner}</source>
       <extracomment>Unicode U+200C codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{Zero width non-joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2278"/>
       <source>{zero width joiner}</source>
       <extracomment>Unicode U+200D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2280"/>
       <source>{left-to-right mark}</source>
       <extracomment>Unicode U+200E codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2282"/>
       <source>{right-to-left mark}</source>
       <extracomment>Unicode U+200F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2284"/>
       <source>{line separator}</source>
       <extracomment>Unicode 0x2028 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{line separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2286"/>
       <source>{paragraph separator}</source>
       <extracomment>Unicode U+2029 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{paragraph separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2288"/>
       <source>{Left-to-right embedding}</source>
       <extracomment>Unicode U+202A codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2290"/>
       <source>{right-to-left embedding}</source>
       <extracomment>Unicode U+202B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2292"/>
       <source>{pop directional formatting}</source>
       <extracomment>Unicode U+202C codepoint - pop (undo last) directional formatting.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{pop directional formatting}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2294"/>
       <source>{Left-to-right override}</source>
       <extracomment>Unicode U+202D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2296"/>
       <source>{right-to-left override}</source>
       <extracomment>Unicode U+202E codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2298"/>
       <source>{narrow width no-break space}</source>
       <extracomment>Unicode U+202F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{narrow width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2300"/>
       <source>{medium width mathematical space}</source>
       <extracomment>Unicode U+205F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{medium width mathematical space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2302"/>
       <source>{zero width non-breaking space}</source>
       <extracomment>Unicode U+2060 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2304"/>
       <source>{function application}</source>
       <extracomment>Unicode U+2061 codepoint - function application (whatever that means!)</extracomment>
-      <translation type="unfinished"/>
+      <translation>{function application}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2306"/>
