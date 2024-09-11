@@ -12,6 +12,9 @@ qrc_*.cpp
 mudlet
 app-build.txt
 
+# Qt creator's clangd cache
+.cache
+
 # ignore macOS apps in general, but keep the Autoupdater from Sparkle
 3rdparty/boost/*
 3rdparty/cocoapods/*
