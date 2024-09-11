@@ -768,7 +768,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     setColors2();
 
 
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
 #else
     checkBox_debugShowAllCodepointProblems->hide();
