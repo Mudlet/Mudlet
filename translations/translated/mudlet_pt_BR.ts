@@ -972,7 +972,10 @@ Por favor aguarde...</translation>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1222"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Você tem um mapa carregado (%n sala(s)), mas o Mudlet não sabe onde você está no momento.</numerusform>
+        <numerusform>Você tem um mapa carregado (%n sala(s)), mas o Mudlet não sabe onde você está no momento.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
@@ -1155,13 +1158,13 @@ Consulte a mensagem de "[ERRO NO MAPA:]" para o motivo.&quot;.</translation>
 Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Digite o texto para enviar para o servidor do jogo para o perfil &quot;%1&quot; , ou digite um alias para executar comandos localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1391"/>
       <source>Input line.</source>
       <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linha de entrada</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1397"/>
@@ -1173,31 +1176,31 @@ Accessibility-friendly description for the built-in command line of a console/wi
 Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Digite o texto para enviar ao servidor do jogo, ou digite um alias para executar comandos localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1409"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linha de entrada adicional &quot;%1&quot; na janela &quot;%2&quot; do perfil &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1425"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linha de entrada adicional &quot;%1&quot; na janela &quot;%2&quot; .</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1444"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linha de entrada da janela de &quot;%1&quot; do perfil &quot;%2&quot; .</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1458"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linha de entrada para o perfil &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1210,19 +1213,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="341"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i>N:&lt;/i> é a latência do servidor do jogo e da rede (também conhecido como ping, em segundos),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt;  é o sistema de processamento de tempo - quanto tempo seus gatilhos levaram para processar a(s) última(s) linha(s).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="356"/>
       <source>N:%1 S:%2</source>
       <extracomment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</extracomment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="364"/>
       <source>&lt;no GA&gt; S:%1</source>
       <extracomment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1734"/>
@@ -1232,86 +1235,86 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="308"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar carimbos de tempo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1028"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Rolagem em tela dividida ativada. Pressione &lt;£&gt;+&lt;ENTER&gt; para cancelar.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1030"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Rolagem em tela dividida ativada. Pressione &lt;CTRL&gt;+&lt;ENTER&gt; para cancelar.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2057"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Mensagens de depuração de todos os perfis são mostradas aqui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2060"/>
       <source>Central debug console past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Console de depuração central de conteúdo passado</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Central debug console live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Console de depuração central de conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2065"/>
       <source>Central debug console.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Console de depuração central.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2074"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de erro do editor&apos;s para o conteúdo anterior do perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de erro do editor&apos;s para o conteúdo ao vivo do perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2079"/>
       <source>Editor&apos;s error window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de erro do editor $apos;s para conteúdo passado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2081"/>
       <source>Editor&apos;s error window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de erro do editor $apos;s para conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de erro do editor $apos;s para perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2090"/>
       <source>Editor&apos;s error window</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de erro do Editor&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2097"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>O conteúdo do jogo é mostrado aqui. Ele pode conter subconsoles e uma janela de mapeamento.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="233"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>janela inicial</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="319"/>
@@ -1321,33 +1324,33 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="329"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Comece a registrar a saída do jogo no arquivo de log.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="383"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>Parada de emergência. Interrompe todos os temporizadores e gatilhos.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="407"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Buffer de busca.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
       <location filename="../src/TConsole.cpp" line="413"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opções de Pesquisa</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="417"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Diferencia maiúsculas de minúsculas</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="419"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Combine o caso com precisão</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="432"/>
@@ -1362,17 +1365,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="834"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>A gravação do replay foi iniciada. Arquivo: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="838"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>A gravação de replay foi interrompida, mas não podel&apos;t ser salvo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="840"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>A gravação de replay foi interrompida. Arquivo: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1838"/>
@@ -1389,164 +1392,164 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2106"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela principal do conteúdo passado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2108"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; conteúdo principal da janela ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2111"/>
       <source>Profile main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil da janela principal de conteúdo passado</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2113"/>
       <source>Profile main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil da janela principal de conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2118"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; Janela principal.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2121"/>
       <source>Profile main window.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela principal do perfil.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2136"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela incorporada &quot;%2&quot; de conteúdo passado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2138"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela incorporada &quot;%2&quot; conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2141"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil janela incorporada &quot;%1&quot; no conteúdo passado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil janela incorporada &quot;%1&quot; conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2148"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela incorporada &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2151"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil incorporado janela &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2166"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela de usuário &quot;%2&quot; conteúdo passado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2168"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela do usuário &quot;%2&quot; conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2171"/>
       <source>Profile user window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de usuário de perfil &quot;%1&quot; no passado conteúdo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2173"/>
       <source>Profile user window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de usuário de perfil &quot;%1&quot; conteúdo ao vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2178"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; janela do usuário &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2181"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Janela de usuário de perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2070"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Erro Console no editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2083"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>As mensagens de erro do perfil &quot;%1&quot; são exibidas aqui no editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2093"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>As mensagens de erro são exibidas aqui no editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2099"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Janela principal para &quot;%1&quot; perfil.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2101"/>
       <source>Main Window.</source>
-      <translation type="unfinished"/>
+      <translation>Janela principal</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2128"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Janela incorporada &quot;%1&quot; para &quot;%2&quot; perfil.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2130"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Janela incorporada &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2132"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation type="unfinished"/>
+      <translation>O conteúdo do jogo ou texto gerado localmente pode ser enviado aqui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2158"/>
       <source>User window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Janela do usuário &quot;%1&quot; para &quot;%2&quot; perfil.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2160"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Janela do Usuário &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2162"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>O conteúdo do jogo ou texto gerado localmente podem ser enviados para esta janela que pode ser arrastada para fora do aplicativo Mudlet ou ancorado na janela principal do aplicativo.</translation>
     </message>
   </context>
   <context>
@@ -1554,7 +1557,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="66"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Barra de EasyButton - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1603,7 +1606,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4890"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não é possível encontrar o módulo Lua %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5508"/>
@@ -1613,17 +1616,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5526"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>O suporte ao banco de dados não estará disponível.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5533"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8 .* As funções de Lua não estarão disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5539"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.* Funções Lua não estarão disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5726"/>
@@ -1638,41 +1641,43 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5730"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não é possível carregar o formatador de código, a funcionalidade de indentação não estará disponível.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5809"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (não existe)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5814"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (não é um arquivo ou link simbólico de um arquivo)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5827"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (não é um arquivo legível ou link simbólico para um arquivo legível).</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5849"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (não pôde ler arquivo)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5855"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mudlet-lua API e Geyser Layout gerenciador carregado.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5862"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] - Não pôde encontrar, carregar e executar com sucesso LuaGlobal.lua-o seu Mudlet está quebrado!
+Tentou estes locais:
+%1</translation>
     </message>
   </context>
   <context>
@@ -1680,22 +1685,22 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="263"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Versão do Mudlet MUD Client: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="265"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, registro do perfil %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="327"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Parar de registrar a saída do jogo no arquivo de log.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="223"/>
       <source>Logging has started. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>O registro foi iniciado. Arquivo de log é %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="181"/>
@@ -1706,110 +1711,113 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="233"/>
       <source>Logging has been stopped. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>O registro foi parado. O arquivo de log é %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="302"/>
       <location filename="../src/TMainConsole.cpp" line="324"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;Sessão de registro começando em &apos;hh:mm:ss&apos; em &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="332"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;Sessão de registro terminando em &apos;hh:mm:ss&apos; em &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="343"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Inicie o registro da saída do jogo no arquivo de registro.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="698"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Relatório de Pré-Carregamento do Mapa(2)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="709"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa (2) ao relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1121"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Janela de usuário - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1174"/>
       <source>N:%1 S:%2</source>
       <extracomment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</extracomment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1183"/>
       <source>&lt;no GA&gt; S:%1</source>
       <extracomment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1281"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Relatório de carregamento pré-mapa(1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1299"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando map(1) ao relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1301"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(1) &quot;%1&quot; em %2 relatório</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1345"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Relatório de importação pré-mapa(1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1368"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - O arquivo de mapa não foi encontrado, o caminho e o nome usados foi:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1374"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: valor de argumento #1 inválido (nome de arquivo usado: 
+&quot;%1&quot; não foi encontrado).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1383"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Mapa localizado e aberto, analisando-o agora ...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1390"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importando map(1) &quot;%1&quot; no relatório %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1393"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Arquivo de mapa localizado, mas não pôde ser aberto, por favor verifique as permissões em:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1396"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: mau argumento #1 valor (nome de arquivo usado: 
+&quot;%1&quot; não pôde ser aberto para leitura).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1420"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pedido de recarga do mapa recebido do sistema...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1425"/>
@@ -3287,49 +3295,49 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2306"/>
       <source>{invisible times}</source>
       <extracomment>Unicode U+2062 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{invisible times}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2308"/>
       <source>{invisible separator}</source>
       <extracomment>Unicode U+2063 codepoint - invisible separator or comma.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{invisible separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2310"/>
       <source>{invisible plus}</source>
       <extracomment>Unicode U+2064 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{invisible plus}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2312"/>
       <source>{left-to-right isolate}</source>
       <extracomment>Unicode U+2066 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2314"/>
       <source>{right-to-left isolate}</source>
       <extracomment>Unicode U+2067 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2316"/>
       <source>{first strong isolate}</source>
       <extracomment>Unicode U+2068 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{first strong isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2318"/>
       <source>{pop directional isolate}</source>
       <extracomment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{pop directional isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2320"/>
       <source>{inhibit symmetrical swapping}</source>
       <extracomment>Unicode U+206A codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{inhibit symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2322"/>
