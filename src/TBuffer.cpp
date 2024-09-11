@@ -3553,6 +3553,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
         switch (utf8SequenceLength) {
         case 4:
+            // Check the 4th byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
@@ -3584,13 +3585,14 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // Fall-through
             [[fallthrough]];
         case 3:
+            // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                 isValid = false;
                 isToUseReplacementMark = true;
-            } else if ((bufferData.at(pos) & 0x0F) == 0x0D) {
+            } else if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -3617,8 +3619,15 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
     * followed by a low surrogate). The majority of UTF-16 encoder and decoder
     * implementations translate between encodings as though this were the case
     * and Windows allows such sequences in filenames."
+    *
+    * So test for and, considering the LS Nibble of first byte:
+    * * accept if LS Nibble of first byte is             less than 0xD
+    * * accept if LS Nibble of first byte is greater than/equal to 0xE
+    * * otherwise (if LS Nibble of first byte IS 0xD)
+    *   * accept if 6 LS Bits of second byte is 0x1F of or less
+    * Conversely this can be stated as:
+    * * reject if LS Nibble of first byte is 0xD AND 6th MS Bit of second byte is set
     */
-// So test for and reject if LSN of first byte is 0xD!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
 #endif
@@ -3627,8 +3636,10 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             } else if (   (static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF)
                        && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB)
                        && (static_cast<quint8>(bufferData.at(pos    )) == 0xEF)) {
-// Got caught out by this one - it is the UTF-8 BOM and
-// needs to be ignored as it transcodes to NO codepoints!
+
+                // Got caught out by this one - it is the UTF-8 BOM (or
+                // Zero-Width No-Break Space) and needs to be detected specially
+                // as Qt's codec ignores it and transcodes it to NO codepoints!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) UTF-8 BOM sequence seen and handled!";
 #endif
@@ -3639,6 +3650,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // Fall-through
             [[fallthrough]];
         case 2:
+            // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";
