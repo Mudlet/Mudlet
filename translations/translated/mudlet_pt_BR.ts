@@ -1822,7 +1822,7 @@ Tentou estes locais:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1425"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - ... Solicitação de recarga do Mapa do Sistema concluída.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1427"/>
@@ -3694,17 +3694,17 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="192"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>Atualmente, não há atualizações disponíveis.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="208"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Você está usando %APPNAME% %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="321"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Baixar automaticamente futuras atualizações</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="368"/>
@@ -3714,7 +3714,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="388"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Instalar atualização agora</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
@@ -3724,7 +3724,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="405"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Lembrar-me depois</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="410"/>
@@ -3757,7 +3757,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/VarUnit.cpp" line="90"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>As variáveis marcadas serão salvas e carregadas com seu perfil.</translation>
     </message>
   </context>
   <context>
@@ -3768,32 +3768,35 @@ Would you like to update now?</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Desculpe, o arquivo que está sendo lido:
+&quot;%1&quot;
+relata que tem uma versão (%2) deve ter vindo de uma versão anterior do Mudlet,
+e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="359"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Analisando dados de área...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="363"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>Analisando dados da sala...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="367"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Analisando dados do ambiente...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="375"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Atribuindo quartos às suas áreas...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="584"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Analisando dados da sala [count: %1]...</translation>
     </message>
   </context>
   <context>
@@ -3811,7 +3814,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="164"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Apoiadores</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="193"/>
@@ -3839,72 +3842,72 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="165"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>Propriedades da Barra de Botões</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="177"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Número de colunas/linhas (dependendo da orientação):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="200"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>Orientação Horizontal</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="205"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>Orientação Vertical</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="220"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>Topo da área da doca</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="225"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>Área da doca à esquerda</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="230"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>Área de doca direita</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="235"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Barra de ferramentas flutuante</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="258"/>
       <source>Button Properties</source>
-      <translation type="unfinished"/>
+      <translation>Propriedades do botão</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="264"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>Rotação do botão:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="281"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>sem rotação</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
       <source>90° rotation to the left</source>
-      <translation type="unfinished"/>
+      <translation>Rotação de 90° para a esquerda</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="291"/>
       <source>90° rotation to the right</source>
-      <translation type="unfinished"/>
+      <translation>Rotação de 90° para a direita</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="299"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>Botão de pressão</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="306"/>
@@ -3915,32 +3918,32 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ui/actions_main_area.ui" line="319"/>
       <location filename="../src/ui/actions_main_area.ui" line="339"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto para enviar para o jogo como está (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="326"/>
       <source>Command (up):</source>
-      <translation type="unfinished"/>
+      <translation>Comando (cima):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Escolha um bom nome, de preferência único, para o seu botão, menu ou barra de ferramentas. Isso será exibido na árvore de botões.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="316"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Digite um ou mais comandos que deseja que o botão envie diretamente para o jogo se for pressionado. (Opcional)&lt;/p&gt;&lt;p&gt;Se este for um &lt;i&gt;botão de pressão&lt;/i&gt; então isso é enviado somente quando o botão vai do estado &lt;i&gt;em cima&lt;/i&gt; Para &lt;i&gt;abaixo&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Para enviar comandos mais complexos, que podem depender ou precisar modificar variáveis dentro deste perfil, um script Lua deve ser inserido &lt;i&gt;ao invés&lt;/i&gt; na área do editor abaixo.  Qualquer coisa inserida aqui é, literalmente, enviada para o servidor do jogo.&lt;/p&gt;&lt;p&gt;É permitido usar ambos este &lt;i&gt;e&lt;/i&gt; um script Lua - isso será enviado &lt;b&gt;antes&lt;/b&gt; do script ser executado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="336"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Digite um ou mais comandos que deseja que o botão envie diretamente para o jogo quando esse botão for do estado  &lt;i&gt;baixo&lt;/i&gt; para &lt;i&gt;cima&lt;/i&gt;. Para enviar comandos mais complexos, que podem depender ou precisar modificar variáveis dentro deste perfil, um script Lua deve ser inserido &lt;i&gt;ao invés&lt;/i&gt; na área do editor abaixo.  Qualquer coisa inserida aqui é, literalmente, enviada para o servidor do jogo.&lt;/p&gt;&lt;p&gt;É permitido usar ambos este &lt;i&gt;e&lt;/i&gt; um script Lua - isso será enviado &lt;b&gt;antes&lt;/b&gt; do script ser executado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="358"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>Folha de Estilos:</translation>
     </message>
   </context>
   <context>
@@ -3953,7 +3956,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>Escolha um nome único para o seu apelido; ele vai aparecer na árvore e é necessário para programar.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="85"/>
@@ -3963,17 +3966,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="126"/>
       <source>Pattern:</source>
-      <translation type="unfinished"/>
+      <translation>Padrão:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="148"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>insira um padrão de regex perl para seu apelido; apelidos são gatilhos em sua entrada</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="151"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^mycommand$ (exemplo)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="158"/>
@@ -3983,12 +3986,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="172"/>
       <source>Regex</source>
-      <translation type="unfinished"/>
+      <translation>Regex</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="177"/>
       <source>Plain</source>
-      <translation type="unfinished"/>
+      <translation>Plano</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="197"/>
@@ -3998,12 +4001,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="219"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Digite um ou mais comandos para usar se o comando dado corresponder ao padrão. (Opcional)&lt;/p>&lt;p>Isso pode ser outro apelido ou um comando para enviar diretamente para o jogo. Para comandos complexos que requerem modificação de variáveis dentro deste perfil, use um script Lua na área do editor abaixo. É possível usar tanto este campo quanto um script Lua - o conteúdo deste campo será usado antes de executar o script.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="222"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto de substituição (opcional)</translation>
     </message>
   </context>
   <context>
@@ -4014,90 +4017,95 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Falha na consulta do nome do hospedeiro!
+Não é possível estabelecer a conexão.
+O nome do servidor não está correto, não está funcionando corretamente,
+ou os seus servidores de nomes não estão funcionando corretamente.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="462"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Uma conexão segura foi estabelecida com sucesso.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="464"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Uma conexão foi estabelecida com sucesso.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="500"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Tempo de conexão: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="507"/>
       <source>hh:mm:ss.zzz</source>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="544"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Conexões seguras não são suportadas por este jogo nesta porta - tente desativar a opção.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2400"/>
       <location filename="../src/ctelnet.cpp" line="2795"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O servidor deseja atualizar a GUI para a nova versão '%1'. Desinstalando a versão antiga '%2'.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2411"/>
       <location filename="../src/ctelnet.cpp" line="2806"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - O pacote já está instalado.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2420"/>
       <location filename="../src/ctelnet.cpp" line="2813"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>baixando GUI do jogo do servidor</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2409"/>
       <location filename="../src/ctelnet.cpp" line="2804"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Servidor oferece GUI para download (url =&apos;%1&apos;) (pacote=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="403"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Procurando o endereço IP do servidor: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="534"/>
       <location filename="../src/ctelnet.cpp" line="546"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - O soquete foi desconectado.
+Motivo: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tentando conexão segura com %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - O endereço IP de %1 foi encontrado. É: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="598"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tentando conectar a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="600"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tentando conectar a %1:%2 via proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="647"/>
@@ -4108,7 +4116,12 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Erro interno, nenhum codec encontrado para a configuração atual de {"%1"}
+então o Mudlet não pode enviar dados nesse formato para o Servidor do Jogo. Por favor,
+verifique se há uma alternativa que o MUD e o Mudlet possam usar. O Mudlet tentará enviar os dados usando a codificação ASCII
+mas ficará limitado apenas aos caracteres sem acento do inglês básico.
+Nota: este aviso será emitido apenas uma vez, até que a codificação seja
+alterada.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2422"/>
@@ -4120,17 +4133,17 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="3006"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-Uma conexão mais segura na porta %1 está disponível.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3011"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>Para proteção e privacidade na transferência de dados, esta conexão anuncia uma porta segura.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3012"/>
       <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <translation>Atualizar para a porta %1 e conectar com criptografia?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3162"/>
@@ -4156,7 +4169,7 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="3211"/>
       <source>INFO</source>
-      <translation type="unfinished"/>
+      <translation>INFO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3223"/>
@@ -4167,44 +4180,47 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="3421"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Carregando arquivo de replay:
+"%1".</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3445"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Não é possível reproduzir o arquivo "%1", a mensagem de erro foi: "o arquivo de reprodução parece estar corrompido".</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3447"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - A reprodução foi interrompida pois o arquivo parece estar corrompido.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3456"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>Não é possível realizar a reprodução, outra reprodução pode já estar em andamento. Tente novamente quando ela terminar.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3458"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ]  - Não é possível realizar a reprodução, outra pode já estar em andamento.
+Tente novamente quando ela terminar.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3466"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Não é possível ler o arquivo "%1", a mensagem de erro foi: "%2".</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3469"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não foi possível ler o arquivo "%1", 
+a mensagem de erro foi: "%2".</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3508"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - A reprodução terminou.</translation>
     </message>
   </context>
   <context>
@@ -4212,7 +4228,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="17"/>
       <source>ANSI 256 Color chooser</source>
-      <translation type="unfinished"/>
+      <translation>Seletor de Cor ANSI 256</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="40"/>
@@ -4221,72 +4237,75 @@ error message was: &quot;%2&quot;.</source>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small>Escolha:&lt;ul>&lt;li>uma das 16 cores básicas abaixo&lt;/li>
+&lt;li>clique no botão &lt;i>mais&lt;/i> para ter acesso a outras cores no conjunto de 256 cores e siga as instruções para selecionar uma cor dessa parte das 256 cores suportadas; se essa cor já estiver em uso, essa parte já estará sendo mostrada&lt;/li>
+&lt;li>clique nos botões &lt;i>Padrão&lt;/i> ou &lt;i>Ignorar&lt;/i> na parte inferior para outros casos especiais&lt;/li>
+&lt;li>clique em &lt;i>Cancelar&lt;/i> para fechar esta caixa de diálogo sem fazer alterações&lt;/li>&lt;/ul>&lt;/small></translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="59"/>
       <source>Basic ANSI Colors [0-15] - click a button to select that color number directly:</source>
-      <translation type="unfinished"/>
+      <translation>Cores ANSI Básicas [0-15] - clique em um botão para selecionar diretamente o número da cor:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="241"/>
       <source>ANSI 6R x 6G x 6B Colors [16-231] - adjust red, green, blue and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>Cores ANSI 6R x 6G x 6B [16-231] - ajuste o vermelho, verde, azul e clique no botão para selecionar o número da cor correspondente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="253"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Vermelho (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="263"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Verde (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="273"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Azul (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="283"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="344"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="354"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>Definir para valor RGB</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="364"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>Escala de cinza ANSI 24 [232-255] - ajuste o cinza e clique no botão para selecionar o número da cor correspondente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="376"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Cinza (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="383"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="415"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="425"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>Definir como valor de Escala de cinza</translation>
     </message>
   </context>
   <context>
@@ -4294,7 +4313,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>Compositor de notícias e mensagens</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="86"/>
@@ -4304,12 +4323,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="99"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Salvar (&lt;span style=" color:#565656;">Shift+Tab&lt;/span>)&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="102"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Salvar</translation>
     </message>
   </context>
   <context>
@@ -4317,118 +4336,118 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="25"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Selecione um perfil para se conectar</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="106"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>lista de perfis</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="367"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Remover</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="386"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copiar</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="411"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Novo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="466"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>Mensagem de boas-vindas</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="492"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome do Perfil:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="507"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>Nome do Perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="510"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>Um nome único para o perfil, mas que é limitado a um subconjunto de caracteres ASCII apenas.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="520"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Endereço do servidor:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="541"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>URL do servidor de jogo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="544"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>O nome do host da Internet ou endereço IP</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="551"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Porta:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="578"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>Porta do servidor de jogo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="486"/>
       <source>Connect to</source>
-      <translation type="unfinished"/>
+      <translation>Conectar a</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="581"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>A porta que é usada juntamente com o nome do servidor para fazer a conexão com o servidor do jogo. Se não for especificado, o padrão é 23 para conexões "Telnet". Conexões seguras podem exigir um número de porta diferente.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="600"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>Conectar através de um protocolo seguro</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="603"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>Fazer o Mudlet usar um protocolo SSL/TLS seguro em vez de um não criptografado</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="609"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Seguro:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Opções</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Histórico do perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="711"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>carregar o perfil mais recente</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="716"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>carregar o perfil mais antigo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="636"/>
@@ -4438,7 +4457,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="646"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>O nome do personagem</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="649"/>
@@ -4448,27 +4467,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="652"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Se fornecido, será enviado, juntamente com a senha, para identificar o usuário no jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="763"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>Abrir perfil automaticamente</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="766"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>Iniciar automaticamente este perfil quando o Mudlet for executado</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="779"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Reconexão automática</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="782"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>Reconectar automaticamente este perfil se ele ficar desconectado por qualquer motivo que não seja o usuário se desconectando do servidor do jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="675"/>
@@ -4478,23 +4497,23 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="678"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Se fornecido, será enviado, juntamente com o nome do personagem, para identificar o usuário no jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="727"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>Ativar integração com o Discord (não suportado pelo jogo)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="733"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>Permitir que este perfil utilize os recursos de "Rich Presence" do Discord do Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
       <location filename="../src/ui/connection_profiles.ui" line="871"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Descrição do jogo ou suas anotações</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="662"/>
@@ -4504,32 +4523,32 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="672"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Senha do personagem. Note que a senha não é criptografada no armazenamento</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="760"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>Com isso ativado, o Mudlet irá iniciar e conectar automaticamente neste perfil quando for lançado</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="772"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Abrir perfil ao iniciar o Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="788"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Reconectar automaticamente</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="730"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Integração com o Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="811"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Informativo</translation>
     </message>
   </context>
   <context>
@@ -4537,12 +4556,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="27"/>
       <source>Custom Line Properties [*]</source>
-      <translation type="unfinished"/>
+      <translation>Propriedades Personalizadas de Linha [*]</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="47"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Configurações de Linha:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="85"/>
@@ -4552,37 +4571,37 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="59"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Estilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="44"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Selecione o Estilo, Cor e se deseja terminar a linha com uma seta.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="123"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Termina com uma seta:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="139"/>
       <source>Exit Details:</source>
-      <translation type="unfinished"/>
+      <translation>Detalhes da Saída:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="154"/>
       <source>Origin:</source>
-      <translation type="unfinished"/>
+      <translation>Origem:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="227"/>
       <source>Destination:</source>
-      <translation type="unfinished"/>
+      <translation>Destino:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="189"/>
       <source>    Direction/Command:</source>
-      <translation type="unfinished"/>
+      <translation>    Direção/Comando:</translation>
     </message>
   </context>
   <context>
@@ -4590,27 +4609,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="14"/>
       <source>Custom Line selection</source>
-      <translation type="unfinished"/>
+      <translation>Seleção de Linha Personalizada</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="45"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>Escolha o formato da linha, cor e opção de seta e depois selecione a saída para começar a desenhar</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="64"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Configurações da Linha:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="172"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Termina com uma seta:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="76"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Estilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="118"/>
@@ -4620,123 +4639,124 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="48"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecionar uma saída imediatamente procede ao desenho do segmento de primeira linha a partir do ponto central da sala.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="61"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Selecione o Estilo, Cor e se deseja terminar a linha com uma seta ANTES de escolher a saída para desenhar a linha...&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="188"/>
       <source>&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Selecione uma saída normal para começar a desenhar uma linha personalizada para ela, os botões são mostrados pressionados se eles já possuem uma linha personalizada e desabilitados se não houver saída naquela direção.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="191"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Saídas Normais:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="213"/>
       <source>NW</source>
-      <translation type="unfinished"/>
+      <translation>NW</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="236"/>
       <source>N</source>
-      <translation type="unfinished"/>
+      <translation>N</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="259"/>
       <source>NE</source>
-      <translation type="unfinished"/>
+      <translation>NE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="298"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>UP</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="337"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>W</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="347"/>
       <source>E</source>
-      <translation type="unfinished"/>
+      <translation>E</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="357"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>EM</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="383"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>FORA</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="393"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>SW</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="403"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>S</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="413"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>SE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="423"/>
       <source>DOWN</source>
-      <translation type="unfinished"/>
+      <translation>Baixo</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="445"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecione uma saída especial para começar a desenhar uma linha para ela, a primeira coluna é marcada se a saída já tiver essa linha personalizada.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="504"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Indica se já existe uma linha personalizada para esta saída especial, será substituída se a saída for selecionada.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="515"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>O quarto para onde esta saída especial leva.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="526"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;O comando ou script LUA que vai para a sala indicada.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="562"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Para remover uma linha personalizada: cancele este diálogo, selecione a linha e clique com o botão direito do mouse para obter uma &amp;quot;opção&amp;quot; de excluir.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="448"/>
       <source>Special Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Saídas Especiais:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="500"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>Tem
+linha personalizada?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="512"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Destino </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="523"/>
@@ -4754,14 +4774,16 @@ custom line?</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="14"/>
       <source>Confirm permanent profile deletion</source>
-      <translation type="unfinished"/>
+      <translation>Confirmar exclusão permanente de perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="26"/>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Tem certeza de que deseja excluir este perfil? Tudo (apelidos, gatilhos, backups e etc) será perdido.
+
+Se sim, digite o nome do perfil como confirmação:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="77"/>
@@ -4785,24 +4807,26 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation type="unfinished"/>
+      <translation>Símbolo
+(Definir Fonte)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
       <source>Symbol
 (All Fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Símbolo
+(Todas as Fontes)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>Pontos de código</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
       <source>Usage
 Count</source>
-      <translation type="unfinished"/>
+      <translation>Contagem de uso</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
@@ -4822,7 +4846,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5577"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5579"/>
@@ -4834,7 +4858,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5581"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>e 	</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5583"/>
@@ -4846,7 +4870,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5585"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5587"/>
@@ -4858,7 +4882,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5589"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>w</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5591"/>
@@ -4870,7 +4894,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5593"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5595"/>
@@ -4882,7 +4906,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5597"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5599"/>
@@ -4894,7 +4918,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5601"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5603"/>
@@ -4906,7 +4930,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5605"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5607"/>
@@ -4918,7 +4942,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5609"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5611"/>
@@ -4930,7 +4954,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5613"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5615"/>
@@ -4942,7 +4966,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5617"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5619"/>
@@ -4954,7 +4978,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5621"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
   </context>
   <context>
@@ -4967,7 +4991,12 @@ Count</source>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Página inicial&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Fóruns&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentação&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discordlt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Código-fonte&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Recursos/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="246"/>
@@ -4977,296 +5006,306 @@ Count</source>
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Outros também marcaram a sua presença em diferentes aspectos do projecto Mudlet e, se não foram aqui mencionados, não é de modo algum intencional! Para colaboradores anteriores você pode vê-los mencionados na lista &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; (no nosso antigo site de rastreamento de bug), ou para contribuidores contínuos, eles podem ser incluídos na lista &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Colaboradores&lt;/a&gt;&lt;/b&gt; no GitHub.&lt;/p&gt;
+&lt;br&gt;
+&lt;p&gt;Muitos ícones são retirados do tema &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 oxygen&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; em &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; ou &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;. A maior parte do restante é de Thorsten Wilms, ou de Stephen Lyon, que combina pedaços do trabalho de Thorsten&apos;com as outras fontes.&lt;/p&gt;
+&lt;p&gt;Agradecimentos especiais a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; e &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. Eles Contribuíram com muitas ideias positivas e contribuíram assim para melhorar substancialmente o quadro de programação.&lt;/p&gt;
+&lt;p&gt;Obrigado a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) que nos juntou e nos inspirou com seu projeto KMuddy. Mudlet está usando um pouco do código do telnet que ele escreveu para seu projeto KMuddy (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;Um agradecimento especial à &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) por nos dar alguns conselhos valiosos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="291"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet foi originalmente escrito por Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
+&lt;p&gt;Mudlet é lançado sob a licença GPL versão 2, que é reproduzida abaixo:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="587"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; é construído sobre os ombros de outros projetos no mundo FOSS; além de utilizar muitos componentes do GPL também fazemos uso de alguns software de terceiros com outras licenças:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="829"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Biblioteca Comuni IRC&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 O Projeto Comuni&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="832"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Partes de &lt;tt&gt;irctextformat.cpp&lt;/t&gt; O código vem do Konversation e tem direitos autorais para:&lt;br&gt;Direitos autorais © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Direitos autorais © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Direitos autorais © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Direitos autorais © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="838"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="841"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2003-2020, Projeto Kepler&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="844"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lua_yajl - Interface Lua 5.1 para yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Brian Maher &amp;lt;maherb em brimworks dot com&amp;gt;&lt;br&gt;Direitos autorais © 2009 Brian Maher&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="848"/>
       <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Luautf8 - Um módulo de suporte UTF-8 para Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2018 Xavier Wang&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="851"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Conectividade de banco de dados para a linguagem de programação Lua (componente Sqlite3).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2003-2019, O Projeto Kepler&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="854"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre -  Regular expression library binding (PCRE flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre - Associação de biblioteca de expressões regulares (sabor PCRE).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © Reuben Thomas 2000-2020&lt;br&gt;Direitos autorais © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="865"/>
       <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Edbee - widget editor de vários recursos&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 por Reliable Bits Software por Blommers IT&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="883"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Qt-Componentes, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [link quebrado]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Máquina de Wayback&amp;quot; versão arquivada}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Direitos autorais © 2013, Razvan Petru&lt;br&gt;Todos os direitos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="890"/>
       <source>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2017 Philipp Medien&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="911"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Cola brilhante&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2008 Remko Troncon&lt;br&gt;Direitos autorais © 2017 Vadim Peretokin&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="923"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - parte do KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, uma empresa do Grupo KDAB, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="927"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifica as funções Lua padrão para que funcionem com nomes de arquivos UTF-8 no Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2019 Egor-Skriptunoff&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="859"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - Lendo arquivos dentro de arquivos zip&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Danilo Tuler&lt;br&gt;Direitos autorais © 2003-2007 Projeto Kepler&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="153"/>
       <source>Original author, original project lead, Mudlet core coding, retired.</source>
       <extracomment>about:Heiko</extracomment>
-      <translation type="unfinished"/>
+      <translation>Autor original, líder do projeto original, codificação principal do Mudlet, aposentado.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="156"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <extracomment>about:Vadi</extracomment>
-      <translation type="unfinished"/>
+      <translation>Design de GUI e planejamento inicial de recursos. Ele é responsável pela página inicial do projeto e pelo manual do usuário. Mantenedor dos instaladores Windows, macOS, Ubuntu e Linux genérico. Mantém o wiki Mudlet, API Lua e lida com gerenciamento de projetos, relações públicas &amp; Ajuda do usuário. Com o projeto desde o início e é um porta-voz oficial do projeto. Desde a aposentadoria de Heiko, ele se tornou o chefe do projeto Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="163"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <extracomment>about:SlySven</extracomment>
-      <translation type="unfinished"/>
+      <translation>Depois de ingressar em 2013, ele cutucou vários bits do código C++ e da GUI com uma vara pontiaguda; posteriormente tentando remendar alguns dos buracos feitos / encontrados. Mais recentemente, ele tem trabalhado em I18n e L10n para o Mudlet 4.0.0, então se você estiver jogando Mudlet em um idioma diferente do inglês americano, verá os resultados dele se cansando das diferenças de ortografia entre o que estava sendo usado e o inglês britânico que seu cérebro queria ver.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="170"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <extracomment>about:demonnic</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ex-mantenedor dos primeiros pacotes Windows e Apple OSX. Ele também administra nosso servidor e ajuda o projeto de várias maneiras.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="174"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <extracomment>about:keneanung</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuiu com muitas melhorias para o Mudlet&apos;s db: interface, sistema de eventos, e está no projeto há muito tempo enquanto auxilia os usuários.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="178"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <extracomment>about:Leris</extracomment>
-      <translation type="unfinished"/>
+      <translation>Faz uma tonelada de trabalho para tornar o Mudlet, o site e o wiki acessíveis a você, independentemente do idioma que você fala - e promover nosso gênero!</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="182"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <extracomment>about:ahmedcharles</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuições para a integração do Travis, compilação do CMake e do Visual C++, muitas melhorias na qualidade do código e no gerenciamento de memória.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="186"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <extracomment>about:Chris7</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desenvolveu um sistema de módulos compartilhados que permite que pacotes de códigos sejam compartilhados entre perfis, uma interface do usuário para visualização de variáveis Lua, melhorias no mapeador e tudo mais.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="190"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <extracomment>about:Ben Carlsen</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desenvolveu a primeira versão do nosso instalador do Mac OSX. Ele é o ex-mantenedor da versão para Mac do Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="194"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <extracomment>about:Ben Smith</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ingressou em dezembro de 2009, embora ele&apos;esteja por aí há muito mais tempo. Contribuiu para a API Lua e é o ex-mantenedor da API Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="198"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <extracomment>about:Blaine von Roeder</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ingressou em dezembro de 2009. Ele contribuiu para a API Lua, enviou pequenos patches de correção de bugs e ajudou no gerenciamento de versões 1.0.5.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="202"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <extracomment>about:Bruno Bigras</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desenvolveu o script de compilação original do cmake e ele cometeu vários patches.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="205"/>
       <source>Contributed to the Lua API.</source>
       <extracomment>about:Carter Dewey</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuiu para a API Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="208"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <extracomment>about:Oneymus</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desenvolveu o Vyzor GUI Manager para o Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="211"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <extracomment>about:TheFae</extracomment>
-      <translation type="unfinished"/>
+      <translation>Fez maravilhas em rejuvenescer nosso site em 2017, mas prefere um pouco de anonimato - se você é um &lt;i&gt;SpamBot&lt;/i&gt; você não entrará em nossos Fóruns agora. Eles também fizeram algumas contribuições úteis de código principal C ++ e estamos ansiosos para futuras revisões e trabalhos nessa área.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="216"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <extracomment>about:Dicene</extracomment>
-      <translation type="unfinished"/>
+      <translation>Juntando-se a nós em 2017, eles nos deram algumas contribuições úteis em C++ e Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="219"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <extracomment>about:James Younquist</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuiu com o gerenciador de layout de Geyser para o Mudlet em março de 2010. Ele é escrito em Lua e visa simplificar os scripts da GUI do usuário.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="223"/>
       <source>Helped develop and debug the Lua API.</source>
       <extracomment>about:John Dahlström</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ajudou a desenvolver e depurar a API Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="226"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <extracomment>about:Beliaar</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuiu com várias melhorias e novos recursos para o Geyser.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="229"/>
       <source>The original author of our Windows installer.</source>
       <extracomment>about:Leigh Stillard</extracomment>
-      <translation type="unfinished"/>
+      <translation>O autor original do nosso instalador do Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="232"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <extracomment>about:Maksym Grinenko</extracomment>
-      <translation type="unfinished"/>
+      <translation>Trabalhou no manual, ajuda no fórum e ajuda com o design e documentação da GUI.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="235"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <extracomment>about:Stephen Hansen</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desenvolveu uma API Lua de banco de dados que permite o uso muito mais fácil de bancos de dados e um dos instaladores OSX originais.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="238"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <extracomment>about:Thorsten Wilms</extracomment>
-      <translation type="unfinished"/>
+      <translation>Projetou nosso lindo logotipo, nossa tela inicial, o diálogo sobre, nosso site, vários ícones e emblemas. Visite sua página inicial em &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="868"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation type="unfinished"/>
+      <translation>O &lt;b&gt;edbee-lib&lt;/b&gt; O próprio widget incorpora outros componentes com licenças que também devem ser observados, são eles:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="870"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENÇA&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Direitos autorais © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;Todos os direitos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="875"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LICENÇA Oniguruma&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Todos os direitos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="879"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Rubi BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;Todos os direitos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="893"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Sparkle - Atualizador do macOS&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2006-2013 Andy Matuschak.&lt;br&gt;Direitos autorais © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Direitos autorais © 2011-2014 Kornel Lesiński.&lt;br&gt;Direitos autorais © 2015-2017 Mayur Pawashe.&lt;br&gt;Direitos autorais © 2014 C.W. Betts.&lt;br&gt;Direitos autorais © 2014 Petroules Corporation.&lt;br&gt;Direitos autorais © 2014 Big Nerd Ranch.&lt;br&gt;Todos os direitos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="903"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h4&gt;bspatch.c e bsdiff.c, a partir de bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Direitos autorais © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c e sais.c, de sais-lite (07/08/2010) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Direitos autorais © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Direitos autorais © 2011 Mark Hamlin.&lt;br&gt;Todos os direitos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="917"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - Biblioteca RPC&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="920"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;QtKeyChain - API Qt independente de plataforma para armazenar senhas com segurança&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Direitos autorais © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1089"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Essas pessoas formidáveis serão lembradas com carinho para sempre&lt;br&gt;por seu generoso apoio financeiro ao Patreon do Mudlet&apos; 
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1097"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Essas pessoas formidáveis serão lembradas com carinho para sempre&lt;br&gt;pelo seu generoso apoio financeiro à &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1133"/>
       <source>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</source>
-      <translation type="unfinished"/>
+      <translation>Você está usando a versão de 32 bits do Mudlet em uma versão de 64 bits do Windows. Você pode querer atualizar (baixando e instalando a versão de 64 bits agora disponível no Mudlet&apos;s).</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1136"/>
       <source>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</source>
-      <translation type="unfinished"/>
+      <translation>Esta é uma versão de 32 bits do Mudlet em execução em uma versão de 64 bits do Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1149"/>
@@ -5274,7 +5313,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1236"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1266"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>Informações técnicas:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1150"/>
@@ -5282,7 +5321,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1237"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1267"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versão</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1152"/>
@@ -5290,20 +5329,20 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1239"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1269"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>OS</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1157"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1203"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-      <translation type="unfinished"/>
+      <translation>CPU (WoW64)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1164"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1210"/>
       <source>CPU (%1-bits)</source>
-      <translation type="unfinished"/>
+      <translation>CPU (%1-bits)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1169"/>
@@ -5312,28 +5351,28 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1272"/>
       <source>CPU</source>
       <extracomment>This is shown for all other OSes than Windows.</extracomment>
-      <translation type="unfinished"/>
+      <translation>CPU</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1175"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1248"/>
       <source>Qt version (compilation)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versão Qt (compilação)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1181"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1254"/>
       <source>Qt version (run-time)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versão do Qt (tempo de execução)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1221"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1277"/>
       <source>Qt version</source>
       <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versão Qt</translation>
     </message>
   </context>
   <context>
@@ -5342,7 +5381,7 @@ Count</source>
       <location filename="../src/dlgAliasMainArea.cpp" line="37"/>
       <source>for example, ^myalias$ to match &apos;myalias&apos;</source>
       <extracomment>This text is shown as placeholder in the pattern box when no real pattern was entered, yet.</extracomment>
-      <translation type="unfinished"/>
+      <translation>por exemplo, ^myalias$ para corresponder &apos;myalias&apos;</translation>
     </message>
   </context>
   <context>
@@ -5350,12 +5389,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation type="unfinished"/>
+      <translation>Mais cores</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
       <source>Click to access all 256 ANSI colors.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para acessar todas as 256 cores ANSI.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -5365,32 +5404,33 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para fazer com que o gatilho de cor ignore o texto&apos;s cor de fundo - no entanto, escolher isso para o primeiro plano e o plano de fundo é um erro.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para fazer com que o gatilho de cor ignore o texto&apos;s cor do primeiro plano - no entanto, escolher isso para o primeiro plano e o plano de fundo é um erro.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para fazer a cor disparar quando 
+ a cor de fundo do texto não foi modificada de seu valor normal.&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para fazer a cor disparar quando a cor de primeiro plano do texto não foi modificada de seu valor normal&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Clique em uma cor para fazer o gatilho disparar somente quando a cor de fundo do texto combinar com o número indicado &apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Clique em uma cor para fazer o gatilho disparar somente quando o texto&apos;A cor do primeiro plano corresponde ao número de cor indicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
