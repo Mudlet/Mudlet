@@ -510,9 +510,40 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
 #
 # * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+#   commands for suboptions - change the value to 2 to get a bit more detail
+#   about the size or nature of the command:
 target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+#   the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_UTF8_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+#   it is not the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_GB_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+#   single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_BIG5_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+#   the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_EUC_KR_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+#   target_compile_definitions(mudlet PRIVATE DEBUG_SGR_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# target_compile_definitions(mudlet PRIVATE DEBUG_OSC_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+#   there is not much against this item at present {only an announcement of the
+#   type (?) of an `\x1b[?z` received}:
+# target_compile_definitions(mudlet PRIVATE DEBUG_MXP_PROCESSING)
+#
+# * Enable the features associated with reporting problems in processing Unicode
+#   codepoints that cannot be displayed on screen in a `TConsole`:
+# target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
