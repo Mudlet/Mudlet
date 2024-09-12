@@ -1827,7 +1827,7 @@ Tentou estes locais:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1427"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ] - ... Falha na solicitação de recarregamento do Mapa do Sistema.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1454"/>
@@ -1835,73 +1835,75 @@ Tentou estes locais:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      Estatísticas do sistema |
++--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1465"/>
       <source>GMCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos GMCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1470"/>
       <source>ATCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos ATCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1475"/>
       <source>Channel102 events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos do Canal102:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1480"/>
       <source>MSSP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos MSSP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1486"/>
       <source>MSDP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos MSDP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1498"/>
       <source>Trigger Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Relatório de Disparos:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1503"/>
       <source>Timer Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Relatório do temporizador:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1508"/>
       <source>Alias Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Relatório de alias:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1513"/>
       <source>Keybinding Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Relatório de Teclado:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1518"/>
       <source>Script Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Relatório de script:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Relatório Gif:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1578"/>
@@ -1916,12 +1918,12 @@ Tentou estes locais:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível salvar o perfil</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Desculpe, não foi possível salvar seu perfil como &quot;%1&quot; - Recebi o seguinte erro: &quot;%2&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1929,37 +1931,37 @@ Tentou estes locais:
     <message>
       <location filename="../src/TMap.cpp" line="136"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>ID da sala =%1 não existe, não pode definir AreaID=%2 para quarto inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="147"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>IDda área=%2 não existe, não é possível definir RoomID=%1 para a área inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="557"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO]-CONVERTING: rótulo de estilo antigo, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="560"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Convertendo o rótulo de estilo antigo id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="565"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ AVISO ] - CONVERTENDO: não é possível converter rótulo antigo em área com ID: %1, o ID do rótulo é: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="568"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[AVISO] - CONVERTENDO: não é possível converter rótulo no estilo antigo com ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="597"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[OK]-Auditório do mapa concluído (%1s). Aproveite o seu jogo ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="604"/>
@@ -3659,7 +3661,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TToolBar.cpp" line="75"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Barra de ferramentas - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3747,7 +3749,7 @@ Gostaria de atualizar agora?</translation>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="192"/>
       <source>There are currently no updates available.</source>
-      <translation>Atualmente, não há atualizações disponíveis.</translation>
+      <translation>Atualmente não há atualizações disponíveis.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="208"/>
@@ -3767,7 +3769,7 @@ Gostaria de atualizar agora?</translation>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="388"/>
       <source>Install update now</source>
-      <translation>Instalar atualização agora</translation>
+      <translation>Instale a atualização agora</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
@@ -3810,7 +3812,7 @@ Gostaria de atualizar agora?</translation>
     <message>
       <location filename="../src/VarUnit.cpp" line="90"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation>As variáveis marcadas serão salvas e carregadas com seu perfil.</translation>
+      <translation>As variáveis selecionadas serão salvas e carregadas com o seu perfil.</translation>
     </message>
   </context>
   <context>
@@ -3821,30 +3823,30 @@ Gostaria de atualizar agora?</translation>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation>[ ALERTA ] - Desculpe, o arquivo que está sendo lido:
-&quot;%1&quot;
-relata que tem uma versão (%2) deve ter vindo de uma versão posterior do Mudlet,
-e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
+      <translation>[ ALERTA ] - Desculpe, o arquivo sendo lido:
+"%1"
+relata que ele possui uma versão (%2) que deve ter vindo de uma versão mais recente do Mudlet,
+e esta não consegue lê-lo, você precisa do Mudlet mais atualizado!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="359"/>
       <source>Parsing area data...</source>
-      <translation>Analisando dados de área...</translation>
+      <translation>Analisando dados da área...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="363"/>
       <source>Parsing room data...</source>
-      <translation>Analisando dados da sala...</translation>
+      <translation>Analisando dados do quarto...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="367"/>
       <source>Parsing environment data...</source>
-      <translation>Analisando dados do ambiente...</translation>
+      <translation>Analisando os dados do ambiente...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="375"/>
       <source>Assigning rooms to their areas...</source>
-      <translation>Atribuindo quartos às suas áreas...</translation>
+      <translation>Atribuindo salas às suas áreas...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="584"/>
@@ -5490,7 +5492,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Preto</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
@@ -6908,7 +6910,7 @@ e há espaço suficiente. A operação de cópia falhou.</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="224"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; or &lt;b&gt;EUC-KR&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alguns MUDs do Leste Asiático podem usar glifos (caracteres) que o Unicode classifica como sendo de &lt;i&gt;Ambíguo&lt;/i&gt; largura quando desenhada em uma fonte com um chamado &lt;i&gt;fixo&lt;/i&gt; campo; na verdade, esse texto é &lt;i&gt;duo-espaçado&lt;/i&gt; quando não estiver usando uma fonte proporcional. Esses símbolos podem ser desenhados usando metade ou todo o espaço de um caractere completo. Por padrão, o Mudlet tenta escolher a largura certa automaticamente, mas você pode substituir a configuração de cada perfil.&lt;/p&gt;&lt;p&gt;Esse controle tem três configurações:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Desmarcada&lt;/b&gt; &apos;&lt;i&gt;estreito&lt;/i&gt;&apos; = Desenhe caracteres de largura ambíguos em um único &apos;espaço&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Verificado&lt;/b&gt; &apos;&lt;i&gt;largo&lt;/i&gt;&apos; = Desenhe caracteres de largura ambíguos dois &apos;Espaços&apos; largo.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Parcialmente verificado&lt;/b&gt; &lt;i&gt;(Padrão) &apos;Automático&apos;&lt;/i&gt; = Utilização &apos;largo&apos; configuração para codificações do servidor MUD de &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; ou &lt;b&gt;EUC-KR&lt;/b&gt; e &apos;estreito&apos; para todos os outros.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Este é um arranjo temporário e provavelmente mudará quando o Mudlet ganhar suporte total para outros idiomas além do inglês.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="236"/>
@@ -7358,7 +7360,16 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
  • enter a space to clear any existing symbols</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Para alterar o símbolo de todos as %n sala(s) selecionado(s), por favor, escolha:
+ • um símbolo existente da lista abaixo (classificado primeiro pelo mais comumente usado)
+ • Insira um ou mais grafemas (&quot;Caracteres visíveis&quot;) como um novo símbolo
+ • insira um espaço para limpar quaisquer símbolos existentes</numerusform>
+        <numerusform>Para alterar o símbolo para todos os %n quartos (s) selecionados, escolha:
+ • um símbolo existente da lista abaixo (classificada por mais comumente usada primeiro)
+ • digite um ou mais grafemas (&quot;caracteres visíveis&quot;) como novo símbolo
+ • digite um espaço para limpar quaisquer símbolos existentes</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="246"/>
@@ -13966,62 +13977,63 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
       <location filename="../src/ui/room_exits.ui" line="1973"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>Saída
+Status</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1977"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Indica se a saída é inválida, leva a outra sala nesta área ou leva a uma sala em outra área.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2013"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;símbolo de porta verde (aberta) é desenhado no mapa 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2022"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Símbolo de porta laranja (fechada) é desenhado no Mapa 2D.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2031"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Símbolo de porta vermelha (Bloqueada) é desenhado no mapa 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2108"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Use este botão para salvar quaisquer alterações, também removerá quaisquer saídas especiais inválidas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2124"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Use este botão para fechar o diálogo sem alterar nada.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1968"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Defina o número da sala para a qual essa saída leva, se definido como zero, a saída será removida ao salvar as saídas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Adicione um item vazio às saídas especiais a serem editadas conforme necessário.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2076"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aperte este botão para desativar a seleção de uma saída especial.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Salvar</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1720"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Saída Peso (0 = Sem substituição)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2127"/>
@@ -14031,75 +14043,82 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1921"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Saídas Especiais:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1964"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Sair
+ID da sala</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1982"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum
+Rota</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>Sair
+Peso</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1995"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Definir um valor inteiro positivo para substituir o peso padrão (quarto) para usar esta rota, um valor zero atribui o padrão.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2000"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+Nenhuma</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2009"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+aberta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2018"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+fechada</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2027"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+Trancada</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2036"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Comando ou script Lua</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2040"/>
       <source>&lt;p&gt;Some mapper scripts may require prefixing the keyword &quot;script:&quot;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Alguns scripts de mapeador podem exigir o prefixo da palavra-chave &quot;roteiro:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2060"/>
       <source>&amp;Add special exit</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Adicionar saída especial</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2079"/>
       <source>&amp;End S. Exits editing</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Finalizar S. Edição de saídas</translation>
     </message>
   </context>
   <context>
@@ -14107,7 +14126,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="20"/>
       <source>Room properties</source>
-      <translation type="unfinished"/>
+      <translation>Propriedades da sala</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
@@ -14117,17 +14136,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
       <source>Room name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome da Sala...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="61"/>
       <source>Icon:</source>
-      <translation type="unfinished"/>
+      <translation>Ícone:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Definir a cor da sala</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -14137,33 +14156,33 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
       <source>Room symbol...</source>
-      <translation type="unfinished"/>
+      <translation>Símbolo da sala ...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Cor a ser usada para os símbolos de quarto</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Definir cor do símbolo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Redefinir</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Pathfinding</source>
-      <translation type="unfinished"/>
+      <translation>Encontrar o caminho</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>1 (default)</source>
-      <translation type="unfinished"/>
+      <translation>1 (padrão)</translation>
     </message>
   </context>
   <context>
@@ -14176,42 +14195,42 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function within the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Escolha um bem, (idealmente, embora não precise ser, exclusivo) nome para o seu script ou grupo de script. Isto será exibido na árvore de script.&lt;/p&gt;&lt;p&gt;Se uma função dentro do script deve ser usada para tratar eventos inseridos na lista abaixo de &lt;b&gt;&lt;u&gt;ele deve ter o mesmo nome que está inserido aqui.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="61"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="90"/>
       <source>Registered Event Handlers:</source>
-      <translation type="unfinished"/>
+      <translation>Manipuladores de Eventos Registrados:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="137"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Remover (selecionado) manipulador de eventos da lista.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="140"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="147"/>
       <source>Add User Event Handler:</source>
-      <translation type="unfinished"/>
+      <translation>Adicionar Manipulador de Eventos do Usuário:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="181"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Adicionar nome do manipulador de eventos digitado para listar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="184"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -14219,17 +14238,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>Mover salas para outra área</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation type="unfinished"/>
+      <translation>Para qual área você gostaria de mover a(s) sala(s)?</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="36"/>
       <source>Input new area name to create one.</source>
-      <translation type="unfinished"/>
+      <translation>Digite um novo nome de área para criar uma.</translation>
     </message>
   </context>
   <context>
@@ -14237,7 +14256,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="26"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>Formulário</translation>
     </message>
   </context>
   <context>
@@ -14245,12 +14264,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>Procurar</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="87"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>Substituir</translation>
     </message>
   </context>
   <context>
@@ -14268,67 +14287,67 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;milissegundos&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="220"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>Tempo:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Escolha um bem, (idealmente, embora não precise ser, exclusivo) nome para o seu timer, cronômetro de deslocamento ou cronômetro. Isso será exibido na árvore do temporizador.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="67"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="141"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;horas&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="156"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;minutos&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="171"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;segundos&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;A &lt;b&gt;hora&lt;/b&gt; parte do intervalo que o cronômetro irá desligar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="440"/>
       <source>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;O &lt;b&gt;milissegundo&lt;/b&gt; parte do intervalo que o temporizador irá desliga em (1000 milissegundos = 1 second).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="310"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;O &lt;b&gt;minuto&lt;/b&gt; parte do intervalo que o temporizador irá desligar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="126"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Insira um ou mais comandos a serem usados se o comando fornecido corresponder ao padrão. (Opcional)&lt;/p&gt;&lt;p&gt;Pode ser outro alias ou um comando para enviar diretamente para o jogo. Para comandos complexos que requerem modificação de variáveis dentro deste perfil, use um script Lua na área do editor abaixo. Ela&apos;é possível usar este campo e um script Lua - o conteúdo deste campo será usado antes de executar o script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="129"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto para enviar ao jogo (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="375"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>A segunda parte do intervalo em que o temporizador vai disparar.&lt;/p></translation>
     </message>
   </context>
   <context>
@@ -14343,22 +14362,22 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="590"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar as variáveis normalmente ocultas</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="476"/>
       <source>&lt;p&gt;Enter text here to search through your code.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Digite o texto aqui para pesquisar através do seu código.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="510"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Ativa ou desativa a exibição da área de resultados da busca.&lt;/p></translation>
     </message>
   </context>
   <context>
@@ -14371,7 +14390,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Use este controle para mostrar ou ocultar os controles extras para o gatilho; isso pode ser usado para permitir mais espaço para mostrar os &lt;i>itens&lt;/i> de gatilho em uma tela menor.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="111"/>
@@ -14381,53 +14400,54 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="155"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="251"/>
       <source>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;O gatilho só disparará se &lt;u&gt;todas as&lt;/u&gt; condições da lista tiverem sido atendidas dentro do delta de linha especificado, e as capturas serão salvas em &lt;tt&gt;multipartidas&lt;/tt&gt; em vez de &lt;tt&gt;partidas&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Se essa opção for &lt;b&gt;não&lt;/b&gt; set o gatilho disparará se &lt;u&gt;qualquer condição de&lt;/u&gt; na lista tiver sido atendida.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="258"/>
       <source>AND / Multi-line (delta)</source>
-      <translation type="unfinished"/>
+      <translation>E / Multilinha (delta)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="310"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Quando marcado, apenas o conteúdo filtrado (=grupos de captura) será repassado para os gatilhos filhos, e não a linha inicial (consulte o manual sobre filtros).&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="316"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>somente passar correspondências</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="352"/>
       <source>Do not pass whole line to children.</source>
-      <translation type="unfinished"/>
+      <translation>Não repasse a linha inteira para os filhos.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="374"/>
       <source>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Escolha esta opção se você deseja incluir todas as correspondências possíveis do padrão na linha.&lt;/p>&lt;p>Sem esta opção, a correspondência do padrão será interrompida após a primeira correspondência bem-sucedida.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="465"/>
       <source>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Continue disparando o script para isso muitas mais linhas, depois que o gatilho ou cadeia correspondeu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="471"/>
       <source>fire length (extra lines)</source>
-      <translation type="unfinished"/>
+      <translation>comprimento do fogo (linhas extras)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="529"/>
       <source>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Reproduzir um arquivo de som se o disparo disparar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
@@ -14435,22 +14455,23 @@ or LUA script</source>
 &lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</source>
       <comment>This is the button used to select a sound file to be played when a trigger fires.</comment>
       <extracomment>Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Use isso para abrir um diálogo de seleção de arquivos para encontrar um arquivo de som para tocar quando o disparo disparar.&lt;/p&gt;
+&lt;p&gt;&lt;i&gt;Cancelamento do diálogo de arquivo não fará nenhuma alteração; para limpar o arquivo utilize o botão claro para o direito do display de nome do arquivo.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="578"/>
       <source>Choose file...</source>
-      <translation type="unfinished"/>
+      <translation>Selecionar Arquivo…</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="609"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>nenhum arquivo</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="670"/>
       <source>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Habilite isso para destacar o texto correspondente, alterando as cores da fore e do fundo para os selecionados aqui.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="713"/>
@@ -14462,7 +14483,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="742"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>guardar</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="703"/>
@@ -14472,58 +14493,58 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="532"/>
       <source>play sound</source>
-      <translation type="unfinished"/>
+      <translation>reproduzir som</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="78"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Escolha um bem, (idealmente, embora não precise ser, exclusivo) nome para o seu timer, cronômetro de deslocamento ou cronômetro. Isso será exibido na árvore do temporizador.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Insira um ou mais comandos a serem usados se o comando fornecido corresponder ao padrão. (Opcional)&lt;/p&gt;&lt;p&gt;Pode ser outro alias ou um comando para enviar diretamente para o jogo. Para comandos complexos que requerem modificação de variáveis dentro deste perfil, use um script Lua na área do editor abaixo. Ela&apos;é possível usar este campo e um script Lua - o conteúdo deste campo será usado antes de executar o script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto para enviar ao jogo (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="297"/>
       <source>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dentro de quantas linhas todas as condições devem ser verdadeiras para disparar o gatilho?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="380"/>
       <source>match all</source>
-      <translation type="unfinished"/>
+      <translation>corresponder a todos</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="410"/>
       <source>Match all occurrences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Combine todas as ocorrências do padrão na linha.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="513"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Quantas linhas mais, depois da que disparou o gatilho, deve ser passada para o gatilho&apos;s crianças?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="600"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
-      <translation type="unfinished"/>
+      <translation>Arquivo de som para reproduzir quando o gatilho disparar.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="622"/>
       <source>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Clique para remover o conjunto de arquivos de som para este disparo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="676"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>destacar</translation>
     </message>
   </context>
   <context>
@@ -14531,17 +14552,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="124"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Cor do primeiro plano ignorada</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="148"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo ignorada</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="175"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>corresponder na linha do prompt</translation>
     </message>
   </context>
   <context>
@@ -14554,81 +14575,81 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="94"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>⏴ Tipo de chave:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="81"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Configure a variável global &lt;i&gt;&lt;/i&gt; ou a entrada de tabela &lt;i&gt;&lt;/i&gt; nome aqui. O nome tem que começar com uma letra, mas pode conter uma mistura de letras e números.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="114"/>
       <location filename="../src/ui/vars_main_area.ui" line="171"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Auto-Tipo</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
       <source>Variable name ...</source>
-      <translation type="unfinished"/>
+      <translation>Nome da variável ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="107"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tabelas podem armazenar valores em uma lista e/ou um hashmap. Rformat@@1&lt;p&gt;Em um &lt;b&gt;lista&lt;/b&gt;, &lt;i&gt;chaves indexadas exclusivas&lt;/i&gt; representam valores - então você pode ter valores em &lt;i&gt;1, 2, 3. .&lt;/i&gt;&lt;/p&gt;&lt;p&gt;Em um mapa &lt;b&gt;&lt;/b&gt; {a. .a. Um &lt;i&gt;array associativo}&lt;/i&gt;, &lt;i&gt;chaves exclusivas&lt;/i&gt; representam valores - para que possa ter valores sob qualquer identificador que queira (teoricamente até uma função ou outra entidade lua, embora esta GUI suporte apenas strings).&lt;/p&gt;&lt;p&gt;Isso, para uma tabela recém-criada (grupo) seleciona sempre que você deseja que sua tabela seja indexada ou associativa.&lt;/p&gt;&lt;p&gt;Em outros casos exibe outras entidades (&lt;span style=&quot; font-style:italic;&quot;&gt;funções&lt;/span&gt;) que não podem ser modificadas a partir daqui.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="119"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>chave (string)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="124"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>índice (inteiro)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="129"/>
       <location filename="../src/ui/vars_main_area.ui" line="191"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>tabela</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="134"/>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>função (não é possível criar a partir da GUI)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="144"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Se marcado, este item (e seus filhos, se aplicável) não será exibido na área à esquerda, a menos que a opção &lt;b>Mostrar variáveis normalmente ocultas&lt;/b> esteja marcada.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="147"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>variável oculta</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Tipo de valor:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="176"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>string</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="181"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>Número</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="186"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>booleano</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="196"/>
