@@ -6619,6 +6619,12 @@ int TLuaInterpreter::sendCharacterName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    if (!host.mTelnet.getCanLuaSendPassword()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sending the character name or password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        return 2;
+    }
+
     if (host.getLogin().isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "no character name set");
@@ -6637,7 +6643,7 @@ int TLuaInterpreter::sendCharacterPassword(lua_State* L)
 
     if (!host.mTelnet.getCanLuaSendPassword()) {
         lua_pushnil(L);
-        lua_pushstring(L, "sending the password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        lua_pushstring(L, "sending the character name or password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
         return 2;
     }
 
@@ -6673,7 +6679,7 @@ int TLuaInterpreter::sendCustomLoginText(lua_State* L)
 
     if (!host.mTelnet.getCanLuaSendPassword()) {
         lua_pushnil(L);
-        lua_pushstring(L, "sending the password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        lua_pushstring(L, "sending the character name or password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
         return 2;
     }
 

@@ -210,13 +210,10 @@ cTelnet::~cTelnet()
 
 void cTelnet::cancelLoginTimers()
 {
-    if (mTimerLogin) {
-        mTimerLogin->stop();
+    if (!mpLuaSendPasswordTimer.isNull()) {
+        mpLuaSendPasswordTimer->stop();
     }
-
-    if (mTimerPass) {
-        mTimerPass->stop();
-    }
+    slot_disableLuaSendPassword();
 }
 
 // This configures two out of three of the QTextCodec used by this profile:
@@ -4038,7 +4035,7 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
 void cTelnet::slot_enableLuaSendPassword()
 {
 #if defined(QT_DEBUG)
-    qDebug().nospace().noquote() << "cTelnet::slot_enableLuaSendPassword() INFO - Lua sendCharacterPassword() function enabled.";
+    qDebug().nospace().noquote() << "cTelnet::slot_enableLuaSendPassword() INFO - Lua sendCharacterName(), sendCharacterPassword() and sendCustomLoginText() functions enabled.";
 #endif
     mLuaSendPasswordEnable = true;
 }
@@ -4046,7 +4043,7 @@ void cTelnet::slot_enableLuaSendPassword()
 void cTelnet::slot_disableLuaSendPassword()
 {
 #if defined(QT_DEBUG)
-    qDebug().nospace().noquote() << "cTelnet::slot_disableLuaSendPassword() INFO - Lua sendCharacterPassword() function disabled.";
+    qDebug().nospace().noquote() << "cTelnet::slot_disableLuaSendPassword() INFO - Lua sendCharacterName(), sendCharacterPassword() and sendCustomLoginText() functions disabled.";
 #endif
     mLuaSendPasswordEnable = false;
 }

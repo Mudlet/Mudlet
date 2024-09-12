@@ -229,7 +229,6 @@ public:
     int getPostingTimeout() const { return mTimeOut; }
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
-
     const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
     void sendCharacterName();
     void sendCharacterPassword();
@@ -242,7 +241,7 @@ public:
     // this is intended as a security measure to limit the chance a rogue script
     // might have to send the password to the Game Server and then to that
     // rogue, or anyone else, who might be listening out for it.
-    QTimer* mpLuaSendPasswordTimer;
+    QPointer<QTimer> mpLuaSendPasswordTimer;
     QMap<int, bool> supportedTelnetOptions;
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
