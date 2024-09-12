@@ -6512,34 +6512,34 @@ Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóru
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="982"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Rebaixado, Por não compartilhar com usuários de versões antigas, Não recomendado}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="991"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>Fator de escala do símbolo da sala do mapa 2D:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1011"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Programa &quot;%1&quot; Na seleção da área do mapa</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1052"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (*Erro, reportar aos Criadores do Mudlet*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1179"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="4258"/>
       <source>Profile preferences - %1</source>
-      <translation type="unfinished"/>
+      <translation>Preferências de perfil - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1502"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferências de perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2411"/>
@@ -6549,7 +6549,7 @@ Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóru
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2351"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa - por favor, aguarde...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
@@ -6562,19 +6562,22 @@ Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóru
       <location filename="../src/dlgProfilePreferences.cpp" line="3175"/>
       <source>copy to %n destination(s)</source>
       <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>copiar para %n destino(s)</numerusform>
+        <numerusform>copiar para %n destino(s)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="370"/>
       <source>Migrated %1...</source>
       <extracomment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</extracomment>
-      <translation type="unfinished"/>
+      <translation>Migrados %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="687"/>
       <source>Mudlet dictionaries:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Dicionários Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="690"/>
@@ -6586,93 +6589,93 @@ Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóru
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>None</source>
       <comment>Special value for number of command line history size to save that does not save any at all!</comment>
-      <translation type="unfinished"/>
+      <translation>Nenhum</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="811"/>
       <source>10</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>20</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>20</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
       <source>50</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>50</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
       <source>100</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>100</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="815"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="816"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="817"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="818"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="819"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="820"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1779"/>
       <source>Pick color</source>
       <extracomment>Generic pick color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Escolha a cor</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2375"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa carregado de %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2377"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível carregar o mapa de %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2438"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Salvar mapa do Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2460"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Salvando o mapa - por favor aguarde.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2477"/>
@@ -6687,12 +6690,12 @@ Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóru
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2510"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>Migrando senhas para armazenamento seguro...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2517"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Migrando senhas para perfis...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2549"/>
@@ -6700,201 +6703,207 @@ Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóru
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não é possível usar ou criar diretório para armazenar o mapa para outro perfil &quot;%1&quot;.
+Verifique se você tem permissões/acesso a:
+&quot;%2&quot;
+e há espaço suficiente. A operação de cópia falhou.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2556"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>Falha na criação de um diretório de destino...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2640"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Fazendo backup do mapa atual - aguarde...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2650"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível fazer backup do mapa - falha ao salvá-lo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2675"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível copiar o mapa - não foi possível descobrir qual arquivo nos salvamos o mapa como!</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2687"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Copiando o mapa para %1 -Aguarde...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2693"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível copiar o mapa para %1 - Não é possível copiar o novo arquivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2697"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa copiado com sucesso para outro perfil %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2709"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa copiado, agora sinalizando outros perfis para recarregá-lo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2745"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Onde o Mudlet deve salvar os arquivos de log?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgProfilePreferences.cpp" line="3182"/>
       <source>%n selected - change destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n selecionado - alterar destinos...</numerusform>
+        <numerusform>%n selecionado - alterar destinos...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3189"/>
       <source>pick destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>escolha destinos...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3430"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível atualizar os temas: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3433"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Atualizando temas de colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3552"/>
       <source>{missing, possibly recently deleted trigger item}</source>
-      <translation type="unfinished"/>
+      <translation>{item de gatilho ausente, possivelmente recentemente excluído}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3555"/>
       <source>{missing, possibly recently deleted alias item}</source>
-      <translation type="unfinished"/>
+      <translation>{item de alias ausente, possivelmente excluído recentemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3558"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation>{item de script ausente, possivelmente excluído recentemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3561"/>
       <source>{missing, possibly recently deleted timer item}</source>
-      <translation type="unfinished"/>
+      <translation>{item de temporizador ausente, possivelmente recentemente excluído}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3564"/>
       <source>{missing, possibly recently deleted key item}</source>
-      <translation type="unfinished"/>
+      <translation>{chave de item ausente, possivelmente excluída recentemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3567"/>
       <source>{missing, possibly recently deleted button item}</source>
-      <translation type="unfinished"/>
+      <translation>{item de botão ausente, possivelmente recentemente excluído}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3691"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo da sala aparecerá assim se apenas símbolos (glifos) da fonte específica forem usados.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3696"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo da sala aparecerá assim se símbolos (glifos) de qualquer fonte puderem ser usados.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3736"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>Quantas salas em todo o mapa têm este símbolo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3754"/>
       <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
-      <translation type="unfinished"/>
+      <translation>As salas com este símbolo, até um máximo de trinta e duas, se houver mais do que isso, é indicado, mas não são mostrados.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3762"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo pode ser feito inteiramente de glifos na fonte especificada.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3780"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo não pode ser desenhado usando nenhuma das fontes do sistema, uma string inválida foi inserida como símbolo para as salas indicadas ou o mapa foi criado em um sistema diferente com um conjunto diferente de fontes disponíveis para uso. Você pode corrigir isso instalando uma fonte adicional usando qualquer método apropriado para este sistema ou editando o mapa para usar um símbolo diferente. Pode ser possível fazer o último por meio de um script lua usando o &lt;i&gt;getRoomChar&lt;/i&gt; e &lt;i&gt;setRoomChar&lt;/i&gt; Funções.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3873"/>
       <source>Large icon</source>
       <extracomment>Discord Rich Presence large icon</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ícone grande</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3875"/>
       <source>Detail</source>
       <extracomment>Discord Rich Presence detail</extracomment>
-      <translation type="unfinished"/>
+      <translation>Detalhe</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3878"/>
       <source>Small icon</source>
       <extracomment>Discord Rich Presence small icon&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ícone pequeno</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3880"/>
       <source>State</source>
       <extracomment>Discord Rich Presence state</extracomment>
-      <translation type="unfinished"/>
+      <translation>Estado</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3883"/>
       <source>Party size</source>
       <extracomment>Discord Rich Presence party size</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tamanho da festa</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3885"/>
       <source>Party max</source>
       <extracomment>Discord Rich Presence maximum party size</extracomment>
-      <translation type="unfinished"/>
+      <translation>Festa máxima</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3887"/>
       <source>Time</source>
       <extracomment>Discord Rich Presence time until or time elapsed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tempo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4390"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Defina a cor externa da marca da sala do jogador.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4391"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Defina a cor interna da marca da sala do jogador.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Essa opção define o formato do nome do registro.&lt;/p&gt;&lt;p&gt;Se &lt;i&gt;Arquivo nomeado&lt;/i&gt; estiver selecionado, você poderá definir um nome de arquivo personalizado. (Os registros serão anexados se já existir um arquivo de registro com o mesmo nome.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
       <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Um temporizador com um intervalo curto preencherá rapidamente as janelas do &lt;i&gt;Console de depuração central&lt;/i&gt; com mensagens nas quais foi executado corretamente em &lt;i&gt;cada&lt;/i&gt; ocasião que foi chamado.  Esse controle (por perfil) ajusta um limite que ocultará essas mensagens apenas nessa janela para aqueles temporizadores que executam &lt;b&gt;corretamente&lt;/b&gt; quando o intervalo do cronômetro&apos;s é menor que essa configuração.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Qualquer script de temporizador que tenha erros ainda terá suas mensagens de erro relatadas, independentemente da configuração.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="216"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Se &lt;b&gt;não&lt;/b&gt; marcado O Mudlet só reagirá à primeira combinação de teclas correspondente (combinação de teclas e modificadores), mesmo que mais de uma delas esteja definida como ativa. Isso significa que uma combinação de teclas temporária (não visível no Editor) criada por um script ou pacote pode ser usada em preferência a uma permanente que é mostrada e está definida como ativa. Se marcado, todos os atalhos de teclado correspondentes serão executados.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Recomenda-se não habilitar esta opção se você precisar manter a compatibilidade com scripts ou pacotes para versões do Mudlet anteriores a &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="224"/>
@@ -6904,135 +6913,136 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="236"/>
       <source>&lt;p&gt;Enable a context (right click) menu action on any console/user window that, when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items that make up each Unicode codepoint on the &lt;b&gt;first&lt;/b&gt; line of any selection.&lt;/p&gt;&lt;p&gt;This utility feature is intended to help the user identify any grapheme (visual equivalent to a &lt;i&gt;character&lt;/i&gt;) that a Game server may send even if it is composed of multiple bytes as any non-ASCII character will be in the Lua sub-system which uses the UTF-8 encoding system.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Habilite uma ação de menu de contexto (clique com o botão direito) em qualquer janela de console/usuário que, quando o cursor do mouse for passado sobre ela, exibirá os itens UTF-16 e UTF-8 que compõem cada ponto de código Unicode no &lt;b&gt;primeiro&lt;/b&gt; de qualquer seleção.&lt;/p&gt;&lt;p&gt;Esse recurso utilitário destina-se a ajudar o usuário a identificar qualquer grafema (visual equivalente a um &lt;i&gt;personagem&lt;/i&gt;) que um servidor de Jogo pode enviar mesmo que seja composto de vários bytes, pois qualquer caractere não ASCII estará no subsistema Lua que usa o sistema de codificação UTF-8.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="243"/>
       <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propagate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alguns ambientes de desktop dizem aos aplicativos Qt como o Mudlet se eles devem mostrar ícones nos menus, outros, no entanto, não. Esse controle permite que o usuário substitua a configuração, se necessário, da seguinte maneira:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Desmarcada&lt;/b&gt; &apos;&lt;i&gt;desligado&lt;/i&gt;&apos; = Impedir que os menus sejam desenhados com ícones.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Verificado&lt;/b&gt; &apos;&lt;i&gt;em&lt;/i&gt;&apos; = Permitir que os menus sejam desenhados com ícones.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Parcialmente verificado&lt;/b&gt; &lt;i&gt;(Padrão) &apos;Automático&apos;&lt;/i&gt; = Use a configuração fornecida pelo sistema.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Essa configuração só é processada quando menus individuais são criados e as alterações podem não se propagar em todos os lugares até que o Mudlet seja reiniciado.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="723"/>
       <source>%1 - not recognised</source>
-      <translation type="unfinished"/>
+      <translation>%1 - não reconhecido</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="724"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;O Mudlet não reconhece o código &quot;%1&quot;, por favor, informe aos desenvolvedores do Mudlet para que possamos descrevê-lo adequadamente em futuras versões do Mudlet!&lt;/p&gt;&lt;p&gt;O arquivo &lt;tt&gt;%2.Dic&lt;/tt&gt; (e seu afixo companheiro &lt;tt&gt;.aff&lt;/tt&gt; arquivo) ainda é utilizável.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="749"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum arquivo de dicionário Hunspell encontrado, a verificação ortográfica não estará disponível.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2362"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não é possível carregar o arquivo de mapa JSON: %1
+razão: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2403"/>
       <source>Any map file (*.dat *.json *.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Qualquer arquivo de mapa (*.dat *.json *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2404"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="2433"/>
       <source>Mudlet binary map (*.dat)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa binário Mudlet (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2405"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="2434"/>
       <source>Mudlet JSON map (*.json)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa JSON do Mudlet (*.json)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2406"/>
       <source>Mudlet XML map (*.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa XML do Mudlet (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2407"/>
       <source>Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Qualquer arquivo (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3724"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esta é a sequência de números hexadecimais que são usados pelo consórcio Unicode para identificar os grafemas necessários para criar o símbolo.  Esses números podem ser utilizados para determinar com precisão o que deve ser desenhado, mesmo que algumas fontes tenham glifos iguais para diferentes pontos de código ou combinação de pontos de código.&lt;/p&gt;&lt;p&gt;Utilitários de entrada de caracteres, como &lt;i&gt;charmap.exe&lt;/i&gt; em &lt;i&gt;Windows&lt;/i&gt; ou &lt;i&gt;mapa de guchar&lt;/i&gt; em muitos sistemas operacionais do tipo Unix também usará esses números que cobrem tudo, desde U+0020 {Space} Para U+10FFFD o último número utilizável no &lt;i&gt;Plano de uso privado 16&lt;/i&gt; através da maioria das marcas escritas que a humanidade já fez.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3748"/>
       <source>more - not shown...</source>
-      <translation type="unfinished"/>
+      <translation>mais - não mostrado...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3771"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;O símbolo não pode ser feito inteiramente de glifos na fonte especificada, mas, usando outras fontes no sistema, pode. Desmarque o &lt;i&gt;Use apenas símbolos (glifos) da fonte escolhida&lt;/i&gt; ou tente escolher outra fonte que tenha os glifos necessários.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Você não precisa fechar esta tabela para tentar outra fonte, alterá-la na caixa de diálogo de preferências principal atualizará esta tabela após um pequeno atraso.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3922"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>Uso do símbolo do mapa - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4003"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd#HH-mm-ss (por exemplo, 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4004"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-ddTHH-mm-ss (por exemplo, 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4005"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd (concatenar logins diários, por exemplo, 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4006"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM (concatenar o mês de login, por exemplo, 1970-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4009"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd#HH-mm-ss (por exemplo, 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4010"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-ddTHH-mm-ss (por exemplo, 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4011"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd (concatenar logins diários, por exemplo, 1970-01-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4012"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM (concatenar os registros mensais, por exemplo, 1970-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4502"/>
       <source>Deleting map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Excluindo mapa - por favor, aguarde...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4514"/>
       <source>Deleted map.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa excluído.</translation>
     </message>
   </context>
   <context>
@@ -7041,106 +7051,106 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="274"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
-      <translation type="unfinished"/>
+      <translation>(ID da sala)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="275"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
-      <translation type="unfinished"/>
+      <translation>(comando ou script Lua)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="441"/>
       <location filename="../src/dlgRoomExits.cpp" line="445"/>
       <location filename="../src/dlgRoomExits.cpp" line="988"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala para a qual essa saída especial vai.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="447"/>
       <location filename="../src/dlgRoomExits.cpp" line="1587"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>Impedir que uma rota seja criada por meio dessa saída, equivalente a um peso de saída infinito.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="452"/>
       <location filename="../src/dlgRoomExits.cpp" line="1593"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
-      <translation type="unfinished"/>
+      <translation>Defina como um valor positivo para substituir o peso padrão (ambiente) para usar esta rota de saída, o valor zero atribui o padrão.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="455"/>
       <location filename="../src/dlgRoomExits.cpp" line="1602"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum símbolo de porta é desenhado no mapa 2D para esta saída (única escolha funcional atualmente).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="457"/>
       <location filename="../src/dlgRoomExits.cpp" line="1603"/>
       <source>Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo da porta verde (aberta) seria desenhado em uma linha de saída personalizada para esta saída no mapa 2D (mas não atualmente).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="459"/>
       <location filename="../src/dlgRoomExits.cpp" line="1604"/>
       <source>Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo laranja (fechado) da porta seria desenhado em uma linha de saída personalizada para esta saída no mapa 2D (mas não atualmente).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="461"/>
       <location filename="../src/dlgRoomExits.cpp" line="1605"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>O símbolo da porta vermelha (trancada) seria desenhado em uma linha de saída personalizada para esta saída no Mapa 2D (mas não atualmente).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="967"/>
       <location filename="../src/dlgRoomExits.cpp" line="992"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>O roomID da sala para a qual essa saída especial leva é esperado aqui. Se deixado assim, esta saída será excluída quando &lt;tt&gt;salvar&lt;/tt&gt; é clicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="983"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>O número inserido é inválido. Se deixado assim, esta saída será excluída quando &lt;tt&gt;salvar&lt;/tt&gt; é clicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="984"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala para a qual essa saída especial leva.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="997"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum comando ou script Lua inserido, se deixado assim, esta saída será excluída quando &lt;tt&gt;salvar&lt;/tt&gt; é clicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1048"/>
       <location filename="../src/dlgRoomExits.cpp" line="1060"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Sair para &quot;%1&quot; Na área: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1511"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <extracomment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Este é o número de ID da sala para esta sala; este &lt;b&gt;quarto está trancado&lt;/b&gt; portanto, não será usado para caminhadas rápidas.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1073"/>
       <location filename="../src/dlgRoomExits.cpp" line="1085"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
-      <translation type="unfinished"/>
+      <translation>Saia para uma sala sem nome na área: &quot;%1&quot;, é válido.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>Alguns scripts de mapeador podem exigir o prefixo da palavra-chave &quot;roteiro:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
       <location filename="../src/dlgRoomExits.cpp" line="1091"/>
       <source>Exit to unnamed room is valid.</source>
-      <translation type="unfinished"/>
+      <translation>A saída para uma sala sem nome é válida.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1187"/>
@@ -7148,7 +7158,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1296"/>
       <location filename="../src/dlgRoomExits.cpp" line="1531"/>
       <source>Set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a noroeste desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1196"/>
@@ -7156,7 +7166,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1304"/>
       <location filename="../src/dlgRoomExits.cpp" line="1533"/>
       <source>Set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala ao norte desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1205"/>
@@ -7164,7 +7174,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1312"/>
       <location filename="../src/dlgRoomExits.cpp" line="1535"/>
       <source>Set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a nordeste desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1214"/>
@@ -7172,7 +7182,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1320"/>
       <location filename="../src/dlgRoomExits.cpp" line="1537"/>
       <source>Set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a partir deste.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1223"/>
@@ -7180,7 +7190,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1328"/>
       <location filename="../src/dlgRoomExits.cpp" line="1539"/>
       <source>Set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a oeste desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1232"/>
@@ -7188,7 +7198,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1336"/>
       <location filename="../src/dlgRoomExits.cpp" line="1541"/>
       <source>Set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a leste desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1241"/>
@@ -7196,7 +7206,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1344"/>
       <location filename="../src/dlgRoomExits.cpp" line="1543"/>
       <source>Set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala para baixo a partir deste.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1250"/>
@@ -7204,7 +7214,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1352"/>
       <location filename="../src/dlgRoomExits.cpp" line="1545"/>
       <source>Set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a sudoeste desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1259"/>
@@ -7212,7 +7222,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1360"/>
       <location filename="../src/dlgRoomExits.cpp" line="1547"/>
       <source>Set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala ao sul desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1268"/>
@@ -7220,7 +7230,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1368"/>
       <location filename="../src/dlgRoomExits.cpp" line="1549"/>
       <source>Set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a sudeste desta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1277"/>
@@ -7228,7 +7238,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1376"/>
       <location filename="../src/dlgRoomExits.cpp" line="1551"/>
       <source>Set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a partir deste.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1286"/>
@@ -7236,13 +7246,13 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1384"/>
       <location filename="../src/dlgRoomExits.cpp" line="1553"/>
       <source>Set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Defina o número da sala a partir deste.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1053"/>
       <location filename="../src/dlgRoomExits.cpp" line="1065"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Sair para &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1051"/>
@@ -7251,7 +7261,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1081"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <extracomment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;O quarto está trancado&lt;/b&gt;, não será usado para caminhadas rápidas para qualquer saída que leve a ele.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1063"/>
@@ -7262,13 +7272,13 @@ reason: %2.</source>
       <extracomment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not
 ----------
 Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Quarto&lt;/b&gt; Peso do destino: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1159"/>
       <location filename="../src/dlgRoomExits.cpp" line="1480"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation type="unfinished"/>
+      <translation>Limpe a saída de stub para que essa saída insira um roomID de saída.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1187"/>
@@ -7284,17 +7294,17 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomExits.cpp" line="1277"/>
       <location filename="../src/dlgRoomExits.cpp" line="1286"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>O número inserido é inválido.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1521"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Saídas para o quarto: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1523"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>Saídas para o ID do quarto: %1 [*]</translation>
     </message>
   </context>
   <context>
@@ -7303,13 +7313,19 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="150"/>
       <source>Lock room(s), so it/they will never be used for speedwalking</source>
       <comment>This text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Tranque(m) sala(s), para que nunca seja usado para caminhada rápida</numerusform>
+        <numerusform>Tranque(m) sala(s), para que nunca seja usado para caminhada rápida</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="167"/>
       <source>Enter a new room weight to use as the travel time for all of the %n selected room(s). This will be used for calculating the best path. The minimum and default is 1.</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Insira um novo peso de ambiente para usar como o tempo de viagem para todos os %n quarto(s) selecionado(s). Isso será usado para calcular o melhor caminho. O mínimo e o padrão são 1.</numerusform>
+        <numerusform>Insira um novo peso de ambiente para usar como o tempo de viagem para todos os %n quarto(s) selecionado(s). Isso será usado para calcular o melhor caminho. O mínimo e o padrão são 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="173"/>
@@ -7317,13 +7333,23 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • an existing room weight from the list below (sorted by most commonly used first)
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Para alterar o peso da sala para todos os %n salas(s) selecionado(s), por favor, escolha:
+ • um peso de sala existente da lista abaixo (classificado primeiro pelo mais comumente usado)
+ • Insira um novo valor inteiro positivo para usar como um novo peso. O padrão é 1.</numerusform>
+        <numerusform>Para alterar o peso da sala para todos os %n salas(s) selecionado(s), por favor, escolha:
+ • um peso de sala existente da lista abaixo (classificado primeiro pelo mais comumente usado)
+ • Insira um novo valor inteiro positivo para usar como um novo peso. O padrão é 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="195"/>
       <source>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all of the %n selected room(s), or enter a space to clear the symbol:</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Digite um ou mais grafemas (&quot;Caracteres visíveis&quot;) para usar como um símbolo para todos os %n sala(s) selecionada(s) ou insira um espaço para limpar o símbolo:</numerusform>
+        <numerusform>Digite um ou mais grafemas (&quot;Caracteres visíveis&quot;) para usar como um símbolo para todos os %n sala(s) selecionada(s) ou insira um espaço para limpar o símbolo:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="201"/>
@@ -7338,13 +7364,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="246"/>
       <location filename="../src/dlgRoomProperties.cpp" line="286"/>
       <source>count</source>
-      <translation type="unfinished"/>
+      <translation>contar</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="517"/>
       <source>Delete room color</source>
       <extracomment>This action deletes a color from the list of all room colors</extracomment>
-      <translation type="unfinished"/>
+      <translation>Excluir cor da sala</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="545"/>
@@ -7361,23 +7387,23 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="442"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Definir cor do símbolo</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="479"/>
       <location filename="../src/dlgRoomProperties.cpp" line="536"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>Definir nova cor de sala</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="502"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Definir a cor da sala</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(Vários valores...)</translation>
     </message>
   </context>
   <context>
@@ -7387,26 +7413,26 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="6501"/>
       <location filename="../src/dlgTriggerEditor.h" line="461"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Gatilhos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="407"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="408"/>
       <source>Show Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar gatilhos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="6525"/>
       <location filename="../src/dlgTriggerEditor.h" line="467"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Botões</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Show Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar botões</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="411"/>
@@ -7418,73 +7444,73 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="412"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="413"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar apelidos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="6507"/>
       <location filename="../src/dlgTriggerEditor.h" line="464"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
       <source>Show Timers</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="6513"/>
       <location filename="../src/dlgTriggerEditor.h" line="463"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="417"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
       <source>Show Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
       <location filename="../src/dlgTriggerEditor.h" line="465"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Chaves</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="427"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar atalhos de teclado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="431"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7018"/>
       <location filename="../src/dlgTriggerEditor.h" line="466"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variáveis</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
       <source>Show Variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar variáveis</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>Ativar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
-      <translation type="unfinished"/>
+      <translation>Alterne o modo ativo ou não ativo para gatilhos, scripts etc.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="477"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>Excluir item</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.h" line="452"/>
@@ -7496,198 +7522,199 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.h" line="458"/>
       <location filename="../src/dlgTriggerEditor.h" line="459"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="498"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="9791"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="9797"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copiar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="502"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="503"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>Copie o gatilho/script/alias/etc</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="512"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="9792"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="9798"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Colar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="516"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="517"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Cole gatilhos/scripts/aliases/etc da área de transferência</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="531"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Importação</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="535"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Exportação</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="539"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="9633"/>
       <location filename="../src/dlgTriggerEditor.h" line="460"/>
       <source>Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>Salvar perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.h" line="460"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>Salva todo o seu perfil (gatilhos, aliases, scripts, cronômetros, botões e teclas, mas não o mapa ou configurações específicas do script); também &quot;Sincroniza&quot; módulos que são assim marcados.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="552"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Salvar perfil como</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
       <location filename="../src/dlgTriggerEditor.h" line="469"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Estatística</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="71"/>
       <source>&lt;p&gt;Alias react on user input. To add a new alias:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create aliases from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alias reage na entrada do usuário. Para adicionar um novo alias:&lt;ol&gt;&lt;li&gt;Clique no ícone &apos;Adicionar item&apos; acima.&lt;/li&gt;&lt;li&gt;Definir uma entrada &lt;strong&gt;padrão&lt;/strong&gt; literalmente ou com uma expressão regular Perl.&lt;/li&gt;&lt;li&gt;Defina um &apos;substituição&apos; &lt;strong&gt;comando&lt;/strong&gt; para enviar para o jogo em texto não criptografado &lt;strong&gt;em vez do padrão de alias&lt;/strong&gt;ou escrever um script para necessidades mais complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Ativar&lt;/strong&gt; o pseudônimo.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;Isso&apos;é isso! Se você&apos;d gostaria de ser capaz de criar aliases a partir da linha de entrada, há um &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;par&lt;/a&gt; de &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Pacotes&lt;/a&gt; que podem ajudá-lo.&lt;p&gt;Verifique o manual para &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Mais informações&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="79"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Os gatilhos reagem na saída do jogo. Para adicionar um novo gatilho:&lt;ol&gt;&lt;li&gt;Clique no ícone &apos;Adicionar item&apos; acima.&lt;/li&gt;&lt;li&gt;Defina um &lt;strong&gt;padrão&lt;/strong&gt; que você deseja acionar.&lt;/li&gt;&lt;li&gt;Selecione o padrão apropriado &lt;strong&gt;tipo&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Defina um texto não criptografado &lt;strong&gt;comando&lt;/strong&gt; que você deseja enviar para o jogo se o gatilho encontrar o padrão no texto do jogo, ou escrever um script para necessidades mais complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Ativar&lt;/strong&gt; o gatilho.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;Isso&apos;é isso! Se você&apos;d gostaria de poder criar gatilhos a partir da linha de entrada, há um &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;par&lt;/a&gt; de &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Pacotes&lt;/a&gt; que podem ajudá-lo.&lt;p&gt;Verifique o manual para &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Mais informações&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="163"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>nova pasta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="164"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>novo item</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 -Editor</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="236"/>
       <source>-- Enter your lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- Digite seu código lua aqui</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="318"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>iniciando nova sessão ***</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
       <location filename="../src/dlgTriggerEditor.h" line="470"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Depurar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="493"/>
       <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Salva o item selecionado. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Salvar faz com que todas as alterações no item entrem em vigor. Ele não será salvo no disco, portanto, as alterações serão perdidas em caso de falha do computador/programa (mas Salvar perfil à direita será seguro).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="540"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Salva seu perfil. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Salva todo o seu perfil (gatilhos, aliases, scripts, cronômetros, botões e teclas, mas não o mapa ou as configurações específicas do script) no disco do seu computador, portanto, em caso de falha do computador ou programa, todas as alterações feitas serão mantidas.&lt;/p&gt;&lt;p&gt;Ele também faz um backup do seu perfil, você pode carregar uma versão mais antiga dele ao se conectar.&lt;/p&gt;&lt;p&gt;Deve haver algum módulo marcado como &quot;&lt;i&gt;Sincronizado&lt;/i&gt;&quot; Isso também fará com que eles sejam salvos e recarregados em outros perfis se também estiverem ativos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="560"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Algo deu errado ao carregar seu perfil do Mudlet e ele não pôde ser carregado. Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico de perfil&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="587"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <extracomment>This is the toolbar that is initially placed at the top of the editor.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barra de ferramentas do editor - %1 -Ações</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
       <source>Editor Toolbar - %1 - Items</source>
       <extracomment>This is the toolbar that is initially placed at the left side of the editor.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barra de ferramentas do editor - %1 -Itens</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="631"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restaurar barra de ferramentas de Ações</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restaurar barra de ferramentas de itens</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="721"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="724"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opções de Pesquisa</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="728"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Diferencia maiúsculas de minúsculas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="833"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>início da linha</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="872"/>
       <source>Text to find (trigger pattern)</source>
-      <translation type="unfinished"/>
+      <translation>Texto a ser encontrado (padrão de gatilho)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2848"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Tentando ativar um grupo de gatilhos, filtro ou gatilho ou parte de um módulo &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; que os contém &lt;em&gt;Conseguiu&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2850"/>
       <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Tentando desativar um grupo de gatilhos, filtro ou gatilho ou parte de um módulo &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; que os contém &lt;em&gt;Conseguiu&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2854"/>
       <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Não é possível ativar um filtro ou gatilho ou a parte de um módulo &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; que os contém; razão: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Você precisará reativá-lo depois que o problema for corrigido.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3043"/>
       <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Tentando ativar um grupo de temporizadores, temporizador de deslocamento, temporizador ou a parte de um módulo &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; que os contém &lt;em&gt;Conseguiu&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3045"/>
       <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Tentando desativar um grupo de temporizadores, temporizador de deslocamento, temporizador ou parte de um módulo &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; que os contém &lt;em&gt;Conseguiu&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3049"/>
