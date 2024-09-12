@@ -1979,48 +1979,54 @@ Tentou estes locais:
     <message>
       <location filename="../src/TMap.cpp" line="113"/>
       <source>[MAP ERROR:]%1</source>
-      <translation type="unfinished"/>
+      <translation>[ERRO DE MAPA:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="527"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Início da auditoria do mapa...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1559"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Talvez você queira doar ESTE arquivo de mapa para o Museu do Mudlet!
+Há tantos dados que ELE NÃO possui que você poderia
+estar melhor começando novamente...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1622"/>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Falha ao carregar um arquivo de mapa JSON do Mudlet, motivo:
+%1; O arquivo é:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1627"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ignorando este arquivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1798"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nome da área padrão (redefinida) (para salas que não foram atribuídas a uma
+área) não encontrada, adicionando ID reservado -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1877"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Arquivo do mapa lido com sucesso (%1s), verificando alguns
+detalhes de consistência...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1892"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum mapa encontrado. Você gostaria de baixar o mapa ou iniciar o seu próprio?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1893"/>
@@ -2030,7 +2036,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1894"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Iniciar o meu próprio</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
@@ -2045,7 +2051,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2381"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>ID da área: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2383"/>
@@ -2060,17 +2066,17 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2399"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>ID da sala: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2401"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>ID do quarto: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2411"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Fim do relatório</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2417"/>
@@ -2080,7 +2086,12 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Pelo menos uma coisa foi detectada durante a última operação de mapa
+que é recomendável que você revise o relatório mais recente em
+O arquivo:
+&quot;%1&quot;
+- Procure o (último) relatório com o título:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2425"/>
@@ -2090,21 +2101,29 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - O equivalente às informações acima sobre essa última operação de mapa foi salva para revisão como o relatório mais recente em
+O arquivo:
+&quot;%1&quot;
+- Procure o (último) relatório com o título:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2446"/>
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Tentativa feita para baixar um mapa XML quando já foi
+solicitado ou está sendo importado de um arquivo local - aguarde até aquela
+operação ser concluída (se não puder ser cancelada) antes de tentar novamente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2467"/>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Tentativa feita para baixar um XML de um URL inválido.  A URL era:
+%1
+e a mensagem de erro (pode conter detalhes técnicos) era:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2481"/>
@@ -2112,63 +2131,69 @@ and the error message (may contain technical details) was:&quot;%2&quot;.</sourc
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Não é possível usar ou criar diretório para armazenar o mapa.
+Verifique se você tem permissões/acesso a:
+&quot;%1&quot;
+e há espaço suficiente. A operação de download falhou.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2507"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Download do mapa iniciado, por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2674"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - O download do mapa encontrou um erro:
+%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2908"/>
       <source>Map JSON export</source>
       <extracomment>This is a title of a progress window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Exportação JSON do Mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3145"/>
       <source>Map JSON import</source>
       <extracomment>This is a title of a progress window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Importação de JSON de Mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2892"/>
       <location filename="../src/TMap.cpp" line="3384"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Exportando dados de mapa JSON de %1
+Áreas: %2 de: %3   Quartos: %4 de: %5   Rótulos: %6 de: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3037"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>Exportando o arquivo de mapa JSON de %1 - Escrevendo dados no arquivo:
+%2 ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3065"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>importação ou exportação já em andamento</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3073"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>não foi possível abrir o arquivo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3083"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>não foi possível analisar o arquivo, motivo: &quot;%1&quot; no desvio %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3092"/>
       <source>empty Json file, no map data detected</source>
-      <translation>arquivo Json vazio, nenhum dado de mapa detectado</translation>
+      <translation>Arquivo Json vazio, nenhum dado de mapa detectado</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3107"/>
@@ -2188,7 +2213,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3244"/>
       <source>aborted by user</source>
-      <translation>Cancelado pelo usuário</translation>
+      <translation>Abortado pelo usuário</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3129"/>
@@ -2202,84 +2227,87 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="1118"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation>[ ERRO ] - A versão de formato "%1" que você está tentando salvar o mapa é muito nova
-para esta versão do Mudlet. Apenas formatos até a versão %2 são suportados.</translation>
+      <translation>[ ERRO ] - A versão do formato &quot;%1&quot; você está tentando salvar o mapa com é muito novo
+para esta versão do Mudlet. Suportados são apenas formatos até a versão %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1134"/>
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation>[ ALERTA ] - Salvando o mapa na versão de formato "%1", que é diferente da versão "%2" na qual ele foi carregado. Isso pode causar problemas se você quiser compartilhar o mapa resultante com outras pessoas que dependem do formato original.</translation>
+      <translation>[ ALERTA ] - Salvando mapa na versão de formato &quot;%1&quot; que é diferente de &quot;%2&quot; qual
+foi carregado como. Isso pode ser um problema se você quiser compartilhar o
+mapa com outros que dependem do formato original.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1144"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation>[ AVISO ] - Salvando mapa na versão de formato "%1" diferente da
-versão de mapa recomendada %2 para esta versão do Mudlet.</translation>
+      <translation>[ WARN ] - Salvando mapa na versão de formato &quot;%1&quot; diferente do
+Versão recomendada do mapa %2 para esta versão do Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1499"/>
       <location filename="../src/TMap.cpp" line="1936"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation>[ ERRO ] - Não é possível abrir o arquivo de mapa para leitura: "%1"!</translation>
+      <translation>[ ERRO ] - Não é possível abrir o arquivo de mapa para leitura: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation>[ ALERTA ] - O arquivo não parece ser um arquivo de mapa do Mudlet. A parte que indica
-sua versão de formato parece ser "%1" e isso não faz sentido. O arquivo é:
-"%2".</translation>
+      <translation>[ ALERTA ] - O arquivo não parece ser um arquivo Mudlet Map. A parte que indica
+sua versão de formato parece ser &quot;%1&quot; e isso não&apos;t faz sentido. O arquivo é:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1536"/>
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation>[ ALERTA ] - O arquivo de mapa é muito novo. Sua versão de formato "%1" é mais alta do que esta versão do Mudlet pode lidar (%2)! O arquivo é:
-"%3".</translation>
+      <translation>[ ALERTA ] - O arquivo de mapa é muito novo. Sua versão de formato &quot;%1&quot; é maior do que esta versão do
+Mudlet pode lidar com (%2)! O arquivo é:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1543"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation>[ INFO ]  - Você precisará atualizar seu Mudlet para ler o arquivo de mapa.</translation>
+      <translation>[ INFO ] - Você precisará atualizar seu Mudlet para ler o arquivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1552"/>
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation>[ ALERTA ] - O arquivo do mapa está muito antigo. Sua versão de formato "%1" é tão antiga que
-esta versão do Mudlet pode não obter informações suficientes dele,
-mas irá tentar! O arquivo é: "%2".</translation>
+      <translation>[ ALERTA ] - O arquivo de mapa é muito antigo. Sua versão de formato &quot;%1&quot; é tão antigo que
+esta versão do Mudlet pode não obter informações suficientes de
+mas vai tentar! O arquivo é: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ]  - Lendo mapa. Versão do formato: %1. Arquivo:
-"%2",
-por favor, aguarde...</translation>
+      <translation>[ INFO ] - Mapa de leitura. Versão do formato: %1. Arquivo:
+&quot;%2&quot;,
+Aguarde...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1569"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation>[ INFO ]  - Lendo mapa. Versão do formato: %1. Arquivo: "%2".</translation>
+      <translation>[ INFO ] - Mapa de leitura. Versão do formato: %1. Arquivo: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1952"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation>[ INFO ]  - Verificando arquivo de mapa "%1", versão de formato "%2".</translation>
+      <translation>[ INFO ] - Verificando o arquivo de mapa &quot;%1&quot;, versão do formato &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2516"/>
       <source>Downloading map file for use in %1...</source>
       <extracomment>%1 is the name of the current Mudlet profile</extracomment>
-      <translation>Baixando arquivo de mapa para uso em %1...</translation>
+      <translation>Baixando o arquivo de mapa para uso em %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2517"/>
@@ -2291,19 +2319,19 @@ por favor, aguarde...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="1528"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation>[ INFO ]  - Ignorando esse arquivo de mapa improvável.</translation>
+      <translation>[ INFO ] - Ignorando este arquivo de mapa improvável.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2519"/>
       <source>Map download</source>
       <extracomment>This is a title of a progress window.</extracomment>
-      <translation>Download do mapa</translation>
+      <translation>Transferência do mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2550"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation>loadMap: incapaz de realizar a solicitação, um mapa já está sendo baixado ou
+      <translation>loadMap: não é possível realizar a solicitação, um mapa já está sendo baixado ou
 importado a pedido do usuário.</translation>
     </message>
     <message>
@@ -2328,39 +2356,39 @@ no console principal!</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2655"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation>[ ALERTA ] - O download do mapa foi cancelado, a pedido do usuário.</translation>
+      <translation>[ ALERTA ] - O download do mapa foi cancelado, no usuário&apos;s pedido.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2713"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation>[ ALERTA ] - Falha no download do mapa, impossível abrir o arquivo de destino:
+      <translation>[ ALERTA ] - Falha na transferência do mapa, não é possível abrir o ficheiro de destino:
 %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2720"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation>[ ALERTA ] - Falha no download do mapa, incapaz de gravar o arquivo de destino:
+      <translation>[ ALERTA ] - Falha no download do mapa, não é possível gravar o arquivo de destino:
 %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2736"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ INFO ]  - ... mapa baixado e armazenado, agora fazendo a análise...</translation>
+      <translation>[ INFO ] - ... mapa baixado e armazenado, agora analisando-o ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2772"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>[ ERRO ] - Problema ao baixar o mapa, falha na análise do arquivo de destino:
+      <translation>[ ERRO ] - Problema de download do mapa, falha na análise do arquivo de destino:
 %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2752"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation>[ ERRO ] - Problema ao baixar o mapa, impossível ler o arquivo de destino:
+      <translation>[ ERRO ] - Problema de download do mapa, não é possível ler o arquivo de destino:
 %1.</translation>
     </message>
   </context>
@@ -2447,12 +2475,12 @@ no console principal!</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="310"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation>Nenhuma área criada! ID da área solicitada=%1. Observação: IDs das áreas devem ser > 0</translation>
+      <translation>Nenhuma área criada!  ID da área solicitada=%1. Nota: Os IDs de área devem ser &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="332"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation>Aviso: Ao definir a área para o Quarto (ID: %1), ele não tinha uma área atual!</translation>
+      <translation>Aviso: Ao definir a área para a sala (Id: %1) não tinha uma área atual!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="981"/>
@@ -2477,25 +2505,26 @@ no console principal!</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1142"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation>[ AVISO ]  - No quarto ID:%1 removendo saída inválida (especial) para %2 {sem nome!}</translation>
+      <translation>[ AVISAR ] - No ID da sala:%1 removendo saída inválida (especial) para %2 {sem nome!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1146"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation>[ AVISO ]  - O quarto possuía uma saída inválida (especial) para %1 {sem nome!} e foi removida.</translation>
+      <translation>[ AVISAR ] - Quarto tinha uma saída inválida (especial) para %1 {sem nome!} foi removido.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1155"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 corrigindo saída especial "%2" que
-ia para uma sala inválida: %3 para agora ir para: %4.</translation>
+      <translation>[ INFO ] - No quarto com id: %1 Corrigindo saída especial &quot;%2&quot; que
+foi para o quarto com saída para o quarto inválido: %3 agora vá
+Para: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation>[ INFO ]  - O quarto precisou corrigir a saída especial "%1" que estava para um quarto com uma saída inválida para o quarto: %2 para agora ir para: %3.</translation>
+      <translation>[ INFO ] - Sala precisava de correção de saída especial &quot;%1&quot; que era para o quarto com saída para o quarto inválido: %2 para agora ir para: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1190"/>
@@ -2504,15 +2533,16 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[ AVISO ]  - O quarto com ID: %1 tem uma saída especial "%2" com uma
-saída para: %3, mas esse quarto não existe. A saída será
-removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto sob uma chave:
-"%4").</translation>
+      <translation>[ AVISAR ] - Quarto com id: %1 tem uma saída especial &quot;%2&quot; com um
+Saida para: %3 mas essa sala não existe.  A saída será
+ser removida (mas o ID da sala de destino será armazenado em
+Os dados do usuário da sala em uma chave:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1203"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation>[ AVISO ]  - O quarto possui uma saída especial "%1" com uma saída para: %2, mas esse quarto não existe. A saída será removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto sob a chave: "%3").</translation>
+      <translation>[ AVISAR ] - Quarto tem uma saída especial &quot;%1&quot; com saída para: %2 mas essa sala não existe.  A saída será removida (mas o ID da sala de destino será armazenado nos dados do usuário da sala sob uma chave:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1242"/>
@@ -2521,16 +2551,16 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 saída especial "%2"
-que estava para uma sala inválida: %3 que não existe.
-A saída será removida (o ID da sala de destino incorreta será armazenado
-nos dados do usuário da sala sob a chave:
-"%4").</translation>
+      <translation>[ INFO ] - No quarto com id: %1 saída especial &quot;%2&quot;
+que era para um quarto com um quarto inválido: %3 isso não existe.
+A saída será removida (o ID da sala de destino incorreto será armazenado no
+Dados do usuário da sala em uma chave:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1255"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation>[ INFO ]  - O quarto tinha uma saída especial "%1" que levava a um quarto inválido: %2 que não existe. A saída será removida (o ID do quarto de destino inválido será armazenado nos dados do usuário do quarto sob a chave "%3").</translation>
+      <translation>[ INFO ] - Quarto tinha saída especial &quot;%1&quot; que era para um quarto com um quarto inválido: %2 isso não existe.  A saída será removida (o ID da sala de destino incorreto será armazenado nos dados do usuário da sala sob uma chave:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1288"/>
@@ -2561,59 +2591,61 @@ nos dados do usuário da sala sob a chave:
       <location filename="../src/TRoom.cpp" line="1304"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 foram encontrados um ou mais itens de porta excedentes que foram removidos:
+      <translation>[ INFO ] - No quarto com id: %1 encontrou um ou mais itens excedentes da porta que foram removidos:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1311"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation>[ INFO ]  - O quarto tinha um ou mais itens de porta excedentes que foram removidos:%1.</translation>
+      <translation>[ INFO ] - O quarto tinha um ou mais itens excedentes da porta que foram removidos:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1327"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 encontrou um ou mais itens com peso excedente que foram removidos:
+      <translation>[ INFO ] - No quarto com id: %1 encontrou um ou mais itens de peso excedente que foram removidos:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1334"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation>[ INFO ]  - O quarto tinha um ou mais itens de peso excedente que foram retirados: %1.</translation>
+      <translation>[ INFO ] - O quarto tinha um ou mais itens de peso excedente que foram removidos: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1350"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 foram encontrados um ou mais itens de bloqueio de saída excedentes que foram removidos:
+      <translation>[ INFO ] - No quarto com ID: %1 encontrou um ou mais itens excedentes de trava de saída que foram removidos:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1357"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation>[ INFO ]  - O quarto tinha um ou mais itens de travamento de saída em excesso que foram removidos: %1.</translation>
+      <translation>[ INFO ] - A sala tinha um ou mais itens de bloqueio de saída excedentes que foram removidos: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1436"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 foram encontrados um ou mais elementos personalizados em excesso que foram removidos: %2.</translation>
+      <translation>[ INFO ] - No quarto com id: %1 encontrou um ou mais elementos de linha personalizados excedentes que
+foram removidos: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1442"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation>[ INFO ]  - O quarto tinha um ou mais elementos de linha personalizados excedentes que foram removidos: %1.</translation>
+      <translation>[ INFO ] - O Quarto tinha um ou mais elementos de linha personalizados excedentes que foram removidos: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1465"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 corrigindo saída "%2" que ia para uma sala inválida: %3 para agora ir para: %4.</translation>
+      <translation>[ INFO ] - No quarto com id: %1 corrigindo a saída &quot;%2&quot; que era para o quarto com
+Uma saída para uma sala inválida: %3 para agora ir para: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1474"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation>[ INFO ]  - Corrigindo saída "%1" que estava para um ID de sala inválido: %2 para agora ir para: %3.</translation>
+      <translation>[ INFO ] - Corrigindo saída &quot;%1&quot; Isso foi para ID de quarto inválido: %2 para agora ir para: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1485"/>
@@ -2622,24 +2654,30 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation>[ AVISO ]  - Sala com ID: %1 possui uma saída "%2" para: %3, mas essa sala não existe. A saída será removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto sob a chave: "%4") e a saída será transformada em um stub.</translation>
+      <translation>[ AVISAR ] - Quarto com id: %1 tem uma saída &quot;%2&quot; Para: %3 mas aquele quarto
+não existe.  A saída será removida (mas a sala de destino
+O ID será armazenado nos dados do usuário da sala sob uma chave:
+&quot;%4&quot;)
+e a saída será transformada em um esboço.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1498"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation>[ AVISO ]  - O quarto tem uma saída "%1" para: %2, mas esse quarto não existe. A saída será removida (mas o ID do quarto de destino será armazenado nos dados do usuário do quarto com a chave: "%4") e a saída será transformada em um stub.</translation>
+      <translation>[ AVISAR ] - Quarto tem uma saída &quot;%1&quot; Para: %2 mas essa sala não existe.  A saída será removida (mas o ID da sala de destino será armazenado nos dados do usuário da sala sob uma chave: &quot;%4&quot;) e a saída será transformada em um esboço.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1542"/>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation>[ ALERTA ] - O cômodo com ID: %1 possui uma saída " %2 " para: %3, mas também possui uma saída incompleta! Como uma saída real exclui uma saída incompleta, esta última será removida.</translation>
+      <translation>[ ALERTA ] - Quarto com ID: %1 tem uma saída &quot;%2&quot; Para: %3 mas também
+tem uma saída de esboço!  Como uma saída real impede um esboço, o último irá
+ser removido.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1552"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation>[ ALERTA ] - O quarto tem uma saída "%1" para: %2, mas também tem uma saída falsa na mesma direção! Como uma saída real impede uma saída falsa, esta última será removida.</translation>
+      <translation>[ ALERTA ] - Quarto tem saída &quot;%1&quot; Para: %2 mas também tem uma saída de esboço na mesma direção!  Como uma saída real impede um esboço este último será removido.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1608"/>
@@ -2648,52 +2686,52 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation>[ INFO ]  - Na sala com ID: %1 saída especial "%2"
-que estava para uma sala inválida: %3 que não existe.
-A saída será removida (o ID da sala de destino incorreta será armazenado
-nos dados do usuário da sala sob a chave:
-"%4").</translation>
+      <translation>[ INFO ] - No quarto com ID: %1 saída &quot;%2&quot; que era para o quarto com um inválido
+quarto: %3 isso não existe.  A saída será removida (o destino ruim
+O ID da sala será armazenado nos dados do usuário da sala em uma chave:
+&quot;%4&quot;)
+e a saída será transformada em um esboço.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1619"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation>[ INFO ]  - O quarto tinha uma saída especial "%1" que levava a um quarto inválido: %2 que não existe. A saída será removida (o ID do quarto de destino inválido será armazenado nos dados do usuário do quarto sob a chave "%3").</translation>
+      <translation>[ INFO ] - Saída do quarto &quot;%1&quot; Isso foi para uma sala com um ID inválido: %2 isso não existe.  A saída será removida (o ID da sala de destino incorreto será armazenado nos dados do usuário da sala sob uma chave:&quot;%4&quot;) e a saída será transformada em um esboço.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1637"/>
       <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation>Estava trancado, isso está registrado como dados do usuário com a chave:
-"%1".</translation>
+      <translation>Estava trancado, isso é registrado como dados do usuário com chave:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1640"/>
       <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation>Estava trancado, isso é registrado como dados do usuário com a chave: "%1".</translation>
+      <translation>Estava trancado, isso é registrado como dados do usuário com chave: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
       <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation>Ele tinha um peso, isso é registrado como dados do usuário com a chave:
-"%1".</translation>
+      <translation>Tinha um peso, isso é registrado como dados do usuário com chave:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1653"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation>Ele tinha um peso, isso é registrado como dados do usuário com a chave: "%1".</translation>
+      <translation>Tinha um peso, isso é registrado como dados do usuário com chave: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1664"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation>[ AVISO ]  - Havia uma linha de saída personalizada associada à saída inválida, mas
-não foi possível recuperá-la, ela foi perdida!</translation>
+      <translation>[ WARN ] - Havia uma linha de saída personalizada associada à saída inválida, mas
+Não foi possível salvá-lo, perdeu-se!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1669"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation>[ AVISO ]  - Havia uma linha de saída personalizada associada à saída inválida, mas não foi possível recuperá-la, ela foi perdida!</translation>
+      <translation>[ AVISAR ] - Havia uma linha de saída personalizada associada à saída inválida, mas não foi possível salvá-la, ela foi perdida!</translation>
     </message>
   </context>
   <context>
@@ -2719,25 +2757,24 @@ não foi possível recuperá-la, ela foi perdida!</translation>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation>[WARN]-Problema com a estrutura de dados associada ao id do quarto: %1 -que os dados da
-sala&apos;foram perdidos para que o id agora esteja sendo excluído.  Este
-sugere sérios problemas com a versão atualmente em execução de
-Mudlet-é o seu sistema ficando sem memória?</translation>
+      <translation>[ WARN ] - Problema com a estrutura de dados associada ao ID da sala: %1 -Os dados da sala&apos;foram perdidos, então a ID agora está sendo excluída.  Este
+sugere sérios problemas com a versão atualmente em execução do
+Mudlet - seu sistema está ficando sem memória?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="634"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation>[ AVISO ]  - Problema com a estrutura de dados associada a esta sala. Os dados da sala foram perdidos, então o ID está sendo excluído. Isso sugere problemas graves com a versão atual do Mudlet - o seu sistema está com falta de memória?</translation>
+      <translation>[ AVISAR ] - Problema com a estrutura de dados associada a esta sala.  &apos;Os dados do sala foram perdidos, então a ID agora está sendo excluída.  Isso sugere sérios problemas com a versão atualmente em execução do Mudlet - seu sistema está ficando sem memória?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="683"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation>[ ALERTA ] - Área com ID: %1 esperada, mas não encontrada, será criada.</translation>
+      <translation>[ ALERTA ] - Área com id: %1 esperado, mas não encontrado, será criado.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="686"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation>[ALERT]-Área com este id esperado mas não encontrada, será criada.</translation>
+      <translation>[ ALERTA ] - Área com este id esperado, mas não encontrado, será criado.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
@@ -2746,10 +2783,10 @@ Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ALERT]- %n área (s) detectada como ausente no mapa: adicionando-as / elas em.
-Procure mais mensagens relacionadas aos quartos que são supostos
-para estar neste / essas (s) área (s) ...</numerusform>
-        <numerusform>[ALERT]- %n área (s) detectada como ausente no mapa: adicionando-as / elas em.
+        <numerusform>[ ALERTA ] - %n Área(s) detectada(s) como ausente(s) no mapa: adicionando-a/elas.
+Procure mais mensagens relacionadas aos quartos que deveriam
+estar nesta/essas área(s)...</numerusform>
+        <numerusform>[ALERT]— %n área (s) detectada como ausente no mapa: adicionando-as / elas em.
 Procure mais mensagens relacionadas aos quartos que são supostos
 para estar neste / essas (s) área (s) ...</numerusform>
       </translation>
@@ -2760,64 +2797,65 @@ para estar neste / essas (s) área (s) ...</numerusform>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[INFO]-A (s) área (s) desaparecida (s) agora são chamadas:
+        <numerusform>[ INFO ] - A(s) área(s) em falta são agora chamadas:
 (ID) ==&gt; &quot;nome&quot;</numerusform>
-        <numerusform>[ INFO ]  - As área(s) faltante(s) agora são chamada(s):
-(ID) ==> "name"</numerusform>
+        <numerusform>[ INFO ] - A(s) área(s) em falta são agora chamadas:
+(ID) ==&gt; &quot;nome&quot;</numerusform>
       </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="766"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation>[ ALERTA ] - IDs de área ruins, (menos de +1 e não o reservado -1) encontrados (contagem: %1)
-no mapa, agora calculando quais novos números de ID usar...</translation>
+      <translation>[ ALERTA ] - Ruim, (menor que +1 e não o -1 reservado) IDs de área encontrados ruins encontrados (contagem: %1)
+No mapa, agora descobrindo quais novos números de identificação usar...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ]  - Os IDs das áreas renumeradas serão:
-Antigo ==> Novo</translation>
+      <translation>[ INFO ] - Os IDs de área renumerados serão:
+Antigo ==&gt; Novo</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="796"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[ INFO ]  - A área com esse ID inválido foi renumerada para: %1.</translation>
+      <translation>[ INFO ] - A área com este ID ruim foi renumerada para: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="797"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ]  - Esta área foi renumerada do ID incorreto: %1.</translation>
+      <translation>[ INFO ] - Esta área foi renumerada a partir do ID inválido: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="834"/>
       <location filename="../src/TRoomDB.cpp" line="837"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ]  - A numeração de ID da área está satisfatória.</translation>
+      <translation>[ INFO ] - A numeração do ID da área é satisfatória.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="845"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation>[ ALERTA ] - Foram encontrados IDs de sala ruins (menos de +1) no mapa (quantidade: %1), agora estou trabalhando para determinar quais novos números de ID usar.</translation>
+      <translation>[ ALERTA ] - IDs ruins, (menos de +1)  de salas encontrados (contagem: %1) no mapa, agora funcionando
+quais novos números de identificação usar.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="857"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation>[ INFO ]  - Os quartos renumerados serão:</translation>
+      <translation>[ INFO ] - Os quartos renumerados serão:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation>[  OK  ]  - As alterações feitas são:
-(ID) "nome antigo" ==> "novo nome"</translation>
+      <translation>[ OK ] - As alterações feitas são:
+(IDENTIFICAÇÃO) &quot;nome antigo&quot; ==&gt; &quot;Novo nome&quot;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="771"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation>[ ALERTA ] - IDs de área inválidos encontrados (menos que +1 e diferentes de -1) no mapa! Procure por mensagens adicionais relacionadas a cada área afetada...</translation>
+      <translation>[ ALERTA ] - IDs ruins, (menor que +1 e não o -1 reservado) área encontrados (contagem: %1) no mapa!  Procure mais mensagens relacionadas a isso para cada área afetada ...</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="722"/>
@@ -2826,60 +2864,61 @@ Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERTA ] - %n área(s) detectada(s) como ausente(s) no mapa: adicionando ela(s).
-Procure por mensagens adicionais relacionadas às salas que deve(m)
-estar nesta(s) área(s)...</numerusform>
-        <numerusform>[ ALERTA ] - %n área(s) detectada(s) como faltante(s) no mapa: adicionando ela(s) nele.
-Procure por mensagens adicionais relacionadas aos quartos que devem estar nesta(s) área(s)...</numerusform>
+        <numerusform>[ ALERTA ] - %n Área(s) detectada(s) como ausente(s) no mapa: adicionando-a/elas.
+Procure mais mensagens relacionadas aos quartos que devem
+estar neste(s) área(s)...</numerusform>
+        <numerusform>[ ALERTA ] - %n Área(s) detectada(s) como ausente(s) no mapa: adicionando-a/elas.
+Procure mais mensagens relacionadas aos quartos que devem
+estar neste(s) área(s)...</numerusform>
       </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation>[ ALERTA ] - IDs de sala ruins (menores que +1) encontrados (contagem: %1) no mapa! Procure por mensagens adicionais relacionadas a cada sala afetada ...</translation>
+      <translation>[ ALERTA ] - IDs ruins, (menos de +1) de salas encontradas (contagem: %1) no mapa!  Procure mais mensagens relacionadas a isso para cada sala afetada...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="873"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation>[ INFO ]  - Este quarto com o ID incorreto foi renumerado para: %1.</translation>
+      <translation>[ INFO ] - Esta sala com o ID ruim foi renumerada para: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="874"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ]  - Este quarto foi renumerado do ID incorreto: %1.</translation>
+      <translation>[ INFO ] - Esta sala foi renumerada a partir do ID ruim: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="910"/>
       <location filename="../src/TRoomDB.cpp" line="913"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ INFO ]  - A numeração de ID dos quartos está satisfatória.</translation>
+      <translation>[ INFO ] - A numeração do ID do quarto é satisfatória.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="933"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[ INFO ]  - Identificadores duplicados de saída encontrados no ID do quarto: %1, isso é uma anomalia, mas foi facilmente corrigido.</translation>
+      <translation>[ INFO ] - Identificadores de esboço de saída duplicados encontrados no ID da sala: %1, este é uma anomalia, mas foi limpa facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="938"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation>[ INFO ]  - Identificadores duplicados de saída de stub encontrados no quarto, isso é uma anomalia, mas foi facilmente corrigido.</translation>
+      <translation>[ INFO ] - Identificadores de esboço de saída duplicados encontrados na sala, isso é uma anomalia, mas foi limpo facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="947"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[ INFO ]  - Identificadores de bloqueio de saída duplicados encontrados no id do quarto: %1, isso é uma anomalia, mas foi resolvido facilmente.</translation>
+      <translation>[ INFO ] - Identificadores de bloqueio de saída duplicados encontrados no ID da sala: %1, este é uma anomalia, mas foi limpa facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="952"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation>[ INFO ]  - Identificadores de bloqueio de saída duplicados encontrados no quarto, isso é uma anomalia, mas foi resolvido facilmente.</translation>
+      <translation>[ INFO ] - Identificadores de bloqueio de saída duplicados encontrados na sala, esta é uma anomalia, mas foi limpa facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation>[ INFO ]  - Este quarto afirma estar na área de id: %1, mas não havia um registro dele. A área foi atualizada para incluir este quarto.</translation>
+      <translation>[ INFO ] - Este quarto afirma estar no ID da área: %1, mas que não tinha registro disso.  A área foi atualizada para incluir esta sala.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1031"/>
@@ -2887,19 +2926,20 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation>[ INFO ]  - Na área com ID: %1 estavam faltando %2 quartos daqueles que deveriam estar sendo registrados como possuindo, eles são:
+      <translation>[ INFO ] - Na área com ID: %1 Houve %2 salas faltando daqueles que
+deveriam estar gravando como possuindo, eles eram:
 %3
 eles foram adicionados.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1039"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation>[ INFO ]  - Nesta área faltavam %1 quartos dos quais deveriam ser registrados como possuindo. Eles são: %2. Eles foram adicionados.</translation>
+      <translation>[ INFO ] - Nesta área havia %1 salas ausentes daqueles que devem ser registrados como possuindo.  Eles são: %2.  Eles foram adicionados.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1060"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation>[ INFO ]  - Este quarto foi reivindicado pelo ID da área: %1, mas não pertence a ela. A área foi atualizada para não incluir este quarto.</translation>
+      <translation>[ INFO ] - Este quarto foi reivindicado por id de área: %1, mas não pertence a ela.  A área foi atualizada para não incluir este quarto.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1066"/>
@@ -2907,35 +2947,35 @@ eles foram adicionados.</translation>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation>[INFO]-Em área com id: %1 havia %2 quartos extras em comparação com aqueles que ele
-deveria estar gravando como possuidor, eles foram:
+      <translation>[ INFO ] - Na área com ID: %1 Houve %2 quartos extras em comparação com aqueles que
+deveriam estar gravando como possuindo, eles eram:
 %3
 eles foram removidos.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1074"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation>[INFO]-Nessa área havia %1 quartos extras que não deve ser registrado como possuidor.  Eles eram: %2.  Eles foram removidos.</translation>
+      <translation>[ INFO ] - Nesta área havia %1 quartos extras que não devem ser registrados como possuindo.  Eles eram: %2.  Eles foram removidos.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1173"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation>Foi detectado que &quot;_###&quot; Sufixos de formulário já foram usados, para simplicidade no algoritmo de renomeação estes terão sido removidos e possivelmente alterados como Mudlet classifica este assunto para fora, se um número atribuído desta forma &lt;b&gt;é&lt;/b&gt; importante para você, você pode alterá-lo de volta, desde que renomee a área que foi alocada o sufixo que foi desejado primeiro ...!&lt;/p&gt;</translation>
+      <translation>Foi detectado que &quot;_ ###&quot; sufixos de formulário já foram usados, para simplificar o algoritmo de renomeação, eles terão sido removidos e possivelmente alterados à medida que o Mudlet resolver esse assunto, se um número for atribuído dessa maneira &lt;b&gt;É&lt;/b&gt; importante para você, você pode alterá-lo de volta, desde que renomeie a área que recebeu o sufixo que era desejado primeiro...!&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1184"/>
       <source>&lt;nothing&gt;</source>
-      <translation>&lt;nada></translation>
+      <translation>&lt;nada&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1187"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation>[INFO]-Nome da área alterado para evitar duplicatas ou não nomeadas; nome antigo: &quot;%1&quot;, novo nome: &quot;%2&quot;.</translation>
+      <translation>[ INFO ] - O nome da área foi alterado para evitar duplicatas ou sem nome; Nome antigo: &quot;%1&quot;, novo nome: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1196"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation>[ALERTA]-Nomes de área vazia e duplicada detectados no arquivo do Mapa!</translation>
+      <translation>[ ALERTA ] - Nomes de áreas vazias e duplicadas detectados no arquivo de mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1197"/>
@@ -2945,17 +2985,17 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation>[INFO]-Mudlet já havia permitido que o mapa tivesse mais de uma área
-com o mesmo ou nenhum nome. Para resolver esses casos, uma área sem um nome
-aqui (ou criada no futuro) será automaticamente atribuído o nome &quot;%1&quot;.
-Nomes de área duplicada causarão tudo, mas o primeiro encontrou um para ganhar um sufixo de estilo
-&quot;_###&quot; .
+      <translation>[ INFO ] - Mudlet já havia permitido que o mapa tivesse mais de uma área
+com o mesmo ou nenhum nome. Para resolver esses casos, uma área sem nome
+aqui (ou criado no futuro) será automaticamente atribuído o nome &quot;%1&quot;.
+Nomes de área duplicados farão com que todos, exceto o primeiro encontrado, ganhem um
+&quot;_ ###&quot; sufixo de estilo.
 %2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1205"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation>[ALERT]-Nomes de área duplicada detectados no arquivo do Mapa!</translation>
+      <translation>[ ALERTA ] - Nomes de área duplicados detectados no arquivo de mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1206"/>
@@ -2971,23 +3011,23 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation>[ INFO ]  - Devido a algumas situações que não foram verificadas no passado, o Mudlet permitia
-que o usuário tivesse mais de uma área com o mesmo nome.
-Isso torna algumas coisas confusas e agora está proibido.
-  Nomes de área duplicados farão com que todos, exceto o primeiro encontrado,
-ganhem um sufixo no estilo "_###" onde cada "###" é um número crescente;
-você pode querer alterá-los, talvez substituindo-os por
-um "(nome de subárea)", mas cabe inteiramente a você como fazer isso,
-exceto que você não poderá definir o nome de uma área para o mesmo nome
-de outra que já exista.
-  Se houver mais de uma área sem nome, todas, exceto a primeira, também
-ganharão um sufixo dessa maneira.
+      <translation>[ INFO ] - Devido a algumas situações não terem sido verificadas no passado, o Mudlet teve
+permitia que o usuário tivesse mais de uma área com o mesmo nome.
+Isso torna algumas coisas confusas e agora não são permitidas.
+  Nomes de área duplicados farão com que todos, exceto o primeiro encontrado
+para ganhar um &quot;_ ###&quot; sufixo de estilo em que cada &quot;###&quot; é um aumento
+número; Você pode querer alterá-los, talvez substituindo-os por
+um &quot;(nome da subárea)&quot; mas depende inteiramente de você como você faz isso,
+caso contrário, você não poderá definir uma área&apos;ao de
+outro que existe na época.
+  Se houvesse mais de uma área sem nome, todas, exceto a
+primeiro também ganhará um sufixo dessa maneira.
 %1)</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1221"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation>[ALERT]-Nomes de área duplicada detectados no arquivo do Mapa!</translation>
+      <translation>[ ALERTA ] - Um nome de área vazio foi detectado no arquivo de mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1224"/>
@@ -3002,16 +3042,24 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation>[  OK  ]  - Devido a algumas situações que não foram verificadas no passado, o Mudlet permitia que o mapa tivesse uma área sem nome. Isso pode causar confusão em algumas coisas e agora isso não é mais permitido.
-  Para resolver esse caso, a área sem nome aqui (ou uma criada no futuro) será automaticamente atribuída o nome "%1".
-  Se isso acontecer mais de uma vez, a duplicação dos nomes das áreas fará com que todas, exceto a primeira encontrada, ganhem um sufixo "_###" onde cada "###" é um número crescente; você pode optar por alterar esses nomes, talvez adicionando nomes de área mais significativos, mas é totalmente sua decisão o que será usado, exceto que você não poderá definir o nome de uma área para o mesmo nome de outra que já exista.</translation>
+      <translation>[ OK ] - Devido a algumas situações não terem sido verificadas no passado, o Mudlet teve
+permitiu que o mapa tivesse uma área sem nome. Isso pode fazer com que alguns
+as coisas são confusas e agora não são permitidas.
+  Para resolver este caso, a área sem um nome aqui (ou um criado
+no futuro) receberá automaticamente o nome &quot;%1&quot;.
+  Se isso acontecer mais de uma vez, a duplicação de nomes de área será
+porque todos, exceto o primeiro encontrado, ganham um &quot;_ ###&quot; estilo
+sufixo onde cada &quot;###&quot; é um número crescente; você pode querer
+alterá-los, talvez adicionando nomes de área mais significativos, mas é
+depende inteiramente de você o que é usado, além de você não ser capaz de
+definir uma área&apos;ao de outro que existe na época.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1248"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation>[ INFO ]  - Nome da área padrão (redefinida) (para salas que não foram atribuídas a uma
-área) não encontrado, adicionando "%1" contra o ID reservado -1.</translation>
+      <translation>[ INFO ] - Nome da área padrão (reset) (para salas que não foram atribuídas a um
+área) não encontrada, adicionando &quot;%1&quot; contra o ID -1 reservado.</translation>
     </message>
   </context>
   <context>
@@ -3049,17 +3097,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1998"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation>Passe o mouse neste item para exibir os pontos de código Unicode na seleção &lt;i>(apenas a primeira linha!)&lt;/i></translation>
+      <translation>Passe o mouse sobre este item para exibir os pontos de código Unicode na seleção &lt;i&gt;(apenas a primeira linha!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2007"/>
       <source>restore Main menu</source>
-      <translation>restaurar Menu Principal</translation>
+      <translation>restaurar menu principal</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2009"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation>Use isto para restaurar o menu Principal para obter acesso aos controles.</translation>
+      <translation>Use isso para restaurar o menu principal para obter acesso aos controles.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2011"/>
@@ -3343,37 +3391,37 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2322"/>
       <source>{activate symmetrical swapping}</source>
       <extracomment>Unicode U+206B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{ativar troca simétrica}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2324"/>
       <source>{inhibit arabic form-shaping}</source>
       <extracomment>Unicode U+206C codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{inibir a formatação árabe}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2326"/>
       <source>{activate arabic form-shaping}</source>
       <extracomment>Unicode U+206D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{ativar moldagem de forma árabe}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2328"/>
       <source>{national digit shapes}</source>
       <extracomment>Unicode U+206E codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{formas de dígitos nacionais}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2330"/>
       <source>{nominal Digit shapes}</source>
       <extracomment>Unicode U+206F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{formas nominais de dígitos}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2332"/>
       <source>{ideographic space}</source>
       <extracomment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</extracomment>
-      <translation type="unfinished"/>
+      <translation>{espaço ideográfico}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2334"/>
@@ -3403,103 +3451,103 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2342"/>
       <source>{variation selector 5}</source>
       <extracomment>Unicode U+FE04 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2344"/>
       <source>{variation selector 6}</source>
       <extracomment>Unicode U+FE05 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2346"/>
       <source>{variation selector 7}</source>
       <extracomment>Unicode U+FE06 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2348"/>
       <source>{variation selector 8}</source>
       <extracomment>Unicode U+FE07 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{selecionador de variação 8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2350"/>
       <source>{variation selector 9}</source>
       <extracomment>Unicode U+FE08 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2352"/>
       <source>{variation selector 10}</source>
       <extracomment>Unicode U+FE09 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2354"/>
       <source>{variation selector 11}</source>
       <extracomment>Unicode U+FE0A codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2356"/>
       <source>{variation selector 12}</source>
       <extracomment>Unicode U+FE0B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2358"/>
       <source>{variation selector 13}</source>
       <extracomment>Unicode U+FE0C codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2360"/>
       <source>{variation selector 14}</source>
       <extracomment>Unicode U+FE0D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2362"/>
       <source>{variation selector 15}</source>
       <extracomment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2364"/>
       <source>{variation selector 16}</source>
       <extracomment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{seletor de variação 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2366"/>
       <source>{zero width no-break space}</source>
       <extracomment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</extracomment>
-      <translation type="unfinished"/>
+      <translation>{espaço sem quebra de linha de largura zero}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2374"/>
       <source>{interlinear annotation anchor}</source>
       <extracomment>Unicode U+FFF9 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{âncora de anotação interlinear}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2376"/>
       <source>{interlinear annotation separator}</source>
       <extracomment>Unicode U+FFFA codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{separador de anotação interlinear}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2378"/>
       <source>{interlinear annotation terminator}</source>
       <extracomment>Unicode U+FFFB codepoint</extracomment>
-      <translation type="unfinished"/>
+      <translation>{terminador de anotação interlinear}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2380"/>
       <source>{object replacement character}</source>
       <extracomment>Unicode U+FFFC codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{caractere de substituição de objeto}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2393"/>
@@ -3511,7 +3559,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 Unicode codepoint in range U+FFFx - not a character.
 ----------
 Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{não é um caractere}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2406"/>
@@ -3535,27 +3583,27 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2412"/>
       <source>{FitzPatrick modifier 5}</source>
       <extracomment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2414"/>
       <source>{FitzPatrick modifier 6}</source>
       <extracomment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{modificador de FitzPatrick 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2691"/>
       <location filename="../src/TTextEdit.cpp" line="2757"/>
       <source>Index (UTF-16)</source>
       <extracomment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Índice (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2696"/>
       <location filename="../src/TTextEdit.cpp" line="2762"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <extracomment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>U+&lt;i&gt;####&lt;/i&gt; Ponto de código Unicode &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2701"/>
@@ -3569,41 +3617,41 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2772"/>
       <source>Index (UTF-8)</source>
       <extracomment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Índice (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2711"/>
       <location filename="../src/TTextEdit.cpp" line="2777"/>
       <source>Byte</source>
       <extracomment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Byte</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2717"/>
       <location filename="../src/TTextEdit.cpp" line="2783"/>
       <source>Lua character or code</source>
       <extracomment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Caractere ou código Lua</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1582"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, extração do console de depuração</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1584"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 extrato de mini-console de %2 perfil</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1586"/>
       <source>Mudlet, %1 user window extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 Extrato da janela do usuário de %2 perfil</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1588"/>
       <source>Mudlet, main console extract from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, extrato do console principal de %1 perfil</translation>
     </message>
   </context>
   <context>
@@ -3619,43 +3667,47 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="195"/>
       <source>Error: This trigger has no patterns defined, yet. Add some to activate it.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: Este gatilho ainda não tem padrões definidos. Adicione alguns para ativá-lo.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="226"/>
       <source>Error: in item %1, perl regex &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: no item %1, regex perl &quot;%2&quot; falha ao compilar, motivo: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="247"/>
       <source>Error: in item %1, lua function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: no item %1, função lua &quot;%2&quot; falha ao compilar, motivo: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="267"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: no item %1, nenhuma cor para combinar foi definida - pelo menos &lt;i&gt;Um&lt;/i&gt; do primeiro ou do fundo não devem ser &lt;i&gt;Ignorado&lt;/i&gt;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="326"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Erro de gatilho:] %1 limite de grupo de captura excedido, capturar menos grupos.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="412"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Erro de gatilho:] %1 limite de grupo de captura excedido, capturar menos grupos.
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1164"/>
       <source>Trigger name=%1 expired.</source>
-      <translation type="unfinished"/>
+      <translation>Nome do gatilho=%1 Expirado.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Nome do gatilho=%1 vai disparar %n mais tempo(s).</numerusform>
+        <numerusform>Nome do gatilho=%1 vai disparar %n mais tempo(s).</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -3663,33 +3715,34 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% atualização</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>Carregando informações de atualização …</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>Uma nova versão do %APPNAME% está disponível!</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="113"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% %UPDATE_VERSION% está disponível (você tem %CURRENT_VERSION%).
+Gostaria de atualizar agora?</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="151"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>Registro de alterações para %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="161"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Você está usando a versão %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="192"/>
@@ -3770,7 +3823,7 @@ reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
       <translation>[ ALERTA ] - Desculpe, o arquivo que está sendo lido:
 &quot;%1&quot;
-relata que tem uma versão (%2) deve ter vindo de uma versão anterior do Mudlet,
+relata que tem uma versão (%2) deve ter vindo de uma versão posterior do Mudlet,
 e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
     </message>
     <message>
@@ -3928,17 +3981,17 @@ e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation>&lt;p>Escolha um bom nome, de preferência único, para o seu botão, menu ou barra de ferramentas. Isso será exibido na árvore de botões.&lt;/p></translation>
+      <translation>&lt;p&gt;Escolha um nome bom, idealmente exclusivo, para o seu botão, menu ou barra de ferramentas. Isso será exibido na árvore de botões.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="316"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Digite um ou mais comandos que deseja que o botão envie diretamente para o jogo se for pressionado. (Opcional)&lt;/p&gt;&lt;p&gt;Se este for um &lt;i&gt;botão de pressão&lt;/i&gt; então isso é enviado somente quando o botão vai do estado &lt;i&gt;em cima&lt;/i&gt; Para &lt;i&gt;abaixo&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Para enviar comandos mais complexos, que podem depender ou precisar modificar variáveis dentro deste perfil, um script Lua deve ser inserido &lt;i&gt;ao invés&lt;/i&gt; na área do editor abaixo.  Qualquer coisa inserida aqui é, literalmente, enviada para o servidor do jogo.&lt;/p&gt;&lt;p&gt;É permitido usar ambos este &lt;i&gt;e&lt;/i&gt; um script Lua - isso será enviado &lt;b&gt;antes&lt;/b&gt; do script ser executado.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Digite um ou mais comandos que deseja que o botão envie diretamente para o jogo se for pressionado. (Opcional)&lt;/p&gt;&lt;p&gt;Se este for um &lt;i&gt;Empurre para baixo&lt;/i&gt; então isso é enviado somente quando o botão sai do estado botão &lt;i&gt;em cima&lt;/i&gt; Para &lt;i&gt;abaixo&lt;/i&gt;&lt;/p&gt;&lt;p&gt;Para enviar comandos mais complexos, que podem depender ou precisar modificar variáveis dentro deste perfil, um script Lua deve ser inserido &lt;i&gt;em vez de&lt;/i&gt; na área do editor abaixo.  Qualquer coisa inserida aqui é, literalmente, enviada para o servidor do jogo.&lt;/p&gt;&lt;p&gt;É permitido usar tanto este &lt;i&gt;e&lt;/i&gt; um script Lua - isso será enviado &lt;b&gt;antes&lt;/b&gt; o script é executado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="336"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Digite um ou mais comandos que deseja que o botão envie diretamente para o jogo quando esse botão for do estado  &lt;i&gt;baixo&lt;/i&gt; para &lt;i&gt;cima&lt;/i&gt;. Para enviar comandos mais complexos, que podem depender ou precisar modificar variáveis dentro deste perfil, um script Lua deve ser inserido &lt;i&gt;ao invés&lt;/i&gt; na área do editor abaixo.  Qualquer coisa inserida aqui é, literalmente, enviada para o servidor do jogo.&lt;/p&gt;&lt;p&gt;É permitido usar ambos este &lt;i&gt;e&lt;/i&gt; um script Lua - isso será enviado &lt;b&gt;antes&lt;/b&gt; do script ser executado.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Digite um ou mais comandos que deseja que o botão envie diretamente para o jogo quando este botão sair do estado &lt;i&gt;abaixo&lt;/i&gt; Para &lt;i&gt;em cima&lt;/i&gt;&lt;/p&gt;&lt;p&gt;Para enviar comandos mais complexos, que podem depender ou precisar modificar variáveis dentro deste perfil, um script Lua deve ser inserido &lt;i&gt;em vez de&lt;/i&gt; na área do editor abaixo.  Qualquer coisa inserida aqui é, literalmente, enviada para o servidor do jogo.&lt;/p&gt;&lt;p&gt;É permitido usar tanto este &lt;i&gt;e&lt;/i&gt; um script Lua - isso será enviado &lt;b&gt;antes&lt;/b&gt; o script é executado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="358"/>
@@ -3956,7 +4009,7 @@ e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation>Escolha um nome único para o seu apelido; ele vai aparecer na árvore e é necessário para programar.</translation>
+      <translation>escolha um nome único para o seu apelido; ele vai aparecer na árvore e é necessário para programar.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="85"/>
@@ -4001,7 +4054,7 @@ e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="219"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation>&lt;p>Digite um ou mais comandos para usar se o comando dado corresponder ao padrão. (Opcional)&lt;/p>&lt;p>Isso pode ser outro apelido ou um comando para enviar diretamente para o jogo. Para comandos complexos que requerem modificação de variáveis dentro deste perfil, use um script Lua na área do editor abaixo. É possível usar tanto este campo quanto um script Lua - o conteúdo deste campo será usado antes de executar o script.&lt;/p></translation>
+      <translation>&lt;p&gt;Insira um ou mais comandos a serem usados se o comando fornecido corresponder ao padrão. (Opcional)&lt;/p&gt;&lt;p&gt;Pode ser outro alias ou um comando para enviar diretamente para o jogo. Para comandos complexos que requerem modificação de variáveis dentro deste perfil, use um script Lua na área do editor abaixo. Ela&apos;é possível usar este campo e um script Lua - o conteúdo deste campo será usado antes de executar o script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="222"/>
@@ -4017,26 +4070,26 @@ e este não pode lê-lo, você precisa de um Mudlet mais novo!</translation>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ ERRO ] - Falha na consulta do nome do hospedeiro!
-Não é possível estabelecer a conexão.
+      <translation>[ ERRO ] - Falha na pesquisa do nome do hospedeiro!
+A conexão não pode ser estabelecida.
 O nome do servidor não está correto, não está funcionando corretamente,
-ou os seus servidores de nomes não estão funcionando corretamente.</translation>
+ou seus servidores de nomes não estão funcionando corretamente.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="462"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation>[INFO]-Uma conexão segura foi estabelecida com sucesso.</translation>
+      <translation>[INFO]- Uma conexão segura foi estabelecida com sucesso.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="464"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation>[INFO]-Uma conexão foi estabelecida com sucesso.</translation>
+      <translation>[INFO]- Uma conexão foi estabelecida com sucesso.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="500"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation>[INFO]-Tempo de conexão: %1
+      <translation>[INFO]- Tempo de conexão: %1
     </translation>
     </message>
     <message>
@@ -4047,20 +4100,21 @@ ou os seus servidores de nomes não estão funcionando corretamente.</translatio
     <message>
       <location filename="../src/ctelnet.cpp" line="544"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation>Conexões seguras não são suportadas por este jogo nesta porta - tente desativar a opção.</translation>
+      <translation>Conexões seguras são&apos;t suportado por este jogo nesta porta - tente desativar a opção.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2400"/>
       <location filename="../src/ctelnet.cpp" line="2795"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation>[ INFO ]  - O servidor deseja atualizar a GUI para a nova versão '%1'. Desinstalando a versão antiga '%2'.</translation>
+      <translation>[ INFO ] - O servidor deseja atualizar a GUI para uma nova versão &apos;%1&apos;.
+Desinstalando a versão antiga &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2411"/>
       <location filename="../src/ctelnet.cpp" line="2806"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation>[  OK  ]  - O pacote já está instalado.</translation>
+      <translation>[ OK ] - O pacote já está instalado.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2420"/>
@@ -4077,7 +4131,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="403"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation>[ INFO ]  - Procurando o endereço IP do servidor: %1:%2 ...</translation>
+      <translation>[ INFO ] - Procurando o endereço IP do servidor: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="534"/>
@@ -4085,27 +4139,27 @@ Uninstalling old version &apos;%2&apos;.</source>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
       <translation>[ ALERTA ] - O soquete foi desconectado.
-Motivo: </translation>
+Razão: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation>[ INFO ]  - Tentando conexão segura com %1: %2 ...</translation>
+      <translation>[ INFO ] - Tentando conexão segura com %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation>[ INFO ]  - O endereço IP de %1 foi encontrado. É: %2</translation>
+      <translation>[ INFO ] - O endereço IP de %1 foi encontrado. É: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="598"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation>[ INFO ]  - Tentando conectar a %1:%2 ...</translation>
+      <translation>[ INFO ] - Tentando se conectar a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="600"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation>[ INFO ]  - Tentando conectar a %1:%2 via proxy...</translation>
+      <translation>[ INFO ] - Tentando se conectar a %1:%2 via proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="647"/>
@@ -4116,12 +4170,13 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation>[ ERRO ] - Erro interno, nenhum codec encontrado para a configuração atual de {"%1"}
-então o Mudlet não pode enviar dados nesse formato para o Servidor do Jogo. Por favor,
-verifique se há uma alternativa que o MUD e o Mudlet possam usar. O Mudlet tentará enviar os dados usando a codificação ASCII
-mas ficará limitado apenas aos caracteres sem acento do inglês básico.
+      <translation>[ ERRO ] - Erro interno, nenhum codec encontrado para a configuração atual de {&quot;%1&quot;}
+então o Mudlet não pode enviar dados nesse formato para o servidor do jogo. Por favor
+verifique se existe uma alternativa que o MUD e o Mudlet possam
+usar. O Mudlet tentará enviar os dados usando a codificação ASCII
+mas será limitado apenas a caracteres sem acento do inglês básico.
 Nota: este aviso será emitido apenas uma vez, até que a codificação seja
-alterada.</translation>
+Mudou.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2422"/>
@@ -4133,7 +4188,7 @@ alterada.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="3006"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation>[INFO]-Uma conexão mais segura na porta %1 está disponível.</translation>
+      <translation>[ INFO ] - Uma conexão mais segura na porta %1 está disponível.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3011"/>
@@ -4180,18 +4235,18 @@ alterada.</translation>
       <location filename="../src/ctelnet.cpp" line="3421"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ INFO ]  - Carregando arquivo de replay:
-"%1".</translation>
+      <translation>[ INFO ] - Carregando arquivo de repetição:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3445"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation>Não é possível reproduzir o arquivo "%1", a mensagem de erro foi: "o arquivo de reprodução parece estar corrompido".</translation>
+      <translation>Não é possível reproduzir o arquivo &quot;%1&quot;, a mensagem de erro foi: &quot;O arquivo de repetição parece estar corrompido&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3447"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation>[ AVISO ]  - A reprodução foi interrompida pois o arquivo parece estar corrompido.</translation>
+      <translation>[ AVISAR ] - O replay foi abortado porque o arquivo parece estar corrompido.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3456"/>
@@ -4202,25 +4257,25 @@ alterada.</translation>
       <location filename="../src/ctelnet.cpp" line="3458"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation>[ AVISO ]  - Não é possível realizar a reprodução, outra pode já estar em andamento.
-Tente novamente quando ela terminar.</translation>
+      <translation>[ AVISAR ] - Não é possível realizar o replay, outro pode já estar em andamento.
+Tente novamente quando terminar.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3466"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation>Não é possível ler o arquivo "%1", a mensagem de erro foi: "%2".</translation>
+      <translation>Não é possível ler o arquivo &quot;%1&quot;, a mensagem de erro foi: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3469"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation>[ ERRO ] - Não foi possível ler o arquivo "%1", 
-a mensagem de erro foi: "%2".</translation>
+      <translation>[ ERRO ] - Não é possível ler o arquivo &quot;%1&quot;,
+A mensagem de erro foi: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3508"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[  OK  ]  - A reprodução terminou.</translation>
+      <translation>[ OK ] - O replay terminou.</translation>
     </message>
   </context>
   <context>
@@ -4237,20 +4292,20 @@ a mensagem de erro foi: "%2".</translation>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation>&lt;small>Escolha:&lt;ul>&lt;li>uma das 16 cores básicas abaixo&lt;/li>
-&lt;li>clique no botão &lt;i>mais&lt;/i> para ter acesso a outras cores no conjunto de 256 cores e siga as instruções para selecionar uma cor dessa parte das 256 cores suportadas; se essa cor já estiver em uso, essa parte já estará sendo mostrada&lt;/li>
-&lt;li>clique nos botões &lt;i>Padrão&lt;/i> ou &lt;i>Ignorar&lt;/i> na parte inferior para outros casos especiais&lt;/li>
-&lt;li>clique em &lt;i>Cancelar&lt;/i> para fechar esta caixa de diálogo sem fazer alterações&lt;/li>&lt;/ul>&lt;/small></translation>
+      <translation>&lt;small&gt;Escolher:&lt;ul&gt;&lt;li&gt;uma das 16 cores básicas abaixo&lt;/li&gt;
+&lt;li&gt;Clique no ícone &lt;i&gt;mais&lt;/i&gt; para obter acesso a outras cores no conjunto de 256 cores e, em seguida, siga as instruções para selecionar uma cor dessa parte das 256 cores suportadas; Se essa cor já estiver em uso, essa parte já estará sendo exibida&lt;/li&gt;
+&lt;li&gt;Clique no ícone &lt;i&gt;Inadimplência&lt;/i&gt; ou &lt;i&gt;Ignorar&lt;/i&gt; botões na parte inferior para um par de outros estojos especiais&lt;/li&gt;
+&lt;li&gt;clique &lt;i&gt;Cancelar&lt;/i&gt; para fechar esta caixa de diálogo sem fazer nenhuma alteração&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="59"/>
       <source>Basic ANSI Colors [0-15] - click a button to select that color number directly:</source>
-      <translation>Cores ANSI Básicas [0-15] - clique em um botão para selecionar diretamente o número da cor:</translation>
+      <translation>Cores ANSI básicas [0-15] - clique em um botão para selecionar esse número de cor diretamente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="241"/>
       <source>ANSI 6R x 6G x 6B Colors [16-231] - adjust red, green, blue and click button to select matching color number:</source>
-      <translation>Cores ANSI 6R x 6G x 6B [16-231] - ajuste o vermelho, verde, azul e clique no botão para selecionar o número da cor correspondente:</translation>
+      <translation>Cores ANSI 6R x 6G x 6B [16-231] - ajuste vermelho, verde, azul e clique no botão para selecionar o número da cor correspondente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="253"/>
@@ -4285,7 +4340,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="364"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation>Escala de cinza ANSI 24 [232-255] - ajuste o cinza e clique no botão para selecionar o número da cor correspondente:</translation>
+      <translation>ANSI 24 Escala de cinzas [232-255] - ajuste o cinza e clique no botão para selecionar o número da cor correspondente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="376"/>
@@ -4323,7 +4378,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/composer.ui" line="99"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation>&lt;p>Salvar (&lt;span style=" color:#565656;">Shift+Tab&lt;/span>)&lt;/p></translation>
+      <translation>&lt;p&gt;Salvar (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="102"/>
@@ -4361,7 +4416,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="466"/>
       <source>welcome message</source>
-      <translation>Mensagem de boas-vindas</translation>
+      <translation>mensagem de boas-vindas</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="492"/>
@@ -4377,7 +4432,7 @@ a mensagem de erro foi: "%2".</translation>
       <location filename="../src/ui/connection_profiles.ui" line="510"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation>Um nome único para o perfil, mas que é limitado a um subconjunto de caracteres ASCII apenas.</translation>
+      <translation>Um nome exclusivo para o perfil, mas que é limitado a um subconjunto de caracteres ascii apenas.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="520"/>
@@ -4392,7 +4447,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="544"/>
       <source>The Internet host name or IP address</source>
-      <translation>O nome do host da Internet ou endereço IP</translation>
+      <translation>O nome do hospedeiro da Internet ou endereço IP</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="551"/>
@@ -4412,7 +4467,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="581"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation>A porta que é usada juntamente com o nome do servidor para fazer a conexão com o servidor do jogo. Se não for especificado, o padrão é 23 para conexões "Telnet". Conexões seguras podem exigir um número de porta diferente.</translation>
+      <translation>A porta que é usada junto com o nome do servidor para fazer a conexão com o servidor do jogo. Se não for especificado, um padrão de 23 para &quot;Telnet&quot; conexões é usado. As conexões seguras podem exigir um número de porta diferente.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="600"/>
@@ -4437,7 +4492,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
       <source>Profile history:</source>
-      <translation>Histórico do perfil</translation>
+      <translation>Histórico do perfil:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="711"/>
@@ -4467,7 +4522,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="652"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation>Se fornecido, será enviado, juntamente com a senha, para identificar o usuário no jogo.</translation>
+      <translation>Se fornecido, será enviado, junto com a senha, para identificar o usuário no jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="763"/>
@@ -4497,7 +4552,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="678"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation>Se fornecido, será enviado, juntamente com o nome do personagem, para identificar o usuário no jogo.</translation>
+      <translation>Se fornecido, será enviado, junto com o nome do personagem, para identificar o usuário no jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="727"/>
@@ -4507,7 +4562,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="733"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation>Permitir que este perfil utilize os recursos de "Rich Presence" do Discord do Mudlet</translation>
+      <translation>Permitir que este perfil use o Mudlet&apos;s Discórdia &quot;Presença rica&quot;  Características</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
@@ -4523,7 +4578,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="672"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation>Senha do personagem. Note que a senha não é criptografada no armazenamento</translation>
+      <translation>Senha de caracteres. Observe que a senha não é&apos;t criptografado no armazenamento</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="760"/>
@@ -4576,7 +4631,7 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="44"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation>&lt;p>Selecione o Estilo, Cor e se deseja terminar a linha com uma seta.&lt;/p></translation>
+      <translation>&lt;p&gt;Selecione Estilo, Cor e se deseja terminar a linha com uma ponta de seta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="123"/>
@@ -4644,12 +4699,12 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="61"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation>&lt;p>Selecione o Estilo, Cor e se deseja terminar a linha com uma seta ANTES de escolher a saída para desenhar a linha...&lt;/p></translation>
+      <translation>&lt;p&gt;Selecione Estilo, Cor e se deseja terminar a linha com uma ponta de seta ANTES de escolher a saída para desenhar a linha para...&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="188"/>
       <source>&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;</source>
-      <translation>&lt;p>Selecione uma saída normal para começar a desenhar uma linha personalizada para ela, os botões são mostrados pressionados se eles já possuem uma linha personalizada e desabilitados se não houver saída naquela direção.&lt;/p></translation>
+      <translation>&lt;p&gt;Selecione uma saída normal para começar a desenhar uma linha para ela, os botões são mostrados pressionados se já tiverem essa linha personalizada e desativados se não houver saída nessa direção.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="191"/>
@@ -4724,12 +4779,12 @@ a mensagem de erro foi: "%2".</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="504"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation>&lt;p>Indica se já existe uma linha personalizada para esta saída especial, será substituída se a saída for selecionada.&lt;/p></translation>
+      <translation>&lt;p&gt;Indica se já existe uma linha personalizada para esta saída especial, será substituída se a saída for selecionada.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="515"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation>&lt;p>O quarto para onde esta saída especial leva.&lt;/p></translation>
+      <translation>&lt;p&gt;A sala para a qual essa saída especial leva.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="526"/>
@@ -4781,9 +4836,9 @@ linha personalizada?</translation>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation>Tem certeza de que deseja excluir este perfil? Tudo (apelidos, gatilhos, backups e etc) será perdido.
+      <translation>Tem certeza de que você&apos;Gostaria de excluir este perfil? Tudo (aliases, gatilhos, backups, etc) desaparecerá.
 
-Se sim, digite o nome do perfil como confirmação:</translation>
+Se estiver, digite o nome do perfil como confirmação:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="77"/>
@@ -4994,7 +5049,7 @@ Count</source>
       <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Página inicial&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Fóruns&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentação&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discordlt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discórdia&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Código-fonte&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Recursos/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
@@ -5521,7 +5576,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="373"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Todas as opções de cores estão aparecendo.</translation>
     </message>
   </context>
   <context>
@@ -5529,72 +5584,72 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="100"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Conectar</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="228"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Senha de caracteres. Observe que a senha não é criptografada no armazenamento</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="278"/>
       <source>Game name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nome do jogo: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="280"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <extracomment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Botão para selecionar um jogo de lama para jogar, clique duas vezes nele para conectar e começar a jogá-lo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="945"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Este perfil está carregado no momento - feche-o antes de alterar os parâmetros de conexão.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1255"/>
       <source>Reset icon</source>
       <extracomment>Reset the custom picture for this profile in the connection dialog and show the default one instead</extracomment>
-      <translation type="unfinished"/>
+      <translation>Redefinir ícone</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1259"/>
       <source>Set custom icon</source>
       <extracomment>Set a custom picture to show for the profile in the connection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Definir ícone personalizado</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1264"/>
       <source>Set custom color</source>
       <extracomment>Set a custom color to show for the profile in the connection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Definir cor personalizada</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1628"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation type="unfinished"/>
+      <translation>O personagem %1 não é permitido. Use um dos seguintes:</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1651"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation type="unfinished"/>
+      <translation>Você tem que inserir um número. Outros personagens não são permitidos.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1640"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Esse nome de perfil já está em uso.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="562"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível renomear os dados do seu perfil no computador.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="112"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Bem-vindo ao Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Clique em um dos jogos da lista para jogar.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Para jogar um jogo que não está na lista, clique em %1 &lt;span style=&quot; color:#555753;&quot;&gt;Novo&lt;/span&gt;, preencha o &lt;i&gt;Nome do perfil&lt;/i&gt;, &lt;i&gt;Endereço do servidor&lt;/i&gt;e &lt;i&gt;Porta&lt;/i&gt; campos na &lt;i&gt;área &lt;/i&gt; necessária.&lt;/p&gt;&lt;p&gt;Depois disso, clique em %2 &lt;span style=&quot; color:#555753;&quot;&gt;Conecte-se&lt;/span&gt; para jogar.&lt;/p&gt;&lt;p&gt;Divirta-se!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;A equipe Mudlet &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
@@ -5605,149 +5660,149 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="125"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1385"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copiar</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="127"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Copiar apenas configurações</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="147"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>Copiar perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="148"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>Copie todo o perfil para um novo que exigirá um novo nome diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="163"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Copiar configurações de perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="164"/>
       <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>Copie as configurações e algumas outras partes do perfil para um novo que exigirá um novo nome diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="226"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation type="unfinished"/>
+      <translation>Senha de caracteres, armazenada com segurança no computador&apos;Gerenciador de credenciais</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="275"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para carregar, mas não conectar o perfil selecionado.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="276"/>
       <source>Click to load and connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para carregar e conectar o perfil selecionado.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="277"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>É necessário ter um nome de perfil, endereço do servidor do jogo e porta antes que este botão possa ser ativado.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="570"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível criar a nova pasta de perfil no seu computador.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="616"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>Novo nome de perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="734"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Excluindo &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="992"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>A integração do Discord não está disponível nesta plataforma</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="998"/>
       <source>Discord integration not supported by game</source>
-      <translation type="unfinished"/>
+      <translation>Integração do Discord não suportada pelo jogo</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1001"/>
       <source>Check to enable Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Marque para ativar a integração do Discord</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1277"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>Selecione a imagem personalizada para o perfil (deve ser 120x30)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1277"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>Imagens (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1367"/>
       <source>Copying...</source>
-      <translation type="unfinished"/>
+      <translation>Copiando...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1661"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>O número da porta deve estar acima de zero e abaixo de 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1681"/>
       <source>Mudlet can not load support for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>O Mudlet não pode carregar suporte para conexões seguras.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1703"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1713"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>Insira o URL ou endereço IP do servidor do jogo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1724"/>
       <source>SSL connections require the URL of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>As conexões SSL requerem o URL do servidor do jogo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1741"/>
       <source>Load profile without connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Carregue o perfil sem conectar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1757"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Defina um nome de perfil válido, endereço do servidor do jogo e a porta do jogo antes de carregar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1762"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Defina um nome de perfil válido, endereço do servidor do jogo e a porta do jogo antes de se conectar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1816"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para ocultar a senha; Ele também ocultará se outro perfil for selecionado.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1820"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Clique para revelar a senha desse perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1669"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1672"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>O Mudlet não está configurado para conexões seguras.</translation>
     </message>
   </context>
   <context>
@@ -5755,102 +5810,102 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="104"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 fechou seu cliente.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="116"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Cliente IRC Mudlet - %1 - %2 em %3</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="130"/>
       <source>$ Starting Mudlet IRC Client...</source>
-      <translation type="unfinished"/>
+      <translation>$ Iniciando o cliente de IRC do Mudlet...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="131"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>$ Anfitrião: %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="132"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Apelido: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="133"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Canais de entrada automática: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="134"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ Este cliente suporta o preenchimento automático usando a tecla Tab.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="135"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$ Tipo &lt;b&gt;/Ajuda&lt;/b&gt; para comandos ou &lt;b&gt;/help [comando]&lt;/b&gt; para sintaxe de comando.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="196"/>
       <source>Restarting IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Reiniciando o IRC Client</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="374"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[Erro] MSGLIMIT requer &lt;limit&gt; ser um número inteiro maior que zero!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="404"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation type="unfinished"/>
+      <translation>[AJUDA] Comandos disponíveis: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
       <source>[HELP] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[AJUDA] Sintaxe: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="414"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Conectado a %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="415"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Juntar %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="420"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Conectar %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="425"/>
       <source>! Disconnected from %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Desconectado de %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="487"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERRO] Sintaxe: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="489"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERRO] Comando desconhecido: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="635"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! O apelido %1 é reservado. Alterando automaticamente o apelido para: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="646"/>
       <source>Your nick has changed.</source>
-      <translation type="unfinished"/>
+      <translation>Seu nick mudou.</translation>
     </message>
   </context>
   <context>
@@ -5859,7 +5914,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="34"/>
       <source>Create label</source>
       <extracomment>Create label dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Criar rótulo</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
@@ -5877,7 +5932,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="116"/>
       <source>Label font</source>
       <extracomment>2D mapper create label font dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Fonte do rótulo</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="134"/>
@@ -5892,7 +5947,7 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="375"/>
       <source>None</source>
       <extracomment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nenhum</translation>
     </message>
   </context>
   <context>
@@ -5900,48 +5955,49 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="46"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Gerenciador de Módulos - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="62"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome do módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="62"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Prioridade</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="62"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Sincronizar</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="62"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Localização do módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="102"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Marcar esta caixa fará com que o módulo seja salvo e &lt;i&gt;ressincronizado&lt;/i&gt; em todas as sessões que o compartilham quando o &lt;i&gt;Salvar perfil&lt;/i&gt; é clicado no Editor ou se for salvo no final da sessão.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="132"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Carregar módulo Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="139"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Carregar módulo do Mudle:</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="139"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Impossível ler o arquivo %1:
+%2.</translation>
     </message>
   </context>
   <context>
@@ -5949,79 +6005,79 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="29"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>Nome do pacote aqui</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>ou</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>Verificar itens para exportar</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="156"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="328"/>
       <source>optional</source>
-      <translation type="unfinished"/>
+      <translation>opcional</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="235"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Tamanho do ícone de 512x512 recomendado</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="245"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>512x512 recomendado</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="182"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>Ícone</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="66"/>
       <source>Select what to export</source>
       <comment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</comment>
-      <translation type="unfinished"/>
+      <translation>Selecione o que exportar</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>Describe your package. Add a description, icons, assets and more.</source>
-      <translation type="unfinished"/>
+      <translation>Descreva seu pacote. Adicione uma descrição, ícones, ativos e muito mais.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Para atribuição, exibido no Gerenciador de pacotes.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>Adicionar ícone</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="255"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>Descrição curta</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Descrição do pacote unifilar mostrada no Gerenciador de Pacotes.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
       <source>Description</source>
-      <translation type="unfinished"/>
+      <translation>Descrição</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="288"/>
@@ -6049,57 +6105,80 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>
+Esta descrição do pacote é mostrada no gerenciador de pacotes.  O editor suporta a marcação de marca comum.  Siga a descrição abaixo para obter um exemplo completo do que incluir na descrição do seu pacote.
+
+### Descrição
+
+Uma descrição completa do que este pacote alcança. Se o pacote for específico do jogo, mencione isso aqui.  Especifique se o pacote tem atualização automática ou, se não tiver, adicione um link na seção Consulte também abaixo para o repositório de código.
+
+### Uso
+
+Se este pacote usar aliases, mostre alguns exemplos e a saída esperada.
+
+`&gt; alias_1'
+
+    saída de alias_1 - recuo em quatro espaços
+    mais saída -- para blocos de código
+
+Se este pacote for uma implementação de GUI, considere adicionar capturas de tela arrastando e soltando imagens diretamente neste editor.
+
+### Veja também
+
+Material de leitura adicional. por exemplo, um link para o wiki do Mudlet, fóruns, repositório de pacotes do Github ou página da web.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [O link 2 pode ser uma página da web](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="318"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versão</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="338"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>Pacotes necessários</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="395"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</source>
-      <translation type="unfinished"/>
+      <translation>Este pacote faz uso de outros pacotes? Liste-os aqui como requisitos. Imprensa &apos;Excluir&apos; para remover um pacote.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="427"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Incluir ativos (imagens, sons, fontes)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="437"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>Arraste e solte arquivos e pastas ou use o botão de navegação abaixo</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="485"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>Selecione os arquivos a serem incluídos no pacote</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Exportador de Pacotes</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="335"/>
       <source>Does this package make use of other packages? List them here as requirements.</source>
-      <translation type="unfinished"/>
+      <translation>Este pacote faz uso de outros pacotes? Liste-os aqui como requisitos.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="535"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>Selecione o local de exportação</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Gatilhos</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
@@ -6109,159 +6188,162 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="65"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="66"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Códigos</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="67"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Chaves</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="68"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Botões</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
       <source>Export</source>
       <extracomment>Text for button to perform the package export on the items the user has selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Exportar</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="135"/>
       <source>Package Exporter - %1</source>
       <extracomment>Title of the window. The %1 will be replaced by the current profile&apos;s name</extracomment>
-      <translation type="unfinished"/>
+      <translation>Exportador de Pacotes</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
       <extracomment>This error message will appear when a file is to be placed into the package but the code cannot open it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao abrir o arquivo &quot;%1&quot; para colocar no pacote. A mensagem de erro foi: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao adicionar arquivo &quot;%1&quot; para empacotar. A mensagem de erro foi: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="903"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <extracomment>This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao abrir o arquivo do pacote. O erro é: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1065"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <extracomment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao compactar o pacote. O erro é: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1475"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Por que não &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;carregar&lt;/a&gt; seu pacote para outros usuários do Mudlet?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageExporter.cpp" line="1493"/>
       <source>Select what to export (%n item(s))</source>
       <extracomment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Selecione o que exportar (%n item(s))</numerusform>
+        <numerusform>Selecione o que exportar (%n item(s))</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1496"/>
       <source>Select what to export</source>
       <extracomment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Selecione o que exportar</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="115"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>atualizar pacote instalado</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="116"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Adicionar dependências</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="338"/>
       <location filename="../src/dlgPackageExporter.cpp" line="340"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>Exportar para %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="873"/>
       <source>cannot copy %1 to the temporary location %2 - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>não é possível copiar %1 para o local temporário %2 - Você pode verificar novamente?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="359"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>Abrir ícone</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="359"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>Arquivos de imagem (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="482"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>Insira o nome do pacote.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="520"/>
       <location filename="../src/dlgPackageExporter.cpp" line="596"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>Exportando pacote...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="540"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Falha ao exportar. Não foi possível abrir a pasta &quot;%1&quot; para escrever. Você tem as permissões necessárias e espaço livre em disco para gravar nessa pasta?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="796"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <extracomment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened</extracomment>
-      <translation type="unfinished"/>
+      <translation>Falha ao exportar. Não foi possível gravar itens do Mudlet no arquivo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="868"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 não&apos;Não parecem existir mais - você pode verificar novamente?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="986"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Falha ao adicionar diretório &quot;%1&quot; para empacotar. O erro é: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1029"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation type="unfinished"/>
+      <translation>Arquivo necessário &quot;%1&quot; não foi encontrada na área de espera. Esta área contém os itens do Mudlet escolhidos para o pacote, que você selecionou para serem incluídos no arquivo do pacote. Isso sugere que pode haver um problema com esse diretório: &quot;%2&quot; - Você tem as permissões necessárias e espaço livre em disco?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="582"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation type="unfinished"/>
+      <translation>Pacote &quot;%1&quot; exportado para: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1058"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>Exportação cancelada.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1119"/>
       <source>Where do you want to save the package?</source>
-      <translation type="unfinished"/>
+      <translation>Onde você deseja salvar o pacote?</translation>
     </message>
   </context>
   <context>
@@ -6269,55 +6351,59 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="47"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Gerenciador de pacotes- %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="99"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importar pacote Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="106"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importar Pacote Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="106"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Não é possível ler o arquivo %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="166"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="166"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versão</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="166"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>Criado</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="166"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Dependências</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="235"/>
       <source>Remove %n package(s)</source>
       <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Retirar %n pacote(s)</numerusform>
+        <numerusform>Retirar %n pacote(s)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="238"/>
       <source>Remove package</source>
       <extracomment>Message on button in package manager initially and when there is no packages to remove</extracomment>
-      <translation type="unfinished"/>
+      <translation>Remover pacote</translation>
     </message>
   </context>
   <context>
@@ -6325,93 +6411,93 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="141"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation type="unfinished"/>
+      <translation>Local que será usado para armazenar arquivos de registro - os registros correspondentes serão anexados.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="142"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Selecione um diretório onde os registros serão salvos.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="143"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation type="unfinished"/>
+      <translation>Redefina o diretório para que os logs sejam salvos no perfil&apos;s &lt;i&gt;tora&lt;/i&gt; diretório.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>Defina um nome personalizado para o seu registro. (Novos registros serão anexados se já existir um arquivo de registro com o mesmo nome).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="176"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>As atualizações automáticas são desativadas nas compilações de desenvolvimento para evitar que uma atualização substitua seu Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="203"/>
       <source>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</source>
-      <translation type="unfinished"/>
+      <translation>Isso levantará uma exibição mostrando todos os símbolos usados no mapa atual e se eles podem ser desenhados usando apenas a fonte especificada, qualquer outra fonte ou não.  Ele também mostra a sequência de Unicode &lt;i&gt;pontos de código&lt;/i&gt; que constituem esse símbolo, de modo a poderem ser identificados mesmo que não possam ser exibidos; Além disso, até as primeiras trinta e duas salas que estão usando esse símbolo são listadas, o que pode ajudar a identificar quaisquer casos inesperados ou estranhos.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="209"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>Selecione a única fonte ou a fonte principal usada (dependendo de &lt;i&gt;Use apenas símbolos (glifos) da fonte escolhida&lt;/i&gt; configuração) para produzir os símbolos de sala do mapeador 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="211"/>
       <source>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</source>
-      <translation type="unfinished"/>
+      <translation>O uso de uma única fonte provavelmente produzirá um estilo mais consistente, mas pode causar o &lt;i&gt;caractere de substituição de fonte&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; para mostrar se a fonte não tem um glifo necessário (uma fonte&apos;s caractere/símbolo individual) para representar o grafema (o que deve ser representado).  Desmarcar essa caixa de seleção permitirá que o melhor glifo alternativo de outra fonte seja usado para desenhar esse grafema.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="307"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% concluído)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="363"/>
       <source>Migrated all passwords to secure storage.</source>
-      <translation type="unfinished"/>
+      <translation>Migrou todas as senhas para armazenamento seguro.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="374"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>Migrou todas as senhas para o armazenamento de perfis.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="721"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>Do arquivo de dicionário &lt;tt&gt;%1.Dic&lt;/tt&gt; (e seu afixo companheiro &lt;tt&gt;.aff&lt;/tt&gt; arquivo).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="882"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd#HH-mm-ss (por exemplo, 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="884"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="885"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd (concatenar registros diários, por exemplo, 1970-01-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="888"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM (concatenar o registros mensais, por exemplo, 1970-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="889"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Arquivo nomeado (concatenar registros em um arquivo)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="927"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>Outros perfis para mapear:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="968"/>
@@ -6421,7 +6507,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="980"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Atualizado, experimental/teste, NÃO recomendado}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="982"/>
