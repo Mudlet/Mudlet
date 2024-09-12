@@ -194,7 +194,12 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     if (async) {
         auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
         auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+            if (!mpHost) {
+                return;
+            }
+            mpHost->xmlSaved(fileName);
+        });
         watcher->setFuture(future);
         saveFutures.append(future);
     } else {
@@ -210,7 +215,12 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        if (!mpHost) {
+            return;
+        }
+        mpHost->xmlSaved(qsl("profile"));
+    });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -770,7 +780,12 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+            if (!mpHost) {
+                return;
+            }
+            mpHost->xmlSaved(qsl("profile"));
+        });
         watcher->setFuture(future);
         saveFutures.append(future);
 
@@ -891,7 +906,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (const int i : qAsConst(pT->mPatternKinds)) {
+            for (const int i : std::as_const(pT->mPatternKinds)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }

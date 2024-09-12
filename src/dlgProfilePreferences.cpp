@@ -767,7 +767,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     setColors2();
 
+
+#if defined(DEBUG_UTF8_PROCESSING)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
+#else
+    checkBox_debugShowAllCodepointProblems->hide();
+#endif
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
 
@@ -2952,7 +2957,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         if (!newIrcChannels.isEmpty()) {
             const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (const QString s : tL) {
+            for (const QString& s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;
                 }
@@ -3384,7 +3389,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
         return;
     }
 
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::getQSettings();
     const QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
@@ -3487,7 +3492,7 @@ void dlgProfilePreferences::populateThemesList()
 
     if (themesFile.open(QIODevice::ReadOnly)) {
         unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : qAsConst(unsortedThemes)) {
+        for (auto theme : std::as_const(unsortedThemes)) {
             const QString themeText = theme.toObject()["Title"].toString();
             const QString themeFileName = theme.toObject()["FileName"].toString();
 
@@ -3506,7 +3511,7 @@ void dlgProfilePreferences::populateThemesList()
 
     auto currentSelection = code_editor_theme_selection_combobox->currentText();
     code_editor_theme_selection_combobox->clear();
-    for (auto key : qAsConst(sortedThemes)) {
+    for (auto key : std::as_const(sortedThemes)) {
         // store the actual theme file as data because edbee needs that,
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(key.first, key.second);
@@ -3937,10 +3942,12 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUse
         } else {
             pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
         }
-        // Clear the existing cache of room symbol pixmaps:
-        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        pHost->mpMap->mpMapper->mp2dMap->repaint();
-        pHost->mpMap->mpMapper->update();
+        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
+        if (pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
+        }
 
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();
@@ -3959,10 +3966,12 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
     if (pHost->mpMap->mMapSymbolFont != font) {
         pHost->mpMap->mMapSymbolFont = font;
         pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        // Clear the existing cache of room symbol pixmaps:
-        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        pHost->mpMap->mpMapper->mp2dMap->repaint();
-        pHost->mpMap->mpMapper->update();
+        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
+        if (pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
+        }
 
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();

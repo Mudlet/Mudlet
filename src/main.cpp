@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023 by Stephen Lyons             *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023, 2024 by Stephen Lyons       *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -110,6 +110,8 @@ void removeOldNoteColorEmojiFonts()
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
     // Release: "Unicode 14.0"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Unicode 15.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -129,9 +131,7 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
-    auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
-                                   (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
+    QSettings* pSettings = mudlet::getQSettings();
     auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
@@ -245,6 +245,10 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
 
+    mudlet::start();
+    // Detect config path before any files are read
+    mudlet::self()->setupConfig();
+
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
     // The third (and fourth if provided) arguments are used to populate the
@@ -276,6 +280,9 @@ int main(int argc, char* argv[])
                                                    qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
+
+    const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
+    parser.addOption(steamMode);
 
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
@@ -311,6 +318,8 @@ int main(int argc, char* argv[])
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                                   "                                    predefined game, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --steammode                  adjusts Mudlet settings to match\n"
+                                                                  "                                    Steam's requirements."));
         texts << appendLF.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
                                                                   "less likely to be useful for normal use of this application:"));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
@@ -374,15 +383,13 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2023  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2024  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
-
-
 
     // Handles installing a package from a command line argument.
     // Used when mudlet is used to open an .mpackage file on some operating systems.
@@ -423,9 +430,26 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
+    // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if defined(Q_OS_WIN32)
+    if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        // This variable is not set - and later versions of Qt 6.x need it for
+        // sound to work:
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        } else {
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+        }
+    } else {
+        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+    }
+#endif
+#endif
+
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-
+    
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
@@ -470,7 +494,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2024");
         const QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -519,8 +543,8 @@ int main(int argc, char* argv[])
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
-    // Release: "Unicode 15.0"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    // Release: "Unicode 15.1, take 3"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -576,8 +600,8 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
@@ -613,7 +637,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    mudlet::start();
+    mudlet::self()->init();
 
 #if defined(Q_OS_WIN)
     // Associate mudlet with .mpackage files
@@ -651,12 +675,16 @@ int main(int argc, char* argv[])
     }
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    mudlet::smSteamMode = parser.isSet(steamMode);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfiles);
+    QTimer::singleShot(0, qApp, [cliProfiles]() {
+        // ensure Mudlet singleton is initialised before calling profile loading
+        mudlet::self()->startAutoLogin(cliProfiles);
+    });
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
@@ -689,8 +717,8 @@ int main(int argc, char* argv[])
 // return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup.exe"));
-    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup-seen.exe"));
+    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QCoreApplication::applicationDirPath()));
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
         if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
@@ -701,7 +729,7 @@ bool runUpdate()
             qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath();
         }
 
-        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
+        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
     } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer

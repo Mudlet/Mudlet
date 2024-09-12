@@ -31,7 +31,7 @@ Don't:
 * translate the Mudlet API: functions, events, error messages or constants (e.g. `main` console)
 * use numbers in the API - English words are preferred instead
 * try to assemble a sentence on the fly - English grammar does not translate into other languages. Present the full sentence to translators instead
-* assume English-centric plural forms, other languages do not necessarily have the simple add an "s"/"es" for more/less then the singular case.
+* assume English-centric plural forms, other languages do not necessarily have the simple add an "s"/"es" for more/less than the singular case.
 * assume universal quote and number punctuation formats. There are languages that use « and » instead of " for "quoting" words or phrases. Qt can provide Locale specific displays of numbers/dates/times.
 
 # Tooltip tips:

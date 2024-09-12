@@ -995,7 +995,7 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     if (pSpecialExit->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder) {
         pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, utils::richText(tr("No command or Lua script entered, if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
     } else {
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, utils::richText(tr("(Lua scripts for those profiles using the <tt>mudlet-mapper</tt> package need to be prefixed with \"script:\").")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, utils::richText(tr("Some mapper scripts may require prefixing the keyword \"script:\").")));
     }
 }
 
