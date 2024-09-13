@@ -5080,7 +5080,7 @@ dlgTriggerEditor* mudlet::createMudletEditor()
 // https://stackoverflow.com/a/62449220/4805858
 void mudlet::changeEvent(QEvent* event)
 {
-    if(event->type() == QEvent::WindowStateChange) {
+    if (event->type() == QEvent::WindowStateChange) {
         emit signal_windowStateChanged(windowState());
     }
     QWidget::changeEvent(event);
