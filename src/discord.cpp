@@ -322,15 +322,16 @@ void Discord::UpdatePresence()
 
     auto pHost = mudlet::self()->getActiveHost();
     if (!pHost) {
-        localDiscordPresence tempPresence;
-        tempPresence.setLargeImageKey(qsl("mudlet"));
-        tempPresence.setDetailText(qsl("www.mudlet.org"));
 #if defined(DEBUG_DISCORD)
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - no current active Host instance, sending update using built-in Mudlet ApplicationID:\n" << tempPresence;
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - No current active Host instance, not sending any update.";
 #endif
-        DiscordRichPresence const convertedPresence(tempPresence.convert());
-        Discord_UpdatePresence(&convertedPresence);
+        return;
+    }
 
+    if (pHost->mDiscordDisableServerSide) {
+#if defined(DEBUG_DISCORD)
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord disabled for this profile, not sending this update.";
+#endif
         return;
     }
 
