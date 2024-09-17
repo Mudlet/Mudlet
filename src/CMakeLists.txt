@@ -123,7 +123,6 @@ set(mudlet_SRCS
     TKey.cpp
     TLabel.cpp
     TLinkStore.cpp
-
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
@@ -187,6 +186,7 @@ if(APPLE)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
+  list(APPEND mudlet_SRCS FileLockChecker.cpp)
 else()
   list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 endif()
@@ -354,6 +354,7 @@ set(mudlet_HDRS
 
 if(WIN32)
   list(APPEND mudlet_HDRS uiawrapper.h)
+  list(APPEND mudlet_HDRS FileLockChecker.h)
 endif()
 
 if(USE_UPDATER)
@@ -487,8 +488,6 @@ if(USE_3DMAPPER)
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various

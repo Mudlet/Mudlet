@@ -648,6 +648,7 @@ SOURCES += \
     exitstreewidget.cpp \
     FontManager.cpp \
     FileOpenHandler.cpp \
+    FileLockChecker.cpp \
     GifTracker.cpp \
     GMCPAuthenticator.cpp \
     TrailingWhitespaceMarker.cpp \
@@ -776,6 +777,7 @@ HEADERS += \
     EAction.h \
     exitstreewidget.h \
     FileOpenHandler.h \
+    FileLockChecker.h \
     GifTracker.h \
     GMCPAuthenticator.h \
     TrailingWhitespaceMarker.h \
