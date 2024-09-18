@@ -114,7 +114,7 @@ void TToolBar::addButton(TFlipButton* pB)
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
     } else {
-        QSize const size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        const QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
@@ -169,7 +169,7 @@ void TToolBar::finalize()
         return;
     }
     auto fillerWidget = new QWidget;
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     fillerWidget->setSizePolicy(sizePolicy);
     int columns = mpTAction->getButtonColumns();
     if (columns <= 0) {
@@ -224,7 +224,7 @@ void TToolBar::clear()
         mpLayout = new QGridLayout(mpWidget);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
         mpLayout = nullptr;

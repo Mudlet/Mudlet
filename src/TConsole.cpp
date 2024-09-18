@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
@@ -97,11 +97,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy const sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy const sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    QSizePolicy const sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    QSizePolicy const sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    const QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
 
@@ -217,22 +217,23 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
 
-    splitter = new TSplitter(Qt::Vertical);
+    splitter = new TSplitter(Qt::Vertical, layer);
+    splitter->setObjectName(qsl("splitter_%1_%2").arg(mProfileName, mConsoleName));
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
-    splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
     //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
     auto styleSheet = qsl("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
-    splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
+    mUpperPane->setObjectName(qsl("upperPane_%1_%2").arg(mProfileName, mConsoleName));
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
+    mLowerPane->setObjectName(qsl("lowerPane_%1_%2").arg(mProfileName, mConsoleName));
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
 
@@ -392,8 +393,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         }
     }
 
-    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
+    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -553,10 +554,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
         mUpperPane->reportCodepointErrors();
     }
+#endif
 }
 
 Host* TConsole::getHost()
@@ -566,7 +569,7 @@ Host* TConsole::getHost()
 
 void TConsole::resizeConsole()
 {
-    QSize const size = QSize(width(), height());
+    const QSize size = QSize(width(), height());
     QResizeEvent event(size, size);
     QApplication::sendEvent(this, &event);
 }
@@ -700,7 +703,7 @@ void TConsole::refresh()
     mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
 }
@@ -722,14 +725,14 @@ void TConsole::closeEvent(QCloseEvent* event)
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
             event->accept();
             return;
-        } else {
-            hide();
-            mudlet::smpDebugArea->setVisible(false);
-            mudlet::smDebugMode = false;
-            mudlet::self()->refreshTabBar();
-            event->ignore();
-            return;
         }
+
+        hide();
+        mudlet::smpDebugArea->setVisible(false);
+        mudlet::smDebugMode = false;
+        mudlet::self()->refreshTabBar();
+        event->ignore();
+        return;
     }
 
     if (mType & (SubConsole|Buffer)) {
@@ -745,11 +748,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             event->accept();
             return;
-        } else {
-            hide();
-            event->ignore();
-            return;
         }
+
+        hide();
+        event->ignore();
+        return;
     }
 
     if (mType == UserWindow) {
@@ -763,112 +766,26 @@ void TConsole::closeEvent(QCloseEvent* event)
                 mUpperPane->close();
                 mLowerPane->close();
             }
-            if (!pD) {
+            if (pD) {
+                pD->setAttribute(Qt::WA_DeleteOnClose);
+                pD->deleteLater();
+            } else {
                 qDebug() << "TConsole::closeEvent(QCloseEvent*) INFO - closing a UserWindow but the TDockWidget pointer was not found to be removed...";
             }
 
+            // This will also cause the QWidget to be automatically hidden:
             event->accept();
             return;
-        } else {
-            hide();
-            event->ignore();
-            return;
         }
-    }
 
-    TEvent conCloseEvent{};
-    conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
-    conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(conCloseEvent);
-
-    if (mpHost->mFORCE_SAVE_ON_EXIT) {
-        mudlet::self()->saveWindowLayout();
-        mpHost->modulesToWrite.clear();
-        mpHost->saveProfile();
-
-        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-            // There is a map loaded - but it *could* have no rooms at all!
-            const QDir dir_map;
-            const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-            const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
-            if (!dir_map.exists(directory_map)) {
-                dir_map.mkpath(directory_map);
-            }
-            QSaveFile file(filename_map);
-            if (file.open(QIODevice::WriteOnly)) {
-                QDataStream out(&file);
-                if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                    out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-                }
-                // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-                mpHost->mpMap->serialize(out);
-                if (!file.commit()) {
-                    qDebug() << "TConsole::closeEvent: error saving map: " << file.errorString();
-                }
-            }
-        }
-        mpHost->waitForProfileSave();
-        event->accept();
+        hide();
+        event->ignore();
         return;
     }
 
-    if (!mUserAgreedToCloseConsole) {
-    ASK:
-        const int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-        if (choice == QMessageBox::Cancel) {
-            event->setAccepted(false);
-            event->ignore();
-            return;
-        }
-        if (choice == QMessageBox::Yes) {
-            mudlet::self()->saveWindowLayout();
-
-            mpHost->modulesToWrite.clear();
-            auto [ok, filename, error] = mpHost->saveProfile();
-
-            if (!ok) {
-                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
-                goto ASK;
-            } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-                // There is a map loaded - but it *could* have no rooms at all!
-                const QDir dir_map;
-                const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-                if (!dir_map.exists(directory_map)) {
-                    dir_map.mkpath(directory_map);
-                }
-                QSaveFile file(filename_map);
-                if (file.open(QIODevice::WriteOnly)) {
-                    QDataStream out(&file);
-                    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-                    }
-                    // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-                    mpHost->mpMap->serialize(out);
-                    if (!file.commit()) {
-                        qDebug() << "TConsole::closeEvent: error saving map: " << file.errorString();
-                    }
-                }
-            }
-            mpHost->waitForProfileSave();
-            event->accept();
-            return;
-
-        } else if (choice == QMessageBox::No) {
-            mudlet::self()->saveWindowLayout();
-
-            event->accept();
-            return;
-        } else {
-            if (!mudlet::self()->isGoingDown()) {
-                QMessageBox::warning(this, "Aborting exit", "Session exit aborted on user request.");
-                event->ignore();
-                return;
-            } else {
-                event->accept();
-                return;
-            }
-        }
+    if (mType == MainConsole) {
+        // The event should have been handled by the override in the TMainConsole
+        Q_ASSERT_X(false, "TConsole::closeEvent()", "Close event not handled by TMainConsole override.");
     }
 }
 
@@ -1107,10 +1024,14 @@ void TConsole::scrollUp(int lines)
 
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
-        if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
+        if (mudlet::self()->showSplitscreenTutorial()) {
+#if defined(Q_OS_MACOS)
+            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
+#else
+            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
+#endif
             mpHost->postMessage(infoMsg);
-            mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
+            mudlet::self()->showedSplitscreenTutorial();
         }
     }
     mUpperPane->scrollUp(lines);
@@ -1119,10 +1040,8 @@ void TConsole::scrollUp(int lines)
 
 void TConsole::deselect()
 {
-    P_begin.setX(0);
-    P_begin.setY(0);
-    P_end.setX(0);
-    P_end.setY(0);
+    P_begin = QPoint();
+    P_end = QPoint();
 }
 
 void TConsole::showEvent(QShowEvent* event)
@@ -1182,7 +1101,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
         return;
 
     } else {
-        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
             if (customFormat) {
                 buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
             } else {
@@ -1231,7 +1150,7 @@ void TConsole::insertText(const QString& text, QPoint P)
         }
 
     } else {
-        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
             buffer.append(text, 0, text.size(), mFormatCurrent);
             mUpperPane->showNewLines();
             mLowerPane->showNewLines();
@@ -1361,7 +1280,7 @@ std::list<int> TConsole::getFgColor()
     auto line = buffer.buffer.at(y);
     const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        QColor const color(line.at(x).foreground());
+        const QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
@@ -1388,7 +1307,7 @@ std::list<int> TConsole::getBgColor()
     auto line = buffer.buffer.at(y);
     const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        QColor const color(line.at(x).background());
+        const QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
@@ -1464,7 +1383,7 @@ bool TConsole::resetConsoleBackgroundImage()
 
 void TConsole::setCmdVisible(bool isVisible)
 {
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
     if (!mpCommandLine) {
         if (!isVisible) {
@@ -1557,10 +1476,8 @@ bool TConsole::moveCursor(int x, int y)
 
 int TConsole::select(const QString& text, int numOfMatch)
 {
-    if (mUserCursor.y() < 0) {
-        return -1;
-    }
-    if (mUserCursor.y() >= buffer.size()) {
+    if (mUserCursor.y() < 0 || mUserCursor.y() >= buffer.size()) {
+        deselect();
         return -1;
     }
 
@@ -1579,19 +1496,18 @@ int TConsole::select(const QString& text, int numOfMatch)
         begin = li.indexOf(text, begin + 1);
 
         if (begin == -1) {
-            P_begin.setX(0);
-            P_begin.setY(0);
-            P_end.setX(0);
-            P_end.setY(0);
+            deselect();
             return -1;
         }
     }
+    if (begin < 0) {
+        deselect();
+        return -1;
+    }
 
     const int end = begin + text.size();
-    P_begin.setX(begin);
-    P_begin.setY(mUserCursor.y());
-    P_end.setX(end);
-    P_end.setY(mUserCursor.y());
+    P_begin = QPoint(begin, mUserCursor.y());
+    P_end = QPoint(end, mUserCursor.y());
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
@@ -1616,10 +1532,8 @@ bool TConsole::selectSection(int from, int to)
     if (from > s || from + to > s) {
         return false;
     }
-    P_begin.setX(from);
-    P_begin.setY(mUserCursor.y());
-    P_end.setX(from + to);
-    P_end.setY(mUserCursor.y());
+    P_begin = QPoint(from, mUserCursor.y());
+    P_end = QPoint(from + to, mUserCursor.y());
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
@@ -1963,7 +1877,7 @@ QSize TConsole::getMainWindowSize() const
     if (isHidden()) {
         return mOldSize;
     }
-    QSize const consoleSize = size();
+    const QSize consoleSize = size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
@@ -1976,14 +1890,17 @@ void TConsole::setProfileName(const QString& newName)
     mProfileName = newName;
 }
 
-
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
     if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+#else
+        Qt::KeyboardModifiers modifiers = e->modifiers();
+#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -1992,12 +1909,18 @@ void TConsole::dragEnterEvent(QDragEnterEvent* e)
         e->accept();
     }
 }
-void TConsole::dragMoveEvent(QDragMoveEvent* e) {
+
+void TConsole::dragMoveEvent(QDragMoveEvent* e)
+{
     if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+#else
+        Qt::KeyboardModifiers modifiers = e->modifiers();
+#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -2036,7 +1959,7 @@ void TConsole::dropEvent(QDropEvent* e)
         }
     }
     if (e->mimeData()->hasText()) {
-        if (QUrl const url(e->mimeData()->text()); url.isValid()) {
+        if (const QUrl url(e->mimeData()->text()); url.isValid()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             const QPoint pos = e->pos();
 #else

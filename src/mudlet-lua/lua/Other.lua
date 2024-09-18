@@ -562,6 +562,10 @@ function _comp(a, b)
   return true
 end
 
+--- exposes _comp as compare as it's a global, has been for years, and is also
+--- extremely useful. But documenting it as _comp is inconsistent with the rest
+--- of the API
+compare = _comp
 
 
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
@@ -1052,6 +1056,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
   folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../../translations/lua") and luaGlobalPath.."/../../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
   assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
@@ -1226,32 +1231,38 @@ function getConfig(...)
   local result = {}
 
   if #args == 0 then
+    -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
     local list = {
-      "mapRoomSize", 
-      "mapExitSize", 
-      "mapRoundRooms", 
-      "showRoomIdsOnMap", 
-      "show3dMapView", 
-      "mapperPanelVisible", 
-      "mapShowRoomBorders", 
-      "enableGMCP", 
-      "enableMSDP", 
-      "enableMSSP", 
-      "enableMSP", 
-      "askTlsAvailable", 
-      "inputLineStrictUnixEndings", 
-      "autoClearInputLine", 
-      "showSentText", 
-      "fixUnnecessaryLinebreaks", 
-      "specialForceCompressionOff", 
-      "specialForceGAOff", 
-      "specialForceCharsetNegotiationOff", 
-      "specialForceMxpNegotiationOff", 
-      "compactInputLine", 
-      "announceIncomingText", 
-      "blankLinesBehaviour", 
-      "caretShortcut", 
-      "commandLineHistorySaveSize", 
+      "announceIncomingText",
+      "askTlsAvailable",
+      "autoClearInputLine",
+      "blankLinesBehaviour",
+      "caretShortcut",
+      "commandLineHistorySaveSize",
+      "compactInputLine",
+      "controlCharacterHandling",
+      "enableGMCP",
+      "enableMNES",
+      "enableMSDP",
+      "enableMSP",
+      "enableMSSP",
+      "enableMTTS",
+      "fixUnnecessaryLinebreaks",
+      "forceNewEnvironNegotiationOff",
+      "inputLineStrictUnixEndings",
+      "logInHTML",
+      "mapExitSize",
+      "mapperPanelVisible",
+      "mapRoomSize",
+      "mapRoundRooms",
+      "mapShowRoomBorders",
+      "show3dMapView",
+      "showRoomIdsOnMap",
+      "showSentText",
+      "specialForceCompressionOff",
+      "specialForceCharsetNegotiationOff",
+      "specialForceGAOff",
+      "specialForceMxpNegotiationOff",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

@@ -85,7 +85,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 // Should be the same as the size of the timeStampFormat constant in the TBuffer
 // class:
 , mTimeStampWidth(13)
-, mShowAllCodepointIssues(false)
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -97,6 +96,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mpHost->setDisplayFontFixedPitch(true);
         setFont(hostFont);
 
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
         // There is no point in setting this option on the Central Debug Console
         // as A) it is shared and B) any codepoints that it can't handle will
         // probably have already cropped up on another TConsole:
@@ -104,6 +104,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
             mShowAllCodepointIssues = mpHost->debugShowAllProblemCodepoints();
             connect(mpHost, &Host::signal_changeDebugShowAllProblemCodepoints, this, &TTextEdit::slot_changeDebugShowAllProblemCodepoints);
         }
+#endif
     } else {
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
@@ -751,11 +752,12 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
     case 2: // Draw as wide
         return 2;
     case widechar_nonprint:
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
         // -1 = The character is not printable - so put in a replacement
         // character instead - and so it can be seen it need a space:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -766,14 +768,16 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 0;
     case widechar_non_character:
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
         // -7 = The character is a non-character - we might make use of some of them for
         // internal purposes in the future (in which case we might need additional code here
         // or elsewhere) but we don't right now:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a non-character that Mudlet is not itself using, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -783,15 +787,17 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
-     }
+        }
+#endif
         return 0;
     case widechar_combining:
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
         // -2 = The character is a zero-width combiner - and should not be
         // present as the FIRST codepoint in a grapheme so this indicates an
         // error somewhere - so put in the replacement character
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -802,16 +808,18 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 0;
     case widechar_ambiguous:
         // -3 = The character is East-Asian ambiguous width.
         return mWideAmbigousWidthGlyphs ? 2 : 1;
     case widechar_private_use:
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
         // -4 = The character is for private use - we cannot know for certain
         // what width to used - let's assume 1 for the moment:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -822,13 +830,15 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+#endif
         return 1;
     case widechar_unassigned:
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
         // -5 = The character is unassigned - at least for the Unicode version
         // that our widechar_wcwidth(...) was built for - assume 1:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
                                                << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -839,6 +849,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+    #endif
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
         return 2;
@@ -1104,10 +1115,19 @@ void TTextEdit::expandSelectionToWords()
 {
     int yind = mPA.y();
     int xind = mPA.x();
-    for (; xind >= 0; --xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Check if yind is within the valid range of lineBuffer
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind >= 0; --xind) {
+            // Ensure xind is within the valid range for the current line
+            if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
+                break; // xind is out of bounds, break the loop
+            }
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragStart.setX(xind + 1);
@@ -1115,15 +1135,22 @@ void TTextEdit::expandSelectionToWords()
 
     yind = mPB.y();
     xind = mPB.x();
-    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Repeat the check for yind and xind for the second part
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
+
+
 
 void TTextEdit::expandSelectionToLine(int y)
 {
@@ -1580,7 +1607,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // switches away from the ASCII default
     text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
     text.append(APP_VERSION);
-    text.append(APP_BUILD);
+    text.append(mudlet::self()->mAppBuild);
     text.append("'>\n");
     // Nice to identify what made the file!
     text.append("  <title>");
@@ -2775,12 +2802,14 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     }
 }
 
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
 void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 {
     if (mShowAllCodepointIssues != state) {
         mShowAllCodepointIssues = state;
     }
 }
+#endif
 
 void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
@@ -2805,6 +2834,8 @@ void TTextEdit::slot_mouseAction(const QString &uniqueName)
     mpHost->raiseEvent(event);
 }
 
+
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
 // Originally this was going to be part of the destructor - but it was unable
 // to get the parent Console and Profile names at that point:
 void TTextEdit::reportCodepointErrors()
@@ -2842,6 +2873,7 @@ void TTextEdit::reportCodepointErrors()
         qDebug().nospace().noquote() << " ";
     }
 }
+#endif
 
 void TTextEdit::setCaretPosition(int line, int column)
 {

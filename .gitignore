@@ -10,6 +10,10 @@ qrc_*.cpp
 *.qm
 *.autosave
 mudlet
+app-build.txt
+
+# Qt creator's clangd cache
+.cache
 
 # ignore macOS apps in general, but keep the Autoupdater from Sparkle
 3rdparty/boost/*

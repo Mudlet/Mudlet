@@ -38,9 +38,7 @@ for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo " "
     echo "Installing ${i}"
-    #Added the -w (whole-word) option so that the grep will NOT match for pcre2
-    #when we are considering pcre:
-    brew list | grep -w -q $i || brew install $i
+    brew install "$i"
     STATUS="$?"
     if [ "${STATUS}" -eq 0 ]; then
       break
@@ -60,4 +58,4 @@ gem update cocoapods
 # we want to expand the subshell only once (it's only temporary anyways)
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
-luarocks-5.1 --local install lua-yajl
+LIBRARY_PATH=/opt/homebrew/Cellar/yajl/2.1.0/lib C_INCLUDE_PATH=/opt/homebrew/Cellar/yajl/2.1.0/include luarocks-5.1 --local install lua-yajl
