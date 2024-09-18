@@ -7071,7 +7071,7 @@ reason: %2.</translation>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
@@ -13998,7 +13998,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2040"/>
       <source>&lt;p&gt;Some mapper scripts may require prefixing the keyword &quot;script:&quot;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Some mapper scripts may require prefixing the keyword &quot;script:&quot;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2060"/>
