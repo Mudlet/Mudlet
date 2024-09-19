@@ -217,22 +217,23 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
 
-    splitter = new TSplitter(Qt::Vertical);
+    splitter = new TSplitter(Qt::Vertical, layer);
+    splitter->setObjectName(qsl("splitter_%1_%2").arg(mProfileName, mConsoleName));
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
-    splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
     //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
     auto styleSheet = qsl("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
-    splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
+    mUpperPane->setObjectName(qsl("upperPane_%1_%2").arg(mProfileName, mConsoleName));
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
+    mLowerPane->setObjectName(qsl("lowerPane_%1_%2").arg(mProfileName, mConsoleName));
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
 
@@ -392,8 +393,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         }
     }
 
-    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
+    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -553,7 +554,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
         mUpperPane->reportCodepointErrors();
@@ -1023,14 +1024,14 @@ void TConsole::scrollUp(int lines)
 
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
-        if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
+        if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
 #endif
             mpHost->postMessage(infoMsg);
-            mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
+            mudlet::self()->showedSplitscreenTutorial();
         }
     }
     mUpperPane->scrollUp(lines);

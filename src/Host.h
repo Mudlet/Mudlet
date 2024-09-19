@@ -686,7 +686,6 @@ public:
     QMap<QString, QKeySequence*> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown;
-    bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
