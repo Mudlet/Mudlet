@@ -33,28 +33,6 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-// Define this to get qDebug() messages about the decoding of UTF-8 data when it
-// is not the single bytes of pure ASCII text:
-// #define DEBUG_UTF8_PROCESSING
-// Define this to get qDebug() messages about the decoding of GB2312/GBK/GB18030
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_GB_PROCESSING
-// Define this to get qDebug() messages about the decoding of BIG5
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_BIG5_PROCESSING
-// Define this to get qDebug() messages about the decoding of EUC-KR
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_EUC_KR_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI SGR sequences:
-// #define DEBUG_SGR_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI OSC sequences:
-// #define DEBUG_OSC_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI MXP sequences
-// although there is not much against this item at present {only an announcement
-// of the type (?) of an `\x1b[?z` received}:
-//#define DEBUG_MXP_PROCESSING
-
-
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(foreground)
 , mBgColor(background)
@@ -437,11 +415,26 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // repeated switch(...) and branch to one of a series of decoding methods
     // each with another up to 128 value switch()
 
-    size_t const localBufferLength = localBuffer.length();
+    size_t localBufferLength = localBuffer.length();
     size_t localBufferPosition = 0;
     if (!localBufferLength) {
         return;
     }
+
+    // If we are resolving/interpolating an MXP entity, the interpolated text
+    // ends at localBuffer[endOfMXPEntity - 1]. This variable used to avoid an
+    // (infinite) recursion like <!EN E "foobar&E;>&E;
+    // Recursively interpolating a predefined entity like <!EN E "foobar&frac12;>&E;
+    // will work though.
+    size_t endOfMXPEntity = 0;
+
+    // A similar index which points behind the name of a literal entity name like
+    // &unknown; which does not exist and will be printed literal, w/o
+    // any MXP interpretation. Again, this avoid endless recursion trying to
+    // resolve an unsolvable entity. We need the hassle in both cases, as the
+    // the resolved values may be in a character encoding that must be decoded by
+    // Mudlet.
+    size_t endOfLiteralEntity = 0;
 
     while (true) {
         if (localBufferPosition >= localBufferLength) {
@@ -689,17 +682,82 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mpHost->mMxpProcessor.isEnabled()) {
+        if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mServerMXPenabled) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
-                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch);
-                    if (result == HANDLER_NEXT_CHAR) {
+                    // The comparison signals to the processor, if custom entities may be resolved
+                    // (countermeasure against infinite recursion)
+                    TMxpProcessingResult const result =
+                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
                         localBufferPosition++;
                         continue;
-                    } else if (result == HANDLER_COMMIT_LINE) { // BR tag
+                    case HANDLER_COMMIT_LINE: // BR tag or &newline;
                         ch = '\n';
                         goto COMMIT_LINE;
-                    } else { //HANDLER_FALL_THROUGH -> do nothing
+                    case HANDLER_INSERT_ENTITY_CUST:
+                        // custom entity value set with <!EN>, recurse except for other custom entities
+                        [[fallthrough]];
+                    case HANDLER_INSERT_ENTITY_LIT: {
+                        // Unknown entity name like &unknown; push back into buffer for codeset interpretation,
+                        // but no MXP parsing.
+
+                        // We replace the already processed text with the entity value into the buffer and restart
+                        // processing it for charset encoding but with limited MXP handling
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        localBuffer.replace(0, localBufferPosition + 1, mpHost->mMxpProcessor.getEntityValue().toLatin1());
+
+                        if (result == HANDLER_INSERT_ENTITY_LIT) {
+                            if (localBufferPosition < endOfMXPEntity) {
+                                // This is a special case, our unknown entity might actually be a custom one
+                                // inside a custom one which we refused to resolve to avoid an endless recursion.
+                                // So we carefully adjust the end marker s.t. custom entities are not reenabled
+                                // too early
+                                endOfMXPEntity -= localBufferPosition + 1 - valueLength;
+                                endOfLiteralEntity = valueLength;
+                            } else {
+                                endOfMXPEntity = valueLength;
+                            }
+                            endOfLiteralEntity = valueLength;
+                        } else {
+                            // HANDLER_INSERT_ENTITY_CUST
+                            endOfMXPEntity = valueLength;
+                            endOfLiteralEntity = 0;
+                        }
+
+                        // Now restart the loop to parse the newly inserted text
+                        localBufferLength = localBuffer.length();
+                        localBufferPosition = 0;
+                        continue;
+                    }
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // System entities are literal QString / UTF values which we just 'print'
+                        // There is no further MXP or Codeset evaluation
+
+                        const TChar::AttributeFlags attributeFlags =
+                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
+                                | (mOverline ? TChar::Overline : TChar::None)
+                                | (mReverse ? TChar::Reverse : TChar::None)
+                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
+
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        // We also need to set the color attributes for the special character
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        // We already handled the input, go to the next character
+                        localBufferPosition++;
+                        continue;
+                    }
+                    default:
+                        //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }
                 } else {
@@ -3473,6 +3531,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
         switch (utf8SequenceLength) {
         case 4:
+            // Check the 4th byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
@@ -3504,13 +3563,14 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // Fall-through
             [[fallthrough]];
         case 3:
+            // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                 isValid = false;
                 isToUseReplacementMark = true;
-            } else if ((bufferData.at(pos) & 0x0F) == 0x0D) {
+            } else if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -3537,8 +3597,15 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
     * followed by a low surrogate). The majority of UTF-16 encoder and decoder
     * implementations translate between encodings as though this were the case
     * and Windows allows such sequences in filenames."
+    *
+    * So test for and, considering the LS Nibble of first byte:
+    * * accept if LS Nibble of first byte is             less than 0xD
+    * * accept if LS Nibble of first byte is greater than/equal to 0xE
+    * * otherwise (if LS Nibble of first byte IS 0xD)
+    *   * accept if 6 LS Bits of second byte is 0x1F of or less
+    * Conversely this can be stated as:
+    * * reject if LS Nibble of first byte is 0xD AND 6th MS Bit of second byte is set
     */
-// So test for and reject if LSN of first byte is 0xD!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
 #endif
@@ -3547,8 +3614,10 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             } else if (   (static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF)
                        && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB)
                        && (static_cast<quint8>(bufferData.at(pos    )) == 0xEF)) {
-// Got caught out by this one - it is the UTF-8 BOM and
-// needs to be ignored as it transcodes to NO codepoints!
+
+                // Got caught out by this one - it is the UTF-8 BOM (or
+                // Zero-Width No-Break Space) and needs to be detected specially
+                // as Qt's codec ignores it and transcodes it to NO codepoints!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) UTF-8 BOM sequence seen and handled!";
 #endif
@@ -3559,6 +3628,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // Fall-through
             [[fallthrough]];
         case 2:
+            // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";

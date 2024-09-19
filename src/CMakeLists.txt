@@ -372,11 +372,15 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS glwidget.h)
 endif(USE_3DMAPPER)
 
+# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
 macro(set_alternate_linker linker)
   find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
   if(LINKER_EXECUTABLE)
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.0.0)
-      add_link_options("-ld-path=${USE_ALTERNATE_LINKER}")
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
+      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
+      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
+      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
+      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
     else()
       add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
     endif()
@@ -512,9 +516,40 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
 #
 # * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+#   commands for suboptions - change the value to 2 to get a bit more detail
+#   about the size or nature of the command:
 target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+#   the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_UTF8_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+#   it is not the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_GB_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+#   single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_BIG5_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+#   the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_EUC_KR_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+#   target_compile_definitions(mudlet PRIVATE DEBUG_SGR_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# target_compile_definitions(mudlet PRIVATE DEBUG_OSC_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+#   there is not much against this item at present {only an announcement of the
+#   type (?) of an `\x1b[?z` received}:
+# target_compile_definitions(mudlet PRIVATE DEBUG_MXP_PROCESSING)
+#
+# * Enable the features associated with reporting problems in processing Unicode
+#   codepoints that cannot be displayed on screen in a `TConsole`:
+# target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

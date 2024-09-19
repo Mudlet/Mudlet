@@ -32,7 +32,6 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
-#include "TSplitter.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
