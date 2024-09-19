@@ -742,7 +742,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 int TTextEdit::getGraphemeWidth(uint unicode) const
 {
     // https://github.com/ridiculousfish/widecharwidth/issues/11
-    if (unicode == 0x1F6E1) {
+    if (unicode == 0x1F6E1 || unicode == 0x2318) {
         return 2;
     }
 
