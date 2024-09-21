@@ -1139,16 +1139,6 @@ QString cTelnet::getNewEnvironLanguage()
     return mudlet::self()->getInterfaceLanguage();
 }
 
-QString cTelnet::getNewEnvironFont()
-{
-    return mpHost->getDisplayFont().family();
-}
-
-QString cTelnet::getNewEnvironFontSize()
-{
-    return qsl("%1").arg(mpHost->getDisplayFont().pointSize());
-}
-
 QString cTelnet::getNewEnvironWordWrap()
 {
     return qsl("%1").arg(mpHost->mWrapAt);
