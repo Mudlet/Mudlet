@@ -1356,16 +1356,6 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
 {
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    QString transcodedMsg;
-
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = payload;
-    }
-
     std::string output;
     output += TN_IAC;
     output += TN_SB;
@@ -1376,14 +1366,14 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     bool is_var = false;
     QString var;
 
-    for (int i = 0; i < transcodedMsg.size(); ++i) {
-        if (!i && transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+    for (int i = 0; i < payload.size(); ++i) {
+        if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
         } else if (!i) {
             return; // Invalid response;
         }
 
-        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+        if (payload.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = QString();
@@ -1393,7 +1383,7 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
 
             is_uservar = false;
             is_var = true;
-        } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
+        } else if (payload.at(i) == NEW_ENVIRON_USERVAR) {
             if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = QString();
@@ -1404,7 +1394,7 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
             is_var = false;
             is_uservar = true;
         } else {
-            var.append(transcodedMsg.at(i));
+            var.append(payload.at(i));
         }
     }
 
@@ -1524,26 +1514,16 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    QString transcodedMsg;
-
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = payload;
-    }
-
     QString var;
 
-    for (int i = 0; i < transcodedMsg.size(); ++i) {
-        if (!i && transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+    for (int i = 0; i < payload.size(); ++i) {
+        if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
         } else if (!i) {
             return; // Invalid response;
         }
 
-        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+        if (payload.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
                 sendMNESValue(var, newEnvironDataMap);
                 var = QString();
@@ -1552,7 +1532,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
             continue;
         }
 
-        var.append(transcodedMsg.at(i));
+        var.append(payload.at(i));
     }
 
     if (!var.isEmpty()) { // Last variable on the stack
