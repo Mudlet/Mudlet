@@ -963,7 +963,7 @@ QByteArray cTelnet::prepareNewEnvironData(const QString &arg)
     ret.replace(NEW_ENVIRON_USERVAR, qsl("%1%2").arg(NEW_ENVIRON_ESC, NEW_ENVIRON_USERVAR));
     ret.replace(NEW_ENVIRON_VAR, qsl("%1%2").arg(NEW_ENVIRON_ESC, NEW_ENVIRON_VAR));
 
-    return !mEncoding.isEmpty() && outgoingDataEncoder ? outgoingDataEncoder->fromUnicode(ret).constData() : ret.toLatin1().constData();
+    return ret.toLatin1().constData();
 }
 
 QString cTelnet::getNewEnvironValueUser()
