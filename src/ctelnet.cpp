@@ -952,7 +952,7 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-// escapes and encodes data to be send over NEW ENVIRON and MNES
+// escapes data to be send over NEW ENVIRON and MNES
 QByteArray cTelnet::prepareNewEnvironData(const QString &arg)
 {
     QString ret = arg;
