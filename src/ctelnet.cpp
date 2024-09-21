@@ -1097,7 +1097,7 @@ QString cTelnet::getNewEnvironANSI()
 
 QString cTelnet::getNewEnvironVT100()
 {
-    return QString("0");
+    return qsl("0");
 }
 
 QString cTelnet::getNewEnviron256Colors()
@@ -1107,7 +1107,7 @@ QString cTelnet::getNewEnviron256Colors()
 
 QString cTelnet::getNewEnvironUTF8()
 {
-    return getEncoding() == "UTF-8" ? qsl("1") : QString();
+    return getEncoding() == "UTF-8" ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCColorPalette()
@@ -1117,7 +1117,7 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironScreenReader()
 {
-    return mpHost->mAdvertiseScreenReader ? qsl("1") : QString("0");
+    return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironTruecolor()
@@ -1130,7 +1130,7 @@ QString cTelnet::getNewEnvironTLS()
 #if !defined(QT_NO_SSL)
     return qsl("1");
 #else
-    return QString("0");
+    return qsl("0");
 #endif
 }
 
