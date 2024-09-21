@@ -1187,8 +1187,6 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
     //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironLanguage())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironFont())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironFontSize())); // Needs an OPT-IN to be enabled, next PR
     newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironWordWrap()));
 
     return newEnvironDataMap;
