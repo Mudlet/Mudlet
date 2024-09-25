@@ -647,7 +647,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
                  "but it is the most dynamic game ever attempted. The wind affects the ships, where "
                  "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
-                 "Do you dare enter?")}
+                 "Do you dare enter?")},
 
             {qsl("Infinity"),
              qsl("infinitymud.com"),
