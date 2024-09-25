@@ -39,9 +39,9 @@ endif()
 if(WIN32)
   # APP_BUILD should now be be available
 
-  if(APP_BUILD matches "-ptb.+")
+  if("${APP_BUILD}" MATCHES "-ptb.+")
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  elseif(("${APP_BUILD}" MATCHES "-dev.+") OR ("${APP_BUILD}" MATCHES "-test.+"))
     # The above test may not be correct as it won't pick up builds where
     # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
     # "Packagers" they will likely want the original icon anyhow for their

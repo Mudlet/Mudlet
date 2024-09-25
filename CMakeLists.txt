@@ -109,6 +109,7 @@ set(APP_VERSION 4.18.5)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
     set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
 else()
+  set(BUILD_VALUE "-MMCP-${GIT_SHA1}")
   # PLACEMARKER: revert "MMCP" back to "dev" in the next three lines before merging this code into the main development branch:
   file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-MMCP-${GIT_SHA1}")
   message(STATUS "Value written to app-build.txt file: -MMCP-${GIT_SHA1}")
@@ -122,9 +123,9 @@ else()
 endif()
 
 # Write to app-build.txt and set APP_BUILD
-file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
-message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
-set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
+#file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
+#message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
+#set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 # For release builds, comment out the above and uncomment below:
 # file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
