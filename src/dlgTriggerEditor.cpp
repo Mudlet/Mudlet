@@ -6176,8 +6176,6 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
     if (!var) {
         return;
     }
-    if (var->hidden) {
-    }
     if (state == Qt::Checked || state == Qt::PartiallyChecked) {
         if (vu->isSaved(var)) {
             return;
