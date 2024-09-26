@@ -44,6 +44,8 @@
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
 #include <QAction>
+#include <QUndoStack>
+#include <QUndoView>
 #include <QDir>
 #include <QFlags>
 #include <QKeySequence>

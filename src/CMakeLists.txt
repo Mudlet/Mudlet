@@ -82,6 +82,7 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
+    dlgTriggerEditorCommand.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
@@ -252,6 +253,7 @@ set(mudlet_HDRS
     dlgSystemMessageArea.h
     dlgTimersMainArea.h
     dlgTriggerEditor.h
+    dlgTriggerEditorCommand.h
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h

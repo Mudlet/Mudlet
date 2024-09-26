@@ -51,6 +51,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QToolBar>
+
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -67,6 +68,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 {
     // init generated dialog
     setupUi(this);
+    undoStack = new QUndoStack(this);
+    createUndoView();
 
     msgInfoAddAlias = tr("<p>Alias react on user input. To add a new alias:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -193,6 +196,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_soundTrigger);
     connect(mpTriggersMainArea->groupBox_triggerColorizer, &QGroupBox::clicked, this, &dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger);
     connect(mpTriggersMainArea->toolButton_clearSoundFile, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_clearSoundFile);
+    // connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_lineEdit_trigger_name);
 
     mpTimersMainArea = new dlgTimersMainArea(this);
     layoutColumn->addWidget(mpTimersMainArea, 1);
@@ -348,6 +352,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
+
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
     treeWidget_aliases->setIsAliasTree();
@@ -459,6 +464,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_triggers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    // connect(treeWidget_triggers, &TTreeWidget::itemDropEvent, this, &dlgTriggerEditor::slot_treeWidget_triggers_drop);
+    // connect(treeWidget_triggers, &QTreeWidget::currentItemChanged, this, &dlgTriggerEditor::slot_treeWidget_triggers_drop);
     connect(treeWidget_aliases, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_timers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_scripts, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
@@ -495,6 +502,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
     connect(mSaveItem, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
 
+    undoAction = undoStack->createUndoAction(this, tr("&Undo"));
+    undoAction->setIcon(QIcon(":/icons/undo.png"));
+    undoAction->setShortcuts(QKeySequence::Undo);
+
+    redoAction = undoStack->createRedoAction(this, tr("&Redo"));
+    redoAction->setIcon(QIcon(":/icons/redo.png"));
+    redoAction->setShortcuts(QKeySequence::Redo);
+
+    // connect(redoAction, &QAction::triggered, this, &dlgTriggerEditor::addTrigger);
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
@@ -597,6 +613,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mpExportAction);
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
+    toolBar->addAction(undoAction);
+    toolBar->addAction(redoAction);
 
     connect(checkBox_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
@@ -980,6 +998,21 @@ void dlgTriggerEditor::readSettings()
     mKeyEditorSplitterState = settings.value("mKeyEditorSplitterState", QByteArray()).toByteArray();
     mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
     mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
+}
+
+void dlgTriggerEditor::createUndoView()
+{
+    QDockWidget* undoDockWidget = new QDockWidget;
+    undoDockWidget->setWindowTitle(tr("Command List"));
+    undoDockWidget->setWidget(new QUndoView(undoStack));
+    treeWidget_triggers->undoStack = undoStack;
+    treeWidget_aliases->undoStack = undoStack;
+    treeWidget_timers->undoStack = undoStack;
+    treeWidget_scripts->undoStack = undoStack;
+    treeWidget_keys->undoStack = undoStack;
+    treeWidget_actions->undoStack = undoStack;
+    treeWidget_variables->undoStack = undoStack;
+    addDockWidget(Qt::RightDockWidgetArea, undoDockWidget);
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -2673,11 +2706,17 @@ void dlgTriggerEditor::delete_variable()
         vu->removeVariable(var);
         delete var;
     }
+
     if (pParent) {
-        pParent->removeChild(pItem);
+        const int cindex = pParent->indexOfChild(pItem);
+        if(cindex >= 0)
+        {
+            pParent->removeChild(pItem);
+        }
     } else {
         qDebug() << "ERROR: dlgTriggerEditor::delete_action() child to be deleted does not have a parent";
     }
+
     mpCurrentVarItem = nullptr;
     clearVarForm();
 }
@@ -2734,8 +2773,8 @@ void dlgTriggerEditor::delete_trigger()
         return;
     }
     QTreeWidgetItem* pParent = pItem->parent();
-
-    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+    int ID = pItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if (!pT) {
         return;
     }
@@ -2748,6 +2787,19 @@ void dlgTriggerEditor::delete_trigger()
     delete pT;
     mpCurrentTriggerItem = nullptr;
     clearTriggerForm();
+}
+
+void dlgTriggerEditor::deleteTriggerCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    TriggerUnit * triggerUnit = mpHost->getTriggerUnit();
+    dlgTriggerEditor* editor = this;
+
+    DeleteTriggerCommand *command = new DeleteTriggerCommand(pItem,triggerUnit,treeWidget_triggers);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -3808,6 +3860,156 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     slot_triggerSelected(treeWidget_triggers->currentItem());
 }
 
+void dlgTriggerEditor::addTriggerCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    TriggerUnit * triggerUnit = mpHost->getTriggerUnit();
+    dlgTriggerEditor* editor = this;
+    AddTriggerCommand *command = new AddTriggerCommand(pItem,triggerUnit,treeWidget_triggers,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::addAliasCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    AliasUnit * aliasUnit = mpHost->getAliasUnit();
+    dlgTriggerEditor* editor = this;
+    AddAliasCommand *command = new AddAliasCommand(pItem,aliasUnit,treeWidget_aliases,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::deleteAliasCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    AliasUnit * aliasUnit = mpHost->getAliasUnit();
+    dlgTriggerEditor* editor = this;
+    DeleteAliasCommand *command = new DeleteAliasCommand(pItem,aliasUnit,treeWidget_aliases);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::deleteScriptCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    ScriptUnit * scriptUnit = mpHost->getScriptUnit();
+    dlgTriggerEditor* editor = this;
+    DeleteScriptCommand *command = new DeleteScriptCommand(pItem,scriptUnit,treeWidget_scripts);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::deleteKeyCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    KeyUnit * keyUnit = mpHost->getKeyUnit();
+    dlgTriggerEditor* editor = this;
+    DeleteKeyCommand *command = new DeleteKeyCommand(pItem,keyUnit,treeWidget_keys);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::addTimerCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    TimerUnit * timerUnit = mpHost->getTimerUnit();
+    dlgTriggerEditor* editor = this;
+    AddTimerCommand *command = new AddTimerCommand(pItem,timerUnit,treeWidget_timers,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::addScriptCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    ScriptUnit * scriptUnit = mpHost->getScriptUnit();
+    dlgTriggerEditor* editor = this;
+    AddScriptCommand *command = new AddScriptCommand(pItem,scriptUnit,treeWidget_scripts,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::addKeyCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    KeyUnit * keyUnit = mpHost->getKeyUnit();
+    dlgTriggerEditor* editor = this;
+    AddKeyCommand *command = new AddKeyCommand(pItem,keyUnit,treeWidget_keys,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::addActionCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    ActionUnit * actionUnit = mpHost->getActionUnit();
+    dlgTriggerEditor* editor = this;
+    AddActionCommand *command = new AddActionCommand(pItem,actionUnit,treeWidget_actions,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::addVarCommand(bool isFolder)
+{
+    QTreeWidgetItem* pItem = nullptr;
+    QTreeWidgetItem* parent = nullptr;
+    LuaInterface* lI = mpHost->getLuaInterface();
+    VarUnit* varUnit = lI->getVarUnit();
+    dlgTriggerEditor* editor = this;
+    AddVarCommand *command = new AddVarCommand(pItem,varUnit,treeWidget_variables,isFolder);
+    command->m_editor = editor;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::deleteActionCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    ActionUnit * actionUnit = mpHost->getActionUnit();
+    dlgTriggerEditor* editor = this;
+    DeleteActionCommand *command = new DeleteActionCommand(pItem,actionUnit,treeWidget_actions);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::deleteVarCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_variables->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    LuaInterface* lI = mpHost->getLuaInterface();
+    VarUnit* varUnit = lI->getVarUnit();
+    dlgTriggerEditor* editor = this;
+    DeleteVarCommand *command = new DeleteVarCommand(pItem,varUnit,treeWidget_variables);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
+}
+
+void dlgTriggerEditor::deleteTimerCommand()
+{
+    QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
+    QTreeWidgetItem* parent = nullptr;
+    TimerUnit * timerUnit = mpHost->getTimerUnit();
+    dlgTriggerEditor* editor = this;
+    DeleteTimerCommand *command = new DeleteTimerCommand(pItem,timerUnit,treeWidget_timers);
+    command->m_editor = editor;
+    command->m_host = mpHost;
+    undoStack->push(command);
+}
 
 void dlgTriggerEditor::addTimer(bool isFolder)
 {
@@ -5392,7 +5594,7 @@ void dlgTriggerEditor::saveVar()
     } else if (varUnit->isSaved(variable)) {
         pItem->setCheckState(0, Qt::Checked);
     }
-    pItem->setData(0, Qt::UserRole, variable->getValueType());
+    pItem->setData(0, Qt::UserRole, QVariant(variable->getId()));
     QIcon icon;
     switch (variable->getValueType()) {
     case 5:
@@ -5406,6 +5608,7 @@ void dlgTriggerEditor::saveVar()
         break;
     }
     pItem->setIcon(0, icon);
+
     mChangingVar = false;
     slot_variableSelected(pItem);
 }
@@ -5900,7 +6103,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     if (pItem != mpCurrentKeyItem) {
         saveKey();
     }
-
+qDebug() << "itemid " << pItem->data(0, Qt::UserRole).toInt() << " text: "<< pItem->text(0);
     mpCurrentKeyItem = pItem;
     mpKeysMainArea->show();
     mpSourceEditorArea->show();
@@ -5981,8 +6184,13 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     TVar* var = vu->getWVar(pItem);
+
     if (!var) {
         return;
+    }
+    if(var->hidden)
+    {
+
     }
     if (state == Qt::Checked || state == Qt::PartiallyChecked) {
         if (vu->isSaved(var)) {
@@ -6221,7 +6429,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     } else if (vu->isSaved(var)) {
         pItem->setCheckState(0, Qt::Checked);
     }
-    pItem->setData(0, Qt::UserRole, var->getValueType());
+    pItem->setData(0, Qt::UserRole, var->getId());
     pItem->setIcon(0, icon);
     mChangingVar = false;
 }
@@ -8000,37 +8208,44 @@ void dlgTriggerEditor::slot_addNewItem()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        addTrigger(false); //add normal trigger
+        // addTrigger(false); //add normal trigger
+        addTriggerCommand(false);
         mpTriggersMainArea->lineEdit_trigger_name->setFocus();
         mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal timer
+        // addTimer(false); //add normal timer
+        addTimerCommand(false);
         mpTimersMainArea->lineEdit_timer_name->setFocus();
         mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
-        addAlias(false); //add normal alias
+        // addAlias(false); //add normal alias
+        addAliasCommand(false);
         mpAliasMainArea->lineEdit_alias_name->setFocus();
         mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal script
+        // addScript(false); //add normal script
+        addScriptCommand(false);
         mpScriptsMainArea->lineEdit_script_name->setFocus();
         mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
-        addAction(false); //add normal action
+        // addAction(false); //add normal action
+        addActionCommand(false);
         mpActionsMainArea->lineEdit_action_name->setFocus();
         mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal key
+        // addKey(false); //add normal key
+        addKeyCommand(false);
         mpKeysMainArea->lineEdit_key_name->setFocus();
         mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
-        addVar(false); //add variable
+        // addVar(false); //add variable
+        addVarCommand(false);
         mpVarsMainArea->lineEdit_var_name->setFocus();
         // variables start without a default name
         break;
@@ -8043,37 +8258,44 @@ void dlgTriggerEditor::slot_addNewGroup()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        addTrigger(true); //add trigger group
+        // addTrigger(true); //add trigger group
+        addTriggerCommand(true);
         mpTriggersMainArea->lineEdit_trigger_name->setFocus();
         mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true); //add timer group
+        // addTimer(true); //add timer group
+        addTimerCommand(true);
         mpTimersMainArea->lineEdit_timer_name->setFocus();
         mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
-        addAlias(true); //add alias group
+        // addAlias(true); //add alias group
+        addAliasCommand(true);
         mpAliasMainArea->lineEdit_alias_name->setFocus();
         mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add script group
+        // addScript(true); //add script group
+        addScriptCommand(true);
         mpScriptsMainArea->lineEdit_script_name->setFocus();
         mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
-        addAction(true); //add action group
+        // addAction(true); //add action group
+        addActionCommand(true);
         mpActionsMainArea->lineEdit_action_name->setFocus();
         mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add keys group
+        // addKey(true); //add keys group
+        addKeyCommand(true);
         mpKeysMainArea->lineEdit_key_name->setFocus();
         mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
-        addVar(true); // add lua table
+        // addVar(true); // add lua table
+        addVarCommand(true);
         mpVarsMainArea->lineEdit_var_name->setFocus();
         // variables start without a default name
         break;
@@ -8204,25 +8426,32 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        delete_trigger();
+        // delete_trigger();
+        deleteTriggerCommand();
         break;
     case EditorViewType::cmTimerView:
-        delete_timer();
+        // delete_timer();
+        deleteTimerCommand();
         break;
     case EditorViewType::cmAliasView:
-        delete_alias();
+        // delete_alias();
+        deleteAliasCommand();
         break;
     case EditorViewType::cmScriptView:
-        delete_script();
+        // delete_script();
+        deleteScriptCommand();
         break;
     case EditorViewType::cmActionView:
-        delete_action();
+        // delete_action();
+        deleteActionCommand();
         break;
     case EditorViewType::cmKeysView:
-        delete_key();
+        // delete_key();
+        deleteKeyCommand();
         break;
     case EditorViewType::cmVarsView:
-        delete_variable();
+        // delete_variable();
+        deleteVarCommand();
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -10226,4 +10455,9 @@ void dlgTriggerEditor::showIDLabels(const bool visible)
     mpScriptsMainArea->frameId->setVisible(visible);
     mpTimersMainArea->frameId->setVisible(visible);
     mpTriggersMainArea->frameId->setVisible(visible);
+}
+
+QUndoStack* dlgTriggerEditor::getQUndoStack()
+{
+    return undoStack;
 }
