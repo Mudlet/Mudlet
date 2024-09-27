@@ -3,49 +3,35 @@
 <MudletPackage version="1.001">
 	<ScriptPackage>
 		<Script isActive="yes" isFolder="no">
-			<name>MedBootstrap</name>
+			<name>MedBootstrapMPKG</name>
 			<packageName></packageName>
-			<script>MedBootstrap = MedBootstrap or {}
+			<script>local meduiPackage = "MedUI"
 
-MedBootstrap.version = "1.1.0"
-
-MedBootstrap.installList = {
-  [1] = {pkg="MedUI", url="https://github.com/jmckisson/MedScripts/raw/master/MedUI/MedUI.mpackage"},
-  [2] = {pkg="MDK", url="https://github.com/demonnic/MDK/releases/download/v2.10.0/MDK.mpackage"},
-}
-
-function MedBootstrap.eventHandler(event, ...)
-
-  if event == "sysInstallPackage" then
+-- function to install or update your MUD package
+local function installServerPackage()
+  local installedVersion = mpkg.getInstalledVersion(meduiPackage)
+  local repoVersion = mpkg.getRepositoryVersion(meduiPackage)
   
-    MedBootstrap.checkInstalledPackages()
+  if not installedVersion then
+    mpkg.install(meduiPackage)
+    return
+  end
+      
+  if semver(installedVersion) &lt; semver(repoVersion) then
+    mpkg.upgrade(meduiPackage)
   end
 end
 
-function MedBootstrap.checkInstalledPackages()
-  local packages = getPackages()
+-- install mpkg if not already
+local mpkgVersion = getPackageInfo("mpkg", "version")
 
-  for i = #MedBootstrap.installList, 1, -1 do
-    local v = MedBootstrap.installList[i]
-
-    if not table.contains(packages, v.pkg) then
-      tempTimer(.05, function() installPackage(v.url) end)
-      table.remove(MedBootstrap.installList, i)
-      break
-    end
-    
-  end
-end
-
-MedBootstrap.registeredEvents = {
-  registerAnonymousEventHandler("sysInstallPackage", "MedBootstrap.eventHandler")
-}
-
-MedBootstrap.loginTrigId = tempRegexTrigger("^You are the (.*) person to connect since",
-  function()
-    MedBootstrap.checkInstalledPackages()
-    killTrigger(MedBootstrap.loginTrigId)
-  end)</script>
+if mpkgVersion == "" then
+  installPackage("https://mudlet.github.io/mudlet-package-repository/packages/mpkg.mpackage")
+  -- wait a few seconds until mpkg is installed then check MUD package
+  tempTimer(5, function() installServerPackage() end)  
+else
+  installServerPackage()
+end</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>
