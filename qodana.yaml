@@ -1,0 +1,2 @@
+# workaround for https://youtrack.jetbrains.com/issue/QD-9230/GitHub-Actions-by-default-tries-to-pull-qodana-clang2024.1-when-its-in-EAP
+linter: jetbrains/qodana-clang:2024.1-eap
