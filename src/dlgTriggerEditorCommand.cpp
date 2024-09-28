@@ -7,21 +7,21 @@
 
 AddTriggerCommand::AddTriggerCommand(QTreeWidgetItem* pItem, TriggerUnit* triggerUnit, TTreeWidget* treeWidget_triggers, bool isFolder, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_triggerUnit = triggerUnit;
-    m_treeWidget_triggers = treeWidget_triggers;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpTriggerUnit = triggerUnit;
+    mpTreeWidget_triggers = treeWidget_triggers;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddTriggerCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -29,19 +29,19 @@ void AddTriggerCommand::undo()
 
 void AddTriggerCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addTrigger(m_isFolder);
-        m_pItem = m_treeWidget_triggers->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addTrigger(mIsFolder);
+        mpItem = mpTreeWidget_triggers->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -50,43 +50,43 @@ void AddTriggerCommand::redo()
 
 DeleteTriggerCommand::DeleteTriggerCommand(QTreeWidgetItem* pItem, TriggerUnit* triggerUnit, TTreeWidget* treeWidget_triggers, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_triggerUnit = triggerUnit;
-    m_treeWidget_triggers = treeWidget_triggers;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpTriggerUnit = triggerUnit;
+    mpTreeWidget_triggers = treeWidget_triggers;
 }
 
 void DeleteTriggerCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
     TTrigger* pT = nullptr;
-    if (m_parent) {
-        const int childID = m_itemTrigger->getID();
-        m_pItem->setData(0, Qt::UserRole, childID);
-        m_parent->insertChild(m_parent->childCount() <= 0 ? 0 : m_parent->childCount(), m_pItem);
-        m_treeWidget_triggers->setCurrentItem(m_pItem);
+    if (mpParent) {
+        const int childID = mpItemTrigger->getID();
+        mpItem->setData(0, Qt::UserRole, childID);
+        mpParent->insertChild(mpParent->childCount() <= 0 ? 0 : mpParent->childCount(), mpItem);
+        mpTreeWidget_triggers->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
 }
 void DeleteTriggerCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        const int ID = m_pItem->data(0, Qt::UserRole).toInt();
-        TTrigger* p = m_triggerUnit->getTrigger(ID);
-        TTrigger* ptr = new TTrigger(p->mName, p->mPatterns, p->getRegexCodePropertyList(), false, m_host);
+    if (mpItem) {
+        const int ID = mpItem->data(0, Qt::UserRole).toInt();
+        TTrigger* p = mpTriggerUnit->getTrigger(ID);
+        TTrigger* ptr = new TTrigger(p->mName, p->mPatterns, p->getRegexCodePropertyList(), false, mpHost);
         ptr->registerTrigger();
-        m_itemTrigger = ptr;
-        m_editor->delete_trigger();
+        mpItemTrigger = ptr;
+        mpEditor->delete_trigger();
     }
     setText(QObject::tr("Delete Trigger"));
 }
@@ -103,38 +103,38 @@ MoveTriggerCommand::MoveTriggerCommand(TriggerUnit* triggerUnit,
                                        QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_childID = childID;
-    m_oldParentID = oldParentID;
-    m_newParentID = newParentID;
-    m_parentPosition = parentPosition;
-    m_childPosition = childPosition;
-    m_prevParentPosition = prevParentPosition;
-    m_prevChildPosition = prevChildPosition;
-    m_triggerUnit = triggerUnit;
-    m_treeWidget_triggers = treeWidget_triggers;
+    mChildID = childID;
+    mOldParentID = oldParentID;
+    mNewParentID = newParentID;
+    mParentPosition = parentPosition;
+    mChildPosition = childPosition;
+    mPrevParentPosition = prevParentPosition;
+    mPrevChildPosition = prevChildPosition;
+    mpTriggerUnit = triggerUnit;
+    mpTreeWidget_triggers = treeWidget_triggers;
 }
 
 void MoveTriggerCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
 
-    m_host->getTriggerUnit()->reParentTrigger(m_childID, m_newParentID, m_oldParentID, m_prevParentPosition, m_prevChildPosition);
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_triggers->setCurrentItem(m_pItem);
+    mpHost->getTriggerUnit()->reParentTrigger(mChildID, mNewParentID, mOldParentID, mPrevParentPosition, mPrevChildPosition);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpParentItem->childCount(), mpItem);
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
 }
 
 void MoveTriggerCommand::redo()
 {
-    m_host->getTriggerUnit()->reParentTrigger(m_childID, m_oldParentID, m_newParentID, m_parentPosition, m_childPosition);
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    mpHost->getTriggerUnit()->reParentTrigger(mChildID, mOldParentID, mNewParentID, mParentPosition, mChildPosition);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
 
     setText(QObject::tr("Move Trigger"));
@@ -142,21 +142,21 @@ void MoveTriggerCommand::redo()
 
 AddAliasCommand::AddAliasCommand(QTreeWidgetItem* pItem, AliasUnit* aliasUnit, TTreeWidget* treeWidget_aliases, bool isFolder, QUndoCommand* parent)
 {
-    m_aliasUnit = aliasUnit;
-    m_treeWidget_aliases = treeWidget_aliases;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpAliasUnit = aliasUnit;
+    mpTreeWidget_aliases = treeWidget_aliases;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddAliasCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -164,19 +164,19 @@ void AddAliasCommand::undo()
 
 void AddAliasCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addAlias(m_isFolder);
-        m_pItem = m_treeWidget_aliases->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addAlias(mIsFolder);
+        mpItem = mpTreeWidget_aliases->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -185,24 +185,24 @@ void AddAliasCommand::redo()
 
 DeleteAliasCommand::DeleteAliasCommand(QTreeWidgetItem* pItem, AliasUnit* aliasUnit, TTreeWidget* treeWidget_aliases, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_aliasUnit = aliasUnit;
-    m_treeWidget_aliases = treeWidget_aliases;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpAliasUnit = aliasUnit;
+    mpTreeWidget_aliases = treeWidget_aliases;
 }
 
 void DeleteAliasCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
     TTrigger* pT = nullptr;
-    if (m_parent) {
-        const int childID = m_itemAlias->getID();
-        m_pItem->setData(0, Qt::UserRole, childID);
-        m_parent->insertChild(m_parent->childCount() <= 0 ? 0 : m_parent->childCount(), m_pItem);
-        m_treeWidget_aliases->setCurrentItem(m_pItem);
+    if (mpParent) {
+        const int childID = mpItemAlias->getID();
+        mpItem->setData(0, Qt::UserRole, childID);
+        mpParent->insertChild(mpParent->childCount() <= 0 ? 0 : mpParent->childCount(), mpItem);
+        mpTreeWidget_aliases->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -210,19 +210,19 @@ void DeleteAliasCommand::undo()
 
 void DeleteAliasCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        const int ID = m_pItem->data(0, Qt::UserRole).toInt();
-        TAlias* p = m_aliasUnit->getAlias(ID);
-        TAlias* ptr = new TAlias(p->mName, m_host);
+    if (mpItem) {
+        const int ID = mpItem->data(0, Qt::UserRole).toInt();
+        TAlias* p = mpAliasUnit->getAlias(ID);
+        TAlias* ptr = new TAlias(p->mName, mpHost);
         ptr->registerAlias();
-        m_itemAlias = ptr;
-        m_editor->delete_alias();
+        mpItemAlias = ptr;
+        mpEditor->delete_alias();
     }
     setText(QObject::tr("Delete Alias"));
 }
@@ -239,38 +239,38 @@ MoveAliasCommand::MoveAliasCommand(AliasUnit* aliasUnit,
                                    QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_childID = childID;
-    m_oldParentID = oldParentID;
-    m_newParentID = newParentID;
-    m_parentPosition = parentPosition;
-    m_childPosition = childPosition;
-    m_prevParentPosition = prevParentPosition;
-    m_prevChildPosition = prevChildPosition;
-    m_aliasUnit = aliasUnit;
-    m_treeWidget_aliases = treeWidget_aliases;
+    mChildID = childID;
+    mOldParentID = oldParentID;
+    mNewParentID = newParentID;
+    mParentPosition = parentPosition;
+    mChildPosition = childPosition;
+    mPrevParentPosition = prevParentPosition;
+    mPrevChildPosition = prevChildPosition;
+    mpAliasUnit = aliasUnit;
+    mpTreeWidget_aliases = treeWidget_aliases;
 }
 
 void MoveAliasCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
 
-    m_host->getAliasUnit()->reParentAlias(m_childID, m_newParentID, m_oldParentID, m_prevParentPosition, m_prevChildPosition);
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_aliases->setCurrentItem(m_pItem);
+    mpHost->getAliasUnit()->reParentAlias(mChildID, mNewParentID, mOldParentID, mPrevParentPosition, mPrevChildPosition);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpPrevParentItem->childCount(), mpItem);
+    mpTreeWidget_aliases->setCurrentItem(mpItem);
 }
 
 void MoveAliasCommand::redo()
 {
-    m_host->getAliasUnit()->reParentAlias(m_childID, m_oldParentID, m_newParentID, m_parentPosition, m_childPosition);
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    mpHost->getAliasUnit()->reParentAlias(mChildID, mOldParentID, mNewParentID, mParentPosition, mChildPosition);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
 
     setText(QObject::tr("Move Alias"));
@@ -278,21 +278,21 @@ void MoveAliasCommand::redo()
 
 AddTimerCommand::AddTimerCommand(QTreeWidgetItem* pItem, TimerUnit* timerUnit, TTreeWidget* treeWidget_timers, bool isFolder, QUndoCommand* parent)
 {
-    m_timerUnit = timerUnit;
-    m_treeWidget_timers = treeWidget_timers;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpTimerUnit = timerUnit;
+    mpTreeWidget_timers = treeWidget_timers;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddTimerCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -300,19 +300,19 @@ void AddTimerCommand::undo()
 
 void AddTimerCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addTimer(m_isFolder);
-        m_pItem = m_treeWidget_timers->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addTimer(mIsFolder);
+        mpItem = mpTreeWidget_timers->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -321,24 +321,24 @@ void AddTimerCommand::redo()
 
 DeleteTimerCommand::DeleteTimerCommand(QTreeWidgetItem* pItem, TimerUnit* timerUnit, TTreeWidget* treeWidget_timers, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_timerUnit = timerUnit;
-    m_treeWidget_timers = treeWidget_timers;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpTimerUnit = timerUnit;
+    mpTreeWidget_timers = treeWidget_timers;
 }
 
 void DeleteTimerCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
     TTrigger* pT = nullptr;
-    if (m_parent) {
-        const int childID = m_itemTimer->getID();
-        m_pItem->setData(0, Qt::UserRole, childID);
-        m_parent->insertChild(m_parent->childCount() <= 0 ? 0 : m_parent->childCount(), m_pItem);
-        m_treeWidget_timers->setCurrentItem(m_pItem);
+    if (mpParent) {
+        const int childID = mpItemTimer->getID();
+        mpItem->setData(0, Qt::UserRole, childID);
+        mpParent->insertChild(mpParent->childCount() <= 0 ? 0 : mpParent->childCount(), mpItem);
+        mpTreeWidget_timers->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -346,19 +346,19 @@ void DeleteTimerCommand::undo()
 
 void DeleteTimerCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        const int ID = m_pItem->data(0, Qt::UserRole).toInt();
-        TTimer* p = m_timerUnit->getTimer(ID);
-        TTimer* ptr = new TTimer(p->getName(), p->getTime(), m_host);
-        m_host->getTimerUnit()->registerTimer(ptr);
-        m_itemTimer = ptr;
-        m_editor->delete_timer();
+    if (mpItem) {
+        const int ID = mpItem->data(0, Qt::UserRole).toInt();
+        TTimer* p = mpTimerUnit->getTimer(ID);
+        TTimer* ptr = new TTimer(p->getName(), p->getTime(), mpHost);
+        mpHost->getTimerUnit()->registerTimer(ptr);
+        mpItemTimer = ptr;
+        mpEditor->delete_timer();
     }
     setText(QObject::tr("Delete Timer"));
 }
@@ -375,38 +375,38 @@ MoveTimerCommand::MoveTimerCommand(TimerUnit* timerUnit,
                                    QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_childID = childID;
-    m_oldParentID = oldParentID;
-    m_newParentID = newParentID;
-    m_parentPosition = parentPosition;
-    m_childPosition = childPosition;
-    m_prevParentPosition = prevParentPosition;
-    m_prevChildPosition = prevChildPosition;
-    m_timerUnit = timerUnit;
-    m_treeWidget_timers = treeWidget_timers;
+    mChildID = childID;
+    mOldParentID = oldParentID;
+    mNewParentID = newParentID;
+    mParentPosition = parentPosition;
+    mChildPosition = childPosition;
+    mPrevParentPosition = prevParentPosition;
+    mPrevChildPosition = prevChildPosition;
+    mpTimerUnit = timerUnit;
+    mpTreeWidget_timers = treeWidget_timers;
 }
 
 void MoveTimerCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
 
-    m_host->getTimerUnit()->reParentTimer(m_childID, m_newParentID, m_oldParentID, m_prevParentPosition, m_prevChildPosition);
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_timers->setCurrentItem(m_pItem);
+    mpHost->getTimerUnit()->reParentTimer(mChildID, mNewParentID, mOldParentID, mPrevParentPosition, mPrevChildPosition);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpPrevParentItem->childCount(), mpItem);
+    mpTreeWidget_timers->setCurrentItem(mpItem);
 }
 
 void MoveTimerCommand::redo()
 {
-    m_host->getTimerUnit()->reParentTimer(m_childID, m_oldParentID, m_newParentID, m_parentPosition, m_childPosition);
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    mpHost->getTimerUnit()->reParentTimer(mChildID, mOldParentID, mNewParentID, mParentPosition, mChildPosition);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
 
     setText(QObject::tr("Move Timer"));
@@ -414,21 +414,21 @@ void MoveTimerCommand::redo()
 
 AddScriptCommand::AddScriptCommand(QTreeWidgetItem* pItem, ScriptUnit* scriptUnit, TTreeWidget* treeWidget_scripts, bool isFolder, QUndoCommand* parent)
 {
-    m_scriptUnit = scriptUnit;
-    m_treeWidget_scripts = treeWidget_scripts;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpScriptUnit = scriptUnit;
+    mpTreeWidget_scripts = treeWidget_scripts;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddScriptCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -436,19 +436,19 @@ void AddScriptCommand::undo()
 
 void AddScriptCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addScript(m_isFolder);
-        m_pItem = m_treeWidget_scripts->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addScript(mIsFolder);
+        mpItem = mpTreeWidget_scripts->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -457,24 +457,24 @@ void AddScriptCommand::redo()
 
 DeleteScriptCommand::DeleteScriptCommand(QTreeWidgetItem* pItem, ScriptUnit* scriptUnit, TTreeWidget* treeWidget_scripts, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_scriptUnit = scriptUnit;
-    m_treeWidget_scripts = treeWidget_scripts;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpScriptUnit = scriptUnit;
+    mpTreeWidget_scripts = treeWidget_scripts;
 }
 
 void DeleteScriptCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
     TTrigger* pT = nullptr;
-    if (m_parent) {
-        const int childID = m_itemScript->getID();
-        m_pItem->setData(0, Qt::UserRole, childID);
-        m_parent->insertChild(m_parent->childCount() <= 0 ? 0 : m_parent->childCount(), m_pItem);
-        m_treeWidget_scripts->setCurrentItem(m_pItem);
+    if (mpParent) {
+        const int childID = mpItemScript->getID();
+        mpItem->setData(0, Qt::UserRole, childID);
+        mpParent->insertChild(mpParent->childCount() <= 0 ? 0 : mpParent->childCount(), mpItem);
+        mpTreeWidget_scripts->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -482,19 +482,19 @@ void DeleteScriptCommand::undo()
 
 void DeleteScriptCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        const int ID = m_pItem->data(0, Qt::UserRole).toInt();
-        TScript* p = m_scriptUnit->getScript(ID);
-        TScript* ptr = new TScript(p->getName(), m_host);
+    if (mpItem) {
+        const int ID = mpItem->data(0, Qt::UserRole).toInt();
+        TScript* p = mpScriptUnit->getScript(ID);
+        TScript* ptr = new TScript(p->getName(), mpHost);
         ptr->registerScript();
-        m_itemScript = ptr;
-        m_editor->delete_script();
+        mpItemScript = ptr;
+        mpEditor->delete_script();
     }
     setText(QObject::tr("Delete Script"));
 }
@@ -511,38 +511,38 @@ MoveScriptCommand::MoveScriptCommand(ScriptUnit* scriptUnit,
                                      QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_childID = childID;
-    m_oldParentID = oldParentID;
-    m_newParentID = newParentID;
-    m_parentPosition = parentPosition;
-    m_childPosition = childPosition;
-    m_prevParentPosition = prevParentPosition;
-    m_prevChildPosition = prevChildPosition;
-    m_scriptUnit = scriptUnit;
-    m_treeWidget_scripts = treeWidget_scripts;
+    mChildID = childID;
+    mOldParentID = oldParentID;
+    mNewParentID = newParentID;
+    mParentPosition = parentPosition;
+    mChildPosition = childPosition;
+    mPrevParentPosition = prevParentPosition;
+    mPrevChildPosition = prevChildPosition;
+    mpScriptUnit = scriptUnit;
+    mpTreeWidget_scripts = treeWidget_scripts;
 }
 
 void MoveScriptCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
 
-    m_host->getScriptUnit()->reParentScript(m_childID, m_newParentID, m_oldParentID, m_prevParentPosition, m_prevChildPosition);
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_scripts->setCurrentItem(m_pItem);
+    mpHost->getScriptUnit()->reParentScript(mChildID, mNewParentID, mOldParentID, mPrevParentPosition, mPrevChildPosition);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpPrevParentItem->childCount(), mpItem);
+    mpTreeWidget_scripts->setCurrentItem(mpItem);
 }
 
 void MoveScriptCommand::redo()
 {
-    m_host->getScriptUnit()->reParentScript(m_childID, m_oldParentID, m_newParentID, m_parentPosition, m_childPosition);
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    mpHost->getScriptUnit()->reParentScript(mChildID, mOldParentID, mNewParentID, mParentPosition, mChildPosition);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
 
     setText(QObject::tr("Move Script"));
@@ -550,21 +550,21 @@ void MoveScriptCommand::redo()
 
 AddKeyCommand::AddKeyCommand(QTreeWidgetItem* pItem, KeyUnit* keyUnit, TTreeWidget* treeWidget_keys, bool isFolder, QUndoCommand* parent)
 {
-    m_keyUnit = keyUnit;
-    m_treeWidget_keys = treeWidget_keys;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpKeyUnit = keyUnit;
+    mpTreeWidget_keys = treeWidget_keys;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddKeyCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -572,19 +572,19 @@ void AddKeyCommand::undo()
 
 void AddKeyCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addKey(m_isFolder);
-        m_pItem = m_treeWidget_keys->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addKey(mIsFolder);
+        mpItem = mpTreeWidget_keys->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -593,24 +593,24 @@ void AddKeyCommand::redo()
 
 DeleteKeyCommand::DeleteKeyCommand(QTreeWidgetItem* pItem, KeyUnit* keyUnit, TTreeWidget* treeWidget_keys, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_keyUnit = keyUnit;
-    m_treeWidget_keys = treeWidget_keys;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpKeyUnit = keyUnit;
+    mpTreeWidget_keys = treeWidget_keys;
 }
 
 void DeleteKeyCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
     TTrigger* pT = nullptr;
-    if (m_parent) {
-        const int childID = m_itemKey->getID();
-        m_pItem->setData(0, Qt::UserRole, childID);
-        m_parent->insertChild(m_parent->childCount() <= 0 ? 0 : m_parent->childCount(), m_pItem);
-        m_treeWidget_keys->setCurrentItem(m_pItem);
+    if (mpParent) {
+        const int childID = mpItemKey->getID();
+        mpItem->setData(0, Qt::UserRole, childID);
+        mpParent->insertChild(mpParent->childCount() <= 0 ? 0 : mpParent->childCount(), mpParent);
+        mpTreeWidget_keys->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -618,19 +618,19 @@ void DeleteKeyCommand::undo()
 
 void DeleteKeyCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        const int ID = m_pItem->data(0, Qt::UserRole).toInt();
-        TKey* p = m_keyUnit->getKey(ID);
-        TKey* ptr = new TKey(p->getName(), m_host);
+    if (mpItem) {
+        const int ID = mpItem->data(0, Qt::UserRole).toInt();
+        TKey* p = mpKeyUnit->getKey(ID);
+        TKey* ptr = new TKey(p->getName(), mpHost);
         ptr->registerKey();
-        m_itemKey = ptr;
-        m_editor->delete_key();
+        mpItemKey = ptr;
+        mpEditor->delete_key();
     }
     setText(QObject::tr("Delete Key"));
 }
@@ -646,59 +646,59 @@ MoveKeyCommand::MoveKeyCommand(KeyUnit* keyUnit,
                                QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_childID = childID;
-    m_oldParentID = oldParentID;
-    m_newParentID = newParentID;
-    m_parentPosition = parentPosition;
-    m_childPosition = childPosition;
-    m_prevParentPosition = prevParentPosition;
-    m_prevChildPosition = prevChildPosition;
-    m_keyUnit = keyUnit;
-    m_treeWidget_keys = treeWidget_keys;
+    mChildID = childID;
+    mOldParentID = oldParentID;
+    mNewParentID = newParentID;
+    mParentPosition = parentPosition;
+    mChildPosition = childPosition;
+    mPrevParentPosition = prevParentPosition;
+    mPrevChildPosition = prevChildPosition;
+    mpKeyUnit = keyUnit;
+    mpTreeWidget_keys = treeWidget_keys;
 }
 
 void MoveKeyCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
 
-    m_host->getKeyUnit()->reParentKey(m_childID, m_newParentID, m_oldParentID, m_prevParentPosition, m_prevChildPosition);
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_keys->setCurrentItem(m_pItem);
+    mpHost->getKeyUnit()->reParentKey(mChildID, mNewParentID, mOldParentID, mPrevParentPosition, mPrevChildPosition);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpPrevParentItem->childCount(), mpItem);
+    mpTreeWidget_keys->setCurrentItem(mpItem);
 }
 
 void MoveKeyCommand::redo()
 {
-    m_host->getKeyUnit()->reParentKey(m_childID, m_oldParentID, m_newParentID, m_parentPosition, m_childPosition);
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    mpHost->getKeyUnit()->reParentKey(mChildID, mOldParentID, mNewParentID, mParentPosition, mChildPosition);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
 
     setText(QObject::tr("Move Key"));
 }
 AddActionCommand::AddActionCommand(QTreeWidgetItem* pItem, ActionUnit* actionUnit, TTreeWidget* treeWidget_actions, bool isFolder, QUndoCommand* parent)
 {
-    m_actionUnit = actionUnit;
-    m_treeWidget_actions = treeWidget_actions;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpActionUnit = actionUnit;
+    mpTreeWidget_actions = treeWidget_actions;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddActionCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -706,19 +706,19 @@ void AddActionCommand::undo()
 
 void AddActionCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addAction(m_isFolder);
-        m_pItem = m_treeWidget_actions->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addAction(mpItem);
+        mpItem = mpTreeWidget_actions->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -726,24 +726,24 @@ void AddActionCommand::redo()
 }
 DeleteActionCommand::DeleteActionCommand(QTreeWidgetItem* pItem, ActionUnit* actionUnit, TTreeWidget* treeWidget_actions, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_actionUnit = actionUnit;
-    m_treeWidget_actions = treeWidget_actions;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpActionUnit = actionUnit;
+    mpTreeWidget_actions = treeWidget_actions;
 }
 
 void DeleteActionCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
     TTrigger* pT = nullptr;
-    if (m_parent) {
-        const int childID = m_itemAction->getID();
-        m_pItem->setData(0, Qt::UserRole, childID);
-        m_parent->insertChild(m_parent->childCount() <= 0 ? 0 : m_parent->childCount(), m_pItem);
-        m_treeWidget_actions->setCurrentItem(m_pItem);
+    if (mpParent) {
+        const int childID = mpItemAction->getID();
+        mpItem->setData(0, Qt::UserRole, childID);
+        mpParent->insertChild(mpParent->childCount() <= 0 ? 0 : mpParent->childCount(), mpItem);
+        mpTreeWidget_actions->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -751,19 +751,19 @@ void DeleteActionCommand::undo()
 
 void DeleteActionCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        const int ID = m_pItem->data(0, Qt::UserRole).toInt();
-        TAction* p = m_actionUnit->getAction(ID);
-        TAction* ptr = new TAction(p->getName(), m_host);
+    if (mpItem) {
+        const int ID = mpItem->data(0, Qt::UserRole).toInt();
+        TAction* p = mpActionUnit->getAction(ID);
+        TAction* ptr = new TAction(p->getName(), mpHost);
         ptr->registerAction();
-        m_itemAction = ptr;
-        m_editor->delete_action();
+        mpItemAction = ptr;
+        mpEditor->delete_action();
     }
     setText(QObject::tr("Delete Action"));
 }
@@ -779,62 +779,62 @@ MoveActionCommand::MoveActionCommand(ActionUnit* actionUnit,
                                      QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_childID = childID;
-    m_oldParentID = oldParentID;
-    m_newParentID = newParentID;
-    m_parentPosition = parentPosition;
-    m_childPosition = childPosition;
-    m_prevParentPosition = prevParentPosition;
-    m_prevChildPosition = prevChildPosition;
-    m_actionUnit = actionUnit;
-    m_treeWidget_actions = treeWidget_actions;
+    mChildID = childID;
+    mOldParentID = oldParentID;
+    mNewParentID = newParentID;
+    mParentPosition = parentPosition;
+    mChildPosition = childPosition;
+    mPrevParentPosition = prevParentPosition;
+    mPrevChildPosition = prevChildPosition;
+    mpActionUnit = actionUnit;
+    mpTreeWidget_actions = treeWidget_actions;
 }
 
 void MoveActionCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
 
-    m_host->getActionUnit()->reParentAction(m_childID, m_newParentID, m_oldParentID, m_prevParentPosition, m_prevChildPosition);
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_actions->setCurrentItem(m_pItem);
-    m_host->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->reParentAction(mChildID, mNewParentID, mOldParentID, mPrevParentPosition, mPrevChildPosition);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpPrevParentItem->childCount(), mpItem);
+    mpTreeWidget_actions->setCurrentItem(mpItem);
+    mpHost->getActionUnit()->updateToolbar();
 }
 
 void MoveActionCommand::redo()
 {
-    m_host->getActionUnit()->reParentAction(m_childID, m_oldParentID, m_newParentID, m_parentPosition, m_childPosition);
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    mpHost->getActionUnit()->reParentAction(mChildID, mOldParentID, mNewParentID, mParentPosition, mChildPosition);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
-    m_host->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateToolbar();
 
     setText(QObject::tr("Move Action"));
 }
 AddVarCommand::AddVarCommand(QTreeWidgetItem* pItem, VarUnit* varUnit, TTreeWidget* treeWidget_variables, bool isFolder, QUndoCommand* parent)
 {
-    m_varUnit = varUnit;
-    m_treeWidget_variables = treeWidget_variables;
-    m_isFolder = isFolder;
-    m_pItem = pItem;
+    mpVarUnit = varUnit;
+    mpTreeWidget_variables = treeWidget_variables;
+    mIsFolder = isFolder;
+    mpItem = pItem;
 }
 
 void AddVarCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
-    m_parent = m_pItem->parent();
+    mpParent = mpItem->parent();
 
-    if (m_parent) {
-        m_parent->removeChild(m_pItem);
+    if (mpParent) {
+        mpParent->removeChild(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -842,24 +842,24 @@ void AddVarCommand::undo()
 
 void AddVarCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_pItem) {
-        m_editor->addVar(m_isFolder);
-        m_pItem = m_treeWidget_variables->currentItem();
-        m_parent = m_pItem->parent();
+    if (!mpItem) {
+        mpEditor->addVar(mIsFolder);
+        mpItem = mpTreeWidget_variables->currentItem();
+        mpParent = mpItem->parent();
     } else {
-        if (!m_parent) {
-            if (m_pItem->parent()) {
-                m_parent = m_pItem->parent();
+        if (!mpParent) {
+            if (mpItem->parent()) {
+                mpParent = mpItem->parent();
             }
         }
-        int count = m_parent->childCount();
-        if (m_isFolder) {
-            m_parent->addChild(m_pItem);
+        int count = mpParent->childCount();
+        if (mIsFolder) {
+            mpParent->addChild(mpItem);
         } else {
-            m_parent->insertChild(count <= 0 ? 0 : count, m_pItem);
+            mpParent->insertChild(count <= 0 ? 0 : count, mpItem);
         }
     }
 
@@ -867,39 +867,39 @@ void AddVarCommand::redo()
 }
 DeleteVarCommand::DeleteVarCommand(QTreeWidgetItem* pItem, VarUnit* varUnit, TTreeWidget* treeWidget_variables, QUndoCommand* parent) : QUndoCommand(parent)
 {
-    m_pItem = pItem;
-    m_parent = m_pItem->parent();
-    m_varUnit = varUnit;
-    m_treeWidget_variables = treeWidget_variables;
+    mpItem = pItem;
+    mpParent = mpItem->parent();
+    mpVarUnit = varUnit;
+    mpTreeWidget_variables = treeWidget_variables;
 }
 
 void DeleteVarCommand::undo()
 {
-    if (!m_pItem) {
+    if (!mpItem) {
         return;
     }
 
-    if (m_parent) {
-        if (!m_tempVar) {
-            m_tempVar = new TVar();
-            *m_tempVar = *m_itemVar;
+    if (mpParent) {
+        if (!mpTempVar) {
+            mpTempVar = new TVar();
+            *mpTempVar = *mpItemVar;
         }
-        TVar* parent = m_tempVar->getParent();
-        parent->addChild(m_tempVar);
-        m_varUnit->addTreeItem(m_pItem, m_tempVar);
+        TVar* parent = mpTempVar->getParent();
+        parent->addChild(mpTempVar);
+        mpVarUnit->addTreeItem(mpItem, mpTempVar);
 
-        m_parent->addChild(m_pItem);
+        mpParent->addChild(mpItem);
         QList<QTreeWidgetItem*> list;
-        m_editor->recurseVariablesDown(m_pItem, list);
+        mpEditor->recurseVariablesDown(mpItem, list);
         for (auto& treeWidgetItem : list) {
-            TVar* v = m_varUnit->getWVar(treeWidgetItem);
+            TVar* v = mpVarUnit->getWVar(treeWidgetItem);
             TVar* vparent = v->getParent();
             const void* pval = vparent->pValue;
             if (v->getParent()->hidden) {
-                v->setParent(m_tempVar);
+                v->setParent(mpTempVar);
             }
         }
-        m_treeWidget_variables->setCurrentItem(m_pItem);
+        mpTreeWidget_variables->setCurrentItem(mpItem);
     } else {
         qDebug() << "parent is null ";
     }
@@ -907,21 +907,21 @@ void DeleteVarCommand::undo()
 
 void DeleteVarCommand::redo()
 {
-    if (!m_editor) {
+    if (!mpEditor) {
         return;
     }
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    if (m_pItem) {
-        m_treeWidget_variables->setCurrentItem(m_pItem);
-        if (!m_itemVar) {
-            m_itemVar = new TVar();
-            TVar* p = m_varUnit->getWVar(m_pItem);
-            *m_itemVar = *p;
+    if (mpItem) {
+        mpTreeWidget_variables->setCurrentItem(mpItem);
+        if (!mpItemVar) {
+            mpItemVar = new TVar();
+            TVar* p = mpVarUnit->getWVar(mpItem);
+            *mpItemVar = *p;
         }
-        m_editor->delete_variable();
-        m_tempVar = nullptr;
+        mpEditor->delete_variable();
+        mpTempVar = nullptr;
     }
     setText(QObject::tr("Delete Variable"));
 }
@@ -929,43 +929,43 @@ MoveVariableCommand::MoveVariableCommand(
         VarUnit* varUnit, TTreeWidget* treeWidget_variables, QTreeWidgetItem* parentItem, QTreeWidgetItem* cItem, QTreeWidgetItem* prevParentItem, QUndoCommand* parent)
 : QUndoCommand(parent)
 {
-    m_varUnit = varUnit;
-    m_treeWidget_variables = treeWidget_variables;
-    m_ParentItem = parentItem;
-    m_pItem = cItem;
-    m_PrevParentItem = prevParentItem;
+    mpVarUnit = varUnit;
+    mpTreeWidget_variables = treeWidget_variables;
+    mpParentItem = parentItem;
+    mpItem = cItem;
+    mpPrevParentItem = prevParentItem;
 }
 
 void MoveVariableCommand::undo()
 {
-    if (!m_host) {
+    if (!mpHost) {
         return;
     }
-    LuaInterface* lI = m_host->getLuaInterface();
+    LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* varUnit = lI->getVarUnit();
-    if (!lI->reparentVariable(m_PrevParentItem, m_pItem, m_ParentItem)) {
-        m_event->setDropAction(Qt::IgnoreAction);
-        m_event->ignore();
+    if (!lI->reparentVariable(mpPrevParentItem, mpItem, mpParentItem)) {
+        mpEvent->setDropAction(Qt::IgnoreAction);
+        mpEvent->ignore();
     }
-    m_ParentItem->removeChild(m_pItem);
-    m_PrevParentItem->insertChild(m_PrevParentItem->childCount() <= 0 ? 0 : m_PrevParentItem->childCount(), m_pItem);
-    m_treeWidget_variables->setCurrentItem(m_pItem);
+    mpParentItem->removeChild(mpItem);
+    mpPrevParentItem->insertChild(mpPrevParentItem->childCount() <= 0 ? 0 : mpPrevParentItem->childCount(), mpItem);
+    mpTreeWidget_variables->setCurrentItem(mpItem);
 }
 
 void MoveVariableCommand::redo()
 {
-    LuaInterface* lI = m_host->getLuaInterface();
+    LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* varUnit = lI->getVarUnit();
-    if (!lI->reparentVariable(m_ParentItem, m_pItem, m_PrevParentItem)) {
-        m_event->setDropAction(Qt::IgnoreAction);
-        m_event->ignore();
+    if (!lI->reparentVariable(mpParentItem, mpItem, mpPrevParentItem)) {
+        mpEvent->setDropAction(Qt::IgnoreAction);
+        mpEvent->ignore();
     }
-    if (m_PrevParentItem) {
-        m_PrevParentItem->removeChild(m_pItem);
+    if (mpPrevParentItem) {
+        mpPrevParentItem->removeChild(mpItem);
     }
-    if (m_ParentItem) {
-        const int count = m_ParentItem->childCount();
-        m_ParentItem->insertChild(count <= 0 ? 0 : count, m_pItem);
+    if (mpParentItem) {
+        const int count = mpParentItem->childCount();
+        mpParentItem->insertChild(count <= 0 ? 0 : count, mpItem);
     }
     setText(QObject::tr("Move Variable"));
 }

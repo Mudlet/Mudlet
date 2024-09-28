@@ -33,7 +33,9 @@
 #include <QHeaderView>
 #include "post_guard.h"
 
-TTreeWidget::TTreeWidget(QWidget* pW) : QTreeWidget(pW), mChildID()
+TTreeWidget::TTreeWidget(QWidget* pW)
+: QTreeWidget(pW)
+, mChildID()
 {
     setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -53,7 +55,6 @@ TTreeWidget::TTreeWidget(QWidget* pW) : QTreeWidget(pW), mChildID()
     mIsActionTree = false;
     mIsKeyTree = false;
     mIsVarTree = false;
-    QUndoStack* undoStack = nullptr;
 }
 
 void TTreeWidget::setIsAliasTree()
@@ -211,8 +212,8 @@ void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int
     if (parent.isValid()) {
         QModelIndex child = parent.model()->index(start, 0, parent);
         mChildID = child.data(Qt::UserRole).toInt();
-        m_PrevParentPosition = parent.row();
-        m_PrevChildPosition = child.row();
+        mPrevParentPosition = parent.row();
+        mPrevChildPosition = child.row();
         if (!mChildID) {
             if (parent.isValid()) {
                 // This if seems redundant - as it has already been done once
@@ -261,99 +262,81 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
             if (mOldParentID == newParentID) {
                 return;
             }
-            const int m_ParentItemID = m_ParentItem->data(0, Qt::UserRole).toInt();
+            const int m_ParentItemID = mParentItem->data(0, Qt::UserRole).toInt();
             if (newParentID != m_ParentItemID) {
-                m_ParentItem = m_ParentItem->parent();
-                const int m_pID = m_ParentItem->data(0, Qt::UserRole).toInt();
-                if (m_pID == newParentID) {
-                    qDebug() << "found match";
-                }
+                mParentItem = mParentItem->parent();
             }
             TriggerUnit* triggerUnit = mpHost->getTriggerUnit();
-            MoveTriggerCommand* command = new MoveTriggerCommand(triggerUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, m_PrevParentPosition, m_PrevChildPosition);
-            command->m_host = mpHost;
-            command->m_parent = parent;
-            command->m_start = start;
-            command->m_end = end;
-            command->m_ParentItem = m_ParentItem;
-            command->m_PrevParentItem = m_PrevParentItem;
-            command->m_pItem = m_droppedItem;
-            if (undoStack) {
-                undoStack->push(command);
+            MoveTriggerCommand* command = new MoveTriggerCommand(triggerUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, mPrevParentPosition, mPrevChildPosition);
+            command->mpHost = mpHost;
+            command->mParent = parent;
+            command->mStart = start;
+            command->mEnd = end;
+            command->mpParentItem = mParentItem;
+            command->mpPrevParentItem = mPrevParentItem;
+            command->mpItem = mdroppedItem;
+            if (mpUndoStack) {
+                mpUndoStack->push(command);
             }
         } else if (mIsAliasTree) {
             if (mOldParentID == newParentID) {
                 return;
             }
-            const int m_ParentItemID = m_ParentItem->data(0, Qt::UserRole).toInt();
+            const int m_ParentItemID = mParentItem->data(0, Qt::UserRole).toInt();
             if (newParentID != m_ParentItemID) {
-                m_ParentItem = m_ParentItem->parent();
-                const int m_pID = m_ParentItem->data(0, Qt::UserRole).toInt();
-                if (m_pID == newParentID) {
-                    qDebug() << "found match";
-                }
+                mParentItem = mParentItem->parent();
             }
             AliasUnit* aliasUnit = mpHost->getAliasUnit();
-            MoveAliasCommand* command = new MoveAliasCommand(aliasUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, m_PrevParentPosition, m_PrevChildPosition);
-            command->m_host = mpHost;
-            command->m_parent = parent;
-            command->m_start = start;
-            command->m_end = end;
-            command->m_ParentItem = m_ParentItem;
-            command->m_PrevParentItem = m_PrevParentItem;
-            command->m_pItem = m_droppedItem;
-            if (undoStack) {
-                undoStack->push(command);
+            MoveAliasCommand* command = new MoveAliasCommand(aliasUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, mPrevParentPosition, mPrevChildPosition);
+            command->mpHost = mpHost;
+            command->mParent = parent;
+            command->mStart = start;
+            command->mEnd = end;
+            command->mpParentItem = mParentItem;
+            command->mpPrevParentItem = mPrevParentItem;
+            command->mpItem = mdroppedItem;
+            if (mpUndoStack) {
+                mpUndoStack->push(command);
             }
         } else if (mIsKeyTree) {
-            // mpHost->getKeyUnit()->reParentKey(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
             if (mOldParentID == newParentID) {
                 return;
             }
-            const int m_ParentItemID = m_ParentItem->data(0, Qt::UserRole).toInt();
+            const int m_ParentItemID = mParentItem->data(0, Qt::UserRole).toInt();
             if (newParentID != m_ParentItemID) {
-                m_ParentItem = m_ParentItem->parent();
-                const int m_pID = m_ParentItem->data(0, Qt::UserRole).toInt();
-                if (m_pID == newParentID) {
-                    qDebug() << "found match";
-                }
+                mParentItem = mParentItem->parent();
             }
             KeyUnit* keyUnit = mpHost->getKeyUnit();
-            MoveKeyCommand* command = new MoveKeyCommand(keyUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, m_PrevParentPosition, m_PrevChildPosition);
-            command->m_host = mpHost;
-            command->m_parent = parent;
-            command->m_start = start;
-            command->m_end = end;
-            command->m_ParentItem = m_ParentItem;
-            command->m_PrevParentItem = m_PrevParentItem;
-            command->m_pItem = m_droppedItem;
-            if (undoStack) {
-                undoStack->push(command);
+            MoveKeyCommand* command = new MoveKeyCommand(keyUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, mPrevParentPosition, mPrevChildPosition);
+            command->mpHost = mpHost;
+            command->mParent = parent;
+            command->mStart = start;
+            command->mEnd = end;
+            command->mpParentItem = mParentItem;
+            command->mpPrevParentItem = mPrevParentItem;
+            command->mpItem = mdroppedItem;
+            if (mpUndoStack) {
+                mpUndoStack->push(command);
             }
         } else if (mIsTimerTree) {
-            // mpHost->getTimerUnit()->reParentTimer(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
             if (mOldParentID == newParentID) {
                 return;
             }
-            const int m_ParentItemID = m_ParentItem->data(0, Qt::UserRole).toInt();
+            const int m_ParentItemID = mParentItem->data(0, Qt::UserRole).toInt();
             if (newParentID != m_ParentItemID) {
-                m_ParentItem = m_ParentItem->parent();
-                const int m_pID = m_ParentItem->data(0, Qt::UserRole).toInt();
-                if (m_pID == newParentID) {
-                    qDebug() << "found match";
-                }
+                mParentItem = mParentItem->parent();
             }
             TimerUnit* timerUnit = mpHost->getTimerUnit();
-            MoveTimerCommand* command = new MoveTimerCommand(timerUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, m_PrevParentPosition, m_PrevChildPosition);
-            command->m_host = mpHost;
-            command->m_parent = parent;
-            command->m_start = start;
-            command->m_end = end;
-            command->m_ParentItem = m_ParentItem;
-            command->m_PrevParentItem = m_PrevParentItem;
-            command->m_pItem = m_droppedItem;
-            if (undoStack) {
-                undoStack->push(command);
+            MoveTimerCommand* command = new MoveTimerCommand(timerUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, mPrevParentPosition, mPrevChildPosition);
+            command->mpHost = mpHost;
+            command->mParent = parent;
+            command->mStart = start;
+            command->mEnd = end;
+            command->mpParentItem = mParentItem;
+            command->mpPrevParentItem = mPrevParentItem;
+            command->mpItem = mdroppedItem;
+            if (mpUndoStack) {
+                mpUndoStack->push(command);
             }
             TTimer* pTChild = mpHost->getTimerUnit()->getTimer(mChildID);
             if (pTChild) {
@@ -390,55 +373,44 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                 }
             }
         } else if (mIsScriptTree) {
-            // mpHost->getScriptUnit()->reParentScript(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
             if (mOldParentID == newParentID) {
                 return;
             }
-            const int m_ParentItemID = m_ParentItem->data(0, Qt::UserRole).toInt();
+            const int m_ParentItemID = mParentItem->data(0, Qt::UserRole).toInt();
             if (newParentID != m_ParentItemID) {
-                m_ParentItem = m_ParentItem->parent();
-                const int m_pID = m_ParentItem->data(0, Qt::UserRole).toInt();
-                if (m_pID == newParentID) {
-                    qDebug() << "found match";
-                }
+                mParentItem = mParentItem->parent();
             }
             ScriptUnit* scriptUnit = mpHost->getScriptUnit();
-            MoveScriptCommand* command = new MoveScriptCommand(scriptUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, m_PrevParentPosition, m_PrevChildPosition);
-            command->m_host = mpHost;
-            command->m_parent = parent;
-            command->m_start = start;
-            command->m_end = end;
-            command->m_ParentItem = m_ParentItem;
-            command->m_PrevParentItem = m_PrevParentItem;
-            command->m_pItem = m_droppedItem;
-            if (undoStack) {
-                undoStack->push(command);
+            MoveScriptCommand* command = new MoveScriptCommand(scriptUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, mPrevParentPosition, mPrevChildPosition);
+            command->mpHost = mpHost;
+            command->mParent = parent;
+            command->mStart = start;
+            command->mEnd = end;
+            command->mpParentItem = mParentItem;
+            command->mpPrevParentItem = mPrevParentItem;
+            command->mpItem = mdroppedItem;
+            if (mpUndoStack) {
+                mpUndoStack->push(command);
             }
         } else if (mIsActionTree) {
-            // mpHost->getActionUnit()->reParentAction(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-            // mpHost->getActionUnit()->updateToolbar();
             if (mOldParentID == newParentID) {
                 return;
             }
-            const int m_ParentItemID = m_ParentItem->data(0, Qt::UserRole).toInt();
+            const int m_ParentItemID = mParentItem->data(0, Qt::UserRole).toInt();
             if (newParentID != m_ParentItemID) {
-                m_ParentItem = m_ParentItem->parent();
-                const int m_pID = m_ParentItem->data(0, Qt::UserRole).toInt();
-                if (m_pID == newParentID) {
-                    qDebug() << "found match";
-                }
+                mParentItem = mParentItem->parent();
             }
             ActionUnit* actionUnit = mpHost->getActionUnit();
-            MoveActionCommand* command = new MoveActionCommand(actionUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, m_PrevParentPosition, m_PrevChildPosition);
-            command->m_host = mpHost;
-            command->m_parent = parent;
-            command->m_start = start;
-            command->m_end = end;
-            command->m_ParentItem = m_ParentItem;
-            command->m_PrevParentItem = m_PrevParentItem;
-            command->m_pItem = m_droppedItem;
-            if (undoStack) {
-                undoStack->push(command);
+            MoveActionCommand* command = new MoveActionCommand(actionUnit, this, mChildID, mOldParentID, newParentID, parentPosition, childPosition, mPrevParentPosition, mPrevChildPosition);
+            command->mpHost = mpHost;
+            command->mParent = parent;
+            command->mStart = start;
+            command->mEnd = end;
+            command->mpParentItem = mParentItem;
+            command->mpPrevParentItem = mPrevParentItem;
+            command->mpItem = mdroppedItem;
+            if (mpUndoStack) {
+                mpUndoStack->push(command);
             }
         } else {
             qWarning().nospace().noquote() << "TTreeWidget::rowsInserted(...) WARNING - a TTreeWidget item which has not been classified as a mudlet type detected.";
@@ -505,21 +477,21 @@ void TTreeWidget::dropEvent(QDropEvent* event)
         }
         const int m_ParentItemID = pItem->data(0, Qt::UserRole).toInt();
         if (newParentID != m_ParentItemID) {
-            m_ParentItem = pItem->parent();
+            mParentItem = pItem->parent();
         }
         VarUnit* varUnit = lI->getVarUnit();
         MoveVariableCommand* command = new MoveVariableCommand(varUnit, this, newpItem, cItem, oldpItem);
-        command->m_host = mpHost;
-        command->m_event = event;
-        if (undoStack) {
-            undoStack->push(command);
+        command->mpHost = mpHost;
+        command->mpEvent = event;
+        if (mpUndoStack) {
+            mpUndoStack->push(command);
         }
     }
 
     mIsDropAction = true;
-    m_droppedItem = cItem;
-    m_ParentItem = pItem;
-    m_PrevParentItem = cItem->parent();
+    mdroppedItem = cItem;
+    mParentItem = pItem;
+    mPrevParentItem = cItem->parent();
 
     QTreeWidget::dropEvent(event);
 }

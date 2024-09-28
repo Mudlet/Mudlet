@@ -61,26 +61,18 @@ public:
     void setIsKeyTree();
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
-    int m_childID;
-    int m_oldParentID;
-    int m_newParentID;
-    int m_parentPosition;
-    int m_childPosition;
-    int m_PrevParentPosition;
-    int m_PrevChildPosition;
-    QModelIndex m_parent;
-    QUndoStack* undoStack;
-    QTreeWidgetItem* m_PrevParentItem;
-    QTreeWidgetItem* m_ParentItem;
-    QTreeWidgetItem* m_droppedItem;
-    int m_start;
-    int m_end;
+    QUndoStack* mpUndoStack = nullptr;
+    QTreeWidgetItem* mPrevParentItem;
+    QTreeWidgetItem* mParentItem;
+    QTreeWidgetItem* mdroppedItem;
 
 private:
     bool mIsDropAction;
     QPointer<Host> mpHost;
     int mOldParentID;
     int mChildID;
+    int mPrevParentPosition;
+    int mPrevChildPosition;
     // TODO: replace these seven booleans with a single enum:
     bool mIsTriggerTree;
     bool mIsAliasTree;

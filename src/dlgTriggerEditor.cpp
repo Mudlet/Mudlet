@@ -62,7 +62,9 @@ using namespace std::chrono_literals;
 // it is disabled):
 static const char* cButtonBaseColor = "baseColor";
 
-dlgTriggerEditor::dlgTriggerEditor(Host* pH) : mpHost(pH), mSearchOptions(pH->mSearchOptions)
+dlgTriggerEditor::dlgTriggerEditor(Host* pH)
+: mpHost(pH)
+, mSearchOptions(pH->mSearchOptions)
 {
     // init generated dialog
     setupUi(this);
@@ -202,7 +204,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH) : mpHost(pH), mSearchOptions(pH->mS
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_soundTrigger);
     connect(mpTriggersMainArea->groupBox_triggerColorizer, &QGroupBox::clicked, this, &dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger);
     connect(mpTriggersMainArea->toolButton_clearSoundFile, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_clearSoundFile);
-    // connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_lineEdit_trigger_name);
 
     mpTimersMainArea = new dlgTimersMainArea(this);
     layoutColumn->addWidget(mpTimersMainArea, 1);
@@ -516,7 +517,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH) : mpHost(pH), mSearchOptions(pH->mS
     redoAction->setIcon(QIcon(":/icons/redo.png"));
     redoAction->setShortcuts(QKeySequence::Redo);
 
-    // connect(redoAction, &QAction::triggered, this, &dlgTriggerEditor::addTrigger);
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
@@ -1001,13 +1001,13 @@ void dlgTriggerEditor::createUndoView()
     QDockWidget* undoDockWidget = new QDockWidget;
     undoDockWidget->setWindowTitle(tr("Command List"));
     undoDockWidget->setWidget(new QUndoView(undoStack));
-    treeWidget_triggers->undoStack = undoStack;
-    treeWidget_aliases->undoStack = undoStack;
-    treeWidget_timers->undoStack = undoStack;
-    treeWidget_scripts->undoStack = undoStack;
-    treeWidget_keys->undoStack = undoStack;
-    treeWidget_actions->undoStack = undoStack;
-    treeWidget_variables->undoStack = undoStack;
+    treeWidget_triggers->mpUndoStack = undoStack;
+    treeWidget_aliases->mpUndoStack = undoStack;
+    treeWidget_timers->mpUndoStack = undoStack;
+    treeWidget_scripts->mpUndoStack = undoStack;
+    treeWidget_keys->mpUndoStack = undoStack;
+    treeWidget_actions->mpUndoStack = undoStack;
+    treeWidget_variables->mpUndoStack = undoStack;
     addDockWidget(Qt::RightDockWidgetArea, undoDockWidget);
 }
 
@@ -2786,8 +2786,8 @@ void dlgTriggerEditor::deleteTriggerCommand()
     dlgTriggerEditor* editor = this;
 
     DeleteTriggerCommand* command = new DeleteTriggerCommand(pItem, triggerUnit, treeWidget_triggers);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
@@ -3861,7 +3861,7 @@ void dlgTriggerEditor::addTriggerCommand(bool isFolder)
     TriggerUnit* triggerUnit = mpHost->getTriggerUnit();
     dlgTriggerEditor* editor = this;
     AddTriggerCommand* command = new AddTriggerCommand(pItem, triggerUnit, treeWidget_triggers, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3872,7 +3872,7 @@ void dlgTriggerEditor::addAliasCommand(bool isFolder)
     AliasUnit* aliasUnit = mpHost->getAliasUnit();
     dlgTriggerEditor* editor = this;
     AddAliasCommand* command = new AddAliasCommand(pItem, aliasUnit, treeWidget_aliases, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3883,8 +3883,8 @@ void dlgTriggerEditor::deleteAliasCommand()
     AliasUnit* aliasUnit = mpHost->getAliasUnit();
     dlgTriggerEditor* editor = this;
     DeleteAliasCommand* command = new DeleteAliasCommand(pItem, aliasUnit, treeWidget_aliases);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
@@ -3895,8 +3895,8 @@ void dlgTriggerEditor::deleteScriptCommand()
     ScriptUnit* scriptUnit = mpHost->getScriptUnit();
     dlgTriggerEditor* editor = this;
     DeleteScriptCommand* command = new DeleteScriptCommand(pItem, scriptUnit, treeWidget_scripts);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
@@ -3907,8 +3907,8 @@ void dlgTriggerEditor::deleteKeyCommand()
     KeyUnit* keyUnit = mpHost->getKeyUnit();
     dlgTriggerEditor* editor = this;
     DeleteKeyCommand* command = new DeleteKeyCommand(pItem, keyUnit, treeWidget_keys);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
@@ -3919,7 +3919,7 @@ void dlgTriggerEditor::addTimerCommand(bool isFolder)
     TimerUnit* timerUnit = mpHost->getTimerUnit();
     dlgTriggerEditor* editor = this;
     AddTimerCommand* command = new AddTimerCommand(pItem, timerUnit, treeWidget_timers, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3930,7 +3930,7 @@ void dlgTriggerEditor::addScriptCommand(bool isFolder)
     ScriptUnit* scriptUnit = mpHost->getScriptUnit();
     dlgTriggerEditor* editor = this;
     AddScriptCommand* command = new AddScriptCommand(pItem, scriptUnit, treeWidget_scripts, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3941,7 +3941,7 @@ void dlgTriggerEditor::addKeyCommand(bool isFolder)
     KeyUnit* keyUnit = mpHost->getKeyUnit();
     dlgTriggerEditor* editor = this;
     AddKeyCommand* command = new AddKeyCommand(pItem, keyUnit, treeWidget_keys, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3952,7 +3952,7 @@ void dlgTriggerEditor::addActionCommand(bool isFolder)
     ActionUnit* actionUnit = mpHost->getActionUnit();
     dlgTriggerEditor* editor = this;
     AddActionCommand* command = new AddActionCommand(pItem, actionUnit, treeWidget_actions, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3964,7 +3964,7 @@ void dlgTriggerEditor::addVarCommand(bool isFolder)
     VarUnit* varUnit = lI->getVarUnit();
     dlgTriggerEditor* editor = this;
     AddVarCommand* command = new AddVarCommand(pItem, varUnit, treeWidget_variables, isFolder);
-    command->m_editor = editor;
+    command->mpEditor = editor;
     undoStack->push(command);
 }
 
@@ -3975,8 +3975,8 @@ void dlgTriggerEditor::deleteActionCommand()
     ActionUnit* actionUnit = mpHost->getActionUnit();
     dlgTriggerEditor* editor = this;
     DeleteActionCommand* command = new DeleteActionCommand(pItem, actionUnit, treeWidget_actions);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
@@ -3988,8 +3988,8 @@ void dlgTriggerEditor::deleteVarCommand()
     VarUnit* varUnit = lI->getVarUnit();
     dlgTriggerEditor* editor = this;
     DeleteVarCommand* command = new DeleteVarCommand(pItem, varUnit, treeWidget_variables);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
@@ -4000,8 +4000,8 @@ void dlgTriggerEditor::deleteTimerCommand()
     TimerUnit* timerUnit = mpHost->getTimerUnit();
     dlgTriggerEditor* editor = this;
     DeleteTimerCommand* command = new DeleteTimerCommand(pItem, timerUnit, treeWidget_timers);
-    command->m_editor = editor;
-    command->m_host = mpHost;
+    command->mpEditor = editor;
+    command->mpHost = mpHost;
     undoStack->push(command);
 }
 
