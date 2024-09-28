@@ -51,11 +51,7 @@ TRoom* TRoomDB::getRoom(int id)
     if (id < 0) {
         return nullptr;
     }
-    const auto i = rooms.constFind(id);
-    if (i != rooms.constEnd() && i.key() == id) {
-        return i.value();
-    }
-    return nullptr;
+    return rooms.value(id, nullptr);
 }
 
 bool TRoomDB::addRoom(int id)

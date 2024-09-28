@@ -596,7 +596,7 @@ target_link_libraries(
         ZIP::ZIP
         ZLIB::ZLIB
 # PLACEMARKER: sample benchmarking code
-#       nanobench
+#         nanobench
         ${QT_LIBS})
 
 if (SYSINFO_LIBRARY)

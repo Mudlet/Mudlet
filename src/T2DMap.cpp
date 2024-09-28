@@ -44,6 +44,7 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
+#include <QDebug>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -583,16 +584,14 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     }
 }
 
-// This has been refactored to a separate function out of the paintEven() code
-// because we need to use it in two places - one for every room that is not the
-// player's room and then, AFTER all those have been drawn, once for the
-// player's room if it is visible. This is so it is drawn LAST (and any effects,
-// or extra markings for it do not get overwritten by the drawing of the other
-// rooms)...
 inline void T2DMap::drawRoom(QPainter& painter,
                              QFont& roomVNumFont,
                              QFont& mapNameFont,
                              QPen& pen,
+                             QPen& innerPen,
+                             QPen& roomBorderPen,
+                             QBrush& brush,
+                             QBrush& innerBrush,
                              TRoom* pRoom,
                              const bool isGridMode,
                              const bool areRoomIdsLegible,
@@ -600,8 +599,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
                              const int speedWalkStartRoomId,
                              const float rx,
                              const float ry,
-                             const QMap<int, QPointF>& areaExitsMap)
-{
+                             const QMap<int, QPointF>& areaExitsMap) {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
     QRectF roomRectangle;
@@ -687,37 +685,32 @@ inline void T2DMap::drawRoom(QPainter& painter,
         }
     }
 
-    const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
-    QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
-    selectionBg.setColorAt(0.25, roomColor);
-    selectionBg.setColorAt(1, Qt::blue);
+    const bool roomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
 
-    QPen roomPen(Qt::transparent);
-    roomPen.setWidth(borderWidth);
     painter.setBrush(roomColor);
 
     if (shouldDrawBorder && mRoomWidth >= 12) {
-        roomPen.setColor(mpHost->mRoomBorderColor);
+        pen.setColor(mpHost->mRoomBorderColor);
     } else if (shouldDrawBorder) {
         auto fadingColor = QColor(mpHost->mRoomBorderColor);
         fadingColor.setAlpha(255 * (mRoomWidth / 12));
-        roomPen.setColor(fadingColor);
-    }
-
-    if (isRoomSelected) {
+        pen.setColor(fadingColor);
+    } else if (roomSelected) {
         QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
         selectionBg.setColorAt(0.2, roomColor);
         selectionBg.setColorAt(1, Qt::blue);
-        roomPen.setColor(QColor(255, 50, 50));
+        pen.setColor(QColor(255, 50, 50));
         painter.setBrush(selectionBg);
+    } else {
+        pen.setColor(Qt::transparent);
     }
 
-    painter.setPen(roomPen);
+    painter.setPen(pen);
 
     if (mBubbleMode) {
         const float roomRadius = 0.5 * rSize * mRoomWidth;
         const QPointF roomCenter = QPointF(rx, ry);
-        if (!isRoomSelected) {
+        if (!roomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
             // rooms might look nice in some situations but not in all:
             QRadialGradient gradient(roomCenter, roomRadius);
@@ -732,7 +725,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
         painter.drawRect(roomRectangle);
     }
 
-    if (isRoomSelected) {
+    if (roomSelected) {
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
@@ -751,10 +744,9 @@ inline void T2DMap::drawRoom(QPainter& painter,
             gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
             gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
             gradient.setColorAt(0, Qt::white);
-            const QPen transparentPen(Qt::transparent);
+            pen.setColor(Qt::transparent);
             QPainterPath diameterPath;
             painter.setBrush(gradient);
-            painter.setPen(transparentPen);
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
 
@@ -820,10 +812,9 @@ inline void T2DMap::drawRoom(QPainter& painter,
         QRadialGradient gradient(roomCenter, roomRadius);
         gradient.setColorAt(0.85, pRoom->highlightColor);
         gradient.setColorAt(0, pRoom->highlightColor2);
-        const QPen transparentPen(Qt::transparent);
+        pen.setColor(Qt::transparent);
         QPainterPath diameterPath;
         painter.setBrush(gradient);
-        painter.setPen(transparentPen);
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
     }
@@ -837,7 +828,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
         } else {
             roomIdColor = QColor(Qt::white);
         }
-        painter.setPen(QPen(roomIdColor));
+        pen.setColor(roomIdColor);
         painter.setFont(roomVNumFont);
         painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
         painter.restore();
@@ -878,7 +869,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
         }
         auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
                                     ? Qt::black : Qt::white);
-        painter.setPen(QPen(roomNameColor));
+        pen.setColor(roomNameColor);
         painter.setFont(mapNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
         painter.restore();
@@ -903,15 +894,8 @@ inline void T2DMap::drawRoom(QPainter& painter,
     } else {
         lc = QColorConstants::White;
     }
-    pen = painter.pen();
     pen.setColor(lc);
-    pen.setCosmetic(mMapperUseAntiAlias);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    QPen innerPen = pen;
-    painter.save();
 
-    QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
     if (pRoom->getUp() > 0 || pRoom->exitStubs.contains(DIR_UP)) {
         QPolygonF poly_up;
@@ -919,7 +903,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
         poly_up.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
         poly_up.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_up)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -946,7 +929,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
             innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
             brush.setStyle(Qt::DiagCrossPattern);
         }
-        painter.setPen(pen);
         painter.setBrush(brush);
         painter.drawPolygon(poly_up);
         if (isDoor) {
@@ -965,7 +947,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
         poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
         poly_down.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_down)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1012,7 +993,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
         poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor)));
         poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_in)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1061,7 +1041,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
         poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor)));
         poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_out)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1100,7 +1079,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
         }
     }
 
-    painter.restore();
     if (!isGridMode) {
         QMapIterator<int, QPointF> it(areaExitsMap);
         while (it.hasNext()) {
@@ -1400,6 +1378,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
     }
 
+
     // Draw label sizing or group selection box
     if (mSizeLabel) {
         painter.fillRect(mMultiRect, QColor(250, 190, 0, 190));
@@ -1409,6 +1388,32 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
+
+    // keep a few brushes and pens around for drawing all rooms in bulk
+    // re-creating the objects on a million-room map is costly, as is changing their properties
+    QBrush brush, innerBrush;
+
+    QPen roomPen = pen;
+    roomPen.setCosmetic(mMapperUseAntiAlias);
+    roomPen.setCapStyle(Qt::RoundCap);
+    roomPen.setJoinStyle(Qt::RoundJoin);
+    QPen innerRoomPen = roomPen;
+
+    const bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !pDrawnArea->gridMode;
+    const int borderWidth = 1 / eSize * mRoomWidth * rSize;
+    QPen roomBorderPen = roomPen;
+
+    if (shouldDrawBorder && mRoomWidth >= 12) {
+        roomBorderPen.setColor(mpHost->mRoomBorderColor);
+    } else if (shouldDrawBorder) {
+        auto fadingColor = QColor(mpHost->mRoomBorderColor);
+        fadingColor.setAlpha(255 * (mRoomWidth / 12));
+        roomBorderPen.setColor(fadingColor);
+    }
+    roomBorderPen.setWidth(borderWidth);
+
+
+
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -1434,12 +1439,13 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
+            drawRoom(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, roomBorderPen, brush, innerBrush, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+        drawRoom(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, roomBorderPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -1611,7 +1617,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 // the "exitLine". Various features of the QPen that is used are redefined
 // as appropriate - but they are restored afterwards so there should be
 // no change to the QPainter as a result of calling this method.
-void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
+void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine) const
 {
     // A set of numbers that can be converted to "static" type and be frobbed
     // during development:
@@ -1678,7 +1684,7 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
+void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap) const
 {
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
@@ -1719,9 +1725,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
         }
     }
-    QSetIterator<int> itRoom2(pArea->getAreaRooms());
-    while (itRoom2.hasNext()) {
-        const int _id = itRoom2.next();
+    const auto& areaRooms = pArea->getAreaRooms();
+    for (auto i = areaRooms.cbegin(), end = areaRooms.cend(); i != end; ++i) {
+        const int _id = *i;
         TRoom* room = mpMap->mpRoomDB->getRoom(_id);
         if (!room) {
             continue;
@@ -2093,7 +2099,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
         }
 
-        for (const int& k : exitList) {
+        for (const int& k : qAsConst(exitList)) {
             const int rID = k;
             if (rID <= 0) {
                 continue;
