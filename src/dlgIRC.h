@@ -129,7 +129,7 @@ private:
 
     void showEvent(QShowEvent* event) override;
 
-    Host* mpHost = nullptr;
+    QPointer<Host> mpHost;
     bool mIrcStarted = false;
     IrcCompleter* completer = nullptr;
     IrcCommandParser* commandParser = nullptr;
