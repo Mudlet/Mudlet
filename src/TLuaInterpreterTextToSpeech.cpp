@@ -100,6 +100,11 @@ void TLuaInterpreter::ttsBuild()
     }
 
     speechUnit = new QTextToSpeech();
+    speechUnit->setPitch(mudlet::self()->mTtsPitch);
+    speechUnit->setRate(mudlet::self()->mTtsRate);
+    speechUnit->setVolume(mudlet::self()->mTtsVolume);
+    speechUnit->setVoice(mudlet::self()->mTtsVoice);
+
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 
@@ -139,7 +144,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
             break;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
         // The Qt documentation is not clear exactly when this change was made
-        // (it says nothing!) but it isn't present in 5.15.13 but is in 6.6.2
+        // but it isn't present in 5.15.13 and not in 6.4, first available in 6.6.2
         case QTextToSpeech::State::Synthesizing:
             event.mArgumentList.append(QLatin1String("ttsSpeechSynthesizing"));
             break;
@@ -421,6 +426,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
     }
 
     speechUnit->setPitch(pitch);
+    mudlet::self()->mTtsPitch = pitch;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsPitchChanged"));
@@ -447,6 +453,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
     }
 
     speechUnit->setRate(rate);
+    mudlet::self()->mTtsRate = rate;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsRateChanged"));
@@ -473,6 +480,7 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
     }
 
     speechUnit->setVolume(volume);
+    mudlet::self()->mTtsVolume = volume;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsVolumeChanged"));
@@ -497,7 +505,9 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
         return 1;
     }
 
-    speechUnit->setVoice(speechVoices.at(index));
+    const auto voice = speechVoices.at(index);
+    speechUnit->setVoice(voice);
+    mudlet::self()->mTtsVoice = voice;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
@@ -520,6 +530,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     for (auto voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
+            mudlet::self()->mTtsVoice = voice;
             lua_pushboolean(L, true);
 
             TEvent event {};
