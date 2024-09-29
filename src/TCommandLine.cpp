@@ -1131,7 +1131,8 @@ bool TCommandLine::historyMove(MoveDirection direction)
     bool bShouldClearInput = false;
     
     if (mHistoryList.empty()) {
-        return bShouldClearInput;
+        // If the history is empty, we may still want to clear the input line...
+        return true;
     }
     const int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
