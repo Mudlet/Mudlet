@@ -969,3 +969,22 @@ void MoveVariableCommand::redo()
     }
     setText(QObject::tr("Move Variable"));
 }
+
+TriggerNameTextEditedCommand::TriggerNameTextEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerNameTextEditedCommand::undo()
+{
+    qDebug() << "prev " << mPrevLineEdit_trigger_name;
+    mpTriggersMainArea->lineEdit_trigger_name->setText(mPrevLineEdit_trigger_name);
+}
+
+void TriggerNameTextEditedCommand::redo()
+{
+    qDebug() << "current " << mLineEdit_trigger_name;
+    mpTriggersMainArea->lineEdit_trigger_name->setText(mLineEdit_trigger_name);
+    setText(QObject::tr("Edit trigger name"));
+}
+

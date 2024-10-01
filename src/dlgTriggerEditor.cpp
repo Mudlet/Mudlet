@@ -204,6 +204,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_soundTrigger);
     connect(mpTriggersMainArea->groupBox_triggerColorizer, &QGroupBox::clicked, this, &dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger);
     connect(mpTriggersMainArea->toolButton_clearSoundFile, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_clearSoundFile);
+    connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_lineEditTriggerNameTextEdited);
 
     mpTimersMainArea = new dlgTimersMainArea(this);
     layoutColumn->addWidget(mpTimersMainArea, 1);
@@ -511,11 +512,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     undoAction = undoStack->createUndoAction(this, tr("&Undo"));
     undoAction->setIcon(QIcon(":/icons/undo.png"));
-    undoAction->setShortcuts(QKeySequence::Undo);
 
     redoAction = undoStack->createRedoAction(this, tr("&Redo"));
     redoAction->setIcon(QIcon(":/icons/redo.png"));
-    redoAction->setShortcuts(QKeySequence::Redo);
 
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
@@ -4635,6 +4634,7 @@ void dlgTriggerEditor::saveTrigger()
 
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
+    prevTriggerName = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     const bool isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
     QStringList patterns;
@@ -5869,7 +5869,6 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     if (pItem != mpCurrentTriggerItem) {
         saveTrigger();
     }
-
     mpCurrentTriggerItem = pItem;
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
@@ -5886,7 +5885,6 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, QVariant());
     mpTriggersMainArea->spinBox_lineMargin->setValue(1);
-
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if (pT) {
@@ -10164,6 +10162,16 @@ void dlgTriggerEditor::slot_clearSoundFile()
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
     mpTriggersMainArea->lineEdit_soundFile->setToolTip(utils::richText(tr("Sound file to play when the trigger fires.")));
+}
+
+void dlgTriggerEditor::slot_lineEditTriggerNameTextEdited()
+{
+    mpTriggerNameTextEditedCommand = new TriggerNameTextEditedCommand(mpTriggersMainArea);
+    mpTriggerNameTextEditedCommand->mPrevLineEdit_trigger_name = prevTriggerName;
+    mpTriggerNameTextEditedCommand->mLineEdit_trigger_name = mpTriggersMainArea->lineEdit_trigger_name->text();
+    undoStack->push(mpTriggerNameTextEditedCommand);
+    saveTrigger();
+
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)

@@ -93,7 +93,7 @@ class TAction;
 class TKey;
 class TConsole;
 class dlgVarsMainArea;
-
+class TriggerNameTextEditedCommand;
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
@@ -336,6 +336,7 @@ private slots:
     void slot_floatingChangedEditorItemsToolbar();
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
+    void slot_lineEditTriggerNameTextEdited();
 public:
     TConsole* mpErrorConsole = nullptr;
     bool mNeedUpdateData = false;
@@ -617,6 +618,8 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+    QString prevTriggerName;
+    TriggerNameTextEditedCommand* mpTriggerNameTextEditedCommand = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

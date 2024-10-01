@@ -499,4 +499,15 @@ private:
     VarUnit* mpVarUnit;
     bool mIsFolder;
 };
+
+class TriggerNameTextEditedCommand : public QUndoCommand
+{
+public:
+    TriggerNameTextEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent = nullptr);
+    void undo() override;
+    void redo() override;
+    dlgTriggersMainArea* mpTriggersMainArea = nullptr;
+    QString mPrevLineEdit_trigger_name;
+    QString mLineEdit_trigger_name;
+};
 #endif
