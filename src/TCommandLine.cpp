@@ -382,11 +382,11 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                bool bShouldClearInput = historyMove(MOVE_DOWN);
+                bool shouldClearInput = historyMove(MOVE_DOWN);
 
                 // If the user has pressed DOWN while in the middle of typing a command
                 // the command line should be cleared
-                if (bShouldClearInput) {
+                if (shouldClearInput) {
                     clear();
                 }
                 ke->accept();
@@ -1128,7 +1128,7 @@ void TCommandLine::handleAutoCompletion()
 
 bool TCommandLine::historyMove(MoveDirection direction)
 {
-    bool bShouldClearInput = false;
+    bool shouldClearInput = false;
     
     if (mHistoryList.empty()) {
         // If the history is empty, we may still want to clear the input line...
@@ -1152,7 +1152,7 @@ bool TCommandLine::historyMove(MoveDirection direction)
         }
     } else {
         if (direction == MOVE_DOWN && !toPlainText().isEmpty()) {
-            bShouldClearInput = true;
+            shouldClearInput = true;
         } else {
             mAutoCompletionCount += shift;
             handleAutoCompletion();
@@ -1160,7 +1160,7 @@ bool TCommandLine::historyMove(MoveDirection direction)
     }
     adjustHeight();
 
-    return bShouldClearInput;
+    return shouldClearInput;
 }
 
 void TCommandLine::slot_clearSelection(bool yes)
