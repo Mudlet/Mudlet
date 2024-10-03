@@ -524,8 +524,8 @@ void TMap::audit()
     _time.start();
 
     { // Blocked - just to limit the scope of infoMsg...!
-        const QString infoMsg = tr("[ INFO ]  - Map audit starting...");
-        postMessage(infoMsg);
+        //const QString infoMsg = tr("[ INFO ]  - Map audit starting...");
+        //postMessage(infoMsg);
     }
 
     // The old mpRoomDB->initAreasForOldMaps() was a subset of these checks
@@ -593,17 +593,17 @@ void TMap::audit()
         itArea.value()->mIsDirty = false;
     }
 
-    { // Blocked - just to limit the scope of infoMsg...!
-        const QString infoMsg = tr("[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...").arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
-        postMessage(infoMsg);
-        appendErrorMsg(infoMsg);
-    }
+    //{ // Blocked - just to limit the scope of infoMsg...!
+    //    const QString infoMsg = tr("[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...").arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+    //    postMessage(infoMsg);
+    //    appendErrorMsg(infoMsg);
+    //}
 
     auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
-    if (loadTime != -1.0) {
-        const QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
-        postMessage(msg);
-    }
+    //if (loadTime != -1.0) {
+    //    const QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
+    //    postMessage(msg);
+    //}
 }
 
 QList<int> TMap::detectRoomCollisions(int id)
@@ -1567,7 +1567,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
                              "\"%2\",\n"
                              "please wait...").arg(version).arg(file.fileName());
         appendErrorMsg(tr(R"([ INFO ]  - Reading map. Format version: %1. File: "%2".)").arg(version).arg(file.fileName()), false);
-        postMessage(infoMsg);
+        //postMessage(infoMsg);
     }
     mVersion = version;
     mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
@@ -1874,12 +1874,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         restore16ColorSet();
 
-        const QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
-                           "consistency details..." )
-                                .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+        //const QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
+        //                   "consistency details..." )
+        //                        .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
 
-        postMessage(okMsg);
-        appendErrorMsgWithNoLf(okMsg);
+        //postMessage(okMsg);
+        //appendErrorMsgWithNoLf(okMsg);
         if (canRestore) {
             return true;
         }

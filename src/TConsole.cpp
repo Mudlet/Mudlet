@@ -300,7 +300,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layoutButtonMainLayer->addWidget(buttonLayerSpacer);
     layoutButtonMainLayer->addWidget(buttonLayer);
 
-    timeStampButton = new QToolButton;
+    /* timeStampButton = new QToolButton;
     timeStampButton->setCheckable(true);
     timeStampButton->setMinimumSize(QSize(30, 30));
     timeStampButton->setMaximumSize(QSize(30, 30));
@@ -309,9 +309,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(qsl(":/icons/dialog-information.png")));
     connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
-    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps); */
 
-    auto replayButton = new QToolButton;
+    /* auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
     replayButton->setMinimumSize(QSize(30, 30));
     replayButton->setMaximumSize(QSize(30, 30));
@@ -319,7 +319,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     replayButton->setFocusPolicy(Qt::NoFocus);
     replayButton->setToolTip(utils::richText(tr("Record a replay.")));
     replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
-    connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
+    connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording); */
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -345,6 +345,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpLineEdit_networkLatency->setMinimumSize(120, 30);
         mpLineEdit_networkLatency->setAutoFillBackground(true);
         mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
+        mpLineEdit_networkLatency->setVisible(false);
         mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
         int latencyFontPointSize = 21;
@@ -370,19 +371,18 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
                  && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(),
                          QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
                             > mpLineEdit_networkLatency->maximumWidth());
-
         mpLineEdit_networkLatency->setFont(latencyFont);
         mpLineEdit_networkLatency->setFrame(false);
     }
 
-    emergencyStop->setMinimumSize(QSize(30, 30));
+    /* emergencyStop->setMinimumSize(QSize(30, 30));
     emergencyStop->setMaximumSize(QSize(30, 30));
     emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
     emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
-    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
+    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems); */
 
     mpBufferSearchBox->setClearButtonEnabled(true);
     for (auto child : mpBufferSearchBox->children()) {
@@ -427,13 +427,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpAction_searchOptions->setMenu(pMenu_searchOptions);
     mpBufferSearchBox->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
 
-    mpBufferSearchUp->setMinimumSize(QSize(30, 30));
+    /* mpBufferSearchUp->setMinimumSize(QSize(30, 30));
     mpBufferSearchUp->setMaximumSize(QSize(30, 30));
     mpBufferSearchUp->setSizePolicy(sizePolicy5);
     mpBufferSearchUp->setToolTip(utils::richText(tr("Earlier search result.")));
     mpBufferSearchUp->setFocusPolicy(Qt::NoFocus);
     mpBufferSearchUp->setIcon(QIcon(qsl(":/icons/export.png")));
-    connect(mpBufferSearchUp, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferUp);
+    connect(mpBufferSearchUp, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferUp); */ //TUNARK
 
 
     mpBufferSearchDown->setMinimumSize(QSize(30, 30));
@@ -450,17 +450,17 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     layoutLayer2->addWidget(mpButtonMainLayer);
-    layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
-    layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
-    layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
-    layoutButtonLayer->addWidget(timeStampButton, 0, 7);
-    layoutButtonLayer->addWidget(replayButton, 0, 8);
-    layoutButtonLayer->addWidget(logButton, 0, 9);
-    layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    if (mType == MainConsole) {
-        // In fact a whole lot more could be inside this "if"!
-        layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
-    }
+    //layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
+    //layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
+    //layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
+    //layoutButtonLayer->addWidget(timeStampButton, 0, 7);
+    //layoutButtonLayer->addWidget(replayButton, 0, 8);
+    //layoutButtonLayer->addWidget(logButton, 0, 9);
+    //layoutButtonLayer->addWidget(emergencyStop, 0, 10);
+    //if (mType == MainConsole) {
+    //    // In fact a whole lot more could be inside this "if"!
+    //    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    //}
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
     layerCommandLine->setAutoFillBackground(true);

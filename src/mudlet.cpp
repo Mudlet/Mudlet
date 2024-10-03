@@ -147,7 +147,8 @@ void mudlet::init()
     publicTestVersion = mAppBuild.startsWith("-ptb");
     developmentVersion = !releaseVersion && !publicTestVersion;
 
-    scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
+    //scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
+    scmVersion = qsl("Mudlet");
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     readEarlySettings(*mpSettings);
@@ -192,9 +193,9 @@ void mudlet::init()
     setContentsMargins(0, 0, 0, 0);
     menuGames->setToolTipsVisible(true);
     menuEditor->setToolTipsVisible(true);
-    menuOptions->setToolTipsVisible(true);
-    menuHelp->setToolTipsVisible(true);
-    menuAbout->setToolTipsVisible(true);
+    //menuOptions->setToolTipsVisible(true);
+    //menuHelp->setToolTipsVisible(true);
+    //menuAbout->setToolTipsVisible(true);
 
     setAttribute(Qt::WA_DeleteOnClose);
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -615,9 +616,9 @@ void mudlet::init()
     mpShortcutsManager = new ShortcutsManager();
     mpShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &mKeySequenceTriggers);
     mpShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &mKeySequenceShowMap);
-    mpShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &mKeySequenceInputLine);
+    //mpShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &mKeySequenceInputLine);
     mpShortcutsManager->registerShortcut(qsl("Preferences"), tr("Preferences"), &mKeySequenceOptions);
-    mpShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &mKeySequenceNotepad);
+    //mpShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &mKeySequenceNotepad);
     mpShortcutsManager->registerShortcut(qsl("Package manager"), tr("Package manager"), &mKeySequencePackages);
     mpShortcutsManager->registerShortcut(qsl("Module manager"), tr("Module manager"), &mKeySequenceModules);
     mpShortcutsManager->registerShortcut(qsl("MultiView"), tr("MultiView"), &mKeySequenceMultiView);
@@ -758,7 +759,7 @@ static void migrateConfig(QSettings& settings)
 
 void mudlet::setupConfig()
 {
-    QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    QString confDirDefault = qsl("%1/.config/mudletuna").arg(QDir::homePath());
     QString execDir = findExecutableDir();
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
@@ -1970,7 +1971,8 @@ void mudlet::readLateSettings(const QSettings& settings)
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
     // it is suggested Mudlet 4.x:
     setMenuBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(visibleAlways)).toInt()));
-    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    //setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleNever)).toInt()));
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
@@ -2698,7 +2700,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
-    hostList << qsl("Mudlet self-test");
+    //hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
     bool openedProfile = false;
 
@@ -2712,10 +2714,10 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
 
     for (auto& hostName : hostList) {
         const QString val = readProfileData(hostName, qsl("autologin"));
-        if (val.toInt() == Qt::Checked) {
+        //if (val.toInt() == Qt::Checked) {
             doAutoLogin(hostName);
             openedProfile = true;
-        }
+        //}
     }
 
     if (!openedProfile) {
@@ -3795,6 +3797,7 @@ Host* mudlet::loadProfile(const QString& profile_name, bool playOnline)
         pHost->setUrl((*it).hostUrl);
         pHost->setPort((*it).port);
         pHost->mSslTsl = (*it).tlsEnabled;
+        //pHost->autologin = (*it).autologmein; //TUNARK
     }
 
     const QString folder = getMudletPath(profileXmlFilesPath, profile_name);
@@ -4888,9 +4891,10 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         }
     }
 
-    if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
-    }
+    //decluttering -MTS 2024/06/24
+    //if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
+    //    mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+    //}
 }
 
 // Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.

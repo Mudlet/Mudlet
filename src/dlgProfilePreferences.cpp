@@ -504,6 +504,12 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_advertiseScreenReader->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
+    tabWidget->removeTab(9); //Shortcuts
+    tabWidget->removeTab(8); //Connection
+    tabWidget->removeTab(7); //Chat
+    tabWidget->removeTab(6); //Mapper colors
+    tabWidget->removeTab(5); //Mapper
+    tabWidget->removeTab(5); //Editor
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
@@ -614,6 +620,12 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_advertiseScreenReader->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
+    tabWidget->removeTab(9); //Shortcuts
+    tabWidget->removeTab(8); //Connection
+    tabWidget->removeTab(7); //Chat
+    tabWidget->removeTab(6); //Mapper colors
+    tabWidget->removeTab(5); //Mapper
+    tabWidget->removeTab(5); //Editor
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);

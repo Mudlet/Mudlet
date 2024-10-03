@@ -518,7 +518,7 @@
        </sizepolicy>
       </property>
       <attribute name="title">
-       <string>Input line</string>
+       <string>Input</string>
       </attribute>
       <layout class="QVBoxLayout" name="vBoxLayout_tab_inputline" stretch="0,1,0">
        <item>
@@ -742,7 +742,7 @@
        </sizepolicy>
       </property>
       <attribute name="title">
-       <string>Main display</string>
+       <string>Display</string>
       </attribute>
       <layout class="QVBoxLayout" name="vBoxLayout_tab_display">
        <item>
@@ -1430,7 +1430,7 @@ you can use it but there could be issues with aligning columns of text</string>
      </widget>
      <widget class="QWidget" name="tab_displayColors">
       <attribute name="title">
-       <string>Color view</string>
+       <string>Colors</string>
       </attribute>
       <layout class="QVBoxLayout" name="vBoxLayout_tab_displayColors">
        <item>
@@ -2392,7 +2392,7 @@ you can use it but there could be issues with aligning columns of text</string>
      <widget class="QWidget" name="tab_mapperColors">
       <attribute name="title">
        <string>Mapper colors</string>
-      </attribute>
+      </attribute> 
       <layout class="QVBoxLayout" name="vBoxLayout_tab_mapperColors">
        <item>
         <widget class="QGroupBox" name="groupBox_mapperColors">
@@ -3765,7 +3765,7 @@ you can use it but there could be issues with aligning columns of text</string>
      </widget>
      <widget class="QWidget" name="tab_specialOptions">
       <attribute name="title">
-       <string>Special Options</string>
+       <string>Special</string>
       </attribute>
       <layout class="QVBoxLayout" name="vBoxLayout_tab_specialOptions">
        <item>

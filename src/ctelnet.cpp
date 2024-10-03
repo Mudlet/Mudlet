@@ -400,7 +400,7 @@ void cTelnet::connectIt(const QString& address, int port)
 
     hostName = address;
     hostPort = port;
-    postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
+    // postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
 }
@@ -457,14 +457,14 @@ void cTelnet::slot_socketConnected()
     reset();
     setKeepAlive(socket.socketDescriptor());
 
-    if (mpHost->mSslTsl)
-    {
-        msg = tr("[ INFO ]  - A secure connection has been established successfully.");
-    } else {
-        msg = tr("[ INFO ]  - A connection has been established successfully.");
-    }
-    msg.append(qsl("\n    \n    "));
-    postMessage(msg);
+    //if (mpHost->mSslTsl)
+    // {
+    //    msg = tr("[ INFO ]  - A secure connection has been established successfully.");
+    //} else {
+    //    msg = tr("[ INFO ]  - A connection has been established successfully.");
+    // }
+    //msg.append(qsl("\n    \n    "));
+    //postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
@@ -593,7 +593,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
+            //postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
                 postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(hostPort))));
             } else {
@@ -2397,18 +2397,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 packageName.remove(QLatin1Char('.'));
 
                 if (mpHost->mServerGUI_Package_version != version) {
-                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                                   "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
+                    //postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                    //               "Uninstalling old version '%2'.")
+                    //            .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
                     // uninstall by previous known package name or current if we don't
                     // know it (in case of manual installation)
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
                     mpHost->mServerGUI_Package_version = version;
                 }
 
-                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
+                // postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
-                    postMessage(tr("[  OK  ]  - Package is already installed."));
+                    // postMessage(tr("[  OK  ]  - Package is already installed."));
                     return;
                 }
 
@@ -2792,18 +2792,18 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
         // If the client does not have the GUI or the current version it will be downloaded from the url.
         if (mpHost->mServerGUI_Package_version != version) {
-            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                           "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
+            //postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+            //               "Uninstalling old version '%2'.")
+            //            .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
             // uninstall by previous known package name or current if we don't
             // know it (in case of manual installation)
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
             mpHost->mServerGUI_Package_version = version;
         }
 
-        postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
+        // postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
-            postMessage(tr("[  OK  ]  - Package is already installed."));
+            // postMessage(tr("[  OK  ]  - Package is already installed."));
         } else {
             mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
             mpHost->updateProxySettings(mpDownloader);

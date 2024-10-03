@@ -298,6 +298,7 @@ public:
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
+    //inline static const QString scmVersion = qsl("Mudlet Project Tuna");
     QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
@@ -736,7 +737,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    controlsVisibility mToolbarVisibility = visibleAlways;
+    controlsVisibility mToolbarVisibility = visibleNever;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
     // hold all the details:

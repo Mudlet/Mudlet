@@ -92,28 +92,30 @@
    </property>
    <widget class="QMenu" name="menuEditor">
     <property name="title">
-     <string>Toolbox</string>
+     <!-- <string>Toolbox</string> -->
+     <string>Tools</string>
     </property>
     <addaction name="dactionScriptEditor"/>
-    <addaction name="dactionShowErrors"/>
-    <addaction name="dactionShowMap"/>
-    <addaction name="dactionInputLine"/>
-    <addaction name="dactionNotepad"/>
-    <addaction name="dactionLiveHelpChat"/>
+    <!-- <addaction name="dactionShowErrors"/> -->
+    <!-- <addaction name="dactionShowMap"/> -->
+    <!-- <addaction name="dactionInputLine"/> -->
+    <!-- <addaction name="dactionNotepad"/> -->
+    <!-- <addaction name="dactionLiveHelpChat"/> -->
     <addaction name="dactionPackageManager"/>
-    <addaction name="dactionReplay"/>
-    <addaction name="dactionModuleManager"/>
+    <!-- <addaction name="dactionReplay"/> -->
+    <!-- <addaction name="dactionModuleManager"/> -->
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionOptions"/>
    </widget>
-   <widget class="QMenu" name="menuOptions">
+   <!-- <widget class="QMenu" name="menuOptions">
     <property name="title">
      <string>Options</string>
     </property>
     <addaction name="dactionOptions"/>
-    <addaction name="dactionMultiView"/>
+    <addaction name="dactionMultiView"/> 
     <addaction name="separator"/>
     <addaction name="menuMute"/>
-   </widget>
+   </widget> -->
    <widget class="QMenu" name="menuMute">
     <property name="title">
      <string>Mute media</string>
@@ -122,7 +124,7 @@
     <addaction name="dactionMuteAPI"/>
     <addaction name="dactionMuteGame"/>
    </widget>
-   <widget class="QMenu" name="menuHelp">
+   <!-- <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
@@ -132,35 +134,36 @@
     <addaction name="dactionMudletDiscord"/>
     <addaction name="dactionIRC"/>
     <addaction name="dactionForum"/>
-   </widget>
-   <widget class="QMenu" name="menuAbout">
+   </widget> -->
+   <!-- <widget class="QMenu" name="menuAbout">
     <property name="title">
      <string>About</string>
     </property>
     <addaction name="dactionAbout"/>
     <addaction name="dactionUpdate"/>
     <addaction name="dactionReportIssue"/>
-   </widget>
+   </widget>  --> <!-- Tunark -->
    <widget class="QMenu" name="menuGames">
     <property name="title">
-     <string>Games</string>
+     <string>File</string>
     </property>
     <addaction name="dactionConnect"/>
-    <addaction name="separator"/>
-    <addaction name="dactionDisconnect"/>
+    <!-- <addaction name="separator"/> -->
     <addaction name="dactionReconnect"/>
+    <addaction name="dactionDisconnect"/>
+    <!-- <addaction name="dactionReconnect"/>
     <addaction name="separator"/>
-    <addaction name="dactionCloseProfile"/>
+    <addaction name="dactionCloseProfile"/> -->
    </widget>
    <addaction name="menuGames"/>
    <addaction name="menuEditor"/>
-   <addaction name="menuOptions"/>
+   <!-- <addaction name="menuOptions"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuAbout"/>
+   <addaction name="menuAbout"/> -->
   </widget>
   <action name="dactionConnect">
    <property name="text">
-    <string>Play</string>
+    <string>Connect</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</string>

@@ -772,7 +772,7 @@
                 <string>Open profile on Mudlet start</string>
                </property>
               </widget>
-             </item>
+             </item> 
              <item row="5" column="0" colspan="2">
               <widget class="QCheckBox" name="auto_reconnect">
                <property name="accessibleName">
