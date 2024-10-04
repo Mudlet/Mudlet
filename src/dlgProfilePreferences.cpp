@@ -34,6 +34,8 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -248,7 +250,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propagate everywhere until Mudlet is restarted.</i></p>"));
-
+    lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
+    lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
+    lineEdit_mmcpChatMessagePrefix->setPlaceholderText(csDefaultChatPrefix);
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -858,6 +862,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
         lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
+
+    lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
+    lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
+    lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
+    checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
+    checkBox_mmcpAllowConnReq->setChecked(pHost->mMMCPAllowConnectionRequests);
+    checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
+    checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
+    checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
@@ -1487,6 +1501,8 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
+
+    lineEdit_mmcpChatName->clear();
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
@@ -3077,6 +3093,21 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
 
+        // Save chat options so they are written to XML upon export
+        pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
+        pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
+        bool ok;
+        quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
+        pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
+        
+        pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
+        pHost->mMMCPAllowConnectionRequests = checkBox_mmcpAllowConnReq->isChecked();
+        pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+        pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
+
+
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
 
@@ -4012,6 +4043,14 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
         comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
         label_logFileNameExtension->setText(qsl(".txt"));
     }
+}
+
+/**
+ * Update the chatname lineEdit if the user changes their chat name while
+ * the preferences dialog is open
+ */
+void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
+    lineEdit_mmcpChatName->setText(name);
 }
 
 void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)

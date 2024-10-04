@@ -57,6 +57,7 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -2307,6 +2308,7 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
+        connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -2920,6 +2922,20 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     } else {
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+    }
+
+    // Now check if we should auto-start the MMCP server, and do so
+    if (pHost->getMMCPAutoStartServer()) {
+        if (!pHost->mmcpServer) {
+            pHost->initMMCPServer();
+        }
+
+        quint16 port = pHost->getMMCPPort();
+
+        const QString infoMsg = tr("[ CHAT ]  - Auto-starting MMCP Server on port %1.").arg(port);
+        pHost->postMessage(infoMsg);
+
+        pHost->mmcpServer->startServer(port);
     }
 }
 
@@ -4877,6 +4893,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
                                                       qsl("stickmud.com")}},
+        {qsl(":/MedBootstrap.xml"),       {qsl("medievia.com")}}
         // clang-format on
     };
 

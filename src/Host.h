@@ -69,6 +69,7 @@ class TConsole;
 class TMainConsole;
 class dlgNotepad;
 class TMap;
+class MMCPServer;
 class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
@@ -246,6 +247,8 @@ public:
 
     void incomingStreamProcessor(const QString& paragraph, int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
+    void postMMCPMessage(const QString&);
+    void postChatChannelMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
     void enableTrigger(const QString&);
@@ -330,6 +333,15 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    QString getMMCPChatName();
+    quint16 getMMCPPort();
+    QString getMMCPChatPrefix();
+    bool getMMCPAutoStartServer();
+    bool getMMCPAllowConnectionRequests();
+    bool getMMCPAllowPeekRequests();
+    bool getMMCPPrefixEmotes();
+    bool getMMCPAddChatMessageNewline();
+    bool getMMCPAutoAcceptCalls();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -423,6 +435,9 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+
+    void initMMCPServer();
+    void setMMCPChatName(const QString&);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -673,6 +688,7 @@ public:
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
+    MMCPServer *mmcpServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<QPointer<TToolBar>> mToolbarLayoutChanges;
@@ -720,6 +736,7 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void mmcpChatNameChanged(const QString&);
 
 private slots:
     void slot_purgeTemps();
@@ -822,6 +839,16 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
+
+    QString mMMCPChatName;
+    QString mMMCPChatPrefix;
+    quint16 mMMCPChatPort;
+    bool mMMCPAutostartServer;
+    bool mMMCPAllowConnectionRequests;
+    bool mMMCPAllowPeekRequests;
+    bool mMMCPPrefixEmotes;
+    bool mMMCPAddChatMessageNewline;
+    bool mMMCPAutoAcceptCalls;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

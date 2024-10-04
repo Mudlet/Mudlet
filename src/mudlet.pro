@@ -127,7 +127,8 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
     BUILD = $${BUILD}-$${GIT_SHA1}
 } else {
-    BUILD = "-dev-"$${GIT_SHA1}
+# PLACEMARKER: revert "MMCP" back to "dev" before merging this code into the main development branch:
+    BUILD = "-MMCP-"$${GIT_SHA1}
 }
 
 # Write BUILD to app-build.txt, note that this adds a newline to the file
@@ -175,7 +176,9 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
+
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
@@ -658,6 +661,9 @@ SOURCES += \
     LuaInterface.cpp \
     main.cpp \
     mapInfoContributorManager.cpp \
+	MMCPServer.cpp \
+	MMCPClient.cpp \
+    TLuaInterpreterMMCP.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
@@ -785,6 +791,9 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
+	MMCP.h \
+	MMCPServer.h \
+	MMCPClient.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
