@@ -318,6 +318,8 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
+    inline static const QString csmTimeStampFormat = qsl("hh:mm:ss.zzz ");
+    inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
     void shrinkBuffer();

@@ -115,9 +115,6 @@ quint8 TChar::alternateFont() const
     return 1;
 }
 
-const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
-const QString blankTimeStamp  = qsl("------------ ");
-
 // Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
 TBuffer::TBuffer(Host* pH, TConsole* pConsole)
@@ -824,7 +821,7 @@ COMMIT_LINE:
                     lineBuffer << QString();
                 }
                 buffer.push_back(mMudBuffer);
-                timeBuffer << QTime::currentTime().toString(timeStampFormat);
+                timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
@@ -841,7 +838,7 @@ COMMIT_LINE:
                     lineBuffer.back().append(QString());
                 }
                 buffer.back() = mMudBuffer;
-                timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+                timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
@@ -2221,7 +2218,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
+        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2247,7 +2244,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << blankTimeStamp;
+            timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2280,7 +2277,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << blankTimeStamp;
+                    timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2298,7 +2295,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                 linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2390,7 +2387,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
+        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2413,7 +2410,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << blankTimeStamp;
+            timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2447,7 +2444,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << blankTimeStamp;
+                    timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2461,7 +2458,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2490,7 +2487,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
+        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
         promptBuffer << false;
         lastLine = 0;
     }
@@ -2514,7 +2511,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2843,7 +2840,7 @@ void TBuffer::log(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(timeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(csmTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
 
@@ -3380,7 +3377,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(csmTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200, 150, 0);
