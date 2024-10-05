@@ -1307,6 +1307,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("العربية");
             } else if (!languageCode.compare(QLatin1String("ko_KR"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("한국어");
+            } else if (!languageCode.compare(QLatin1String("he_IL"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("עִברִית");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
