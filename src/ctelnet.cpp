@@ -2406,12 +2406,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     mpHost->mServerGUI_Package_version = version;
                 }
 
-                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
-                    postMessage(tr("[  OK  ]  - Package is already installed."));
                     return;
                 }
 
+                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
                 mpHost->updateProxySettings(mpDownloader);
                 auto request = QNetworkRequest(QUrl(url));
@@ -2801,10 +2800,8 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             mpHost->mServerGUI_Package_version = version;
         }
 
-        postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
-        if (mpHost->mInstalledPackages.contains(packageName)) {
-            postMessage(tr("[  OK  ]  - Package is already installed."));
-        } else {
+        if (!mpHost->mInstalledPackages.contains(packageName)) {
+            postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
             mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
             mpHost->updateProxySettings(mpDownloader);
             auto request = QNetworkRequest(QUrl(url));
