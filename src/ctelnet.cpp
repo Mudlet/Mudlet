@@ -952,7 +952,7 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-// escapes and encodes data to be send over NEW ENVIRON and MNES
+// escapes data to be send over NEW ENVIRON and MNES
 QByteArray cTelnet::prepareNewEnvironData(const QString &arg)
 {
     QString ret = arg;
@@ -963,7 +963,7 @@ QByteArray cTelnet::prepareNewEnvironData(const QString &arg)
     ret.replace(NEW_ENVIRON_USERVAR, qsl("%1%2").arg(NEW_ENVIRON_ESC, NEW_ENVIRON_USERVAR));
     ret.replace(NEW_ENVIRON_VAR, qsl("%1%2").arg(NEW_ENVIRON_ESC, NEW_ENVIRON_VAR));
 
-    return !mEncoding.isEmpty() && outgoingDataEncoder ? outgoingDataEncoder->fromUnicode(ret).constData() : ret.toLatin1().constData();
+    return ret.toLatin1().constData();
 }
 
 QString cTelnet::getNewEnvironValueUser()
@@ -1097,7 +1097,7 @@ QString cTelnet::getNewEnvironANSI()
 
 QString cTelnet::getNewEnvironVT100()
 {
-    return QString("0");
+    return qsl("0");
 }
 
 QString cTelnet::getNewEnviron256Colors()
@@ -1107,7 +1107,7 @@ QString cTelnet::getNewEnviron256Colors()
 
 QString cTelnet::getNewEnvironUTF8()
 {
-    return getEncoding() == "UTF-8" ? qsl("1") : QString();
+    return getEncoding() == "UTF-8" ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCColorPalette()
@@ -1117,7 +1117,7 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironScreenReader()
 {
-    return mpHost->mAdvertiseScreenReader ? qsl("1") : QString("0");
+    return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironTruecolor()
@@ -1130,23 +1130,13 @@ QString cTelnet::getNewEnvironTLS()
 #if !defined(QT_NO_SSL)
     return qsl("1");
 #else
-    return QString("0");
+    return qsl("0");
 #endif
 }
 
 QString cTelnet::getNewEnvironLanguage()
 {
     return mudlet::self()->getInterfaceLanguage();
-}
-
-QString cTelnet::getNewEnvironFont()
-{
-    return mpHost->getDisplayFont().family();
-}
-
-QString cTelnet::getNewEnvironFontSize()
-{
-    return qsl("%1").arg(mpHost->getDisplayFont().pointSize());
 }
 
 QString cTelnet::getNewEnvironWordWrap()
@@ -1187,8 +1177,6 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
     //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironLanguage())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironFont())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironFontSize())); // Needs an OPT-IN to be enabled, next PR
     newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironWordWrap()));
 
     return newEnvironDataMap;
@@ -1356,16 +1344,6 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
 {
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    QString transcodedMsg;
-
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = payload;
-    }
-
     std::string output;
     output += TN_IAC;
     output += TN_SB;
@@ -1376,14 +1354,14 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     bool is_var = false;
     QString var;
 
-    for (int i = 0; i < transcodedMsg.size(); ++i) {
-        if (!i && transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+    for (int i = 0; i < payload.size(); ++i) {
+        if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
         } else if (!i) {
             return; // Invalid response;
         }
 
-        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+        if (payload.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = QString();
@@ -1393,7 +1371,7 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
 
             is_uservar = false;
             is_var = true;
-        } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
+        } else if (payload.at(i) == NEW_ENVIRON_USERVAR) {
             if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = QString();
@@ -1404,7 +1382,7 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
             is_var = false;
             is_uservar = true;
         } else {
-            var.append(transcodedMsg.at(i));
+            var.append(payload.at(i));
         }
     }
 
@@ -1524,26 +1502,16 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    QString transcodedMsg;
-
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = payload;
-    }
-
     QString var;
 
-    for (int i = 0; i < transcodedMsg.size(); ++i) {
-        if (!i && transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+    for (int i = 0; i < payload.size(); ++i) {
+        if (!i && payload.at(i) == NEW_ENVIRON_SEND) {
             continue;
         } else if (!i) {
             return; // Invalid response;
         }
 
-        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+        if (payload.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
                 sendMNESValue(var, newEnvironDataMap);
                 var = QString();
@@ -1552,7 +1520,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
             continue;
         }
 
-        var.append(transcodedMsg.at(i));
+        var.append(payload.at(i));
     }
 
     if (!var.isEmpty()) { // Last variable on the stack
