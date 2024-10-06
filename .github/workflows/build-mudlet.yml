@@ -86,9 +86,9 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
-    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name: Use CMake 3.20.1
-      uses: lukka/get-cmake@v3.20.1
+
+    - name: Use CMake 3.30.3
+      uses: lukka/get-cmake@v3.30.3
 
     - name: (macOS) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'macOS'
@@ -127,7 +127,6 @@ jobs:
         # these aren't available or don't work well in vcpkg
         brew install libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
-        echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
@@ -229,6 +228,9 @@ jobs:
         ${{github.workspace}}/CI/travis.set-build-info.sh
         # remove it as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
         brew uninstall pcre
+        # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
+        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
@@ -257,7 +259,7 @@ jobs:
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
     - name: check ccache stats post build
-      run: ccache --show-stats
+      run: ccache --show-stats -vv
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
