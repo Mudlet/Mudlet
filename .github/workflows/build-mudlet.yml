@@ -259,7 +259,7 @@ jobs:
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
     - name: check ccache stats post build
-      run: ccache --show-stats -vv
+      run: ccache --show-stats
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
