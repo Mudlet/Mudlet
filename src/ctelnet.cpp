@@ -2396,7 +2396,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
 
-                // Check if the package is installed, but versions are the same
+                // Check if the package is installed
                 if (!mpHost->mInstalledPackages.contains(packageName)) {
                     // Package is not installed, initiate the download
                     mpHost->mServerGUI_Package_version = version;
@@ -2754,7 +2754,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
     packageName.remove(QLatin1Char('\\'));
     packageName.remove(QLatin1Char('.'));
 
-    // Check if the package is installed, but versions are the same
+    // Check if the package is installed
     if (!mpHost->mInstalledPackages.contains(packageName)) {
         // Package is not installed, initiate the download
         mpHost->mServerGUI_Package_version = version;
