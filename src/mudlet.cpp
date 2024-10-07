@@ -1307,6 +1307,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("العربية");
             } else if (!languageCode.compare(QLatin1String("ko_KR"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("한국어");
+            } else if (!languageCode.compare(QLatin1String("he_IL"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("עִברִית");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -3015,14 +3017,14 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
         mpActionMuteGame->setIcon(QIcon(mMuteGame ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     }
 
-    // Toolbar icon. "Mute" when any protocol is unmuted. "Unmute" only when all protocols are muted.
+    // Toolbar icon. "Mute all media" when any protocol is unmuted. "Unmute all media" only when all protocols are muted.
     const bool isMediaMuted = mediaMuted();
     mpActionMuteMedia->setIcon(QIcon(isMediaMuted ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     mpActionMuteMedia->setText(isMediaMuted ? tr("Unmute all media") : tr("Mute all media"));
     mpActionMuteMedia->setChecked(isMediaMuted);
     dactionMuteMedia->setChecked(isMediaMuted);
-    mpButtonMute->setText(isMediaMuted ? tr("Unmute") : tr("Mute"));
-    mpButtonMute->setChecked(false);
+    mpButtonMute->setText(isMediaMuted ? tr("Unmute all media") : tr("Mute all media"));
+    mpButtonMute->setChecked(isMediaMuted);
     mpButtonMute->setEnabled(true);
 
     // Notify when all media is muted or all media is unmuted. Helps if the shortcut is hit accidentally.
@@ -3030,17 +3032,22 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
         QString message;
 
         for (auto pHost : mHostManager) {
-            const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
+            if (mudlet::self()->showMuteAllMediaTutorial()) {
+                const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
 
-            if (sequence && !sequence->toString().isEmpty()) {
-                message = isMediaMuted
-                    ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.").arg(sequence->toString())
-                    : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.").arg(sequence->toString());
-            } else {
-                message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted.") : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
+                if (sequence && !sequence->toString().isEmpty()) {
+                    const QString seq = sequence->toString(QKeySequence::NativeText).split("", Qt::SkipEmptyParts).join(">+<");
+
+                    message = isMediaMuted
+                        ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use <%1> to unmute.").arg(seq)
+                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use <%1> to mute.").arg(seq);
+                } else {
+                    message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted.") : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
+                }
+
+                pHost->postMessage(message);
+                mudlet::self()->showedMuteAllMediaTutorial();
             }
-
-            pHost->postMessage(message);
         }
     }
 }
@@ -4995,6 +5002,16 @@ bool mudlet::showSplitscreenTutorial()
 void mudlet::showedSplitscreenTutorial()
 {
     mScrollbackTutorialsShown++;
+}
+
+bool mudlet::showMuteAllMediaTutorial()
+{
+    return !experiencedMudletPlayer() && mMuteAllMediaTutorialsShown < mMuteAllMediaTutorialsMax;
+}
+
+void mudlet::showedMuteAllMediaTutorial()
+{
+    mMuteAllMediaTutorialsShown++;
 }
 
 // returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic
