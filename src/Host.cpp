@@ -2068,9 +2068,6 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     case 3:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
         break;
-    case 4:
-        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysReinstallPackage"));
-        break;
     default:
         Q_UNREACHABLE();
     }
