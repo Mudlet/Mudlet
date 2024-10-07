@@ -1463,11 +1463,6 @@ void mudlet::slot_closeCurrentProfile()
         return;
     }
     slot_closeProfileRequested(mpTabBar->currentIndex());
-
-    if (!getActiveHost()) {
-        disableToolbarButtons();
-        slot_showConnectionDialog();
-    }
 }
 
 void mudlet::slot_closeProfileRequested(int tab)
@@ -1482,7 +1477,15 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
-    closeHost(name);
+    QTimer::singleShot(0, this, [this, name] {
+        closeHost(name);
+        // Check to see if there are any profiles left...
+        if (!mHostManager.getHostCount() && !mIsGoingDown) {
+            disableToolbarButtons();
+            slot_showConnectionDialog();
+            setWindowTitle(scmVersion);
+        }
+    });
 }
 
 // This removes the Host (profile) from this class's QMainWindow and related
