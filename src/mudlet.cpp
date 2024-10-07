@@ -1493,6 +1493,10 @@ void mudlet::slot_closeProfileRequested(int tab)
 void mudlet::closeHost(const QString& name)
 {
     Host* pH = mHostManager.getHost(name);
+    if (!pH) {
+        // Don't try and close a non-existant profile:
+        return;
+    }
     migrateDebugConsole(pH);
 
     mpTabBar->removeTab(name);
