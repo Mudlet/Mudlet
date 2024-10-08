@@ -481,6 +481,10 @@ void mudlet::init()
     }
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    #if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Add Apple Color Emoji fallback.
+    QFont::insertSubstitution(mainFont.family(), qsl("Apple Color Emoji"));
+    #endif
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 

@@ -215,6 +215,14 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(Announcer::accessibleFactory);
 #endif
 
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Apple Color Emoji Fallback
+    QFont defaultFont;
+    defaultFont.setFamily(defaultFont.defaultFamily());
+    QFont::insertSubstitution(defaultFont.family(), qsl("Apple Color Emoji"));
+    app->setFont(defaultFont);
+#endif
+
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
