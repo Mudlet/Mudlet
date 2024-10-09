@@ -421,6 +421,8 @@ public:
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
+    bool showMuteAllMediaTutorial();
+    void showedMuteAllMediaTutorial();
     bool experiencedMudletPlayer();
 
     Appearance mAppearance = Appearance::systemSetting;
@@ -747,10 +749,12 @@ private:
     // The collection of words in what mpHunspell_sharedDictionary points to:
     QSet<QString> mWordSet_shared;
 
-    // amount of times the shortcut to cancel split screen has been shown help educate new users
-    int mScrollbackTutorialsShown = 0;
-    // show the split screen tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3;
+    // amount of times the shortcut has been shown help educate new users
+    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    // show the tutorial maximum 3 times on a new Mudlet
+    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
