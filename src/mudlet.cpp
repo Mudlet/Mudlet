@@ -1999,13 +1999,13 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     resize(size);
     move(pos);
-    if (settings.value("maximized", false).toBool()) {
-        // Need to remove the Qt::WindowMaximized AND Qt::WindowActive from the
-        // state and then apply the result - If we are in, or go into,
-        // full-screen then this does not have any effect until we leave that:
 
-        setWindowState(windowState() & ~(Qt::WindowMaximized|Qt::WindowActive));
-    }
+    // Need to remove the Qt::WindowMaximized AND Qt::WindowActive from the
+    // state and then apply the result - If we are in, or go into,
+    // full-screen then this does not have any effect until we leave that:
+    setWindowState((windowState() & ~(Qt::WindowMaximized|Qt::WindowActive))
+                   |(settings.value("maximized", false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState));
+
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
