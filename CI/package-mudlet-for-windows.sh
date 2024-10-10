@@ -147,6 +147,16 @@ else
       | /usr/bin/cut -d ">" -f2 \
       | /usr/bin/cut -d "(" -f1 \
       | /usr/bin/sort)
+    # For some reason as of September 2024 ntldd no longer identifies these
+    # libraries for the 32-Bit case and our Qt5 (in this case) application
+    # refuses to start without them. At a guess they are being loaded
+    # dynamically so cannot be identified by static analysis like (nt)ldd
+    # seems to do. Yet the same thing works for the now Qt6 based 64-Bit
+    # application. Unfortunately this might bite us again for other libraries
+    # I guess - I only deduced these omissions by comparing the file list
+    # against an older working build. Slysven - 2024/11
+    NEEDED_LIBS=${NEEDED_LIBS} "${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlicommon.dll" "${MINGW_INTERNAL_BASE_DIR}/libbrotlidec.dll" "${MINGW_INTERNAL_BASE_DIR}/libfreetype-6.dll"
+"
 fi
 echo ""
 echo "Copying these identified libraries..."
