@@ -156,7 +156,6 @@ else
     # I guess - I only deduced these omissions by comparing the file list
     # against an older working build. Slysven - 2024/11
     NEEDED_LIBS=${NEEDED_LIBS} "${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlicommon.dll" "${MINGW_INTERNAL_BASE_DIR}/libbrotlidec.dll" "${MINGW_INTERNAL_BASE_DIR}/libfreetype-6.dll"
-"
 fi
 echo ""
 echo "Copying these identified libraries..."
