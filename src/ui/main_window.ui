@@ -99,7 +99,7 @@
     <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
-    <addaction name="dactionLiveHelpChat"/>
+    <addaction name="dactionIRC"/>
     <addaction name="dactionPackageManager"/>
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
@@ -130,7 +130,7 @@
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
     <addaction name="dactionMudletDiscord"/>
-    <addaction name="dactionIRC"/>
+    <addaction name="dactionLiveHelpChat"/>
     <addaction name="dactionForum"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
@@ -272,7 +272,7 @@
     <string>Live help chat</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionShowMap">
@@ -314,9 +314,6 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>MultiView</string>
    </property>
@@ -329,9 +326,6 @@
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
@@ -348,9 +342,6 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Mute sounds from Mudlet (triggers, scripts, etc.)</string>
    </property>
@@ -363,9 +354,6 @@
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
