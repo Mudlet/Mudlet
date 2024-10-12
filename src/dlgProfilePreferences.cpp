@@ -41,14 +41,15 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QHBoxLayout>
+#include <QKeySequenceEdit>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QRegularExpressionValidator>
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QKeySequenceEdit>
-#include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
@@ -856,7 +857,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
-        lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
@@ -1486,7 +1486,6 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToPartyInfo->setChecked(false);
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
-    lineEdit_discordUserDiscriminator->clear();
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
@@ -3075,12 +3074,6 @@ void dlgProfilePreferences::slot_saveAndClose()
                                          | (checkBox_discordLuaAPI->isChecked() ? Host::DiscordLuaAccessEnabled : Host::DiscordNoOption));
 
         pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
-        if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
-            // The input mask specifies 4 digits [0-9]
-            pHost->mRequiredDiscordUserDiscriminator = lineEdit_discordUserDiscriminator->text();
-        } else {
-            pHost->mRequiredDiscordUserDiscriminator.clear();
-        }
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();

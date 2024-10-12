@@ -40,6 +40,7 @@
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QMap>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 class Host;
