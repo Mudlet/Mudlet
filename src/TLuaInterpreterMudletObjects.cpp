@@ -848,15 +848,26 @@ int TLuaInterpreter::getScript(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
+    const int n = lua_gettop(L);
+    QString location = QDir::currentPath();
     const bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     const QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
+    if (n > 2) {
+        QString target = getVerifiedString(L, __func__, 3, "dialogLocation");
+        QDir dir(target);
+
+        if (dir.exists()) {
+            location = target;
+        }
+    }
+
     if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, QDir::currentPath());
+        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     } else {
-        const QString fileName = QFileDialog::getOpenFileName(nullptr, title, QDir::currentPath());
+        const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     }
