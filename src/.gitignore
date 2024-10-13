@@ -3,4 +3,5 @@
 /kwallet_interface.h
 /kwallet_interface.cpp
 /moc_predefs.h
+./crashpad_handler
 

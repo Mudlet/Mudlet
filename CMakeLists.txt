@@ -148,6 +148,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
                         OPTION_VARIABLE USE_QT6
                         READABLE_NAME "build with Qt6 (if installed)")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SENTRY
+                        OPTION_VARIABLE USE_SENTRY
+                        READABLE_NAME "sentry integration"
+                        SUPPORTED_SYSTEMS "Darwin")
 
 if(USE_QT6)
   find_package(
@@ -174,6 +178,12 @@ include(InitGitSubmodule)
 git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
+
+if(APPLE AND USE_SENTRY)
+  git_submodule_init(
+    CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
+    "3rdparty/sentry-native" READABLE_NAME "sentry-native")
+endif()
 
 if(USE_OWN_QTKEYCHAIN)
   git_submodule_init(
@@ -227,6 +237,14 @@ if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
+
+if(APPLE AND USE_SENTRY)
+  set(SENTRY_BACKEND "crashpad")
+  set(SENTRY_INTEGRATION_QT "ON")
+  set(SENTRY_INCLUDE_DIR "3rdparty/sentry-native/include")
+  set(SENTRY_LIBRARIES "3rdparty/sentry-native")
+  add_subdirectory(3rdparty/sentry-native)
+endif()
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)

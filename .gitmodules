@@ -19,3 +19,6 @@
 [submodule "3rdparty/qt-ordered-map"]
 	path = 3rdparty/qt-ordered-map
 	url = https://github.com/Mudlet/qt-ordered-map
+[submodule "3rdparty/sentry-native"]
+	path = 3rdparty/sentry-native
+	url = https://github.com/getsentry/sentry-native.git
