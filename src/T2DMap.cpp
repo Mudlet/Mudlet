@@ -1149,7 +1149,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
 void T2DMap::paintEvent(QPaintEvent* e)
 {
     Q_UNUSED(e)
-    if (!mpMap) {
+    if (!mpMap||mpHost.isNull()) {
         return;
     }
     QElapsedTimer renderTimer;
