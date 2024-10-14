@@ -203,6 +203,7 @@ private:
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
     void setupPasswordsMigration();
+    void generateLoginTexts();
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();

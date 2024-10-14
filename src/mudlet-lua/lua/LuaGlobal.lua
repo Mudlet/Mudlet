@@ -97,7 +97,30 @@ function unzip( what, dest )
   z:close()
 end
 
+--[[
+Effectively this has migrated from cTelnet::handle_socket_signal_connected()
+but can be replaced with something more advanced by the player if needed. It
+would also be possible to produce a sysConnectionEvent handler or a simple
+pair) of triggers. In either of those two cases it would be necessary to replace
+this predefined function in the profile's scripts with a dummy, do nothing one,
+of the form:
 
+  function doLogin()
+  end
+
+so that the Lua interpreter doesn't run this code.
+
+Also revised to check and use a custom login text if specified in the profile
+preferences (on "Special options" tab):
+]]
+function doLogin()
+  if getCustomLoginId() > 0 then
+    tempTimer(2.0, [[sendCustomLoginText()]], 1)
+  elseif getCharacterName() ~= "" then
+    tempTimer(2.0, [[sendCharacterName()]], 1)
+    tempTimer(3.0, [[sendCharacterPassword()]], 1)
+  end
+end
 
 function onConnect()
 end
