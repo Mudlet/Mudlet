@@ -974,6 +974,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
+        remove_profile_button->setEnabled(false);
+        remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
         port_entry->setReadOnly(true);
@@ -1008,6 +1011,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
             clearNotificationArea();
         }
+        remove_profile_button->setEnabled(true);
+        remove_profile_button->setToolTip(QString());
     }
 }
 

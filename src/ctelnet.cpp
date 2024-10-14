@@ -2367,34 +2367,23 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
 
-                if (mpHost->mServerGUI_Package_version != version) {
-                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                                   "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
-                    // uninstall by previous known package name or current if we don't
-                    // know it (in case of manual installation)
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                // Check if the package is installed
+                if (!mpHost->mInstalledPackages.contains(packageName)) {
+                    // Package is not installed, initiate the download
                     mpHost->mServerGUI_Package_version = version;
+                    downloadAndInstallGUIPackage(packageName, fileName, url);
+                } else if (mpHost->mServerGUI_Package_version != version) {
+                    // Check if the version is different and handle the upgrade
+                    postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
+                                .arg(version, mpHost->mServerGUI_Package_version, url));
+                    
+                    // Uninstall the old version
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    
+                    // Download and install the new version
+                    mpHost->mServerGUI_Package_version = version;
+                    downloadAndInstallGUIPackage(packageName, fileName, url);
                 }
-
-                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
-                if (mpHost->mInstalledPackages.contains(packageName)) {
-                    postMessage(tr("[  OK  ]  - Package is already installed."));
-                    return;
-                }
-
-                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-                mpHost->updateProxySettings(mpDownloader);
-                auto request = QNetworkRequest(QUrl(url));
-                mudlet::self()->setNetworkRequestDefaults(url, request);
-                mpPackageDownloadReply = mpDownloader->get(request);
-                mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"),
-                    //: Cancel download of GUI package from Server
-                    tr("Cancel"), 0, 4000000, mpHost->mpConsole);
-                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
-                connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
-                mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
-                mpProgressDialog->show();
             }
             return;
         }
@@ -2664,6 +2653,97 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     }
 }
 
+// Helper function to parse the GUI version from JSON
+QString cTelnet::parseGUIVersionFromJSON(const QJsonObject& json) {
+    QString version;
+    auto versionJSON = json.value(qsl("version"));
+
+    if (versionJSON != QJsonValue::Undefined && versionJSON.isString() && !versionJSON.toString().isEmpty()) {
+        version = versionJSON.toString();
+    } else if (versionJSON != QJsonValue::Undefined && versionJSON.isDouble()) {
+        version = qsl("%1").arg(versionJSON.toInt());
+    }
+    
+    return version;
+}
+
+// Helper function to parse the GUI URL from JSON
+QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
+    QString url;
+    auto urlJSON = json.value(qsl("url"));
+
+    if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
+        url = urlJSON.toString();
+    }
+    
+    return url;
+}
+
+// Helper function to download and install the GUI package
+void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url) {
+    postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
+
+    mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+    mpHost->updateProxySettings(mpDownloader);
+
+    auto request = QNetworkRequest(QUrl(url));
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+    mpPackageDownloadReply = mpDownloader->get(request);
+
+    mpProgressDialog = new QProgressDialog(tr("Downloading game GUI from server..."), tr("Cancel"), 0, 4000000, mpHost->mpConsole);
+    connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
+    connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpProgressDialog->show();
+}
+
+// Main logic for handling GUI package installation and upgrades
+void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
+    // Parse the JSON response
+    auto json = document.object();
+    if (json.isEmpty()) {
+        return;
+    }
+
+    // Extract version and URL from JSON
+    QString version = parseGUIVersionFromJSON(json);
+    QString url = parseGUIUrlFromJSON(json);
+
+    if (version.isEmpty() || url.isEmpty()) {
+        return;  // Exit if version or URL is missing
+    }
+
+    // Clean up package name from URL
+    QString packageName = url.section(QLatin1Char('/'), -1);
+    QString fileName = packageName;
+
+    packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
+    packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
+    packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1Char('/'));
+    packageName.remove(QLatin1Char('\\'));
+    packageName.remove(QLatin1Char('.'));
+
+    // Check if the package is installed
+    if (!mpHost->mInstalledPackages.contains(packageName)) {
+        // Package is not installed, initiate the download
+        mpHost->mServerGUI_Package_version = version;
+        downloadAndInstallGUIPackage(packageName, fileName, url);
+    } else if (mpHost->mServerGUI_Package_version != version) {
+        // Check if the version is different and handle the upgrade
+        postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
+                    .arg(version, mpHost->mServerGUI_Package_version, url));
+        
+        // Uninstall the old version
+        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+        
+        // Download and install the new version
+        mpHost->mServerGUI_Package_version = version;
+        downloadAndInstallGUIPackage(packageName, fileName, url);
+    }
+}
+
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
     // JSON (and thus the GMCP data) is always utf8
@@ -2698,96 +2778,26 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
 
-        QString version;
-        QString url;
         bool rawTelnet = false;
-
         auto document = QJsonDocument::fromJson(data.toUtf8());
 
         if (!document.isObject()) {
             // This is raw telnet, not JSON
-            version = transcodedMsg.section(QChar::LineFeed, 0);
+            QString version = transcodedMsg.section(QChar::LineFeed, 0);
+
             version.remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive);
             version.replace(QChar::LineFeed, QChar::Space);
             version = version.section(QChar::Space, 0, 0);
 
-            if (version.isEmpty()) {
-                return;
-            }
+            QString url = transcodedMsg.section(QChar::LineFeed, 1);
 
-            url = transcodedMsg.section(QChar::LineFeed, 1);
-
-            if (url.isEmpty()) {
-                return;
+            if (version.isEmpty() || url.isEmpty()) {
+                return;  // Exit if version or URL is missing
             }
 
             rawTelnet = true;
         } else {
-            // This is JSON
-            auto json = document.object();
-
-            if (json.isEmpty()) {
-                return;
-            }
-
-            auto versionJSON = json.value(qsl("version"));
-
-            if (versionJSON != QJsonValue::Undefined && versionJSON.isString() && !versionJSON.toString().isEmpty()) {
-                version = versionJSON.toString();
-            } else if (versionJSON != QJsonValue::Undefined && versionJSON.toInt()) {
-                version = qsl("%1").arg(versionJSON.toInt());
-            } else {
-                return;
-            }
-
-            auto urlJSON = json.value(qsl("url"));
-
-            if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
-                url = urlJSON.toString();
-            } else {
-                return;
-            }
-        }
-
-        QString packageName = url.section(QLatin1Char('/'), -1);
-        QString fileName = packageName;
-        // As this is a file name it must be handled case insensitively to allow
-        // for platforms which may not be case sensitive (MacOs!):
-        packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
-        packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
-        packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1Char('/'));
-        packageName.remove(QLatin1Char('\\'));
-        packageName.remove(QLatin1Char('.'));
-
-        // If the client does not have the GUI or the current version it will be downloaded from the url.
-        if (mpHost->mServerGUI_Package_version != version) {
-            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                           "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
-            // uninstall by previous known package name or current if we don't
-            // know it (in case of manual installation)
-            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
-            mpHost->mServerGUI_Package_version = version;
-        }
-
-        postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
-        if (mpHost->mInstalledPackages.contains(packageName)) {
-            postMessage(tr("[  OK  ]  - Package is already installed."));
-        } else {
-            mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-            mpHost->updateProxySettings(mpDownloader);
-            auto request = QNetworkRequest(QUrl(url));
-            mudlet::self()->setNetworkRequestDefaults(url, request);
-            mpPackageDownloadReply = mpDownloader->get(request);
-            mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"),
-                //: Cancel download of GUI package from Server
-                tr("Cancel"), 0, 4000000, mpHost->mpConsole);
-            connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
-            connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
-            mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
-            mpProgressDialog->show();
+            handleGUIPackageInstallationAndUpgrade(document);
         }
 
         if (rawTelnet) {
