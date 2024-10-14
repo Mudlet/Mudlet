@@ -850,7 +850,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
     const int n = lua_gettop(L);
     Host& host = getHostFromLua(L);
-    const QString location = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
+    QString location = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
     const bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     const QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
