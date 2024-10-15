@@ -1038,6 +1038,15 @@ void Host::updateConsolesFont()
 {
     if (mpConsole) {
         mpConsole->refreshView();
+
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysMainWindowFontChanged"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(mDisplayFont.family());
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QString::number(mDisplayFont.pointSize()));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        raiseEvent(event);
     }
 
     if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
