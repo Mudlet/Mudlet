@@ -1040,7 +1040,9 @@ void Host::updateConsolesFont()
         mpConsole->refreshView();
 
         TEvent event{};
-        event.mArgumentList.append(qsl("sysMainWindowFontChanged"));
+        event.mArgumentList.append(qsl("sysSettingChanged"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(qsl("font"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(mDisplayFont.family());
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
