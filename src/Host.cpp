@@ -3305,22 +3305,14 @@ bool Host::createBuffer(const QString& name)
     return false;
 }
 
-
+// Doesn't work on the errors or central debug consoles:
 bool Host::clearWindow(const QString& name)
 {
     if (!mpConsole) {
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mUpperPane->resetHScrollbar();
-        pC->buffer.clear();
-        pC->mUpperPane->update();
-        return true;
-    } else {
-        return false;
-    }
+    return mpConsole->clear(name);
 }
 
 bool Host::showWindow(const QString& name)
