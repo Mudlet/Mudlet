@@ -62,7 +62,7 @@ function Adjustable.Container:setTitle(text, color, format)
     self.titleFormat = format or self.titleFormat or "l"
     self.titleText = text or self.titleText or string.format("%s - Adjustable Container")
     self.titleTxtColor = color or self.titleTxtColor or "green"
-    if self.locked and self.connectedContainers then
+    if self.locked and (self.connectedContainers or self.lockStyle == "standard" or self.lockStyle == "border" or self.lockStyle == "full") then
         return
     end
     self.adjLabel:echo(string.format("&nbsp;&nbsp;%s", self.titleText), self.titleTxtColor, self.titleFormat)
