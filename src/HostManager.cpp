@@ -183,3 +183,7 @@ QSharedPointer<Host> HostManager::Iter::operator*()
     return *it;
 }
 
+bool HostManager::hostLoaded(const QString& hostname) const
+{
+    return mHostPool.contains(hostname);
+}
