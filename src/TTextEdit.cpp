@@ -82,7 +82,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mMaxHRange(0)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mTabStopwidth(8)
-// Should be the same as the size of the timeStampFormat constant in the TBuffer
+// Should be the same as the size of the csmTimeStampFormat constant in the TBuffer
 // class:
 , mTimeStampWidth(13)
 , mMouseWheelRemainder()
@@ -195,6 +195,10 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
         }
         forceUpdate();
         update();
+        if (mpConsole->getType() == TConsole::MainConsole && mpConsole->mpHost) {
+            // Update and send out the NAWS data:
+            mpConsole->mpHost->updateDisplayDimensions();
+        }
     }
 }
 
