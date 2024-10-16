@@ -70,6 +70,7 @@ public:
     void removeHidden(const QString &name);
     bool isSaved(TVar*);
     void addPointer(const void*);
+    int getNewID();
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
     QSet<QString> savedVars;
@@ -82,6 +83,7 @@ private:
     // temporary variables
     QMap<QTreeWidgetItem*, TVar*> tVars;
     QSet<const void*> mPointers;
+    int mMaxID = 0;
 };
 
 #endif // MUDLET_VARUNIT_H

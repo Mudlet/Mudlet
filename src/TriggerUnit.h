@@ -77,7 +77,8 @@ public:
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
-
+    void addTrigger(TTrigger* pT);
+    void removeTrigger(TTrigger*);
     QList<TTrigger*> uninstallList;
 
 private:
@@ -85,9 +86,8 @@ private:
     void assembleReport(TTrigger*);
     TTrigger* getTriggerPrivate(int id);
     void addTriggerRootNode(TTrigger* pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false);
-    void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
-    void removeTrigger(TTrigger*);
+    
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;

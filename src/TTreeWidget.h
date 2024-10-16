@@ -26,6 +26,7 @@
 #include "pre_guard.h"
 #include <QPointer>
 #include <QTreeWidget>
+#include <QUndoStack>
 #include "post_guard.h"
 
 class Host;
@@ -60,12 +61,18 @@ public:
     void setIsKeyTree();
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
+    QUndoStack* mpUndoStack = nullptr;
+    QTreeWidgetItem* mPrevParentItem;
+    QTreeWidgetItem* mParentItem;
+    QTreeWidgetItem* mdroppedItem;
 
 private:
     bool mIsDropAction;
     QPointer<Host> mpHost;
     int mOldParentID;
     int mChildID;
+    int mPrevParentPosition;
+    int mPrevChildPosition;
     // TODO: replace these seven booleans with a single enum:
     bool mIsTriggerTree;
     bool mIsAliasTree;

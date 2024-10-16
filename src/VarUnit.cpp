@@ -189,6 +189,9 @@ QStringList VarUnit::shortVarName(TVar* var)
 
 void VarUnit::addVariable(TVar* var)
 {
+    if (!var->getId()) {
+        var->setId(getNewID());
+    }
     const QString fullName = varName(var).join(qsl("."));
     // pointers.insert(var->pointer);
     variableSet.insert(fullName);
@@ -199,6 +202,9 @@ void VarUnit::addVariable(TVar* var)
 
 void VarUnit::addHidden(TVar* var, int user)
 {
+    if (!var->getId()) {
+        var->setId(getNewID());
+    }
     var->hidden = true;
     if (user) {
         hiddenByUser.insert(shortVarName(var).join(qsl(".")));
@@ -251,6 +257,12 @@ void VarUnit::removeVariable(TVar* var)
 {
     variableSet.remove(varName(var).join(qsl(".")));
 }
+
+int VarUnit::getNewID()
+{
+    return ++mMaxID;
+}
+
 
 bool VarUnit::varExists(TVar* var)
 {
