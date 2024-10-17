@@ -39,16 +39,24 @@ jobs:
             gcc_compiler_version: 9
             qt: '5.14.2'
           - os: macos-12
-            buildname: 'macos / c++, lua tests'
+            buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.2'
+            deploy: 'deploy'
+            run_tests: 'true'
+          - os: macos-14
+            buildname: 'macos (arm64) / c++, lua tests'
+            triplet: arm64-osx
+            compiler: clang_64
+            qt: '5.15.13'
             deploy: 'deploy'
             run_tests: 'true'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
+      VCPKG_ROOT: ${{github.workspace}}/3rdparty/vcpkg
 
     steps:
     - name: Checkout Mudlet source code
@@ -58,6 +66,8 @@ jobs:
         fetch-depth: 0
 
     - name: Install Qt
+      # need to install qt a different way for arm64-osx
+      if: ${{ matrix.triplet != 'arm64-osx' }}
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
@@ -98,8 +108,29 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # dependencies needed for vcpkg specifically
-        brew install automake autoconf pkg-config
+        # dependencies needed for vcpkg specifically.
+        BREWS=("automake" "autoconf" "pkg-config")
+
+        # if on arm64, also install libtool and qt@5
+        if [ "$(uname -m)" = "arm64" ]; then
+         BREWS+=("libtool" "qt@5")
+        fi
+
+        # Loop through each brew package
+        for brew in "${BREWS[@]}"; do
+         if ! brew list --formula | grep -q "^${brew}$"; then
+          echo "Installing ${brew}..."
+          brew install "$brew"
+         else
+          echo "${brew} is already installed."
+         fi
+        done
+
+
+        # Set these here so that vcpkg can use them.
+        # Use latest available XCode
+        echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
+        echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
@@ -114,7 +145,7 @@ jobs:
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-${{matrix.triplet}}-cachekey
 
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
@@ -125,7 +156,17 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install libzzip libzip ccache luarocks expect mitchellh/gon/gon
+        BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect" "mitchellh/gon/gon")
+
+        # Loop through each brew package
+        for brew in "${BREWS[@]}"; do
+          if ! brew list --formula | grep -q "^${brew}$"; then
+            echo "Installing ${brew}..."
+            brew install "$brew"
+          else
+           echo "${brew} is already installed."
+         fi
+        done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -137,8 +178,8 @@ jobs:
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
         luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
         # for some reason it gets installed in a place where lua-yajl can't find it after, fix that
-        mkdir -p /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx/lib/
-        cp  /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/installed/x64-osx/lib/libyajl.2.dylib /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx/lib/libyajl.2.dylib
+        mkdir -p /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_${{matrix.triplet}}/lib/
+        cp "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.2.dylib" "${{env.VCPKG_ROOT}}/packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
 
 
         # Allow stats generation script to see location of lua-yajl
@@ -146,8 +187,16 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-        # Use latest available XCode
-        echo "DEVELOPER_DIR=/Applications/Xcode_14.2.app/Contents/Developer" >> $GITHUB_ENV
+    - name: (macOS) Add additional paths for Qt (1/1)
+      if: ${{ matrix.triplet == 'arm64-osx' }}
+      run: |
+        echo "LDFLAGS=-L/opt/homebrew/opt/qt@5/lib" >> $GITHUB_ENV
+        echo "CPPFLAGS=-I/opt/homebrew/opt/qt@5/include" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=/opt/homebrew/opt/qt@5/lib/pkgconfig" >> $GITHUB_ENV
+        echo "QT5_PREFIX=$(brew --prefix qt@5)" >> $GITHUB_ENV
+        # both of these needed for the packager / installer on Github
+        echo "PATH=/opt/homebrew/opt/qt@5/bin:$PATH" >> $GITHUB_ENV
+        echo "Qt5_DIR=/opt/homebrew/opt/qt@5/bin" >> $GITHUB_ENV
 
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
@@ -246,7 +295,7 @@ jobs:
         # buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
           -G Ninja
-          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DCMAKE_PREFIX_PATH=${{ env.QT5_PREFIX != '' && env.QT5_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
@@ -315,7 +364,10 @@ jobs:
 
     - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-      run: ${{github.workspace}}/CI/travis.after_success.sh
+      run: |
+       export ARCH=$(uname -m)
+       echo "ARCH=$ARCH" >> $GITHUB_ENV
+       ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
@@ -327,6 +379,7 @@ jobs:
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
         AC_USERNAME: ${{secrets.APPLE_USERNAME}}
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
+        TRIPLET: ${{matrix.triplet}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v4
