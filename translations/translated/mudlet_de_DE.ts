@@ -4127,12 +4127,12 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2377"/>
       <location filename="../src/ctelnet.cpp" line="2735"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  -  GUI wird aktualisiert auf die neue Version &apos;%1&apos; von Version &apos;%2&apos; (url=&apos;%3&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2684"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Lade und installiere das Paket &apos;%1&apos; (url=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2693"/>
@@ -5677,7 +5677,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="949"/>
       <source>A profile that is in use cannot be removed</source>
-      <translation type="unfinished"/>
+      <translation>Ein Profil, das gerade verwendet wird, kann nicht entfernt werden</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="997"/>
@@ -11468,12 +11468,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="3053"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet und Spielgeräusche sind stummgeschaltet. Drücke &lt;%1&gt;, um die Stummschaltung aufzuheben.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3054"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet und Spielgeräusche sind nicht stummgeschaltet. Drücke &lt;%1&gt;, um sie stumm zu schalten.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3831"/>
