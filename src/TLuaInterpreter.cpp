@@ -5398,6 +5398,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
+    lua_register(pGlobalLua, "sendCharacterName", TLuaInterpreter::sendCharacterName);
+    lua_register(pGlobalLua, "sendCharacterPassword", TLuaInterpreter::sendCharacterPassword);
+    lua_register(pGlobalLua, "getCustomLoginTextId", TLuaInterpreter::getCustomLoginTextId);
+    lua_register(pGlobalLua, "sendCustomLoginText", TLuaInterpreter::sendCustomLoginText);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -6609,6 +6613,85 @@ int TLuaInterpreter::getCharacterName(lua_State* L)
     }
 
     lua_pushstring(L, name.toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#sendCharacterName
+int TLuaInterpreter::sendCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mTelnet.getCanLuaSendPassword()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sending the character name or password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        return 2;
+    }
+
+    if (host.getLogin().isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    host.mTelnet.sendCharacterName();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#sendCharacterPassword
+int TLuaInterpreter::sendCharacterPassword(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mTelnet.getCanLuaSendPassword()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sending the character name or password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        return 2;
+    }
+
+    // Knowing that there is no password set would theoretically be a bit of
+    // information leakage but given the overall security of things it is hard
+    // to see how this would be a problem - especially compared to that of not
+    // having a password at all - and, on the other hand it might help someone
+    // debugging a log-in script that we were ready and willing to send
+    // something but was just out of stock in the password department! 8-)
+    if (host.getPass().isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no password set");
+        return 2;
+    }
+
+    host.mTelnet.sendCharacterPassword();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCustomLoginTextId
+int TLuaInterpreter::getCustomLoginTextId(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushnumber(L, host.getCustomLoginId());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#sendCustomLoginText
+int TLuaInterpreter::sendCustomLoginText(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mTelnet.getCanLuaSendPassword()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sending the character name or password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        return 2;
+    }
+
+    if (auto [success, message] = host.mTelnet.sendCustomLogin(); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
     return 1;
 }
 

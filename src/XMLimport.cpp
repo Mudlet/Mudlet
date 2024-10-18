@@ -942,6 +942,12 @@ void XMLimport::readHost(Host* pHost)
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
 
+    if (attributes().hasAttribute(QLatin1String("CustomLoginId"))) {
+        pHost->setCustomLoginId(attributes().value(QLatin1String("CustomLoginId")).toInt());
+    } else {
+        pHost->setCustomLoginId(0);
+    }
+
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
     } else {

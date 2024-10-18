@@ -229,10 +229,20 @@ public:
     int getPostingTimeout() const { return mTimeOut; }
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
+    const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
+    void sendCharacterName();
+    void sendCharacterPassword();
+    // If the default argument is used then it will lookup the actual value
+    // stored for this profile:
+    std::pair<bool, QString> sendCustomLogin(const int loginId = -1);
 
-
+    // A one-shot timer used to prevent the Lua sendCharacterPassword() command
+    // from functioning for more than a short time after a successful connection
+    // this is intended as a security measure to limit the chance a rogue script
+    // might have to send the password to the Game Server and then to that
+    // rogue, or anyone else, who might be listening out for it.
+    QPointer<QTimer> mpLuaSendPasswordTimer;
     QMap<int, bool> supportedTelnetOptions;
-    bool mResponseProcessed = true;
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData = true;
@@ -258,8 +268,8 @@ public slots:
     void slot_socketSslError(const QList<QSslError>&);
 #endif
     void slot_timerPosting();
-    void slot_send_login();
-    void slot_send_pass();
+    void slot_enableLuaSendPassword();
+    void slot_disableLuaSendPassword();
 
 signals:
     // Intended to signal status changes for other parts of application
@@ -382,8 +392,6 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting = false;
-    QTimer* mTimerLogin = nullptr;
-    QTimer* mTimerPass = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -417,6 +425,10 @@ private:
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy = false;
+
+    // Set when mpLuaSendPasswordTimer is started (on successful connection) and
+    // reset on timeout of that timer (or disconnection)
+    bool mLuaSendPasswordEnable = false;
 
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB = false;
