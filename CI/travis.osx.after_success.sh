@@ -34,7 +34,6 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
-# deploy is set to "deploy" on all Github actions. Is there a case where we would run this but not deploy?
 if [ "${DEPLOY}" = "deploy" ]; then
 
   # get commit date now before we check out an change into another git repository
@@ -46,9 +45,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   cd "${BUILD_DIR}/../installers/osx"
 
-  # setup macOS keychain for code signing on development builds only,
-  # as CI's don't allow signing on usual PR builds
-  # I don't think the above comment is accurate at the moment.
+  # setup macOS keychain for code signing on ptb/release builds.
   if [ -n "$MACOS_SIGNING_PASS" ]; then
     KEYCHAIN=build.keychain
     security create-keychain -p travis $KEYCHAIN
