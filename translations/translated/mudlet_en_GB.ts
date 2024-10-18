@@ -4089,12 +4089,12 @@ changed.</translation>
       <location filename="../src/ctelnet.cpp" line="2377"/>
       <location filename="../src/ctelnet.cpp" line="2735"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2684"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2693"/>
@@ -5643,7 +5643,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="949"/>
       <source>A profile that is in use cannot be removed</source>
-      <translation type="unfinished"/>
+      <translation>A profile that is in use cannot be removed</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="997"/>
@@ -11421,12 +11421,12 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="3053"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3054"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3831"/>
