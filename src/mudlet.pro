@@ -229,6 +229,17 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+############################### Sentry QT toggle ###############################
+# To remove the sentry, set the environment WITH_SENTRY variable to "NO"
+# ie: export WITH_SENTRY="NO" qmake
+#
+macx {
+    SENTRY_TEST = $$upper($$(WITH_SENTRY))
+    isEmpty( SENTRY_TEST ) | !equals(SENTRY_TEST, "NO" ) {
+        DEFINES += INCLUDE_SENTRY
+    }
+}
+
 ######################## System QtKeyChain library #############################
 # To use a system provided QtKeyChain library set the environmental variable
 # WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
@@ -482,6 +493,12 @@ macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
+macx {
+    contains( DEFINES, INCLUDE_SENTRY ) {
+        INCLUDEPATH += ../3rdparty/sentry-native/include
+    }
+}
+
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
@@ -533,6 +550,14 @@ win32 {
         }
     }
 } else {
+    macx {
+        contains( DEFINES, INCLUDE_SENTRY ) {
+            !exists("$${PWD}/../3rdparty/sentry-native/include/sentry.h") {
+                message("git submodule for required sentry-native missing from source code, executing 'git submodule update --init --recursive' to get it...")
+                system("cd $${PWD}/.. ; git submodule update --init --recursive 3rdparty/sentry-native")
+            }
+        }
+    }
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/edbee-lib")
@@ -872,6 +897,17 @@ HEADERS += \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
+
+macx {
+    contains( DEFINES, INCLUDE_SENTRY ) {
+        # sentry-native is needed for MacOS builds with crash-reporting
+        exists("$${PWD}/../3rdparty/sentry-native/include/sentry.h") {
+            HEADERS += ../3rdparty/sentry-native/include/sentry.h
+        } else {
+            error("Cannot locate sentry-native submodule source code, build abandoned!")
+        }
+    }
+}
 
 macx|win32 {
     macx {

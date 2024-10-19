@@ -452,6 +452,10 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
+if(APPLE AND USE_SENTRY)
+  find_package(sentry REQUIRED)
+endif()
+
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -556,6 +560,10 @@ if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
 endif()
 
+if(USE_SENTRY)
+  target_compile_definitions(mudlet PRIVATE INCLUDE_SENTRY)
+endif()
+
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
@@ -611,6 +619,10 @@ if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
   target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
 endif(USE_UPDATER)
+
+if(APPLE AND USE_SENTRY)
+  target_link_libraries(mudlet sentry::sentry)
+endif()
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
@@ -736,4 +748,37 @@ if(UNIX AND NOT APPLE)
         GROUP_EXECUTE
         WORLD_READ
         WORLD_EXECUTE)
+endif()
+
+if(APPLE AND USE_SENTRY)
+  message(STATUS "mudlet_SOURCE_DIR : ${mudlet_SOURCE_DIR}")
+  message(STATUS "mudlet_BINARY_DIR : ${mudlet_BINARY_DIR}")
+
+  add_custom_command(
+      TARGET mudlet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy
+              ${mudlet_BINARY_DIR}/3rdparty/sentry-native/crashpad_build/handler/crashpad_handler
+              ${mudlet_BINARY_DIR}/src
+  )
+
+  add_custom_command(
+      TARGET mudlet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy
+              ${mudlet_BINARY_DIR}/3rdparty/sentry-native/crashpad_build/handler/crashpad_handler
+              ${mudlet_SOURCE_DIR}
+  )
+  
+  if(DEFINED ENV{SENTRY_AUTH_TOKEN} AND NOT $ENV{SENTRY_AUTH_TOKEN} STREQUAL "" AND DEFINED ENV{SENTRY_ORG} AND NOT $ENV{SENTRY_ORG} STREQUAL "" AND DEFINED ENV{SENTRY_PROJECT} AND NOT $ENV{SENTRY_PROJECT} STREQUAL "")
+    add_custom_command(
+        TARGET mudlet POST_BUILD
+        COMMAND curl -sL https://sentry.io/get-cli/ | sh
+        COMMAND sentry-cli login --auth-token $ENV{SENTRY_AUTH_TOKEN}        
+        COMMAND sentry-cli debug-files upload --include-sources -o $ENV{SENTRY_ORG} -p $ENV{SENTRY_PROJECT}  /usr/lib --wait 
+        COMMAND sentry-cli debug-files upload --include-sources -o $ENV{SENTRY_ORG} -p $ENV{SENTRY_PROJECT}  ${mudlet_BINARY_DIR} --wait 
+        WORKING_DIRECTORY ${mudlet_BINARY_DIR}
+        COMMENT "Uploading debug files to Sentry"
+    )
+  else()
+    message(STATUS "Some Sentry variables are not defined or empty. Skipping Sentry upload.")
+  endif()
 endif()
