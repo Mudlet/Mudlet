@@ -4166,12 +4166,12 @@ non sarà variata nuovamente.</translation>
       <location filename="../src/ctelnet.cpp" line="2377"/>
       <location filename="../src/ctelnet.cpp" line="2735"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Aggiornamento della GUI alla nuova versione &apos;%1&apos; dalla versione &apos;%2&apos; (url=&apos;%3&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2684"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Download e installazione del package &apos;%1&apos; (url=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2693"/>
@@ -5722,7 +5722,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="949"/>
       <source>A profile that is in use cannot be removed</source>
-      <translation type="unfinished"/>
+      <translation>Un profilo in uso non può essere rimosso</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="997"/>
@@ -6905,7 +6905,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="216"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Se &lt;b&gt;non&lt;/b&gt; selezionata, Mudlet eseguirà solo le azioni associate alla prima combinazione di tasti anche se ve ne è più di una configurata e attiva. Questo significa che una combinazione di tasti temporanea (non visibile nell'editor) creata da uno script o da un pacchetto/modulo può essere usata in modo prioritaria rispetto ad una permanente. Se l'opzione è selezionata, sono eseguite invece tutte le combinazioni di tasti corrispondenti.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Non abilitare questa opzione se è necessario mantenere la compatibilità con gli script o i package/moduli in versioni di Mudlet precedenti alla &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Se &lt;b&gt;non&lt;/b&gt; selezionata, Mudlet eseguirà solo le azioni associate alla prima combinazione di tasti anche se ve ne è più di una configurata e attiva. Questo significa che una combinazione di tasti temporanea (non visibile nell'editor) creata da uno script o da un package/modulo può essere usata in modo prioritaria rispetto ad una permanente. Se l'opzione è selezionata, sono eseguite invece tutte le combinazioni di tasti corrispondenti.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Non abilitare questa opzione se è necessario mantenere la compatibilità con gli script o i package/moduli in versioni di Mudlet precedenti alla &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="224"/>
@@ -11531,12 +11531,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="3053"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - I suoni di Mudlet e del gioco sono stati silenziati. Usa &lt;%1&gt; per riattivarli.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3054"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - I suoni di Mudlet e del gioco sono attivi. Usa &lt;%1&gt; per silenziarli.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3831"/>
