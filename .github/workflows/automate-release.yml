@@ -1,0 +1,40 @@
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  automate-release-tagging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version information
+        run: |
+          VERSION=$(grep 'VERSION =' src/mudlet.pro | grep -oP '\d+\.\d+\.\d+')
+          APP_VERSION=$(grep 'set(APP_VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')
+          echo "Extracted VERSION: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted APP_VERSION: $APP_VERSION"
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+
+      - name: Update mudlet.pro and CMakeLists.txt
+        run: |
+          sed -i "s/VERSION =.*/VERSION = ${{ env.VERSION }}/" src/mudlet.pro
+          sed -i "s/set(APP_VERSION .*/set(APP_VERSION ${{ env.APP_VERSION }})/" CMakeLists.txt
+          sed -i "s/set(APP_BUILD .*/set(APP_BUILD )/" CMakeLists.txt
+          git add src/mudlet.pro CMakeLists.txt
+          git commit -m "Update version for release v${{ env.VERSION }}"
+          git push origin HEAD
+
+      - name: Strip out BUILD variable in release branch
+        if: github.event_name == 'release'
+        run: |
+          release_branch="release/${{ env.VERSION }}"
+          git checkout -b $release_branch
+          sed -i "s/set(APP_BUILD .*/set(APP_BUILD )/" CMakeLists.txt
+          git add CMakeLists.txt
+          git commit -m "Strip out BUILD variable for release v${{ env.VERSION }}"
+          git push origin $release_branch
