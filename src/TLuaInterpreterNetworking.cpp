@@ -165,11 +165,37 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
 {
     const Host& host = getHostFromLua(L);
 
-    auto [hostName, hostPort, connected] = host.mTelnet.getConnectionInfo();
+    auto [hostName, hostPort, state] = host.mTelnet.getConnectionInfo();
     lua_pushstring(L, hostName.toUtf8().constData());
     lua_pushnumber(L, hostPort);
-    lua_pushboolean(L, connected);
-    return 3;
+    lua_pushboolean(L, state == QAbstractSocket::ConnectedState);
+    switch(state) {
+    case QAbstractSocket::UnconnectedState:
+        lua_pushstring(L, "Unconnected");
+        break;
+    case QAbstractSocket::HostLookupState:
+        lua_pushstring(L, "HostNameLookup");
+        break;
+    case QAbstractSocket::ConnectingState:
+        lua_pushstring(L, "Connecting");
+        break;
+    case QAbstractSocket::ConnectedState:
+        lua_pushstring(L, "Connected");
+        break;
+    case QAbstractSocket::BoundState:
+        lua_pushstring(L, "Bound");
+        break;
+    case QAbstractSocket::ClosingState:
+        lua_pushstring(L, "Closing");
+        break;
+    case QAbstractSocket::ListeningState:
+        lua_pushstring(L, "Listening");
+        break;
+    default:
+        lua_pushstring(L, "Unknown");
+    }
+
+    return 4;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcChannels
