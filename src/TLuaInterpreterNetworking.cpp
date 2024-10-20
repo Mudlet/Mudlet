@@ -169,7 +169,7 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
     lua_pushstring(L, hostName.toUtf8().constData());
     lua_pushnumber(L, hostPort);
     lua_pushboolean(L, state == QAbstractSocket::ConnectedState);
-    switch(state) {
+    switch (state) {
     case QAbstractSocket::UnconnectedState:
         lua_pushstring(L, "Unconnected");
         break;

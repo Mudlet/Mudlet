@@ -2625,7 +2625,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_settable(L, -3);
 
             lua_pushstring(L, "connectionState");
-            switch(state) {
+            switch (state) {
             case QAbstractSocket::UnconnectedState:
                 lua_pushstring(L, "Unconnected");
                 break;

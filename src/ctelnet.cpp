@@ -4032,7 +4032,7 @@ void cTelnet::slot_connectionStateChanged(const QAbstractSocket::SocketState new
 
     TEvent event{};
     event.mArgumentList << QLatin1String("sysConnectionStateEvent");
-    switch(newState) {
+    switch (newState) {
     case QAbstractSocket::UnconnectedState:
         event.mArgumentList << QLatin1String("Unconnected");
         break;
