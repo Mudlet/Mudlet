@@ -768,7 +768,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     setColors2();
 
 
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
 #else
     checkBox_debugShowAllCodepointProblems->hide();
@@ -1901,6 +1901,11 @@ void dlgProfilePreferences::slot_setDisplayFont()
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
     QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+#endif
+
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Add Apple Color Emoji fallback.
+    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
 #endif
 
     auto mainConsole = pHost->mpConsole;
@@ -3938,10 +3943,12 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUse
         } else {
             pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
         }
-        // Clear the existing cache of room symbol pixmaps:
-        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        pHost->mpMap->mpMapper->mp2dMap->repaint();
-        pHost->mpMap->mpMapper->update();
+        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
+        if (pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
+        }
 
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();
@@ -3960,10 +3967,12 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
     if (pHost->mpMap->mMapSymbolFont != font) {
         pHost->mpMap->mMapSymbolFont = font;
         pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        // Clear the existing cache of room symbol pixmaps:
-        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        pHost->mpMap->mpMapper->mp2dMap->repaint();
-        pHost->mpMap->mpMapper->update();
+        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
+        if (pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
+        }
 
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();

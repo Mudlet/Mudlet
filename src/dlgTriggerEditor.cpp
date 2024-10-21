@@ -94,7 +94,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                           "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>"
                           "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
                           "<p><code>lua registerAnonymousEventHandler(&quot;nameOfTheMudletEvent&quot;, &quot;nameOfYourFunctionToBeCalled&quot;)</code></p>"
-                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>more information</a>.</p>");
 
     msgInfoAddTimer = tr("<p>Timers react after a timespan once or regularly. To add a new timer:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -105,7 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p><strong>Note:</strong> Timers can also be defined from the command line in the main profile window like this:</p>"
                          "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
                          "<p>This will greet you exactly 3 seconds after it was made.</p>"
-                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>more information</a>.</p>");
 
     msgInfoAddButton = tr("<p>Buttons react on mouse clicks. To add a new button:"
                           "<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
@@ -115,7 +115,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                           "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
                           "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
                           "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
-                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>more information</a>.</p>");
 
     msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
                        "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -125,7 +125,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p><strong>Note:</strong> Keys can also be defined from the command line in the main profile window like this:</p>"
                        "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
                        "<p>Pressing F8 will make you jump.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>more information</a>.</p>");
 
     msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
                        "<ol><li>Click on the 'Add Item' icon above. To add a table instead click 'Add Group'.</li>"
@@ -137,7 +137,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p><strong>Note:</strong> Variables and tables can also be defined from the command line in the main profile window like this:</p>"
                        "<p><code>lua foo = &quot;bar&quot;</code></p>"
                        "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>more information</a>.</p>");
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
     //: Item is currently on, short enough to be spoken
@@ -4632,15 +4632,14 @@ void dlgTriggerEditor::saveTrigger()
             clearEditorNotification();
 
             if (old_name == tr("New trigger") || old_name == tr("New trigger group")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActiveFolder;
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActive;
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -4877,25 +4876,24 @@ void dlgTriggerEditor::saveAlias()
             clearEditorNotification();
 
             if (old_name == tr("New alias")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -5184,26 +5182,25 @@ void dlgTriggerEditor::saveScript()
         }
 
         if (old_name == tr("New script") || old_name == tr("New script group")) {
-            QIcon _icon;
             if (pT->isFolder()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descActive;
-                _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 if (pT->ancestorsActive()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             }
-            pItem->setIcon(0, _icon);
+            pItem->setIcon(0, icon);
             pItem->setText(0, name);
             pT->setIsActive(true);
         } else {
@@ -5541,15 +5538,14 @@ void dlgTriggerEditor::saveKey()
         if (pT->state()) {
             clearEditorNotification();
             if (old_name == tr("New key")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActiveFolder;
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActive;
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -8043,7 +8039,7 @@ void dlgTriggerEditor::slot_saveEdits()
         saveVar();
         break;
     default:
-        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view, not sure what to save";
     }
 
     // There was a mpHost->serialize() call here, but that code was
@@ -9377,7 +9373,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                 break;
 
             default:
-                key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
+                keyGrabCallback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
                 setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
@@ -9428,7 +9424,7 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
     }
 }
 
-void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
+void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
     if (!pKeyUnit) {
@@ -9447,13 +9443,6 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
         }
     }
 }
-
-// Not used:
-//void dlgTriggerEditor::slot_choseActionIcon()
-//{
-//    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
-//    mpActionsMainArea->lineEdit_action_icon->setText(fileName);
-//}
 
 void dlgTriggerEditor::slot_toggleIsPushDownButton(const int state)
 {
