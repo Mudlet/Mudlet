@@ -367,7 +367,7 @@ end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNamedTimers
 function getNamedTimers(user)
-  local funcName = "stopNamedTimers"
+  local funcName = "getNamedTimers"
   local userType = type(user)
   if userType ~= "string" then
     printError(userErrorMsg(funcName, userType), true, true)
