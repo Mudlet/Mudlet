@@ -3,6 +3,8 @@
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
+  # print all environment variables to see which maps to the `inputs` context: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#inputs-context
+  env
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ] || [[ "$GITHUB_EVENT_NAME" = "schedule" ]] || [[ "$GITHUB_EVENT_INPUTS_SCHEDULED" = "true" ]]; then
     MUDLET_VERSION_BUILD="-ptb"
   else
@@ -59,7 +61,5 @@ if [ -n "$GITHUB_REPOSITORY" ]; then
 fi
 
 export VERSION
-# This no longer has a Git SHA1 appended, which it did previously for anything
-# other than a "Release" build:
 export MUDLET_VERSION_BUILD
 export BUILD_COMMIT
