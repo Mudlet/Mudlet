@@ -5127,3 +5127,16 @@ dlgTriggerEditor* mudlet::createMudletEditor()
 
     return pEditor;
 }
+
+bool mudlet::profileExists(const QString& profileName)
+{
+    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+                                 .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    if (profiles.contains(profileName, Qt::CaseInsensitive)) {
+        return true;
+    }
+
+    auto it = TGameDetails::findGame(profileName);
+    return it != TGameDetails::scmDefaultGames.end();
+}
