@@ -318,6 +318,11 @@ private:
     void promptTlsConnectionAvailable();
 #endif
     void sendNAWS(int width, int height);
+    QString parseGUIVersionFromJSON(const QJsonObject& json);
+    QString parseGUIUrlFromJSON(const QJsonObject& json);
+    void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
+
     static std::pair<bool, bool> testReadReplayFile();
 
 

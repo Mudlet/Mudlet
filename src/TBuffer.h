@@ -253,7 +253,6 @@ public:
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
-    QString wrapText(const QString& text) const;
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
@@ -318,6 +317,8 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
+    inline static const QString csmTimeStampFormat = qsl("hh:mm:ss.zzz ");
+    inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
     void shrinkBuffer();
