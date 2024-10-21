@@ -138,7 +138,8 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         # gettext is needed for vcpkg
-        sudo apt-get install gettext -y
+        # gdb for running in debugger later on
+        sudo apt-get install gettext gdb -y
 
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
@@ -416,9 +417,8 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.6
-      with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      # using quit 0 ensures that GDB exits without an error code of 1 when there is no backtrace available after executing the "bt full" command when run via xvfb-run
+      run: xvfb-run --auto-servernum gdb --batch -ex "run" -ex "bt full" -ex "quit 0" --args ${{github.workspace}}/src/mudlet --profile 'Mudlet self-test' --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
