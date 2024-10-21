@@ -275,6 +275,8 @@ jobs:
 
     - name: (macOS) Set build info
       if: runner.os == 'macOS'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         brew install pcre
         ${{github.workspace}}/CI/travis.validate_deployment.sh
