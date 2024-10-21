@@ -41,7 +41,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
   # CHANGEME - setting this to my repo to test.
-  git clone https://github.com/rparet/installers.git "${BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
 
