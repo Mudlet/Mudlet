@@ -418,6 +418,7 @@ public:
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
+    bool profileExists(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
