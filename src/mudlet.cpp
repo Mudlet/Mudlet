@@ -92,6 +92,13 @@
 #include <QSettings>
 #endif
 
+#ifdef QT_TEXTTOSPEECH_LIB
+#include <QVoice>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+Q_DECLARE_METATYPE(QVoice)
+#endif
+#endif
+
 #if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
@@ -2011,6 +2018,15 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
+#ifdef QT_TEXTTOSPEECH_LIB
+    mTtsPitch = settings.value(qsl("ttsPitch"), QVariant(0.0)).toDouble();
+    mTtsRate = settings.value(qsl("ttsRate"), QVariant(0.0)).toDouble();
+    mTtsVolume = settings.value(qsl("ttsVolume"), QVariant(0.0)).toDouble();
+    QVariant voiceVariant = settings.value(qsl("ttsVoice"));
+    if (voiceVariant.canConvert<QVoice>()) {
+        mTtsVoice = voiceVariant.value<QVoice>();
+    }
+#endif
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2151,6 +2167,13 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
+#ifdef QT_TEXTTOSPEECH_LIB
+    settings.setValue(qsl("ttsPitch"), mTtsPitch);
+    settings.setValue(qsl("ttsRate"), mTtsRate);
+    settings.setValue(qsl("ttsVolume"), mTtsVolume);
+    // there has to be a Qt-supplied way to serialise this value
+    settings.setValue(qsl("ttsVoice"), QVariant::fromValue(mTtsVoice));
+#endif
 }
 
 void mudlet::slot_showConnectionDialog()
