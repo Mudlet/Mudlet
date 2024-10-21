@@ -39,7 +39,7 @@ private slots:
 
     void processInput(TMxpProcessor &processor, std::string &input) {
         for (char &ch : input) {
-            processor.processMxpInput(ch);
+            processor.processMxpInput(ch, true);
         }
     }
 

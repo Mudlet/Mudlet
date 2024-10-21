@@ -118,6 +118,8 @@ then
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
 
       SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
+      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+      read -r day month year hour minute second <<< "$current_timestamp"
 
       # file_cat=2 asuming Linux is the 2nd item in WP-Download-Manager category
       curl -X POST 'https://www.mudlet.org/download-add.php' \
@@ -128,6 +130,12 @@ then
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=2" \
       -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
       -F "output=json" \
       -F "do=Add File"
     fi
@@ -166,6 +174,9 @@ then
       xz "Mudlet-${VERSION}.tar"
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
+      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+      read -r day month year hour minute second <<< "$current_timestamp"
+
       # file_cat=3 asuming Source is the 4th item in WP-Download-Manager category
       curl -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
@@ -175,6 +186,12 @@ then
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=3" \
       -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
       -F "output=json" \
       -F "do=Add File"
     fi
