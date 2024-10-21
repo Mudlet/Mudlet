@@ -767,7 +767,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     setColors2();
 
+
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
+#else
+    checkBox_debugShowAllCodepointProblems->hide();
+#endif
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
 
@@ -1896,6 +1901,11 @@ void dlgProfilePreferences::slot_setDisplayFont()
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
     QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+#endif
+
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Add Apple Color Emoji fallback.
+    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
 #endif
 
     auto mainConsole = pHost->mpConsole;
@@ -3380,7 +3390,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
         return;
     }
 
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::getQSettings();
     const QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
@@ -3933,10 +3943,12 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUse
         } else {
             pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
         }
-        // Clear the existing cache of room symbol pixmaps:
-        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        pHost->mpMap->mpMapper->mp2dMap->repaint();
-        pHost->mpMap->mpMapper->update();
+        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
+        if (pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
+        }
 
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();
@@ -3955,10 +3967,12 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
     if (pHost->mpMap->mMapSymbolFont != font) {
         pHost->mpMap->mMapSymbolFont = font;
         pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        // Clear the existing cache of room symbol pixmaps:
-        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        pHost->mpMap->mpMapper->mp2dMap->repaint();
-        pHost->mpMap->mpMapper->update();
+        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
+        if (pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
+        }
 
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();

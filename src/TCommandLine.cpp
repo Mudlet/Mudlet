@@ -27,7 +27,6 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
-#include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TEvent.h"
@@ -383,7 +382,13 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                historyMove(MOVE_DOWN);
+                bool shouldClearInput = historyMove(MOVE_DOWN);
+
+                // If the user has pressed DOWN while in the middle of typing a command
+                // the command line should be cleared
+                if (shouldClearInput) {
+                    clear();
+                }
                 ke->accept();
                 return true;
             }
@@ -1118,11 +1123,16 @@ void TCommandLine::handleAutoCompletion()
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
+// If the user is currently typing in the command line, a DOWN key will indicate
+// that the input line should be cleared
 
-void TCommandLine::historyMove(MoveDirection direction)
+bool TCommandLine::historyMove(MoveDirection direction)
 {
+    bool shouldClearInput = false;
+    
     if (mHistoryList.empty()) {
-        return;
+        // If the history is empty, we may still want to clear the input line...
+        return true;
     }
     const int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
@@ -1141,10 +1151,16 @@ void TCommandLine::historyMove(MoveDirection direction)
             moveCursor(QTextCursor::End);
         }
     } else {
-        mAutoCompletionCount += shift;
-        handleAutoCompletion();
+        if (direction == MOVE_DOWN && !toPlainText().isEmpty()) {
+            shouldClearInput = true;
+        } else {
+            mAutoCompletionCount += shift;
+            handleAutoCompletion();
+        }
     }
     adjustHeight();
+
+    return shouldClearInput;
 }
 
 void TCommandLine::slot_clearSelection(bool yes)
