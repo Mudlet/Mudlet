@@ -120,7 +120,7 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 
 
 # Set Mudlet version (update in CMakeLists.txt as well)
-VERSION = 4.18.3
+VERSION = 4.18.5
 
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
@@ -280,6 +280,37 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # commands for suboptions - change the value to 2 to get a bit more detail
 # about the size or nature of the command:
 DEFINES+=DEBUG_TELNET=1
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_UTF8_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+# it is not the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_GB_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+# single bytes of pure ASCII text:
+# DEFINES+=DEBUG_BIG5_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_EUC_KR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+# DEFINES+=DEBUG_SGR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# DEFINES+=DEBUG_OSC_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+# there is not much against this item at present {only an announcement of the
+# type (?) of an `\x1b[?z` received}:
+# DEFINES+=DEBUG_MXP_PROCESSING
+#
+# * Enable the features associated with reporting problems in processing Unicode
+# codepoints that cannot be displayed on screen in a `TConsole`:
+# DEFINES+=DEBUG_CODEPOINT_PROBLEMS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -437,15 +468,13 @@ macx {
 BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_CC
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
-    message("Found ccache, updating QMAKE_CXX and QMAKE_CC")
+
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(C:\msys64\mingw64\bin\ccache.exe)|exists(C:\msys64\mingw32\bin\ccache.exe) {
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_CC = ccache $$BASE_C
 } else {
-    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
+    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, C:\msys64\mingw64\bin\ccache.exe, or C:\msys64\mingw64\bin\ccache.exe")
 }
-
-message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_CC: '"$${QMAKE_CC}"'")
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:

@@ -98,6 +98,7 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
     if /usr/bin/pacman -Su --needed --noconfirm \
       "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
@@ -162,6 +163,8 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
@@ -174,6 +177,16 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
+
+echo "Removing harfbuzz installed by qt"
+pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
+
+echo "Building harfbuzz without graphite2"
+git clone https://github.com/harfbuzz/harfbuzz.git
+cd harfbuzz
+meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson compile -C build
+meson install -C build
 
 echo ""
 echo "    Completed"
@@ -196,34 +209,13 @@ else
   echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
   echo "  do not end up in the same place"
 fi
-echo ""
-echo "  When using lua modules from luarocks and you wish to use a per-user one"
-echo "rather than sharing them with other users on this PC it is recommended that"
-echo "you avoid using the --local option to luarocks but instead use"
-echo "--tree \"user\" {the word user, NOT your username). This is so that if you"
-echo "are building things for other PC systems and are working with more than"
-echo "one 'bitness' or are investigating the different Mingw-w64 environments"
-echo "the rocks compiled for each variant do not end up in the same set of"
-echo "directories - which will break things!"
-echo ""
-echo "You will probably have to tweak the LUA_PATH and LUA_CPATH environmental"
-echo "variables before running Mudlet so that it can find the per-user modules"
-echo "You will likely want to review the output from 'luarocks path --help'"
-echo "for more information (remembering to include the '--lua-version 5.1'"
-echo "command line argument to get the right details when using it!)"
-echo ""
+echo "For per-user Lua modules from LuaRocks:"
+echo "- Use '--tree \"user\"' (literally) instead of '--local'"
+echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
+echo "- See 'luarocks path --help' for details"
 
 
-# Save the wanted Luarocks 5.1 command so it can be used repeatedly next
-# this uses the "system" (shared between all users) tree, using the --local
-# option does NOT work, but the alternative --tree "user" (the literal string
-# user NOT the user's name) does for "per user" luarocks as the previous use
-# of sed above has "fixed" things:
 ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
-# CHECKCOMMAND=$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")
-# FIXME: Only install if needed - this whole script is safe to be rerun
-# (idempotent) but it is an unnecessary delay to reinstall the same things over
-# again:
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
@@ -262,5 +254,13 @@ fi
 cd ~ || exit 1
 echo "  ... setup-windows-sdk.sh shell script finished."
 echo ""
+
+echo "Copy the following lines into the build environment for a project in Qt Creator:"
+echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
+echo ""
+MSYS_ROOT=$(cygpath -aw /)
+echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo ${MSYSTEM_PREFIX} | sed 's/\//\\/g')"
+echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
+echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 
 exit 0

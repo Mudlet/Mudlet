@@ -471,7 +471,7 @@ void TArea::calcSpan()
 // bool TRoom::setArea( int, bool )  -- the second arg there can be used for this
 // bool TRoomDB::__removeRoom( int ) -- automatically skipped for area deletion
 //                                      (when this would not be needed)
-void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
+void TArea::removeRoom(int room, bool deferAreaRecalculations)
 {
     static double cumulativeMean = 0.0;
     static quint64 runCount = 0;
@@ -480,7 +480,7 @@ void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
 
     // Will use to flag whether some things have to be recalculated.
     bool isOnExtreme = false;
-    if (rooms.contains(room) && !isToDeferAreaRelatedRecalculations) {
+    if (rooms.contains(room) && !deferAreaRecalculations) {
         // just a check, if the area DOESN'T have the room then it is not wise
         // to behave as if it did
         TRoom* pR = mpRoomDB->getRoom(room);
