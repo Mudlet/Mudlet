@@ -501,6 +501,14 @@ public:
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
 
+    // A set of fixed strings that the user can choose one of to be used when
+    // the lua function sendCustomLogin() is used in a script/package, the texts
+    // are stored in this map:
+    static const QMap<int, QString> mCustomLoginTexts;
+    // and the translated form for display in the preferences are stored in this
+    // one:
+    QMap<int, QString> mLocaliseCustomLoginTexts;
+
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
 #endif

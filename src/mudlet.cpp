@@ -128,6 +128,20 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
     return smpSelf;
 }
 
+// The texts here must be replicated exactly as the source texts for the
+// translationed form to be held in mudlet::mLocaliseCustomLoginTexts in the
+// mudlet::loadMaps() method further down - if any entry is ever deleted the
+// number must be retired as well as that is what will be stored in the
+// profile's settings and in the event that a particular value is not present
+// the first one will be selected which is the disabled one.
+// The strings "{character name}" and "{password}" are specific tokens that
+// are replaced - but only the second one is required to be present in all but
+// the disabled one:
+const QMap<int, QString> mudlet::mCustomLoginTexts{
+        {0, QStringLiteral("disabled")},
+        {1, QStringLiteral("connect {character name} {password}")}
+};
+
 mudlet::mudlet()
 : QMainWindow()
 {
@@ -1117,6 +1131,13 @@ void mudlet::loadMaps()
                                   {qsl("zh_cn"), tr("Chinese (China - simplified)")},
                                   {qsl("zh_tw"), tr("Chinese (Taiwan - traditional)")},
                                   {qsl("zu"), tr("Zulu")}};
+
+    // Any additional entries must have a matching one loaded into the
+    // mudlet::mCustomLoginTexts QMap at the top of this file:
+    mLocaliseCustomLoginTexts = {
+            {0, tr("disabled")},
+            {1, tr("connect {character name} {password}", "This represents a user selectable text that can be sent to the Game server to log in, please provide translation only of the wording within each '{...}'.")}
+    };
 
     mEncodingNameMap = {
         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)

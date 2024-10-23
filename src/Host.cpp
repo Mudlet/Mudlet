@@ -65,6 +65,8 @@
 
 using namespace std::chrono;
 
+const std::chrono::seconds Host::csmLuaSendPasswordTimeout = 30s;
+
 stopWatch::stopWatch()
 : mIsInitialised(false)
 , mIsRunning(false)
@@ -424,6 +426,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->storingPasswordsSecurely()) {
+        // Depending on how long this takes we might need to hold off on
+        // connecting until we have the password to use!
         loadSecuredPassword();
     } else {
         QString password{readProfileData(qsl("password"))};
@@ -3065,6 +3069,13 @@ void Host::setCompactInputLine(const bool state)
         if (mpConsole && mpConsole->mpButtonMainLayer) {
             mpConsole->mpButtonMainLayer->setVisible(!state);
         }
+    }
+}
+
+void Host::setCustomLoginId(const int value)
+{
+    if (value >= 0 && value < mudlet::mCustomLoginTexts.count()) {
+        mCustomLoginId = value;
     }
 }
 

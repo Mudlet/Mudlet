@@ -1077,6 +1077,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
     connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
 
+    generateLoginTexts();
+
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
     frame_notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -3090,6 +3092,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
+        pHost->setCustomLoginId(comboBox_customLoginText->currentData().toInt());
+
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
@@ -4268,6 +4272,49 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // assembled after the class instance was created {i.e. outside of the
     // setupUi(...) call in the constructor} would be needed in every class with
     // persistent UI texts - this is not trivial and has been deemed NWIH...!
+    generateLoginTexts();
+}
+
+void dlgProfilePreferences::generateLoginTexts()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    comboBox_customLoginText->blockSignals(true);
+    comboBox_customLoginText->setToolTip(utils::richText(tr("Provides a means to send both of the character name and the password in a single "
+                                                            "line to the Game server for those that have a requirement that cannot be met by "
+                                                            "sending each of them on their own shortly after a connection has been made.</p>"
+                                                            "<p>For further information refer to <tt>sendCustomLoginText()</tt> in the "
+                                                            "Mudlet Wiki.")));
+    int selection = 0;
+    if (!comboBox_customLoginText->count()) {
+        // Empty - this is the first time this method has been called, so read
+        // the setting from the profile:
+        selection = pHost->getCustomLoginId();
+    } else {
+        // Not empty - this method has been called before so note the current
+        // setting:
+        selection = comboBox_customLoginText->currentData().toInt();
+        // And clear the widget
+        comboBox_customLoginText->clear();
+    }
+
+    QMapIterator<int, QString> itTranslatedLoginText(mudlet::self()->mLocaliseCustomLoginTexts);
+    while (itTranslatedLoginText.hasNext()) {
+        itTranslatedLoginText.next();
+        if (!itTranslatedLoginText.key()) {
+            // Disable (zero) case
+            comboBox_customLoginText->addItem(qsl("%1: %2").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
+        } else {
+            comboBox_customLoginText->addItem(qsl("%1: \"%2\"").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
+        }
+    }
+
+    comboBox_customLoginText->setCurrentIndex(comboBox_customLoginText->findData(selection));
+
+    comboBox_customLoginText->blockSignals(false);
 }
 
 void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)

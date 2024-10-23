@@ -618,6 +618,10 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getCharacterName(lua_State*);
+    static int sendCharacterName(lua_State*);
+    static int sendCharacterPassword(lua_State*);
+    static int getCustomLoginTextId(lua_State*);
+    static int sendCustomLoginText(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State*);
     static int customHTTP(lua_State*);
