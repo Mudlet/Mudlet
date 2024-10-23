@@ -445,6 +445,7 @@ void mudlet::init()
     mpActionMultiView->setCheckable(true);
     mpActionMultiView->setChecked(false);
     mpActionMultiView->setEnabled(false);
+    dactionMultiView->setEnabled(false);
     mpActionMultiView->setObjectName(qsl("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
@@ -535,7 +536,7 @@ void mudlet::init()
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
-    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_showHelpDialogIrc);
     connect(dactionShowErrors, &QAction::triggered, this, [=]() {
         auto host = getActiveHost();
         if (!host) {
@@ -1524,7 +1525,7 @@ void mudlet::closeHost(const QString& name)
 
 void mudlet::updateMultiViewControls()
 {
-    const bool isEnabled = (mHostManager.getHostCount() - 1);
+    const bool isEnabled = (mHostManager.getHostCount() > 1);
     if (mpActionMultiView->isEnabled() != isEnabled){
         mpActionMultiView->setEnabled(isEnabled);
     }
@@ -1687,17 +1688,40 @@ void mudlet::slot_timerFires()
 void mudlet::disableToolbarButtons()
 {
     mpActionTriggers->setEnabled(false);
+    dactionScriptEditor->setEnabled(false);
+    dactionShowErrors->setEnabled(false);
+
     mpActionAliases->setEnabled(false);
+
     mpActionTimers->setEnabled(false);
+
     mpActionButtons->setEnabled(false);
+
     mpActionScripts->setEnabled(false);
+
     mpActionKeys->setEnabled(false);
+
     mpActionVariables->setEnabled(false);
+
     mpActionMudletDiscord->setEnabled(false);
+    dactionDiscord->setEnabled(false);
+
     mpActionMapper->setEnabled(false);
+    dactionShowMap->setEnabled(false);
+
     mpActionNotes->setEnabled(false);
+    dactionNotepad->setEnabled(false);
+
     mpButtonPackageManagers->setEnabled(false);
+    dactionPackageManager->setEnabled(false);
+    dactionModuleManager->setEnabled(false);
+    dactionPackageExporter->setEnabled(false);
+
     mpActionIRC->setEnabled(false);
+    dactionIRC->setEnabled(false);
+
+    dactionInputLine->setEnabled(false);
+
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(tr("<p>Load a Mudlet replay.</p>"
                                   "<p><i>Disabled until a profile is loaded.</i></p>"));
@@ -1706,10 +1730,13 @@ void mudlet::disableToolbarButtons()
     // more texts to show {the default is to repeat the menu text which is not
     // useful} with a call to menuEditor->setToolTipsVisible(true);
     dactionReplay->setToolTip(mpActionReplay->toolTip());
-
     dactionReplay->setEnabled(false);
+
     mpActionReconnect->setEnabled(false);
+    dactionReconnect->setEnabled(false);
+
     mpActionDisconnect->setEnabled(false);
+    dactionDisconnect->setEnabled(false);
 
     mpActionCloseProfile->setEnabled(false);
     dactionCloseProfile->setEnabled(false);
@@ -1718,17 +1745,39 @@ void mudlet::disableToolbarButtons()
 void mudlet::enableToolbarButtons()
 {
     mpActionTriggers->setEnabled(true);
+    dactionScriptEditor->setEnabled(true);
+    dactionShowErrors->setEnabled(true);
+
     mpActionAliases->setEnabled(true);
+
     mpActionTimers->setEnabled(true);
+
     mpActionButtons->setEnabled(true);
+
     mpActionScripts->setEnabled(true);
+
     mpActionKeys->setEnabled(true);
+
     mpActionVariables->setEnabled(true);
+
     mpActionMudletDiscord->setEnabled(true);
+    dactionDiscord->setEnabled(true);
+
     mpActionMapper->setEnabled(true);
+    dactionShowMap->setEnabled(true);
+
     mpActionNotes->setEnabled(true);
+    dactionNotepad->setEnabled(true);
+
     mpButtonPackageManagers->setEnabled(true);
+    dactionPackageManager->setEnabled(true);
+    dactionModuleManager->setEnabled(true);
+    dactionPackageExporter->setEnabled(true);
+
     mpActionIRC->setEnabled(true);
+    dactionIRC->setEnabled(true);
+
+    dactionInputLine->setEnabled(true);
 
     if (!mpToolBarReplay) {
         // Only enable the replay button if it is not disabled because there is
@@ -1745,7 +1794,10 @@ void mudlet::enableToolbarButtons()
     }
 
     mpActionReconnect->setEnabled(true);
+    dactionReconnect->setEnabled(true);
+
     mpActionDisconnect->setEnabled(true);
+    dactionDisconnect->setEnabled(true);
 
     mpActionCloseProfile->setEnabled(true);
     dactionCloseProfile->setEnabled(true);
@@ -2014,6 +2066,10 @@ void mudlet::readLateSettings(const QSettings& settings)
     // by calling the slot method that does that and ALSO carry out the
     // other things needed for it:
     bool multiView = false;
+    // The naming of this is a little mis-leading - it actually means: is the
+    // multiview mode going to be used if more than one profile is loaded, i.e.
+    // is this knob "checked", the "enabling" of the knob is down to the number
+    // of profiles in use!
     if (settings.contains(qsl("enableMultiViewMode"))) {
         // We have a setting stored for this
         multiView = settings.value(qsl("enableMultiViewMode"), QVariant(false)).toBool();
@@ -2533,11 +2589,12 @@ void mudlet::slot_showHelpDialogForum()
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/"));
 }
 
-// Not used:
-//void mudlet::slot_showHelpDialogIrc()
-//{
-//    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
-//}
+// This uses a web-based IRC server and is NOT profile specific and can always
+// be enabled:
+void mudlet::slot_showHelpDialogIrc()
+{
+    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
+}
 
 void mudlet::slot_mapper()
 {
@@ -2587,6 +2644,8 @@ void mudlet::slot_notes()
     pNotes->show();
 }
 
+// This opens a profile specific IRC client for that client so should only be
+// enabled when a profile is loaded.
 void mudlet::slot_irc()
 {
     Host* pHost = getActiveHost();

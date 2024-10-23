@@ -539,7 +539,7 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
-// Not used:    void slot_showHelpDialogIrc();
+    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
     void slot_tabChanged(int);
     void slot_timerFires();
