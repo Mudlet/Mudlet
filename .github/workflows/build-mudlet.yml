@@ -38,7 +38,7 @@ jobs:
             # We still need a gcc for some sub-stages - and it ain't always the same one:
             gcc_compiler_version: 9
             qt: '5.14.2'
-          - os: macos-12
+          - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
@@ -406,11 +406,13 @@ jobs:
       run: |
         if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
           cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
+        elif [ -d "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ]; then
+          cp -r "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ~/Desktop/Mudlet.app
         else
           cp -r ${{runner.workspace}}/b/ninja/src/mudlet.app ~/Desktop/Mudlet.app
         fi
         cd ~/Desktop
-        sudo codesign --remove-signature Mudlet.app
+        sudo codesign --remove-signature ~/Desktop/Mudlet.app
       shell: bash
 
     - name: (Linux) Run Lua tests
