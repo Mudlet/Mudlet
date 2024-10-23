@@ -211,6 +211,11 @@ bool TVar::setName(const QString& n)
     return true;
 }
 
+void TVar::setId(const int Id)
+{
+    id = Id;
+}
+
 TVar* TVar::getParent()
 {
     return parent;

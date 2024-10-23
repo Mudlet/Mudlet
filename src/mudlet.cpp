@@ -56,6 +56,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "dlgTriggerEditorCommand.h"
 #include "VarUnit.h"
 
 #include "pre_guard.h"

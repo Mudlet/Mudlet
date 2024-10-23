@@ -46,13 +46,18 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
+#include "dlgTriggerEditorCommand.h"
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QUndoStack>
+#include <QUndoView>
+#include <QUndoCommand>
 #include <QFlag>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
+#include <QDockWidget>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -88,7 +93,7 @@ class TAction;
 class TKey;
 class TConsole;
 class dlgVarsMainArea;
-
+class TriggerNameTextEditedCommand;
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
@@ -193,7 +198,6 @@ public:
     void children_icon_action(QTreeWidgetItem* pWidgetItemParent);
     void doCleanReset();
     void writeScript(int id);
-    void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
     void repopulateVars();
@@ -218,16 +222,38 @@ public:
     void delete_action();
     void delete_alias();
     void delete_key();
+    void deleteKeyCommand();
     void delete_script();
+    void deleteScriptCommand();
     void delete_timer();
+    void addTrigger(bool);
+    void addTriggerCommand(bool);
+    void addAlias(bool);
+    void addAliasCommand(bool);
+    void addKey(bool);
+    void addKeyCommand(bool);
+    void addAction(bool);
+    void addActionCommand(bool);
+    void deleteActionCommand();
+    void addVar(bool);
+    void addVarCommand(bool);
+    void deleteVarCommand();
+    void addScript(bool);
+    void addScriptCommand(bool);
+    void deleteAliasCommand();
     void delete_trigger();
+    void deleteTriggerCommand();
+    void moveTriggerCommand(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition, int prevParentPosition, int prevChildPosition);
+    void addTimer(bool);
+    void addTimerCommand(bool);
+    void deleteTimerCommand();
     void delete_variable();
     void setSearchOptions(const SearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
     void showIDLabels(const bool);
-
+    void createUndoView();
 public slots:
     void slot_toggleHiddenVariables(bool);
     void slot_hideVariable(bool);
@@ -288,8 +314,8 @@ public slots:
     void slot_profileSaveAsAction();
     void slot_setToolBarIconSize(int);
     void slot_setTreeWidgetIconSize(int);
-    void slot_colorTriggerFg();
-    void slot_colorTriggerBg();
+    void slot_colorTriggerFg(int);
+    void slot_colorTriggerBg(int);
     void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
@@ -310,10 +336,24 @@ private slots:
     void slot_floatingChangedEditorItemsToolbar();
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
+    void slot_lineEditTriggerNameTextEdited();
+    void slot_lineEditTriggerCommandTextEdited();
+    void slot_triggerFireLengthEdited(int);
+    void slot_triggerPlaySoundEdited(bool);
+    void slot_triggerPlaySoundFileEdited(const QString &text);
+    void slot_triggerColorizerEdited(bool);
+    void slot_triggerPerlSlashGOptionEdited(bool);
+    void slot_triggerGroupFilterEdited(bool);
+    void slot_triggerMultiLineEdited(bool);
+    void slot_triggerLineMarginEdited(int);
+    void slot_triggerLinePatternItemEdited(int);
+    void slot_triggerLinePatternEdited(int);
+    void slot_triggerLineSpacerEdited(int);
 
 public:
     TConsole* mpErrorConsole = nullptr;
     bool mNeedUpdateData = false;
+    QUndoStack* getQUndoStack();
 
 private:
     void populateTriggers();
@@ -331,12 +371,6 @@ private:
     void saveAction();
     void readSettings();
     void writeSettings();
-    void addScript(bool);
-    void addAlias(bool);
-    void addTimer(bool);
-    void addTrigger(bool);
-    void addAction(bool);
-    void addKey(bool);
     void timerEvent(QTimerEvent *event) override;
 
     void selectTriggerByID(int id);
@@ -529,7 +563,10 @@ private:
     QAction* mDeleteItem = nullptr;
     QAction* mAddGroup = nullptr;
     QAction* mSaveItem = nullptr;
-
+    QAction* undoAction = nullptr;
+    QAction* redoAction = nullptr;
+    QUndoStack* undoStack = nullptr;
+    QUndoView* undoView = nullptr;
     SearchOptions mSearchOptions = SearchOptionNone;
 
     // This has a menu which the following QActions are inserted into:
@@ -594,6 +631,25 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+
+    QString mPrevTriggerName;
+    QString mPrevTriggerCommand;
+    int mPrevFireLength;
+    bool mPrevGroupBox_soundTrigger;
+    QString mPrevLineEdit_soundFile;
+    bool mPrevBox_triggerColorizer;
+    QColor mPrevfgColor;
+    QColor mPrevbgColor;
+    bool mPrevPerlSlashGOption;
+    bool mPrevFilterTrigger;
+    bool mPrevMultiLineTrigger;
+    int mPrevLineMargin;
+    int mPrevLineEditPattern;
+    QList<int> mpPrevTriggerPatternItemEdit;
+    QList<QString> mpPrevTriggerPatternEdit;
+    QList<int> mPrevLineSpacer;
+    QColor mPrevColorTriggerFgColor;
+    QColor mPrevColorTriggerBgColor;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

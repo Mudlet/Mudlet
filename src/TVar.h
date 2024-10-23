@@ -49,6 +49,7 @@ public:
     bool setName(const QString&, int);
     void setNewName(const QString&, int);
     void setReference(bool);
+    void setId(const int);
     QList<TVar*> getChildren(bool isToSort = true);
     TVar* getParent();
     QString getValue() const;
@@ -58,6 +59,7 @@ public:
     int getKeyType() const;
     int getNewKeyType() const;
     int getValueType() const;
+    int getId() const { return id; }
     bool isReference();
 
 public:
@@ -67,6 +69,7 @@ public:
     bool saved;
 
 private:
+    int id = 0;
     bool reference;
     QList<TVar*> children;
     TVar* parent;
@@ -102,7 +105,7 @@ inline QDebug& operator<<(QDebug& debug, const TVar* var)
     case LUA_TNONE: debug.nospace() << ", valueType=none"; break;
     case LUA_TNIL: debug.nospace() << ", valueType=nil"; break;
     case LUA_TBOOLEAN: debug.nospace() << ", valueType=boolean"; break;
-    case LUA_TLIGHTUSERDATA: debug.nospace() << ", valueType=lightuserdata"; break;  
+    case LUA_TLIGHTUSERDATA: debug.nospace() << ", valueType=lightuserdata"; break;
     case LUA_TNUMBER: debug.nospace() << ", valueType=number"; break;
     case LUA_TSTRING: debug.nospace() << ", valueType=string"; break;
     case LUA_TTABLE: debug.nospace() << ", valueType=table"; break;

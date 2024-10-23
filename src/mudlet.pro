@@ -770,6 +770,7 @@ HEADERS += \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
     dlgTriggerEditor.h \
+    dlgTriggerEditorCommand.h \
     dlgTriggerPatternEdit.h \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
