@@ -5450,6 +5450,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     lua_register(pGlobalLua, "findItems", TLuaInterpreter::findItems);
     lua_register(pGlobalLua, "holdingModifiers", TLuaInterpreter::holdingModifiers);
+    lua_register(pGlobalLua, "getProfiles", TLuaInterpreter::getProfiles);
+    lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

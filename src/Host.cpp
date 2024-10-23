@@ -1042,6 +1042,17 @@ void Host::updateConsolesFont()
 {
     if (mpConsole) {
         mpConsole->refreshView();
+
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysSettingChanged"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(qsl("main window font"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(mDisplayFont.family());
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QString::number(mDisplayFont.pointSize()));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        raiseEvent(event);
     }
 
     if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
@@ -3316,22 +3327,14 @@ bool Host::createBuffer(const QString& name)
     return false;
 }
 
-
+// Doesn't work on the errors or central debug consoles:
 bool Host::clearWindow(const QString& name)
 {
     if (!mpConsole) {
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mUpperPane->resetHScrollbar();
-        pC->buffer.clear();
-        pC->mUpperPane->update();
-        return true;
-    } else {
-        return false;
-    }
+    return mpConsole->clear(name);
 }
 
 bool Host::showWindow(const QString& name)
