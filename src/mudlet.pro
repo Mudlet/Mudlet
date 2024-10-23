@@ -74,7 +74,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
@@ -280,6 +280,37 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # commands for suboptions - change the value to 2 to get a bit more detail
 # about the size or nature of the command:
 DEFINES+=DEBUG_TELNET=1
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_UTF8_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+# it is not the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_GB_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+# single bytes of pure ASCII text:
+# DEFINES+=DEBUG_BIG5_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_EUC_KR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+# DEFINES+=DEBUG_SGR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# DEFINES+=DEBUG_OSC_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+# there is not much against this item at present {only an announcement of the
+# type (?) of an `\x1b[?z` received}:
+# DEFINES+=DEBUG_MXP_PROCESSING
+#
+# * Enable the features associated with reporting problems in processing Unicode
+# codepoints that cannot be displayed on screen in a `TConsole`:
+# DEFINES+=DEBUG_CODEPOINT_PROBLEMS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted

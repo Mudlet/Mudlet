@@ -63,6 +63,7 @@ public:
     void changeAllHostColour(const Host*);
     Iter begin() { return Iter(this, true); }
     Iter end() { return Iter(this, false); }
+    bool hostLoaded(const QString& hostname) const;
 
 private:
     HostMap mHostPool;

@@ -33,28 +33,6 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-// Define this to get qDebug() messages about the decoding of UTF-8 data when it
-// is not the single bytes of pure ASCII text:
-// #define DEBUG_UTF8_PROCESSING
-// Define this to get qDebug() messages about the decoding of GB2312/GBK/GB18030
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_GB_PROCESSING
-// Define this to get qDebug() messages about the decoding of BIG5
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_BIG5_PROCESSING
-// Define this to get qDebug() messages about the decoding of EUC-KR
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_EUC_KR_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI SGR sequences:
-// #define DEBUG_SGR_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI OSC sequences:
-// #define DEBUG_OSC_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI MXP sequences
-// although there is not much against this item at present {only an announcement
-// of the type (?) of an `\x1b[?z` received}:
-//#define DEBUG_MXP_PROCESSING
-
-
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(foreground)
 , mBgColor(background)
@@ -136,9 +114,6 @@ quint8 TChar::alternateFont() const
     }
     return 1;
 }
-
-const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
-const QString blankTimeStamp  = qsl("------------ ");
 
 // Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
@@ -846,7 +821,7 @@ COMMIT_LINE:
                     lineBuffer << QString();
                 }
                 buffer.push_back(mMudBuffer);
-                timeBuffer << QTime::currentTime().toString(timeStampFormat);
+                timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
@@ -863,7 +838,7 @@ COMMIT_LINE:
                     lineBuffer.back().append(QString());
                 }
                 buffer.back() = mMudBuffer;
-                timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+                timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
@@ -2243,7 +2218,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
+        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2269,7 +2244,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << blankTimeStamp;
+            timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2302,7 +2277,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << blankTimeStamp;
+                    timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2320,7 +2295,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                 linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2334,68 +2309,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
-
-// Wraps text to max line length of mWrapAt
-// Applies indentation of mWrapIndent to wrapped lines
-// If wrapLength <= indentWidth, emits a warning and returns unmodified text
-QString TBuffer::wrapText(const QString& text) const
-{
-    if (mWrapAt <= mWrapIndent) {
-        qWarning() << "Wrap (" << mWrapAt << ") is too small to accommodate Indent (" << mWrapIndent << ")";
-        return text;
-    }
-
-    QString wrappedText;
-    qsizetype curIndent = 0;
-    QTextBoundaryFinder lineFinder(QTextBoundaryFinder::Line, text);
-    const QString indentText = QChar::LineFeed + QString(" ").repeated(mWrapIndent);
-
-    for (qsizetype curLineStart = 0; curLineStart < text.size(); curLineStart++) {
-        // Find where the next line break is.
-        // The end of the input text also counts as a line break.
-        qsizetype nextLineBreak = text.indexOf(QChar::LineFeed, curLineStart);
-        if (nextLineBreak == -1) {
-            nextLineBreak = text.size();
-        }
-
-        // Find where the wrap window ends
-        const qsizetype wrapWindowEnd = curLineStart + mWrapAt - curIndent;
-
-        // If linebreak happens within wrap window:
-        // Clear indentation, write the line, and skip the rest of the steps
-        if (nextLineBreak < wrapWindowEnd) {
-            curIndent = 0;
-            const qsizetype lineWidth = nextLineBreak - curLineStart + 1;
-            wrappedText += text.mid(curLineStart, lineWidth);
-            curLineStart = nextLineBreak;
-            continue;
-        }
-
-        // Find a good place to break up this line
-        lineFinder.setPosition(wrapWindowEnd + 1);
-        lineFinder.toPreviousBoundary();
-        qsizetype safeLineEnd = lineFinder.position();
-
-        // If a single word is too long to fit in the wrap window:
-        // Write as much of it as possible
-        if (safeLineEnd <= curLineStart) {
-            safeLineEnd = wrapWindowEnd;
-        }
-
-        // Move start point forward, set indention level
-        const qsizetype lineWidth = safeLineEnd - curLineStart;
-        wrappedText += text.mid(curLineStart, lineWidth);
-        curIndent = mWrapIndent;
-        curLineStart = safeLineEnd - 1;
-
-        // Apply indentation, unless we've reached the end of the text
-        if (curLineStart < text.size()) {
-            wrappedText += indentText;
-        }
-    }
-    return wrappedText;
-}
-
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
@@ -2412,7 +2325,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
+        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2435,7 +2348,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << blankTimeStamp;
+            timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2469,7 +2382,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << blankTimeStamp;
+                    timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2483,7 +2396,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2512,7 +2425,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
+        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
         promptBuffer << false;
         lastLine = 0;
     }
@@ -2536,7 +2449,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2865,7 +2778,7 @@ void TBuffer::log(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(timeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(csmTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
 
@@ -3402,7 +3315,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(csmTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200, 150, 0);
@@ -3553,6 +3466,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
         switch (utf8SequenceLength) {
         case 4:
+            // Check the 4th byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
@@ -3584,13 +3498,14 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // Fall-through
             [[fallthrough]];
         case 3:
+            // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                 isValid = false;
                 isToUseReplacementMark = true;
-            } else if ((bufferData.at(pos) & 0x0F) == 0x0D) {
+            } else if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -3617,8 +3532,15 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
     * followed by a low surrogate). The majority of UTF-16 encoder and decoder
     * implementations translate between encodings as though this were the case
     * and Windows allows such sequences in filenames."
+    *
+    * So test for and, considering the LS Nibble of first byte:
+    * * accept if LS Nibble of first byte is             less than 0xD
+    * * accept if LS Nibble of first byte is greater than/equal to 0xE
+    * * otherwise (if LS Nibble of first byte IS 0xD)
+    *   * accept if 6 LS Bits of second byte is 0x1F of or less
+    * Conversely this can be stated as:
+    * * reject if LS Nibble of first byte is 0xD AND 6th MS Bit of second byte is set
     */
-// So test for and reject if LSN of first byte is 0xD!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
 #endif
@@ -3627,8 +3549,10 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             } else if (   (static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF)
                        && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB)
                        && (static_cast<quint8>(bufferData.at(pos    )) == 0xEF)) {
-// Got caught out by this one - it is the UTF-8 BOM and
-// needs to be ignored as it transcodes to NO codepoints!
+
+                // Got caught out by this one - it is the UTF-8 BOM (or
+                // Zero-Width No-Break Space) and needs to be detected specially
+                // as Qt's codec ignores it and transcodes it to NO codepoints!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) UTF-8 BOM sequence seen and handled!";
 #endif
@@ -3639,6 +3563,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // Fall-through
             [[fallthrough]];
         case 2:
+            // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";
