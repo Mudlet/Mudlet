@@ -6267,7 +6267,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function, bool multiline)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -6287,6 +6287,7 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
     pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
+    pT->setIsMultiline(multiline);
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
@@ -6295,7 +6296,7 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function, bool multiline)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -6315,6 +6316,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
+    pT->setIsMultiline(multiline);
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
@@ -6323,7 +6325,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, bool multiline)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -6343,6 +6345,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
+    pT->setIsMultiline(multiline);
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
