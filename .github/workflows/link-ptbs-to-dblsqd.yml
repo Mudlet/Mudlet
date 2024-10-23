@@ -42,7 +42,7 @@ jobs:
           cat "${LATEST_FEED}" | jq
         fi
 
-        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"linux\") | .url")
+        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "linux" and (.url | contains("-ptb-"))) | .url')
         export MACOS_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"macos\") | .url")
 
         echo "Linux PTB link: $LINUX_PTB_URL"
