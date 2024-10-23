@@ -126,7 +126,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
-      mkdir -p "${BUILLD_DIR}/upload/"
+      mkdir -p "${BUILD_DIR}/upload/"
       mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
       {
         echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
