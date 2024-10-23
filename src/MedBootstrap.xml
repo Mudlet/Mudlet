@@ -3,7 +3,7 @@
 <MudletPackage version="1.001">
 	<ScriptPackage>
 		<Script isActive="yes" isFolder="no">
-			<name>MedBootstrapMPKG</name>
+			<name>MedBootstrap</name>
 			<packageName></packageName>
 			<script>local meduiPackage = "MedUI"
 
