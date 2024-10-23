@@ -27,10 +27,12 @@
 #include <QPointer>
 #include <QTreeWidget>
 #include <QUndoStack>
+#include "dlgTriggerPatternEdit.h"
+#include "dlgTriggersMainArea.h"
 #include "post_guard.h"
 
 class Host;
-
+class dlgTriggerPatternEdit;
 
 class TTreeWidget : public QTreeWidget
 {
@@ -65,6 +67,10 @@ public:
     QTreeWidgetItem* mPrevParentItem;
     QTreeWidgetItem* mParentItem;
     QTreeWidgetItem* mdroppedItem;
+    dlgTriggersMainArea* mpTriggersMainArea = nullptr;
+    dlgTriggerPatternEdit* mpPatternItem;
+    dlgTriggerPatternEdit* mpTriggerPattern;
+    QMouseEvent* mouseEvent = nullptr;
 
 private:
     bool mIsDropAction;

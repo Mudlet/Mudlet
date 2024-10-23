@@ -2,6 +2,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "dlgTriggerEditor.h"
+#include "dlgTriggerPatternEdit.h"
 #include "mudlet.h"
 #include <QPointer>
 
@@ -977,14 +978,625 @@ TriggerNameTextEditedCommand::TriggerNameTextEditedCommand(dlgTriggersMainArea* 
 
 void TriggerNameTextEditedCommand::undo()
 {
-    qDebug() << "prev " << mPrevLineEdit_trigger_name;
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    // mpEditor->slot_triggerSelected(mpItem);
     mpTriggersMainArea->lineEdit_trigger_name->setText(mPrevLineEdit_trigger_name);
 }
 
 void TriggerNameTextEditedCommand::redo()
 {
-    qDebug() << "current " << mLineEdit_trigger_name;
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    // mpEditor->slot_triggerSelected(mpItem);
     mpTriggersMainArea->lineEdit_trigger_name->setText(mLineEdit_trigger_name);
     setText(QObject::tr("Edit trigger name"));
 }
 
+TriggerCommandTextEditedCommand::TriggerCommandTextEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerCommandTextEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->lineEdit_trigger_command->setText(mPrevLineEdit_trigger_command);
+}
+
+void TriggerCommandTextEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->lineEdit_trigger_command->setText(mLineEdit_trigger_command);
+    setText(QObject::tr("Edit trigger command"));
+}
+
+TriggerFireLengthEditedCommand::TriggerFireLengthEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerFireLengthEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->spinBox_stayOpen->blockSignals(true);
+    mpTriggersMainArea->spinBox_stayOpen->setValue(mPrevFireLength);
+    mpTriggersMainArea->spinBox_stayOpen->blockSignals(false);
+}
+
+void TriggerFireLengthEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->spinBox_stayOpen->blockSignals(true);
+    mpTriggersMainArea->spinBox_stayOpen->setValue(mFireLength);
+    mpTriggersMainArea->spinBox_stayOpen->blockSignals(false);
+    setText(QObject::tr("Edit fire length"));
+}
+
+TriggerPlaySoundEditedCommand::TriggerPlaySoundEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerPlaySoundEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_soundTrigger->blockSignals(true);
+    mpTriggersMainArea->groupBox_soundTrigger->setChecked(mPrevGroupBox_soundTrigger);
+    mpTriggersMainArea->groupBox_soundTrigger->blockSignals(false);
+}
+
+void TriggerPlaySoundEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_soundTrigger->blockSignals(true);
+    mpTriggersMainArea->groupBox_soundTrigger->setChecked(mGroupBox_soundTrigger);
+    mpTriggersMainArea->groupBox_soundTrigger->blockSignals(false);
+    setText(QObject::tr("Edit play sound"));
+}
+
+TriggerPlaySoundFileEditedCommand::TriggerPlaySoundFileEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerPlaySoundFileEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->lineEdit_soundFile->blockSignals(true);
+    mpTriggersMainArea->lineEdit_soundFile->setText(mPrevLineEdit_soundFile);
+    mpTriggersMainArea->lineEdit_soundFile->blockSignals(false);
+}
+
+void TriggerPlaySoundFileEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->lineEdit_soundFile->blockSignals(true);
+    mpTriggersMainArea->lineEdit_soundFile->setText(mLineEdit_soundFile);
+    mpTriggersMainArea->lineEdit_soundFile->blockSignals(false);
+    setText(QObject::tr("Edit play sound file"));
+}
+
+TriggerColorizerEditedCommand::TriggerColorizerEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerColorizerEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_triggerColorizer->blockSignals(true);
+    mpTriggersMainArea->groupBox_triggerColorizer->setChecked(mPrevBox_triggerColorizer);
+    mpTriggersMainArea->groupBox_triggerColorizer->blockSignals(false);
+}
+
+void TriggerColorizerEditedCommand::redo()
+{
+    mpTriggersMainArea->groupBox_triggerColorizer->blockSignals(true);
+    mpTriggersMainArea->groupBox_triggerColorizer->setChecked(mBox_triggerColorizer);
+    mpTriggersMainArea->groupBox_triggerColorizer->blockSignals(false);
+    setText(QObject::tr("Edit trigger colorizer"));
+}
+
+TriggerColorizerBgColorEditedCommand::TriggerColorizerBgColorEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerColorizerBgColorEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->pushButtonBgColor->blockSignals(true);
+    mpTriggersMainArea->pushButtonBgColor->setProperty("baseColor", mPrevbgColor);
+    const bool keepColor = mPrevbgColor == QColorConstants::Transparent.name();
+    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? mpEditor->tr("keep") : QString());
+    mpTriggersMainArea->pushButtonBgColor->setStyleSheet(mpEditor->generateButtonStyleSheet(mPrevbgColor));
+    mpTriggersMainArea->pushButtonBgColor->blockSignals(false);
+}
+
+void TriggerColorizerBgColorEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->pushButtonBgColor->blockSignals(true);
+    mpTriggersMainArea->pushButtonBgColor->setProperty("baseColor", mBgColor);
+    const bool keepColor = mBgColor == QColorConstants::Transparent.name();
+    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? mpEditor->tr("keep") : QString());
+    mpTriggersMainArea->pushButtonBgColor->setStyleSheet(mpEditor->generateButtonStyleSheet(mBgColor));
+    mpTriggersMainArea->pushButtonBgColor->blockSignals(false);
+    setText(QObject::tr("Edit trigger bg color"));
+}
+
+TriggerColorizerFgColorEditedCommand::TriggerColorizerFgColorEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerColorizerFgColorEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->pushButtonFgColor->blockSignals(true);
+    mpTriggersMainArea->pushButtonFgColor->setProperty("baseColor", mPrevfgColor);
+    const bool keepColor = mPrevfgColor == QColorConstants::Transparent.name();
+    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? mpEditor->tr("keep") : QString());
+    mpTriggersMainArea->pushButtonFgColor->setStyleSheet(mpEditor->generateButtonStyleSheet(mPrevfgColor));
+    mpTriggersMainArea->pushButtonFgColor->blockSignals(false);
+}
+
+void TriggerColorizerFgColorEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->pushButtonFgColor->blockSignals(true);
+    mpTriggersMainArea->pushButtonFgColor->setProperty("baseColor", mFgColor);
+    const bool keepColor = mFgColor == QColorConstants::Transparent.name();
+    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? mpEditor->tr("keep") : QString());
+    mpTriggersMainArea->pushButtonFgColor->setStyleSheet(mpEditor->generateButtonStyleSheet(mFgColor));
+    mpTriggersMainArea->pushButtonFgColor->blockSignals(false);
+    setText(QObject::tr("Edit trigger fg color"));
+}
+
+TriggerPerlSlashGOptionEditedCommand::TriggerPerlSlashGOptionEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerPerlSlashGOptionEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_perlSlashGOption->blockSignals(true);
+    mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(mPrevPerlSlashGOption);
+    mpTriggersMainArea->groupBox_perlSlashGOption->blockSignals(false);
+}
+
+void TriggerPerlSlashGOptionEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_perlSlashGOption->blockSignals(true);
+    mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(mPerlSlashGOption);
+    mpTriggersMainArea->groupBox_perlSlashGOption->blockSignals(false);
+    setText(QObject::tr("Edit Perl Option"));
+}
+
+TriggerGroupFilterEditedCommand::TriggerGroupFilterEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerGroupFilterEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_filterTrigger->blockSignals(true);
+    mpTriggersMainArea->groupBox_filterTrigger->setChecked(mPrevFilterTrigger);
+    mpTriggersMainArea->groupBox_filterTrigger->blockSignals(false);
+}
+
+void TriggerGroupFilterEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_filterTrigger->blockSignals(true);
+    mpTriggersMainArea->groupBox_filterTrigger->setChecked(mFilterTrigger);
+    mpTriggersMainArea->groupBox_filterTrigger->blockSignals(false);
+    setText(QObject::tr("Edit filter trigger"));
+}
+
+TriggerMultiLineEditedCommand::TriggerMultiLineEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerMultiLineEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_multiLineTrigger->blockSignals(true);
+    mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(mPrevMultiLineTrigger);
+    mpTriggersMainArea->groupBox_multiLineTrigger->blockSignals(false);
+}
+
+void TriggerMultiLineEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->groupBox_multiLineTrigger->blockSignals(true);
+    mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(mMultiLineTrigger);
+    mpTriggersMainArea->groupBox_multiLineTrigger->blockSignals(false);
+    setText(QObject::tr("Edit multiline trigger"));
+}
+
+TriggerLineMarginEditedCommand::TriggerLineMarginEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerLineMarginEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->spinBox_lineMargin->blockSignals(true);
+    mpTriggersMainArea->spinBox_lineMargin->setValue(mPrevLineMargin);
+    mpTriggersMainArea->spinBox_lineMargin->blockSignals(false);
+}
+
+void TriggerLineMarginEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpTriggersMainArea->spinBox_lineMargin->blockSignals(true);
+    mpTriggersMainArea->spinBox_lineMargin->setValue(mLineMargin);
+    mpTriggersMainArea->spinBox_lineMargin->blockSignals(false);
+    setText(QObject::tr("Edit line margin"));
+}
+
+TriggerLineEditPatternItemEditedCommand::TriggerLineEditPatternItemEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerLineEditPatternItemEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    // mpEditor->slot_triggerSelected(mpItem);
+    pBox->blockSignals(true);
+    pBox->setCurrentIndex(mPrevTriggerPatternEdit);
+    pBox->blockSignals(false);
+    pBox->currentIndexChanged(mPrevTriggerPatternEdit);
+    mpEditor->slot_saveSelectedItem(mpItem);
+}
+
+void TriggerLineEditPatternItemEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    // mpEditor->slot_triggerSelected(mpItem);
+    const int ID = mpItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpTriggerUnit->getTrigger(ID);
+    pBox->blockSignals(true);
+    pBox->setCurrentIndex(mTriggerPatternEdit);
+    pBox->blockSignals(false);
+    pBox->currentIndexChanged(mTriggerPatternEdit);
+    mpEditor->slot_saveSelectedItem(mpItem);
+    setText(QObject::tr("Edit line pattern"));
+}
+
+TriggerLineEditPatternEditedCommand::TriggerLineEditPatternEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerLineEditPatternEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpTriggerPattern->lineEdit_pattern->blockSignals(true);
+    // mpEditor->slot_triggerSelected(mpItem);
+    mpTriggerPattern->lineEdit_pattern->setText(mPrevLineEdit_trigger_pattern);
+    mpTriggerPattern->lineEdit_pattern->blockSignals(false);
+
+    if (!mPrevLineEdit_trigger_pattern.isEmpty()) {
+        dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow];
+        pPatternItem->lineEdit_pattern->setEnabled(true);
+    }
+    dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow + 1];
+    pPatternItem->lineEdit_pattern->blockSignals(true);
+    pPatternItem->lineEdit_pattern->setEnabled(false);
+    pPatternItem->lineEdit_pattern->blockSignals(false);
+}
+
+void TriggerLineEditPatternEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpTriggerPattern->lineEdit_pattern->blockSignals(true);
+    // mpEditor->slot_triggerSelected(mpItem);
+    mpTriggerPattern->lineEdit_pattern->setText(mLineEdit_trigger_pattern);
+
+    if (!mLineEdit_trigger_pattern.isEmpty()) {
+        dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow];
+        pPatternItem->lineEdit_pattern->setEnabled(true);
+    }
+    dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow + 1];
+    pPatternItem->lineEdit_pattern->blockSignals(true);
+    pPatternItem->lineEdit_pattern->setEnabled(true);
+    pPatternItem->lineEdit_pattern->blockSignals(false);
+    setText(QObject::tr("Edit trigger pattern"));
+}
+
+TriggerLineSpacerEditedCommand::TriggerLineSpacerEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerLineSpacerEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpPatternItem->spinBox_lineSpacer->blockSignals(true);
+    mpPatternItem->spinBox_lineSpacer->setValue(mPrevLineSpacer);
+    mpPatternItem->spinBox_lineSpacer->blockSignals(false);
+}
+
+void TriggerLineSpacerEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    mpPatternItem->spinBox_lineSpacer->blockSignals(true);
+    mpPatternItem->spinBox_lineSpacer->setValue(mLineSpacer);
+    mpPatternItem->spinBox_lineSpacer->blockSignals(false);
+    setText(QObject::tr("Edit line spacer"));
+}
+
+TriggerColorFGEditedCommand::TriggerColorFGEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerColorFGEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    // mpEditor->slot_triggerSelected(mpItem);
+    const int triggerID = mpItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpTriggerUnit->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    QString styleSheet;
+    if (mPrevColorTriggerFgColor.isValid()) {
+        styleSheet = mpEditor->generateButtonStyleSheet(mPrevColorTriggerFgColor);
+    }
+    mpPushButton->setStyleSheet(styleSheet);
+    qDebug() << mpPatternItem->mRow;
+    qDebug() << mpPatternItem->lineEdit_pattern->text();
+
+    mpPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+
+    if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
+        //: Color trigger ignored foreground color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Foreground color ignored"));
+    } else if (pT->mColorTriggerFgAnsi == TTrigger::scmDefault) {
+        //: Color trigger default foreground color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Default foreground color"));
+    } else {
+        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorTriggerFgAnsi)));
+    }
+    dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow + 1];
+    pPatternItem->lineEdit_pattern->blockSignals(true);
+    pPatternItem->lineEdit_pattern->setEnabled(false);
+    pPatternItem->lineEdit_pattern->blockSignals(false);
+}
+
+void TriggerColorFGEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    // mpEditor->slot_triggerSelected(mpItem);
+    const int triggerID = mpItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpTriggerUnit->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    QString styleSheet;
+    if (mColorTriggerFgColor.isValid()) {
+        styleSheet = mpEditor->generateButtonStyleSheet(mColorTriggerFgColor);
+    }
+    mpPushButton->setStyleSheet(styleSheet);
+    qDebug() << mpPatternItem->mRow;
+    mpPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+
+    if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
+        //: Color trigger ignored foreground color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Foreground color ignored"));
+    } else if (pT->mColorTriggerFgAnsi == TTrigger::scmDefault) {
+        //: Color trigger default foreground color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Default foreground color"));
+    } else {
+        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorTriggerFgAnsi)));
+    }
+    // if (!mLineEdit_trigger_pattern.isEmpty()) {
+    //     dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow];
+    //     pPatternItem->lineEdit_pattern->setEnabled(true);
+    // }
+    dlgTriggerPatternEdit* pPatternItem = mpTriggerPatternEdit[mRow + 1];
+    pPatternItem->lineEdit_pattern->blockSignals(true);
+    pPatternItem->lineEdit_pattern->setEnabled(true);
+    pPatternItem->lineEdit_pattern->blockSignals(false);
+    setText(QObject::tr("Edit FG Color"));
+}
+
+TriggerColorBGEditedCommand::TriggerColorBGEditedCommand(dlgTriggersMainArea* triggersMainArea, QUndoCommand* parent): QUndoCommand(parent)
+{
+    mpTriggersMainArea = triggersMainArea;
+}
+
+void TriggerColorBGEditedCommand::undo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    const int triggerID = mpItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpTriggerUnit->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    QString styleSheet;
+    if (mPrevColorTriggerBgColor.isValid()) {
+        styleSheet = mpEditor->generateButtonStyleSheet(mPrevColorTriggerBgColor);
+    }
+    mpPushButton->setStyleSheet(styleSheet);
+
+    mpPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+
+    if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
+        //: Color trigger ignored background color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Background color ignored"));
+    } else if (pT->mColorTriggerBgAnsi == TTrigger::scmDefault) {
+        //: Color trigger default background color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Default background color"));
+    } else {
+        //: Color trigger ANSI background color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Background color [ANSI %1]").arg(QString::number(pT->mColorTriggerBgAnsi)));
+    }
+}
+
+void TriggerColorBGEditedCommand::redo()
+{
+    if (!mpItem || !mpEditor) {
+        return;
+    }
+    mpTreeWidget_triggers->setCurrentItem(mpItem);
+    mpEditor->slot_triggerSelected(mpItem);
+    const int triggerID = mpItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpTriggerUnit->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    QString styleSheet;
+    if (mColorTriggerBgColor.isValid()) {
+        styleSheet = mpEditor->generateButtonStyleSheet(mColorTriggerBgColor);
+    }
+    mpPushButton->setStyleSheet(styleSheet);
+
+    mpPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+
+    if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
+        //: Color trigger ignored background color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Background color ignored"));
+    } else if (pT->mColorTriggerBgAnsi == TTrigger::scmDefault) {
+        //: Color trigger default background color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Default background color"));
+    } else {
+        //: Color trigger ANSI background color button, ensure all three instances have the same text
+        mpPushButton->setText(mpEditor->tr("Background color [ANSI %1]").arg(QString::number(pT->mColorTriggerBgAnsi)));
+    }
+    setText(QObject::tr("Edit BG Color"));
+}

@@ -314,8 +314,8 @@ public slots:
     void slot_profileSaveAsAction();
     void slot_setToolBarIconSize(int);
     void slot_setTreeWidgetIconSize(int);
-    void slot_colorTriggerFg();
-    void slot_colorTriggerBg();
+    void slot_colorTriggerFg(int);
+    void slot_colorTriggerBg(int);
     void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
@@ -337,6 +337,19 @@ private slots:
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
     void slot_lineEditTriggerNameTextEdited();
+    void slot_lineEditTriggerCommandTextEdited();
+    void slot_triggerFireLengthEdited(int);
+    void slot_triggerPlaySoundEdited(bool);
+    void slot_triggerPlaySoundFileEdited(const QString &text);
+    void slot_triggerColorizerEdited(bool);
+    void slot_triggerPerlSlashGOptionEdited(bool);
+    void slot_triggerGroupFilterEdited(bool);
+    void slot_triggerMultiLineEdited(bool);
+    void slot_triggerLineMarginEdited(int);
+    void slot_triggerLinePatternItemEdited(int);
+    void slot_triggerLinePatternEdited(int);
+    void slot_triggerLineSpacerEdited(int);
+
 public:
     TConsole* mpErrorConsole = nullptr;
     bool mNeedUpdateData = false;
@@ -618,8 +631,25 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
-    QString prevTriggerName;
-    TriggerNameTextEditedCommand* mpTriggerNameTextEditedCommand = nullptr;
+
+    QString mPrevTriggerName;
+    QString mPrevTriggerCommand;
+    int mPrevFireLength;
+    bool mPrevGroupBox_soundTrigger;
+    QString mPrevLineEdit_soundFile;
+    bool mPrevBox_triggerColorizer;
+    QColor mPrevfgColor;
+    QColor mPrevbgColor;
+    bool mPrevPerlSlashGOption;
+    bool mPrevFilterTrigger;
+    bool mPrevMultiLineTrigger;
+    int mPrevLineMargin;
+    int mPrevLineEditPattern;
+    QList<int> mpPrevTriggerPatternItemEdit;
+    QList<QString> mpPrevTriggerPatternEdit;
+    QList<int> mPrevLineSpacer;
+    QColor mPrevColorTriggerFgColor;
+    QColor mPrevColorTriggerBgColor;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
