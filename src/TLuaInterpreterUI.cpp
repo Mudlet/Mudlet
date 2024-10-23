@@ -272,21 +272,20 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearUserWindow
+// Note that this is registered as both clearUserWindow(...) AND clearWindow(...)
 int TLuaInterpreter::clearUserWindow(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        const Host& host = getHostFromLua(L);
-        host.mpConsole->mUpperPane->resetHScrollbar();
-        host.mpConsole->buffer.clear();
-        host.mpConsole->mUpperPane->showNewLines();
-        //host.mpConsole->mUpperPane->forceUpdate();
-        return 0;
+    QString windowName;
+    if (lua_gettop(L)) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
-    const QString text = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    host.clearWindow(text);
-
+    host.clearWindow(windowName);
+    // Note that exceptionally THIS function does not return a true/nil+error
+    // message on failure - because on success this could plonk a "true" on the
+    // main screen if run from the command line - which sort of messes with the
+    // idea of clearing it of text!
     return 0;
 }
 

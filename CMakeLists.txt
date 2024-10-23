@@ -39,7 +39,7 @@ if(APPLE)
   # needed for fetching Sparkle
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Qt6 for our Qt5/Qt6 build compatibility
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
 endif()
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake)
