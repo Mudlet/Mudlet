@@ -113,7 +113,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
-    QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
+    QAbstractButton* pButton_close = dialog_buttonbox->button(QDialogButtonBox::Close);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
     offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
@@ -121,10 +121,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
-    // the first and best place to test this as the "Cancel" button is a built-
+    // the first and best place to test this as the "Close" button is a built-
     // in dialog button which will have an icon if the current system style
     // settings suggest it:
-    mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
+    mudlet::self()->mShowIconsOnDialogs = !pButton_close->icon().isNull();
 
     auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
                                     "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
@@ -192,10 +192,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // actual icon in use.
         pWelcome_document->setHtml(qsl("<html><head/><body>%1</body></html>").arg(Welcome_text_template.arg(qsl("NEW_PROFILE_ICON"), qsl("CONNECT_PROFILE_ICON"))));
 
-        // As we are repurposing the cancel to be a close button we do want to
-        // change it anyhow:
-        abort->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
-
         const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
         const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
@@ -248,7 +244,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
-    connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
+    connect(pButton_close, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_close);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
@@ -1449,10 +1445,11 @@ void dlgConnectionProfiles::slot_passwordDeleted(QKeychain::Job* job)
     job->deleteLater();
 }
 
-void dlgConnectionProfiles::slot_cancel()
+void dlgConnectionProfiles::slot_close()
 {
     // QDialog::Rejected is the enum value (= 0) return value for a "cancelled"
-    // outcome...
+    // outcome... we are abusing it a bit here to mean close the dialogue
+    // without loading a profile but still saving other changes:
     QDialog::done(QDialog::Rejected);
 }
 
