@@ -708,6 +708,15 @@ void TConsole::refresh()
     QApplication::sendEvent(this, &event);
 }
 
+void TConsole::clear()
+{
+    mUpperPane->resetHScrollbar();
+    buffer.clear();
+    clearSplit();
+    mUpperPane->update();
+    mLowerPane->update();
+}
+
 void TConsole::clearSelection() const
 {
     mLowerPane->unHighlight();

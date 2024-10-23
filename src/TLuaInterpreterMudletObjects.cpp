@@ -54,6 +54,7 @@
 #include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
+#include "TGameDetails.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
@@ -848,15 +849,27 @@ int TLuaInterpreter::getScript(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
+    const int n = lua_gettop(L);
+    Host& host = getHostFromLua(L);
+    QString location = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
     const bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     const QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
+    if (n > 2) {
+        QString target = getVerifiedString(L, __func__, 3, "dialogLocation");
+        QDir dir(target);
+
+        if (dir.exists()) {
+            location = target;
+        }
+    }
+
     if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, QDir::currentPath());
+        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     } else {
-        const QString fileName = QFileDialog::getOpenFileName(nullptr, title, QDir::currentPath());
+        const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     }
@@ -2555,3 +2568,110 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfiles
+int TLuaInterpreter::getProfiles(lua_State* L)
+{
+    auto& hostManager = mudlet::self()->getHostManager();
+    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    lua_newtable(L);
+
+    for (const auto& profile : profiles) {
+        lua_pushstring(L, profile.toUtf8().constData());
+        lua_newtable(L);
+
+        QString url = mudlet::self()->readProfileData(profile, qsl("url"));
+        QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+
+        // if url/port haven't been written to disk yet (which is what happens
+        // when a default profile is opened for the first time), fetch this data from game details
+        if (url.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                url = (*it).hostUrl;
+            }
+        }
+        if (port.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                port = QString::number((*it).port);
+            }
+        }
+
+        if (!url.isEmpty()) {
+            lua_pushstring(L, "host");
+            lua_pushstring(L, url.toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        if (!port.isEmpty()) {
+            lua_pushstring(L, "port");
+            lua_pushstring(L, port.toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        auto host = hostManager.getHost(profile);
+        const auto loaded = static_cast<bool>(host);
+        lua_pushstring(L, "loaded");
+        lua_pushboolean(L, loaded);
+        lua_settable(L, -3);
+
+        if (loaded) {
+            auto [hostName, hostPort, connected] = host->mTelnet.getConnectionInfo();
+
+            lua_pushstring(L, "connected");
+            lua_pushboolean(L, connected);
+            lua_settable(L, -3);
+        }
+
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadProfile
+int TLuaInterpreter::loadProfile(lua_State* L)
+{
+    auto& hostManager = mudlet::self()->getHostManager();
+    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+    bool offline = false;
+
+    if (lua_gettop(L) > 1) {
+        offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
+    }
+
+    Host& host = getHostFromLua(L);
+
+    if (profileName.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "loadProfile: profile name cannot be empty");
+        return 2;
+    }
+
+    if (!mudlet::self()->profileExists(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    if (hostManager.hostLoaded(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "loadProfile: profile '%s' is already loaded", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    bool success = mudlet::self()->loadProfile(profileName, !offline);
+    mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
+    mudlet::self()->enableToolbarButtons();
+
+    if (!success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
