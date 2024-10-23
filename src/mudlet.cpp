@@ -643,7 +643,7 @@ void mudlet::init()
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
     connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showChangelog);
 #if defined(Q_OS_MACOS)
-    // ensure that 'Check for updates' and 'Changelog' is under the Applications menu per convention
+    // ensure that 'Check for updates' and 'Changelog' are under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
     dactionChangelog->setMenuRole(QAction::ApplicationSpecificRole);
 #else
