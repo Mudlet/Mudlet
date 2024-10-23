@@ -266,6 +266,8 @@ jobs:
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         sudo apt-get -y install pcregrep
         ${{github.workspace}}/CI/travis.validate_deployment.sh
@@ -273,6 +275,8 @@ jobs:
 
     - name: (macOS) Set build info
       if: runner.os == 'macOS'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         brew install pcre
         ${{github.workspace}}/CI/travis.validate_deployment.sh
