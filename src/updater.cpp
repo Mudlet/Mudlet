@@ -29,6 +29,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
+#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -77,7 +78,7 @@ void Updater::checkUpdatesOnStart()
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-          qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
+          qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
           if (updates.isEmpty()) {
               return;
           } else if (!updateAutomatically()) {
@@ -128,8 +129,20 @@ void Updater::showDialogManually() const
 
 void Updater::showChangelog() const
 {
+    if (!feed->isReady()) {
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() {
+            qDebug() << "Changelog dialog is being shown, feed is ready";
+            qDebug() << feed;
+            showChangelog(); });
+        feed->load();
+
+        return;
+    }
+
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
-    changelogDialog->setPreviousVersion(getPreviousVersion());
+    const auto previousVersion = getPreviousVersion();
+    qDebug() << "Updater::showChangelog() previous version is " << previousVersion;
+    changelogDialog->setPreviousVersion(previousVersion);
     changelogDialog->show();
 }
 
