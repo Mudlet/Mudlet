@@ -481,6 +481,7 @@ public:
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
     static int startLogging(lua_State*);
+    static int appendLog(lua_State*);
     static int calcFontWidth(int size);
     static int calcFontHeight(int size);
     static int calcFontSize(lua_State*);

@@ -1523,6 +1523,18 @@ int TLuaInterpreter::startLogging(lua_State* L)
     return 4;
 }
 
+int TLuaInterpreter::appendLog(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "text to append to logfile", true);
+
+    const Host& host = getHostFromLua(L);
+
+    host.mpConsole->buffer.appendLog(text);
+
+    return 0;
+}
+
+
 // No documentation available in wiki - internal function
 int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 {
@@ -5123,6 +5135,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableCommandLine", TLuaInterpreter::enableCommandLine);
     lua_register(pGlobalLua, "disableCommandLine", TLuaInterpreter::disableCommandLine);
     lua_register(pGlobalLua, "startLogging", TLuaInterpreter::startLogging);
+    lua_register(pGlobalLua, "appendLog", TLuaInterpreter::appendLog);
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);
     lua_register(pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger);
