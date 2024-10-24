@@ -1128,17 +1128,17 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    bool multiline = false;
+    int multilineDelta = -1;
     if (lua_gettop(L) > 4) {
-        multiline = getVerifiedBool(L, __func__, 5, "multiline-AND trigger type", true);
+        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
     } else {
         // Reproduce old, prior to 4.19, behaviour, in absence of flag:
         if (parent.isEmpty() && regList.count() > 1) {
-            multiline = true;
+            multilineDelta = 0;
         }
     }
 
-    auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script, multiline);
+    auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script, multilineDelta);
     if (triggerId == -1) {
         lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
@@ -1177,17 +1177,17 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    bool multiline = false;
+    int multilineDelta = -1;
     if (lua_gettop(L) > 4) {
-        multiline = getVerifiedBool(L, __func__, 5, "multiline-AND trigger type", true);
+        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
     } else {
         // Reproduce old, prior to 4.19, behaviour, in absence of flag:
         if (parent.isEmpty() && regList.count() > 1) {
-            multiline = true;
+            multilineDelta = 0;
         }
     }
 
-    auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script, multiline);
+    auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script, multilineDelta);
     if (triggerId == -1) {
         lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
@@ -1225,17 +1225,17 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    bool multiline = false;
+    int multilineDelta = -1;
     if (lua_gettop(L) > 4) {
-        multiline = getVerifiedBool(L, __func__, 5, "multiline-AND trigger type", true);
+        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
     } else {
         // Reproduce old, prior to 4.19, behaviour, in absence of flag:
         if (parent.isEmpty() && regList.count() > 1) {
-            multiline = true;
+            multilineDelta = 0;
         }
     }
 
-    auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script, multiline);
+    auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script, multilineDelta);
     if(triggerID == - 1) {
         lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
