@@ -547,7 +547,7 @@ void mudlet::init()
     });
 
 #if defined(INCLUDE_UPDATER)
-    // Show the chanlgelog/update options if the code is present AND if this is a
+    // Show the changelog and update options if the code is present AND if this is a
     // release OR a public test version:
     dactionUpdate->setVisible(releaseVersion || publicTestVersion);
     dactionChangelog->setVisible(releaseVersion || publicTestVersion);
