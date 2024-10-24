@@ -292,6 +292,8 @@ public:
     int getMaxBufferSize();
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
+    void appendLog(const QString &text);
+
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
