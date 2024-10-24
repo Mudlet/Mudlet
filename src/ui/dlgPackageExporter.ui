@@ -172,7 +172,7 @@
               <enum>Qt::StrongFocus</enum>
              </property>
              <property name="placeholderText">
-              <string>For attribution, displayed in the Package Manager.</string>
+              <string>For attribution, displayed in the Package Manager. Required.</string>
              </property>
             </widget>
            </item>
@@ -265,7 +265,7 @@
               <number>140</number>
              </property>
              <property name="placeholderText">
-              <string>One-line package description shown in the Package Manager.</string>
+              <string>One-line package description shown in the Package Manager. Required.</string>
              </property>
             </widget>
            </item>
@@ -325,7 +325,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
            <item row="4" column="1">
             <widget class="QLineEdit" name="lineEdit_version">
              <property name="placeholderText">
-              <string>optional</string>
+              <string>Version number. Required.</string>
              </property>
             </widget>
            </item>
