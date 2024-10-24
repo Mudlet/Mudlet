@@ -158,7 +158,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect" "mitchellh/gon/gon")
+        BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect")
 
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
