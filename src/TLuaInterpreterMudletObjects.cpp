@@ -1128,7 +1128,10 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    bool multiline = lua_isboolean(L, 5) ? lua_toboolean(L, 5) : false;
+    bool multiline = false;
+    if (lua_gettop(L) > 4) {
+        multiline = getVerifiedBool(L, __func__, 5, "multiline flag", true);
+    }
     auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script, multiline);
     if (triggerId == -1) {
         lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
@@ -1168,7 +1171,10 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    bool multiline = lua_isboolean(L, 5) ? lua_toboolean(L, 5) : false;
+    bool multiline = false;
+    if (lua_gettop(L) > 4) {
+        multiline = getVerifiedBool(L, __func__, 5, "multiline flag", true);
+    }
     auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script, multiline);
     if (triggerId == -1) {
         lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
@@ -1207,7 +1213,10 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    bool multiline = lua_isboolean(L, 5) ? lua_toboolean(L, 5) : false;
+    bool multiline = false;
+    if (lua_gettop(L) > 4) {
+        multiline = getVerifiedBool(L, __func__, 5, "multiline flag", true);
+    }
     auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script, multiline);
     if(triggerID == - 1) {
         lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
