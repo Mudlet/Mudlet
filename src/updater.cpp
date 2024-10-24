@@ -150,7 +150,7 @@ void Updater::finishSetup()
 void Updater::setupOnMacOS()
 {
     CocoaInitializer initializer;
-    msparkleUpdater = new SparkleAutoUpdater(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
+    msparkleUpdater = new SparkleAutoUpdater();
     // don't need to explicitly check for updates - sparkle will do so on its own
 }
 #endif // Q_OS_MACOS
