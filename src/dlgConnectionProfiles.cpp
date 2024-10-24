@@ -307,9 +307,13 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mAlignItemsInLayoutTimer.setSingleShot(true);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
     connect(&mAlignItemsInLayoutTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reorderItems);
+    profiles_tree_widget->setSpacing(3);
     fillout_form();
 
-    profiles_tree_widget->setSpacing(3);
+    // Run this once to capture the (vertical) geometry details of the layout
+    // of the items in the profiles_tree_widget - especially as we have just
+    // tweaked the inter-item spacing:
+    slot_reorderItems();
     QCoreApplication::instance()->installEventFilter(this);
 }
 
@@ -2277,9 +2281,25 @@ void dlgConnectionProfiles::slot_reorderItems()
     for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
         auto pItem = profiles_tree_widget->item(i);
         auto itemRect = profiles_tree_widget->visualItemRect(pItem);
-        QPair<int, int> itemInvertPos = qMakePair(itemRect.topLeft().y(), itemRect.topLeft().x());
+        const auto rawPosition = itemRect.topLeft();
+        QPair<int, int> itemInvertPos = qMakePair(rawPosition.y(), rawPosition.x());
         while (Q_UNLIKELY(positionMap.contains(itemInvertPos))) {
             itemInvertPos.second += 1;
+        }
+        if (mTopLeftCornerYOfFirstItemOnFirstRow < 0) {
+            // As the items will be snapped to grid on the first use we can
+            // immediately store this value:
+            mTopLeftCornerYOfFirstItemOnFirstRow = rawPosition.y();
+            mTopLeftCornerYOfFirstItemOnNextRow = mTopLeftCornerYOfFirstItemOnFirstRow;
+        }
+        if ((mTopLeftCornerYOfFirstItemOnFirstRow == mTopLeftCornerYOfFirstItemOnNextRow)
+            && (mTopLeftCornerYOfFirstItemOnNextRow < rawPosition.y())) {
+
+            mTopLeftCornerYOfFirstItemOnNextRow = rawPosition.y();
+            qDebug().nospace().noquote() << "dlgConnectionProfiles::slot_reorderItems() INFO - have identified that the offset to the top of the first row of items is: "
+                                         << mTopLeftCornerYOfFirstItemOnFirstRow
+                                         << " and the inter row gap is: "
+                                         << mTopLeftCornerYOfFirstItemOnNextRow - mTopLeftCornerYOfFirstItemOnFirstRow - 1;
         }
         positionMap.insert(itemInvertPos, i);
     }

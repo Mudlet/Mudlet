@@ -159,6 +159,27 @@ private:
     QString mSearchText;
     QTimer mAlignItemsInLayoutTimer;
     bool mAutoAlignIcons = true;
+    /* These are set after the first time the items are laid out to get the
+     * size and offset needed to "bin" the y coordinate of the position of each
+     * item. If there are not sufficient items to fill the first row then we
+     * will have to estimate the second - to, say
+     * +------------------------------~ =   -  -
+     * |                                #   |  |- topLeftCornerYOfFirstItemOnFirstRow (A)
+     * |  #----+  #----+  #----+  #---~ 1   |  _
+     * |  |    |  |    |  |    |  |     #   |
+     * |  +----+  +----+  +----+  +---~ #   |---- topLeftCornerYOfFirstItemOnNextRow (B)
+     * |                                =   |
+     * |  #----+  #----+  #----+  #---~ #   -
+     * |  |    |  |    |  |    |  |     2
+     * |  +----+  +----+  +----+  +---~ #
+     *                                  =
+     * If y of an item is in range 0 to (B - (A/2)) - 1 then make it be A
+     * If y of an item is in range (B - (A/2)) to (2B - (A/2)) - 1  then make it
+     * be A + ((B-A) * N) where N is the row.
+     *
+     */
+    int mTopLeftCornerYOfFirstItemOnFirstRow = -1;
+    int mTopLeftCornerYOfFirstItemOnNextRow = -1;
 
 
 private slots:
