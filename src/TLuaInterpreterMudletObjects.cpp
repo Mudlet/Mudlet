@@ -2618,10 +2618,38 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_settable(L, -3);
 
         if (loaded) {
-            auto [hostName, hostPort, connected] = host->mTelnet.getConnectionInfo();
+            auto [hostName, hostPort, state] = host->mTelnet.getConnectionInfo();
 
             lua_pushstring(L, "connected");
-            lua_pushboolean(L, connected);
+            lua_pushboolean(L, state == QAbstractSocket::ConnectedState);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "connectionState");
+            switch (state) {
+            case QAbstractSocket::UnconnectedState:
+                lua_pushstring(L, "Unconnected");
+                break;
+            case QAbstractSocket::HostLookupState:
+                lua_pushstring(L, "HostNameLookup");
+                break;
+            case QAbstractSocket::ConnectingState:
+                lua_pushstring(L, "Connecting");
+                break;
+            case QAbstractSocket::ConnectedState:
+                lua_pushstring(L, "Connected");
+                break;
+            case QAbstractSocket::BoundState:
+                lua_pushstring(L, "Bound");
+                break;
+            case QAbstractSocket::ClosingState:
+                lua_pushstring(L, "Closing");
+                break;
+            case QAbstractSocket::ListeningState:
+                lua_pushstring(L, "Listening");
+                break;
+            default:
+                lua_pushstring(L, "Unknown");
+            }
             lua_settable(L, -3);
         }
 
@@ -2642,7 +2670,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    Host& host = getHostFromLua(L);
+    getHostFromLua(L);
 
     if (profileName.isEmpty()) {
         lua_pushnil(L);

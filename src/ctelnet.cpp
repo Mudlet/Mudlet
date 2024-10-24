@@ -128,6 +128,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
+
+    connect(&socket, &QAbstractSocket::stateChanged, this, &cTelnet::slot_connectionStateChanged);
 }
 
 void cTelnet::reset()
@@ -943,16 +945,15 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
-std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
+std::tuple<QString, int, QAbstractSocket::SocketState> cTelnet::getConnectionInfo() const
 {
-    // intentionally simplify connection state to a boolean
-    const bool connected = socket.state() == QAbstractSocket::ConnectedState;
+    const auto state = socket.state();
 
     if (hostName.isEmpty() && hostPort == 0) {
-        return {mpHost->getUrl(), mpHost->getPort(), connected};
-    } else {
-        return {hostName, hostPort, connected};
+        return {mpHost->getUrl(), mpHost->getPort(), state};
     }
+
+    return {hostName, hostPort, state};
 }
 
 // escapes data to be send over NEW ENVIRON and MNES
@@ -4021,4 +4022,41 @@ void cTelnet::setPostingTimeout(const int timeout)
     }
 
     return {false, false};
+}
+
+void cTelnet::slot_connectionStateChanged(const QAbstractSocket::SocketState newState)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+
+    TEvent event{};
+    event.mArgumentList << QLatin1String("sysConnectionStateEvent");
+    switch (newState) {
+    case QAbstractSocket::UnconnectedState:
+        event.mArgumentList << QLatin1String("Unconnected");
+        break;
+    case QAbstractSocket::HostLookupState:
+        event.mArgumentList << QLatin1String("HostNameLookup");
+        break;
+    case QAbstractSocket::ConnectingState:
+        event.mArgumentList << QLatin1String("Connecting");
+        break;
+    case QAbstractSocket::ConnectedState:
+        event.mArgumentList << QLatin1String("Connected");
+        break;
+    case QAbstractSocket::BoundState:
+        event.mArgumentList << QLatin1String("Bound");
+        break;
+    case QAbstractSocket::ClosingState:
+        event.mArgumentList << QLatin1String("Closing");
+        break;
+    case QAbstractSocket::ListeningState:
+        event.mArgumentList << QLatin1String("Listening");
+        break;
+    default:
+        event.mArgumentList << QLatin1String("Unknown");
+    }
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    mpHost->raiseEvent(event);
 }

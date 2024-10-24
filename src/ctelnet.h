@@ -224,7 +224,7 @@ public:
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::tuple<QString, int, bool> getConnectionInfo() const;
+    std::tuple<QString, int, QAbstractSocket::SocketState> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
@@ -267,6 +267,8 @@ signals:
     void signal_connected(Host*);
     void signal_disconnected(Host*);
 
+private slots:
+    void slot_connectionStateChanged(const QAbstractSocket::SocketState);
 
 private:
     cTelnet() = default;
