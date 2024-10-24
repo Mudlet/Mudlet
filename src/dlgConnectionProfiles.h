@@ -90,7 +90,6 @@ public slots:
     void slot_updateAutoReconnect(int state);
     void slot_updateDiscordOptIn(int state);
     void slot_load();
-    void slot_close();
     void slot_copyProfile();
     void slot_copyOnlySettingsOfProfile();
     void indicatePackagesInstallOnConnect(QStringList packages);

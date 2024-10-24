@@ -244,7 +244,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
-    connect(pButton_close, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_close);
+    connect(pButton_close, &QAbstractButton::clicked, this, &dlgConnectionProfiles::reject);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
@@ -1443,14 +1443,6 @@ void dlgConnectionProfiles::slot_passwordDeleted(QKeychain::Job* job)
     }
 
     job->deleteLater();
-}
-
-void dlgConnectionProfiles::slot_close()
-{
-    // QDialog::Rejected is the enum value (= 0) return value for a "cancelled"
-    // outcome... we are abusing it a bit here to mean close the dialogue
-    // without loading a profile but still saving other changes:
-    QDialog::done(QDialog::Rejected);
 }
 
 void dlgConnectionProfiles::slot_copyProfile()
