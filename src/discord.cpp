@@ -33,7 +33,6 @@
 
 QString Discord::smUserName;
 QString Discord::smUserId;
-QString Discord::smDiscriminator;
 QString Discord::smAvatar;
 const QString Discord::mMudletApplicationId = qsl("450571881909583884");
 
@@ -270,7 +269,6 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Discord::smUserName = request->username;
     Discord::smUserId = request->userId;
-    Discord::smDiscriminator = request->discriminator;
     Discord::smAvatar = request->avatar;
 
 #if defined(DEBUG_DISCORD)
@@ -283,7 +281,7 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 QStringList Discord::getDiscordUserDetails() const
 {
     QStringList results;
-    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
+    results << Discord::smUserName << Discord::smUserId << Discord::smAvatar;
     results.detach();
     return results;
 }
@@ -334,11 +332,11 @@ void Discord::UpdatePresence()
         return;
     }
 
-    if (!pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator)) {
+    if (!pHost->discordUserIdMatch(Discord::smUserName)) {
         // Oh dear - the current Discord User does not match the required user
         // details (if set) - must abort
 #if defined(DEBUG_DISCORD)
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName/Discriminator does not match, not sending this update!";
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName does not match, not sending this update!";
 #endif
         return;
     }
@@ -687,5 +685,5 @@ bool Discord::usingMudletsDiscordID(Host* pHost) const
 
 bool Discord::discordUserIdMatch(Host* pHost) const
 {
-    return pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator);
+    return pHost->discordUserIdMatch(Discord::smUserName);
 }

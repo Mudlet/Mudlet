@@ -2790,17 +2790,13 @@ void Host::setDiscordInviteURL(const QString& s)
 
 // Compares the current discord username and discriminator against the non-empty
 // arguments. Returns true if neither match, otherwise false.
-bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
+bool Host::discordUserIdMatch(const QString& userName) const
 {
     if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
         return false;
     }
 
-    if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
-        return false;
-    } else {
-        return true;
-    }
+    return true;
 }
 
 QString  Host::getSpellDic()
