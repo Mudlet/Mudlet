@@ -92,19 +92,19 @@
       <translation>Falha ao salvar "%1" no módulo "%2". A mensagem de erro foi: "%3".</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1058"/>
+      <location filename="../src/Host.cpp" line="1069"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>%1 Muito obrigado por usar o beta público!</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1059"/>
+      <location filename="../src/Host.cpp" line="1070"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>%1 Ajude-nos a fazer o Mudlet melhor reportando qualquer problema.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1834"/>
+      <location filename="../src/Host.cpp" line="1845"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -113,7 +113,7 @@ please wait...</source>
 Por favor aguarde...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1836"/>
+      <location filename="../src/Host.cpp" line="1847"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -122,35 +122,35 @@ please wait...</source>
 Por favor aguarde...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1840"/>
+      <location filename="../src/Host.cpp" line="1851"/>
       <source>Unpacking</source>
       <translation>Desempacotando</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2614"/>
+      <location filename="../src/Host.cpp" line="2625"/>
       <source>Playing %1</source>
       <translation>Jogando %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2617"/>
-      <location filename="../src/Host.cpp" line="2624"/>
+      <location filename="../src/Host.cpp" line="2628"/>
+      <location filename="../src/Host.cpp" line="2635"/>
       <source>%1 at %2:%3</source>
       <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
       <translation>%1 de %2:%3</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3030"/>
-      <location filename="../src/Host.cpp" line="4080"/>
+      <location filename="../src/Host.cpp" line="3041"/>
+      <location filename="../src/Host.cpp" line="4091"/>
       <source>Map - %1</source>
       <translation>Mapa - %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="4096"/>
+      <location filename="../src/Host.cpp" line="4107"/>
       <source>Pre-Map loading(3) report</source>
       <translation>Relatório de Pré-Carregamento do Mapa(3)</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="4106"/>
+      <location filename="../src/Host.cpp" line="4117"/>
       <source>Loading map(3) at %1 report</source>
       <translation>Carregando mapa(3) em %1 reportar</translation>
     </message>
@@ -9433,6 +9433,11 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       <translation>&lt;p&gt;Abre o Fórum (on-line) do Mudlet no navegador do seu sistema.&lt;/p&gt;</translation>
     </message>
     <message>
+      <location filename="../src/ui/main_window.ui" line="275"/>
+      <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
       <source>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mostre ou oculte o mapa do jogo.&lt;/p&gt;</translation>
@@ -9458,63 +9463,63 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       <translation>&lt;p&gt;Reúna e agrupe coleções de itens Mudlet Lua e outros recursos em um módulo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="338"/>
+      <location filename="../src/ui/main_window.ui" line="332"/>
       <source>Mute all media</source>
       <translation>Silenciar todas as mídias</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="341"/>
+      <location filename="../src/ui/main_window.ui" line="335"/>
       <source>&lt;p&gt;Mutes all media played.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Silencia todas as mídias reproduzidas.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="355"/>
+      <location filename="../src/ui/main_window.ui" line="346"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
       <translation>Silenciar sons do Mudlet (gatilhos, scripts, etc.)</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="358"/>
+      <location filename="../src/ui/main_window.ui" line="349"/>
       <source>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Silencia a mídia reproduzida pela API Lua e scripts.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="389"/>
+      <location filename="../src/ui/main_window.ui" line="377"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ocultar / mostrar a área de pesquisa e os botões na parte inferior da tela.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="394"/>
+      <location filename="../src/ui/main_window.ui" line="382"/>
       <source>Discord</source>
       <translation>Discord</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="397"/>
+      <location filename="../src/ui/main_window.ui" line="385"/>
       <source>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Abra um link para o Discord.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="405"/>
+      <location filename="../src/ui/main_window.ui" line="393"/>
       <source>Discord help channel</source>
       <translation>Canal de ajuda do Discord</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="408"/>
+      <location filename="../src/ui/main_window.ui" line="396"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Abra um link para o servidor Mudlet no Discord.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="413"/>
-      <location filename="../src/ui/main_window.ui" line="416"/>
+      <location filename="../src/ui/main_window.ui" line="401"/>
+      <location filename="../src/ui/main_window.ui" line="404"/>
       <source>Report an issue</source>
       <translation>Relatar um problema</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="419"/>
+      <location filename="../src/ui/main_window.ui" line="407"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
       <translation>A compilação de teste público fornece recursos mais recentes para você mais rapidamente e você nos ajuda a encontrar problemas neles mais rapidamente. Viu algo estranho? Deixe-nos saber o mais rápido possível!</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="424"/>
+      <location filename="../src/ui/main_window.ui" line="412"/>
       <source>Close profile</source>
       <translation>Fechar perfil</translation>
     </message>
@@ -9576,7 +9581,6 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="238"/>
-      <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Abre um bate-papo IRC integrado.&lt;/p&gt;</translation>
     </message>
@@ -9616,28 +9620,28 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       <translation>Gerenciador de módulos</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="321"/>
+      <location filename="../src/ui/main_window.ui" line="318"/>
       <source>MultiView</source>
       <translation>Multiview</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="324"/>
+      <location filename="../src/ui/main_window.ui" line="321"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
       <translation>&lt;p&gt;Divide a tela do Mudlet para mostrar vários perfis de uma só vez; desabilitado quando menos de dois são carregados.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="372"/>
+      <location filename="../src/ui/main_window.ui" line="360"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
       <translation>Silenciar sons do jogo (MCMP, MSP)</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="375"/>
+      <location filename="../src/ui/main_window.ui" line="363"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Silencia a mídia reproduzida pelo jogo (MCMP, MSP).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/main_window.ui" line="386"/>
+      <location filename="../src/ui/main_window.ui" line="374"/>
       <source>Compact input line</source>
       <translation>Linha de entrada compacta</translation>
     </message>
@@ -9870,340 +9874,340 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
   <context>
     <name>mudlet</name>
     <message>
-      <location filename="../src/mudlet.cpp" line="838"/>
+      <location filename="../src/mudlet.cpp" line="846"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
       <translation>Africâner</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="839"/>
+      <location filename="../src/mudlet.cpp" line="847"/>
       <source>Afrikaans (South Africa)</source>
       <translation>Africâner (África do Sul)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="840"/>
+      <location filename="../src/mudlet.cpp" line="848"/>
       <source>Aragonese</source>
       <translation>Aragonês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="841"/>
+      <location filename="../src/mudlet.cpp" line="849"/>
       <source>Aragonese (Spain)</source>
       <translation>Aragonês (Espanha)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="842"/>
+      <location filename="../src/mudlet.cpp" line="850"/>
       <source>Arabic</source>
       <translation>Árabe</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="843"/>
+      <location filename="../src/mudlet.cpp" line="851"/>
       <source>Arabic (United Arab Emirates)</source>
       <translation>Árabe (Emirados Árabes Unidos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="844"/>
+      <location filename="../src/mudlet.cpp" line="852"/>
       <source>Arabic (Bahrain)</source>
       <translation>Árabe (Bahrein)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="845"/>
+      <location filename="../src/mudlet.cpp" line="853"/>
       <source>Arabic (Algeria)</source>
       <translation>Árabe (Argélia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="847"/>
+      <location filename="../src/mudlet.cpp" line="855"/>
       <source>Arabic (India)</source>
       <translation>Árabe (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="848"/>
+      <location filename="../src/mudlet.cpp" line="856"/>
       <source>Arabic (Iraq)</source>
       <translation>Árabe (Iraque)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="849"/>
+      <location filename="../src/mudlet.cpp" line="857"/>
       <source>Arabic (Jordan)</source>
       <translation>Árabe (Jordânia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="850"/>
+      <location filename="../src/mudlet.cpp" line="858"/>
       <source>Arabic (Kuwait)</source>
       <translation>Árabe (Kuwait)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="851"/>
+      <location filename="../src/mudlet.cpp" line="859"/>
       <source>Arabic (Lebanon)</source>
       <translation>Árabe (Líbano)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="852"/>
+      <location filename="../src/mudlet.cpp" line="860"/>
       <source>Arabic (Libya)</source>
       <translation>Árabe (Líbia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="853"/>
+      <location filename="../src/mudlet.cpp" line="861"/>
       <source>Arabic (Morocco)</source>
       <translation>Árabe (Marrocos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="854"/>
+      <location filename="../src/mudlet.cpp" line="862"/>
       <source>Arabic (Oman)</source>
       <translation>Árabe (Omã)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="855"/>
+      <location filename="../src/mudlet.cpp" line="863"/>
       <source>Arabic (Qatar)</source>
       <translation>Árabe (Qatar)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="856"/>
+      <location filename="../src/mudlet.cpp" line="864"/>
       <source>Arabic (Saudi Arabia)</source>
       <translation>Árabe (Arábia Saudita)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="857"/>
+      <location filename="../src/mudlet.cpp" line="865"/>
       <source>Arabic (Sudan)</source>
       <translation>Árabe (Sudão)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="858"/>
+      <location filename="../src/mudlet.cpp" line="866"/>
       <source>Arabic (Syria)</source>
       <translation>Árabe (Síria)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="859"/>
+      <location filename="../src/mudlet.cpp" line="867"/>
       <source>Arabic (Tunisia)</source>
       <translation>Árabe (Tunísia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="860"/>
+      <location filename="../src/mudlet.cpp" line="868"/>
       <source>Arabic (Yemen)</source>
       <translation>Árabe (Iêmen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="861"/>
+      <location filename="../src/mudlet.cpp" line="869"/>
       <source>Belarusian</source>
       <translation>Bielo-russo</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="862"/>
+      <location filename="../src/mudlet.cpp" line="870"/>
       <source>Belarusian (Belarus)</source>
       <translation>Bielorrusso (Bielorrússia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="863"/>
+      <location filename="../src/mudlet.cpp" line="871"/>
       <source>Belarusian (Russia)</source>
       <translation>Bielorrusso (Rússia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="864"/>
+      <location filename="../src/mudlet.cpp" line="872"/>
       <source>Bulgarian</source>
       <translation>Búlgaro</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="865"/>
+      <location filename="../src/mudlet.cpp" line="873"/>
       <source>Bulgarian (Bulgaria)</source>
       <translation>Búlgaro (Bulgária)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="866"/>
+      <location filename="../src/mudlet.cpp" line="874"/>
       <source>Bangla</source>
       <translation>Bangla</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="867"/>
+      <location filename="../src/mudlet.cpp" line="875"/>
       <source>Bangla (Bangladesh)</source>
       <translation>Bangla (Bangladesh)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="868"/>
+      <location filename="../src/mudlet.cpp" line="876"/>
       <source>Bangla (India)</source>
       <translation>Bangla (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="869"/>
+      <location filename="../src/mudlet.cpp" line="877"/>
       <source>Tibetan</source>
       <translation>Tibetano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="870"/>
+      <location filename="../src/mudlet.cpp" line="878"/>
       <source>Tibetan (China)</source>
       <translation>Tibetano (China)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="871"/>
+      <location filename="../src/mudlet.cpp" line="879"/>
       <source>Tibetan (India)</source>
       <translation>Tibetano (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="872"/>
+      <location filename="../src/mudlet.cpp" line="880"/>
       <source>Breton</source>
       <translation>Bretão</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="873"/>
+      <location filename="../src/mudlet.cpp" line="881"/>
       <source>Breton (France)</source>
       <translation>Bretão (França)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="874"/>
+      <location filename="../src/mudlet.cpp" line="882"/>
       <source>Bosnian</source>
       <translation>Bósnio</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="875"/>
+      <location filename="../src/mudlet.cpp" line="883"/>
       <source>Bosnian (Bosnia/Herzegovina)</source>
       <translation>Bósnio (Bósnia/Herzegovina)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="876"/>
+      <location filename="../src/mudlet.cpp" line="884"/>
       <source>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</source>
       <translation>Bósnio (Bósnia/Herzegovina - alfabeto cirílico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="877"/>
+      <location filename="../src/mudlet.cpp" line="885"/>
       <source>Catalan</source>
       <translation>Catalão</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="878"/>
+      <location filename="../src/mudlet.cpp" line="886"/>
       <source>Catalan (Spain)</source>
       <translation>Catalão (Espanha)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="879"/>
+      <location filename="../src/mudlet.cpp" line="887"/>
       <source>Catalan (Spain - Valencian)</source>
       <translation>Catalão (Espanha - Valenciano)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="880"/>
+      <location filename="../src/mudlet.cpp" line="888"/>
       <source>Central Kurdish</source>
       <translation>Curdo Central</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="881"/>
+      <location filename="../src/mudlet.cpp" line="889"/>
       <source>Central Kurdish (Iraq)</source>
       <translation>Curdo Central (Iraque)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="882"/>
+      <location filename="../src/mudlet.cpp" line="890"/>
       <source>Czech</source>
       <translation>Tcheco</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="883"/>
+      <location filename="../src/mudlet.cpp" line="891"/>
       <source>Czech (Czechia)</source>
       <translation>Tcheco (República Tcheca)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="886"/>
+      <location filename="../src/mudlet.cpp" line="894"/>
       <source>Danish</source>
       <translation>Dinamarquês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="887"/>
+      <location filename="../src/mudlet.cpp" line="895"/>
       <source>Danish (Denmark)</source>
       <translation>Dinamarquês (Dinamarca)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="888"/>
+      <location filename="../src/mudlet.cpp" line="896"/>
       <source>German</source>
       <translation>Alemão</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="889"/>
+      <location filename="../src/mudlet.cpp" line="897"/>
       <source>German (Austria)</source>
       <translation>Alemão (Áustria)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="890"/>
+      <location filename="../src/mudlet.cpp" line="898"/>
       <source>German (Austria, revised by F M Baumann)</source>
       <translation>Alemão (Áustria, revisado por FM Baumann)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="891"/>
+      <location filename="../src/mudlet.cpp" line="899"/>
       <source>German (Belgium)</source>
       <translation>Alemão (Bélgica)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="892"/>
+      <location filename="../src/mudlet.cpp" line="900"/>
       <source>German (Switzerland)</source>
       <translation>Alemão (Suíça)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="893"/>
+      <location filename="../src/mudlet.cpp" line="901"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
       <translation>Alemão (Suíça, revisado por FM Baumann)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="894"/>
+      <location filename="../src/mudlet.cpp" line="902"/>
       <source>German (Germany/Belgium/Luxemburg)</source>
       <translation>Alemão (Alemanha/Bélgica/Luxemburgo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="895"/>
+      <location filename="../src/mudlet.cpp" line="903"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
       <translation>Alemão (Alemanha/Bélgica/Luxemburgo, revisado por F. M. Baumann)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="896"/>
+      <location filename="../src/mudlet.cpp" line="904"/>
       <source>German (Liechtenstein)</source>
       <translation>Alemão (Liechtenstein)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="897"/>
+      <location filename="../src/mudlet.cpp" line="905"/>
       <source>German (Luxembourg)</source>
       <translation>Alemão (Luxemburgo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="900"/>
+      <location filename="../src/mudlet.cpp" line="908"/>
       <source>Greek</source>
       <translation>Grego</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="901"/>
+      <location filename="../src/mudlet.cpp" line="909"/>
       <source>Greek (Greece)</source>
       <translation>Grego (Grécia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="902"/>
+      <location filename="../src/mudlet.cpp" line="910"/>
       <source>English</source>
       <translation>Inglês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="903"/>
+      <location filename="../src/mudlet.cpp" line="911"/>
       <source>English (Antigua/Barbuda)</source>
       <translation>Inglês (Antígua/Barbuda)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="904"/>
+      <location filename="../src/mudlet.cpp" line="912"/>
       <source>English (Australia)</source>
       <translation>Português (Austrália)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="906"/>
+      <location filename="../src/mudlet.cpp" line="914"/>
       <source>English (Bahamas)</source>
       <translation>Português (Bahamas)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="907"/>
+      <location filename="../src/mudlet.cpp" line="915"/>
       <source>English (Botswana)</source>
       <translation>Português (Botswana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="908"/>
+      <location filename="../src/mudlet.cpp" line="916"/>
       <source>English (Belize)</source>
       <translation>Inglês (Belize)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="846"/>
+      <location filename="../src/mudlet.cpp" line="854"/>
       <source>Arabic (Egypt)</source>
       <translation>Árabe (Egito)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="263"/>
       <location filename="../src/mudlet.cpp" line="265"/>
-      <location filename="../src/mudlet.cpp" line="632"/>
+      <location filename="../src/mudlet.cpp" line="640"/>
       <source>Close profile</source>
       <translation>Fechar perfil</translation>
     </message>
@@ -10215,16 +10219,16 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
       <location filename="../src/mudlet.cpp" line="327"/>
-      <location filename="../src/mudlet.cpp" line="628"/>
-      <location filename="../src/mudlet.cpp" line="3034"/>
-      <location filename="../src/mudlet.cpp" line="3037"/>
+      <location filename="../src/mudlet.cpp" line="636"/>
+      <location filename="../src/mudlet.cpp" line="3104"/>
+      <location filename="../src/mudlet.cpp" line="3107"/>
       <source>Mute all media</source>
       <translation>Silenciar todas as mídias</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="331"/>
       <location filename="../src/mudlet.cpp" line="333"/>
-      <location filename="../src/mudlet.cpp" line="3068"/>
+      <location filename="../src/mudlet.cpp" line="3138"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
       <translation>Silenciar sons do Mudlet (gatilhos, scripts, etc.)</translation>
     </message>
@@ -10239,478 +10243,483 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       <translation>Abra um link para o servidor Mudlet no Discord</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="453"/>
+      <location filename="../src/mudlet.cpp" line="454"/>
       <source>Report issue</source>
       <translation>Relatar problema</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="620"/>
+      <location filename="../src/mudlet.cpp" line="480"/>
+      <source>Full Screen</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="628"/>
       <source>Script editor</source>
       <translation>Editor de scripts</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="621"/>
+      <location filename="../src/mudlet.cpp" line="629"/>
       <source>Show Map</source>
       <translation>Mostrar mapa</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="622"/>
+      <location filename="../src/mudlet.cpp" line="630"/>
       <source>Compact input line</source>
       <translation>Linha de entrada compacta</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="623"/>
+      <location filename="../src/mudlet.cpp" line="631"/>
       <source>Preferences</source>
       <translation>Preferências</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="625"/>
+      <location filename="../src/mudlet.cpp" line="633"/>
       <source>Package manager</source>
       <translation>Gerenciador de pacotes</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="626"/>
+      <location filename="../src/mudlet.cpp" line="634"/>
       <source>Module manager</source>
       <translation>Gerenciador de módulos</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="629"/>
+      <location filename="../src/mudlet.cpp" line="637"/>
       <source>Play</source>
       <translation>Jogar</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="884"/>
+      <location filename="../src/mudlet.cpp" line="892"/>
       <source>Welsh</source>
       <translation>Galês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="885"/>
+      <location filename="../src/mudlet.cpp" line="893"/>
       <source>Welsh (United Kingdom {Wales})</source>
       <translation>Galês (Reino Unido {Wales})</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="898"/>
+      <location filename="../src/mudlet.cpp" line="906"/>
       <source>Dzongkha</source>
       <translation>Dzongkha</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="899"/>
+      <location filename="../src/mudlet.cpp" line="907"/>
       <source>Dzongkha (Bhutan)</source>
       <translation>Dzongkha (Butão)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="905"/>
+      <location filename="../src/mudlet.cpp" line="913"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Inglês (Austrália, Grande)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="909"/>
+      <location filename="../src/mudlet.cpp" line="917"/>
       <source>English (Canada)</source>
       <translation>Inglês (Canadá)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="910"/>
+      <location filename="../src/mudlet.cpp" line="918"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Inglês (Canadá, Grande)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="911"/>
+      <location filename="../src/mudlet.cpp" line="919"/>
       <source>English (Denmark)</source>
       <translation>Inglês (Dinamarca)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="912"/>
+      <location filename="../src/mudlet.cpp" line="920"/>
       <source>English (United Kingdom)</source>
       <translation>Português (Reino Unido)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="913"/>
+      <location filename="../src/mudlet.cpp" line="921"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Inglês (Reino Unido, Grande)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="914"/>
+      <location filename="../src/mudlet.cpp" line="922"/>
       <source>English (United Kingdom - &apos;ise&apos; not &apos;ize&apos;)</source>
       <comment>This dictionary prefers the British &apos;ise&apos; form over the American &apos;ize&apos; one.</comment>
       <translation>Inglês (Reino Unido - &apos;Ise&apos; não &apos;Ize&apos;)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="915"/>
+      <location filename="../src/mudlet.cpp" line="923"/>
       <source>English (Ghana)</source>
       <translation>Inglês (Gana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="916"/>
+      <location filename="../src/mudlet.cpp" line="924"/>
       <source>English (Hong Kong SAR China)</source>
       <translation>Inglês (Hong Kong, RAE da China)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="917"/>
+      <location filename="../src/mudlet.cpp" line="925"/>
       <source>English (Ireland)</source>
       <translation>Inglês (Irlanda)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="918"/>
+      <location filename="../src/mudlet.cpp" line="926"/>
       <source>English (India)</source>
       <translation>Inglês (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="919"/>
+      <location filename="../src/mudlet.cpp" line="927"/>
       <source>English (Jamaica)</source>
       <translation>Inglês (Jamaica)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="920"/>
+      <location filename="../src/mudlet.cpp" line="928"/>
       <source>English (Namibia)</source>
       <translation>Inglês (Namíbia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="921"/>
+      <location filename="../src/mudlet.cpp" line="929"/>
       <source>English (Nigeria)</source>
       <translation>Inglês (Nigéria)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="922"/>
+      <location filename="../src/mudlet.cpp" line="930"/>
       <source>English (New Zealand)</source>
       <translation>Inglês (Nova Zelândia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="923"/>
+      <location filename="../src/mudlet.cpp" line="931"/>
       <source>English (Philippines)</source>
       <translation>Inglês (Filipinas)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="924"/>
+      <location filename="../src/mudlet.cpp" line="932"/>
       <source>English (Singapore)</source>
       <translation>Inglês (Cingapura)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="925"/>
+      <location filename="../src/mudlet.cpp" line="933"/>
       <source>English (Trinidad/Tobago)</source>
       <translation>Inglês (Trindade/Tobago)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="926"/>
+      <location filename="../src/mudlet.cpp" line="934"/>
       <source>English (United States)</source>
       <translation>Inglês (Estados Unidos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="927"/>
+      <location filename="../src/mudlet.cpp" line="935"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Inglês (Estados Unidos, Grande)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="928"/>
+      <location filename="../src/mudlet.cpp" line="936"/>
       <source>English (South Africa)</source>
       <translation>Inglês (África do Sul)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="929"/>
+      <location filename="../src/mudlet.cpp" line="937"/>
       <source>English (Zimbabwe)</source>
       <translation>Inglês (Zimbábue)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="930"/>
+      <location filename="../src/mudlet.cpp" line="938"/>
       <source>Spanish</source>
       <translation>Espanhol</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="931"/>
+      <location filename="../src/mudlet.cpp" line="939"/>
       <source>Spanish (Argentina)</source>
       <translation>Espanhol (Argentina)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="932"/>
+      <location filename="../src/mudlet.cpp" line="940"/>
       <source>Spanish (Bolivia)</source>
       <translation>Espanhol (Bolívia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="933"/>
+      <location filename="../src/mudlet.cpp" line="941"/>
       <source>Spanish (Chile)</source>
       <translation>Espanhol (Chile)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="934"/>
+      <location filename="../src/mudlet.cpp" line="942"/>
       <source>Spanish (Colombia)</source>
       <translation>Espanhol (Colômbia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="935"/>
+      <location filename="../src/mudlet.cpp" line="943"/>
       <source>Spanish (Costa Rica)</source>
       <translation>Espanhol (Costa Rica)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="936"/>
+      <location filename="../src/mudlet.cpp" line="944"/>
       <source>Spanish (Cuba)</source>
       <translation>Espanhol (Cuba)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="937"/>
+      <location filename="../src/mudlet.cpp" line="945"/>
       <source>Spanish (Dominican Republic)</source>
       <translation>Espanhol (República Dominicana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="938"/>
+      <location filename="../src/mudlet.cpp" line="946"/>
       <source>Spanish (Ecuador)</source>
       <translation>Espanhol (Equador)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="939"/>
+      <location filename="../src/mudlet.cpp" line="947"/>
       <source>Spanish (Spain)</source>
       <translation>Espanhol (Espanha)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="940"/>
+      <location filename="../src/mudlet.cpp" line="948"/>
       <source>Spanish (Guatemala)</source>
       <translation>Espanhol (Guatemala)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="941"/>
+      <location filename="../src/mudlet.cpp" line="949"/>
       <source>Spanish (Honduras)</source>
       <translation>Espanhol (Honduras)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="942"/>
+      <location filename="../src/mudlet.cpp" line="950"/>
       <source>Spanish (Mexico)</source>
       <translation>Espanhol (México)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="943"/>
+      <location filename="../src/mudlet.cpp" line="951"/>
       <source>Spanish (Nicaragua)</source>
       <translation>Espanhol (Nicarágua)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="944"/>
+      <location filename="../src/mudlet.cpp" line="952"/>
       <source>Spanish (Panama)</source>
       <translation>Espanhol (Panamá)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="945"/>
+      <location filename="../src/mudlet.cpp" line="953"/>
       <source>Spanish (Peru)</source>
       <translation>Espanhol (Peru)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="946"/>
+      <location filename="../src/mudlet.cpp" line="954"/>
       <source>Spanish (Puerto Rico)</source>
       <translation>Espanhol (Porto Rico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="947"/>
+      <location filename="../src/mudlet.cpp" line="955"/>
       <source>Spanish (Paraguay)</source>
       <translation>Espanhol (Paraguai)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="948"/>
+      <location filename="../src/mudlet.cpp" line="956"/>
       <source>Spanish (El Savador)</source>
       <translation>Espanhol (El Salvador)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="949"/>
+      <location filename="../src/mudlet.cpp" line="957"/>
       <source>Spanish (United States)</source>
       <translation>Espanhol (Estados Unidos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="950"/>
+      <location filename="../src/mudlet.cpp" line="958"/>
       <source>Spanish (Uruguay)</source>
       <translation>Espanhol (Uruguai)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="951"/>
+      <location filename="../src/mudlet.cpp" line="959"/>
       <source>Spanish (Venezuela)</source>
       <translation>Espanhol (Venezuela)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="952"/>
+      <location filename="../src/mudlet.cpp" line="960"/>
       <source>Estonian</source>
       <translation>Estoniano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="953"/>
+      <location filename="../src/mudlet.cpp" line="961"/>
       <source>Estonian (Estonia)</source>
       <translation>Estoniano (Estônia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="954"/>
+      <location filename="../src/mudlet.cpp" line="962"/>
       <source>Basque</source>
       <translation>Basco</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="955"/>
+      <location filename="../src/mudlet.cpp" line="963"/>
       <source>Basque (Spain)</source>
       <translation>Basco (Espanha)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="956"/>
+      <location filename="../src/mudlet.cpp" line="964"/>
       <source>Basque (France)</source>
       <translation>Basco (França)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="957"/>
-      <location filename="../src/mudlet.cpp" line="958"/>
+      <location filename="../src/mudlet.cpp" line="965"/>
+      <location filename="../src/mudlet.cpp" line="966"/>
       <source>Finnish</source>
       <translation>Finlandês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="959"/>
-      <location filename="../src/mudlet.cpp" line="963"/>
+      <location filename="../src/mudlet.cpp" line="967"/>
+      <location filename="../src/mudlet.cpp" line="971"/>
       <source>French</source>
       <translation>Francês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="964"/>
+      <location filename="../src/mudlet.cpp" line="972"/>
       <source>French (Belgium)</source>
       <translation>Francês (Bélgica)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="965"/>
+      <location filename="../src/mudlet.cpp" line="973"/>
       <source>French (Catalan)</source>
       <translation>Francês (Catalão)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="966"/>
+      <location filename="../src/mudlet.cpp" line="974"/>
       <source>French (Switzerland)</source>
       <translation>Francês (Suíça)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="967"/>
+      <location filename="../src/mudlet.cpp" line="975"/>
       <source>French (France)</source>
       <translation>Francês (França)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="968"/>
+      <location filename="../src/mudlet.cpp" line="976"/>
       <source>French (Luxemburg)</source>
       <translation>Francês (Luxemburgo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="969"/>
+      <location filename="../src/mudlet.cpp" line="977"/>
       <source>French (Monaco)</source>
       <translation>Francês (Mônaco)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="970"/>
+      <location filename="../src/mudlet.cpp" line="978"/>
       <source>Irish</source>
       <translation>Irlandês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="971"/>
+      <location filename="../src/mudlet.cpp" line="979"/>
       <source>Gaelic</source>
       <translation>Gaélico</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="972"/>
+      <location filename="../src/mudlet.cpp" line="980"/>
       <source>Gaelic (United Kingdom {Scots})</source>
       <translation>Gaélico (Reino Unido {Scots})</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="973"/>
+      <location filename="../src/mudlet.cpp" line="981"/>
       <source>Galician</source>
       <translation>Galego</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="974"/>
+      <location filename="../src/mudlet.cpp" line="982"/>
       <source>Galician (Spain)</source>
       <translation>Galego (Espanha)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="975"/>
-      <location filename="../src/mudlet.cpp" line="980"/>
+      <location filename="../src/mudlet.cpp" line="983"/>
+      <location filename="../src/mudlet.cpp" line="988"/>
       <source>Guarani</source>
       <translation>Guarani</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="976"/>
-      <location filename="../src/mudlet.cpp" line="981"/>
+      <location filename="../src/mudlet.cpp" line="984"/>
+      <location filename="../src/mudlet.cpp" line="989"/>
       <source>Guarani (Paraguay)</source>
       <translation>Guarani (Paraguai)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="977"/>
+      <location filename="../src/mudlet.cpp" line="985"/>
       <source>Gujarati</source>
       <translation>Guzerate</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="978"/>
+      <location filename="../src/mudlet.cpp" line="986"/>
       <source>Gujarati (India)</source>
       <translation>Gujarati (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="982"/>
+      <location filename="../src/mudlet.cpp" line="990"/>
       <source>Hebrew</source>
       <translation>Hebraico</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="983"/>
+      <location filename="../src/mudlet.cpp" line="991"/>
       <source>Hebrew (Israel)</source>
       <translation>Hebraico (Israel)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="984"/>
+      <location filename="../src/mudlet.cpp" line="992"/>
       <source>Hindi</source>
       <translation>Hindi</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="985"/>
+      <location filename="../src/mudlet.cpp" line="993"/>
       <source>Hindi (India)</source>
       <translation>Hindi (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="986"/>
+      <location filename="../src/mudlet.cpp" line="994"/>
       <source>Croatian</source>
       <translation>Croata</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="987"/>
+      <location filename="../src/mudlet.cpp" line="995"/>
       <source>Croatian (Croatia)</source>
       <translation>Croata (Croácia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="988"/>
+      <location filename="../src/mudlet.cpp" line="996"/>
       <source>Hungarian</source>
       <translation>Húngaro</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="989"/>
+      <location filename="../src/mudlet.cpp" line="997"/>
       <source>Hungarian (Hungary)</source>
       <translation>Húngaro (Hungria)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="990"/>
+      <location filename="../src/mudlet.cpp" line="998"/>
       <source>Armenian</source>
       <translation>Armênio</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="991"/>
+      <location filename="../src/mudlet.cpp" line="999"/>
       <source>Armenian (Armenia)</source>
       <translation>Armênio (Armênia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="992"/>
+      <location filename="../src/mudlet.cpp" line="1000"/>
       <source>Indonesian</source>
       <translation>Indonésio</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="993"/>
+      <location filename="../src/mudlet.cpp" line="1001"/>
       <source>Indonesian (Indonesia)</source>
       <translation>Indonésio (Indonésia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1187"/>
+      <location filename="../src/mudlet.cpp" line="1195"/>
       <source>Medievia {Custom codec for that MUD}</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>Medievia {Custom codec for that MUD}</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3034"/>
-      <location filename="../src/mudlet.cpp" line="3037"/>
+      <location filename="../src/mudlet.cpp" line="3104"/>
+      <location filename="../src/mudlet.cpp" line="3107"/>
       <source>Unmute all media</source>
       <translation>Ativar som de todas as mídias</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3726"/>
+      <location filename="../src/mudlet.cpp" line="3818"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
       <translation>
@@ -10719,7 +10728,7 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3744"/>
+      <location filename="../src/mudlet.cpp" line="3836"/>
       <source>Review %n update(s)...</source>
       <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
       <translation>
@@ -10728,7 +10737,7 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3747"/>
+      <location filename="../src/mudlet.cpp" line="3839"/>
       <source>Review the update(s) available...</source>
       <extracomment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</extracomment>
       <translation>
@@ -10737,799 +10746,799 @@ NÃO HÁ GARANTIA, na medida permitida por lei.</translation>
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="996"/>
+      <location filename="../src/mudlet.cpp" line="1004"/>
       <source>Icelandic</source>
       <translation>Islandês</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="337"/>
       <location filename="../src/mudlet.cpp" line="339"/>
-      <location filename="../src/mudlet.cpp" line="3073"/>
+      <location filename="../src/mudlet.cpp" line="3143"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
       <translation>Silenciar sons do jogo (MCMP, MSP)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="997"/>
+      <location filename="../src/mudlet.cpp" line="1005"/>
       <source>Icelandic (Iceland)</source>
       <translation>Islandês (Islândia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="998"/>
+      <location filename="../src/mudlet.cpp" line="1006"/>
       <source>Italian</source>
       <translation>Italiano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="999"/>
+      <location filename="../src/mudlet.cpp" line="1007"/>
       <source>Italian (Switzerland)</source>
       <translation>Italiano (Suíça)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1000"/>
+      <location filename="../src/mudlet.cpp" line="1008"/>
       <source>Italian (Italy)</source>
       <translation>Italiano (Itália)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1001"/>
+      <location filename="../src/mudlet.cpp" line="1009"/>
       <source>Kazakh</source>
       <translation>Cazaque</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1002"/>
+      <location filename="../src/mudlet.cpp" line="1010"/>
       <source>Kazakh (Kazakhstan)</source>
       <translation>Cazaquistão (Cazaquistão)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1003"/>
+      <location filename="../src/mudlet.cpp" line="1011"/>
       <source>Kurmanji</source>
       <translation>Kurmanji</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1004"/>
+      <location filename="../src/mudlet.cpp" line="1012"/>
       <source>Kurmanji {Latin-alphabet Kurdish}</source>
       <translation>Kurmanji {Latin-alphabet Kurdish}</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1005"/>
+      <location filename="../src/mudlet.cpp" line="1013"/>
       <source>Korean</source>
       <translation>Coreano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1006"/>
+      <location filename="../src/mudlet.cpp" line="1014"/>
       <source>Korean (South Korea)</source>
       <translation>Coreano (Coreia do Sul)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1007"/>
+      <location filename="../src/mudlet.cpp" line="1015"/>
       <source>Kurdish</source>
       <translation>Curdo</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1008"/>
+      <location filename="../src/mudlet.cpp" line="1016"/>
       <source>Kurdish (Syria)</source>
       <translation>Curdo (Síria)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1009"/>
+      <location filename="../src/mudlet.cpp" line="1017"/>
       <source>Kurdish (Turkey)</source>
       <translation>Curdo (Turquia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1010"/>
+      <location filename="../src/mudlet.cpp" line="1018"/>
       <source>Latin</source>
       <translation>Latim</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1011"/>
+      <location filename="../src/mudlet.cpp" line="1019"/>
       <source>Luxembourgish</source>
       <translation>Luxemburguês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1012"/>
+      <location filename="../src/mudlet.cpp" line="1020"/>
       <source>Luxembourgish (Luxembourg)</source>
       <translation>Luxemburguês (Luxemburgo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1013"/>
+      <location filename="../src/mudlet.cpp" line="1021"/>
       <source>Lao</source>
       <translation>Lao</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1014"/>
+      <location filename="../src/mudlet.cpp" line="1022"/>
       <source>Lao (Laos)</source>
       <translation>Lao (Laos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1015"/>
+      <location filename="../src/mudlet.cpp" line="1023"/>
       <source>Lithuanian</source>
       <translation>Lituano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1016"/>
+      <location filename="../src/mudlet.cpp" line="1024"/>
       <source>Lithuanian (Lithuania)</source>
       <translation>Lituano (Lituânia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1017"/>
+      <location filename="../src/mudlet.cpp" line="1025"/>
       <source>Latvian</source>
       <translation>Letão</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1018"/>
+      <location filename="../src/mudlet.cpp" line="1026"/>
       <source>Latvian (Latvia)</source>
       <translation>Letão (Letónia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1019"/>
+      <location filename="../src/mudlet.cpp" line="1027"/>
       <source>Malayalam</source>
       <translation>Malaiala</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1020"/>
+      <location filename="../src/mudlet.cpp" line="1028"/>
       <source>Malayalam (India)</source>
       <translation>Malaiala (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1021"/>
+      <location filename="../src/mudlet.cpp" line="1029"/>
       <source>Norwegian Bokmål</source>
       <translation>Bokmål norueguês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1022"/>
+      <location filename="../src/mudlet.cpp" line="1030"/>
       <source>Norwegian Bokmål (Norway)</source>
       <translation>Norueguês Bokmål (Noruega)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1023"/>
+      <location filename="../src/mudlet.cpp" line="1031"/>
       <source>Nepali</source>
       <translation>Nepalês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1024"/>
+      <location filename="../src/mudlet.cpp" line="1032"/>
       <source>Nepali (Nepal)</source>
       <translation>Nepalês (Nepal)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1025"/>
+      <location filename="../src/mudlet.cpp" line="1033"/>
       <source>Dutch</source>
       <translation>Holandês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1026"/>
+      <location filename="../src/mudlet.cpp" line="1034"/>
       <source>Dutch (Netherlands Antilles)</source>
       <translation>Holandês (Antilhas Holandesas)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1027"/>
+      <location filename="../src/mudlet.cpp" line="1035"/>
       <source>Dutch (Aruba)</source>
       <translation>Holandês (Aruba)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1028"/>
+      <location filename="../src/mudlet.cpp" line="1036"/>
       <source>Dutch (Belgium)</source>
       <translation>Holandês (Bélgica)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1029"/>
+      <location filename="../src/mudlet.cpp" line="1037"/>
       <source>Dutch (Netherlands)</source>
       <translation>Holandês (Países Baixos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1030"/>
+      <location filename="../src/mudlet.cpp" line="1038"/>
       <source>Dutch (Suriname)</source>
       <translation>Holandês (Suriname)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1031"/>
+      <location filename="../src/mudlet.cpp" line="1039"/>
       <source>Norwegian Nynorsk</source>
       <translation>Norueguês Nynorsk</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1032"/>
+      <location filename="../src/mudlet.cpp" line="1040"/>
       <source>Norwegian Nynorsk (Norway)</source>
       <translation>Norueguês Nynorsk (Noruega)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1033"/>
+      <location filename="../src/mudlet.cpp" line="1041"/>
       <source>Occitan</source>
       <translation>Occitano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1034"/>
+      <location filename="../src/mudlet.cpp" line="1042"/>
       <source>Occitan (France)</source>
       <translation>Occitano (França)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1035"/>
+      <location filename="../src/mudlet.cpp" line="1043"/>
       <source>Polish</source>
       <translation>Polonês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1036"/>
+      <location filename="../src/mudlet.cpp" line="1044"/>
       <source>Polish (Poland)</source>
       <translation>Polonês (Polônia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1037"/>
+      <location filename="../src/mudlet.cpp" line="1045"/>
       <source>Portuguese</source>
       <translation>Português</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1038"/>
+      <location filename="../src/mudlet.cpp" line="1046"/>
       <source>Portuguese (Brazil)</source>
       <translation>Português (Brasil)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1039"/>
+      <location filename="../src/mudlet.cpp" line="1047"/>
       <source>Portuguese (Portugal)</source>
       <translation>Português (Portugal)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1040"/>
+      <location filename="../src/mudlet.cpp" line="1048"/>
       <source>Romanian</source>
       <translation>Romeno</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1041"/>
+      <location filename="../src/mudlet.cpp" line="1049"/>
       <source>Romanian (Romania)</source>
       <translation>Romeno (Romênia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1042"/>
+      <location filename="../src/mudlet.cpp" line="1050"/>
       <source>Russian</source>
       <translation>Russo</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1043"/>
+      <location filename="../src/mudlet.cpp" line="1051"/>
       <source>Russian (Russia)</source>
       <translation>Russo (Rússia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1044"/>
+      <location filename="../src/mudlet.cpp" line="1052"/>
       <source>Northern Sami</source>
       <translation>Sami do Norte</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1045"/>
+      <location filename="../src/mudlet.cpp" line="1053"/>
       <source>Northern Sami (Finland)</source>
       <translation>Sami do Norte (Finlândia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1046"/>
+      <location filename="../src/mudlet.cpp" line="1054"/>
       <source>Northern Sami (Norway)</source>
       <translation>Sami do Norte (Noruega)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1047"/>
+      <location filename="../src/mudlet.cpp" line="1055"/>
       <source>Northern Sami (Sweden)</source>
       <translation>Sami do Norte (Suécia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1052"/>
+      <location filename="../src/mudlet.cpp" line="1060"/>
       <source>Sinhala</source>
       <translation>Cingalês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1053"/>
+      <location filename="../src/mudlet.cpp" line="1061"/>
       <source>Sinhala (Sri Lanka)</source>
       <translation>Sinhala (Sri Lanka)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1054"/>
+      <location filename="../src/mudlet.cpp" line="1062"/>
       <source>Slovak</source>
       <translation>Eslovaco</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1055"/>
+      <location filename="../src/mudlet.cpp" line="1063"/>
       <source>Slovak (Slovakia)</source>
       <translation>Eslovaco (Eslováquia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1056"/>
+      <location filename="../src/mudlet.cpp" line="1064"/>
       <source>Slovenian</source>
       <translation>Esloveno</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1057"/>
+      <location filename="../src/mudlet.cpp" line="1065"/>
       <source>Slovenian (Slovenia)</source>
       <translation>Esloveno (Eslovênia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1058"/>
+      <location filename="../src/mudlet.cpp" line="1066"/>
       <source>Somali</source>
       <translation>Somali</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1059"/>
+      <location filename="../src/mudlet.cpp" line="1067"/>
       <source>Somali (Somalia)</source>
       <translation>Somali (Somália)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1060"/>
+      <location filename="../src/mudlet.cpp" line="1068"/>
       <source>Albanian</source>
       <translation>Albanês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1061"/>
+      <location filename="../src/mudlet.cpp" line="1069"/>
       <source>Albanian (Albania)</source>
       <translation>Albanês (Albânia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1062"/>
+      <location filename="../src/mudlet.cpp" line="1070"/>
       <source>Serbian</source>
       <translation>Sérvio</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1063"/>
+      <location filename="../src/mudlet.cpp" line="1071"/>
       <source>Serbian (Montenegro)</source>
       <translation>Sérvio (Montenegro)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1064"/>
+      <location filename="../src/mudlet.cpp" line="1072"/>
       <source>Serbian (Serbia)</source>
       <translation>Sérvio (Sérvia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1065"/>
+      <location filename="../src/mudlet.cpp" line="1073"/>
       <source>Serbian (Serbia - Latin-alphabet)</source>
       <translation>Sérvio (Sérvia - alfabeto latino)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1066"/>
+      <location filename="../src/mudlet.cpp" line="1074"/>
       <source>Serbian (former state of Yugoslavia)</source>
       <translation>Sérvio (antigo estado da Iugoslávia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1067"/>
+      <location filename="../src/mudlet.cpp" line="1075"/>
       <source>Swati</source>
       <translation>Swati</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1068"/>
+      <location filename="../src/mudlet.cpp" line="1076"/>
       <source>Swati (Swaziland)</source>
       <translation>Swati (Suazilândia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1069"/>
+      <location filename="../src/mudlet.cpp" line="1077"/>
       <source>Swati (South Africa)</source>
       <translation>Swati (África do Sul)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1070"/>
+      <location filename="../src/mudlet.cpp" line="1078"/>
       <source>Swedish</source>
       <translation>Sueco</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1071"/>
+      <location filename="../src/mudlet.cpp" line="1079"/>
       <source>Swedish (Sweden)</source>
       <translation>Sueco (Suécia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1072"/>
+      <location filename="../src/mudlet.cpp" line="1080"/>
       <source>Swedish (Finland)</source>
       <translation>Sueco (Finlândia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1073"/>
+      <location filename="../src/mudlet.cpp" line="1081"/>
       <source>Swahili</source>
       <translation>Suaíle</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1074"/>
+      <location filename="../src/mudlet.cpp" line="1082"/>
       <source>Swahili (Kenya)</source>
       <translation>Suaíli (Quênia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1075"/>
+      <location filename="../src/mudlet.cpp" line="1083"/>
       <source>Swahili (Tanzania)</source>
       <translation>Suaíli (Tanzânia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1088"/>
+      <location filename="../src/mudlet.cpp" line="1096"/>
       <source>Turkish</source>
       <translation>Turco</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1076"/>
+      <location filename="../src/mudlet.cpp" line="1084"/>
       <source>Telugu</source>
       <translation>Telugu</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1077"/>
+      <location filename="../src/mudlet.cpp" line="1085"/>
       <source>Telugu (India)</source>
       <translation>Telugu (Índia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1078"/>
+      <location filename="../src/mudlet.cpp" line="1086"/>
       <source>Thai</source>
       <translation>Tailandês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1079"/>
+      <location filename="../src/mudlet.cpp" line="1087"/>
       <source>Thai (Thailand)</source>
       <translation>Tailandês (Tailândia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1080"/>
+      <location filename="../src/mudlet.cpp" line="1088"/>
       <source>Tigrinya</source>
       <translation>Tigrinya</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1081"/>
+      <location filename="../src/mudlet.cpp" line="1089"/>
       <source>Tigrinya (Eritrea)</source>
       <translation>Tigrinya (Eritreia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1082"/>
+      <location filename="../src/mudlet.cpp" line="1090"/>
       <source>Tigrinya (Ethiopia)</source>
       <translation>Tigrinya (Etiópia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1083"/>
+      <location filename="../src/mudlet.cpp" line="1091"/>
       <source>Turkmen</source>
       <translation>Turcomeno</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1084"/>
+      <location filename="../src/mudlet.cpp" line="1092"/>
       <source>Turkmen (Turkmenistan)</source>
       <translation>Turcomenistão (Turcomenistão)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1085"/>
+      <location filename="../src/mudlet.cpp" line="1093"/>
       <source>Tswana</source>
       <translation>Tswana</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1086"/>
+      <location filename="../src/mudlet.cpp" line="1094"/>
       <source>Tswana (Botswana)</source>
       <translation>Tswana (Botswana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1087"/>
+      <location filename="../src/mudlet.cpp" line="1095"/>
       <source>Tswana (South Africa)</source>
       <translation>Tswana (África do Sul)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1090"/>
+      <location filename="../src/mudlet.cpp" line="1098"/>
       <source>Tsonga</source>
       <translation>Tsonga</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1091"/>
+      <location filename="../src/mudlet.cpp" line="1099"/>
       <source>Tsonga (South Africa)</source>
       <translation>Tsonga (África do Sul)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1092"/>
+      <location filename="../src/mudlet.cpp" line="1100"/>
       <source>Ukrainian</source>
       <translation>Ucraniano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1093"/>
+      <location filename="../src/mudlet.cpp" line="1101"/>
       <source>Ukrainian (Ukraine)</source>
       <translation>Ucraniano (Ucrânia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1094"/>
+      <location filename="../src/mudlet.cpp" line="1102"/>
       <source>Uzbek</source>
       <translation>Uzbeque</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1095"/>
+      <location filename="../src/mudlet.cpp" line="1103"/>
       <source>Uzbek (Uzbekistan)</source>
       <translation>Uzbeque (Uzbequistão)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1096"/>
+      <location filename="../src/mudlet.cpp" line="1104"/>
       <source>Venda</source>
       <translation>Venda</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1097"/>
+      <location filename="../src/mudlet.cpp" line="1105"/>
       <source>Vietnamese</source>
       <translation>Vietnamita</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1098"/>
+      <location filename="../src/mudlet.cpp" line="1106"/>
       <source>Vietnamese (Vietnam)</source>
       <translation>Vietnamita (Vietnã)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1105"/>
+      <location filename="../src/mudlet.cpp" line="1113"/>
       <source>Walloon</source>
       <translation>Valão</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1106"/>
+      <location filename="../src/mudlet.cpp" line="1114"/>
       <source>Xhosa</source>
       <translation>Xhosa</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1107"/>
+      <location filename="../src/mudlet.cpp" line="1115"/>
       <source>Yiddish</source>
       <translation>Iídiche</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1108"/>
+      <location filename="../src/mudlet.cpp" line="1116"/>
       <source>Chinese</source>
       <translation>Chinês</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1109"/>
+      <location filename="../src/mudlet.cpp" line="1117"/>
       <source>Chinese (China - simplified)</source>
       <translation>Chinês (China - simplificado)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1110"/>
+      <location filename="../src/mudlet.cpp" line="1118"/>
       <source>Chinese (Taiwan - traditional)</source>
       <translation>Chinês (Taiwan - tradicional)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1111"/>
+      <location filename="../src/mudlet.cpp" line="1119"/>
       <source>Zulu</source>
       <translation>Zulu</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1115"/>
+      <location filename="../src/mudlet.cpp" line="1123"/>
       <source>ASCII (Basic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ASCII (Básico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1117"/>
+      <location filename="../src/mudlet.cpp" line="1125"/>
       <source>UTF-8 (Recommended)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>UTF-8 (recomendado)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1119"/>
+      <location filename="../src/mudlet.cpp" line="1127"/>
       <source>EUC-KR (Korean)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>EUC-KR (coreano)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1121"/>
+      <location filename="../src/mudlet.cpp" line="1129"/>
       <source>GBK (Chinese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>GBK (chinês)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1123"/>
+      <location filename="../src/mudlet.cpp" line="1131"/>
       <source>GB18030 (Chinese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>GB18030 (chinês)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1125"/>
+      <location filename="../src/mudlet.cpp" line="1133"/>
       <source>Big5-ETen (Taiwan)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>Big5-ETen (Taiwan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1127"/>
+      <location filename="../src/mudlet.cpp" line="1135"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>Big5-HKSCS (Hong Kong)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1129"/>
+      <location filename="../src/mudlet.cpp" line="1137"/>
       <source>ISO 8859-1 (Western European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-1 (Europa Ocidental)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1131"/>
+      <location filename="../src/mudlet.cpp" line="1139"/>
       <source>ISO 8859-2 (Central European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-2 (Europa Central)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1133"/>
+      <location filename="../src/mudlet.cpp" line="1141"/>
       <source>ISO 8859-3 (South European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-3 (Sul da Europa)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1135"/>
+      <location filename="../src/mudlet.cpp" line="1143"/>
       <source>ISO 8859-4 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-4 (Báltico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1137"/>
+      <location filename="../src/mudlet.cpp" line="1145"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-5 (cirílico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1139"/>
+      <location filename="../src/mudlet.cpp" line="1147"/>
       <source>ISO 8859-6 (Arabic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-6 (árabe)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1141"/>
+      <location filename="../src/mudlet.cpp" line="1149"/>
       <source>ISO 8859-7 (Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-7 (Grego)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1143"/>
+      <location filename="../src/mudlet.cpp" line="1151"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-8 (Visual Hebraico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1145"/>
+      <location filename="../src/mudlet.cpp" line="1153"/>
       <source>ISO 8859-9 (Turkish)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-9 (turco)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1147"/>
+      <location filename="../src/mudlet.cpp" line="1155"/>
       <source>ISO 8859-10 (Nordic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-10 (nórdico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1149"/>
+      <location filename="../src/mudlet.cpp" line="1157"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-11 (latim / tailandês)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1151"/>
+      <location filename="../src/mudlet.cpp" line="1159"/>
       <source>ISO 8859-13 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-13 (Báltico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1153"/>
+      <location filename="../src/mudlet.cpp" line="1161"/>
       <source>ISO 8859-14 (Celtic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-14 (celta)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1155"/>
+      <location filename="../src/mudlet.cpp" line="1163"/>
       <source>ISO 8859-15 (Western)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-15 (Ocidental)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1157"/>
+      <location filename="../src/mudlet.cpp" line="1165"/>
       <source>ISO 8859-16 (Romanian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>ISO 8859-16 (romeno)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1159"/>
-      <location filename="../src/mudlet.cpp" line="1161"/>
+      <location filename="../src/mudlet.cpp" line="1167"/>
+      <location filename="../src/mudlet.cpp" line="1169"/>
       <source>CP437 (OEM Font)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP437 (Fonte OEM)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1163"/>
-      <location filename="../src/mudlet.cpp" line="1165"/>
+      <location filename="../src/mudlet.cpp" line="1171"/>
+      <location filename="../src/mudlet.cpp" line="1173"/>
       <source>CP667 (Mazovia)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP667 (Mazóvia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1167"/>
-      <location filename="../src/mudlet.cpp" line="1169"/>
+      <location filename="../src/mudlet.cpp" line="1175"/>
+      <location filename="../src/mudlet.cpp" line="1177"/>
       <source>CP737 (DOS Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP737 (DOS grego)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1171"/>
+      <location filename="../src/mudlet.cpp" line="1179"/>
       <source>CP850 (Western Europe)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP850 (Europa Ocidental)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1173"/>
+      <location filename="../src/mudlet.cpp" line="1181"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP866 (cirílico / russo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1175"/>
-      <location filename="../src/mudlet.cpp" line="1177"/>
+      <location filename="../src/mudlet.cpp" line="1183"/>
+      <location filename="../src/mudlet.cpp" line="1185"/>
       <source>CP869 (DOS Greek 2)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP869 (DOS Grego 2)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1179"/>
+      <location filename="../src/mudlet.cpp" line="1187"/>
       <source>CP1161 (Latin/Thai)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>CP1161 (latim / tailandês)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1181"/>
+      <location filename="../src/mudlet.cpp" line="1189"/>
       <source>KOI8-R (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>KOI8-R (cirílico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1183"/>
+      <location filename="../src/mudlet.cpp" line="1191"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>KOI8-U (cirílico/ucraniano)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1185"/>
+      <location filename="../src/mudlet.cpp" line="1193"/>
       <source>MACINTOSH</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>MACINTOSH</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1189"/>
+      <location filename="../src/mudlet.cpp" line="1197"/>
       <source>WINDOWS-1250 (Central European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1250 (Europa Central)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1191"/>
+      <location filename="../src/mudlet.cpp" line="1199"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1251 (cirílico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1193"/>
+      <location filename="../src/mudlet.cpp" line="1201"/>
       <source>WINDOWS-1252 (Western)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1252 (Ocidental)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1195"/>
+      <location filename="../src/mudlet.cpp" line="1203"/>
       <source>WINDOWS-1253 (Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1253 (Grego)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1197"/>
+      <location filename="../src/mudlet.cpp" line="1205"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1254 (Turco)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1199"/>
+      <location filename="../src/mudlet.cpp" line="1207"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1255 (hebraico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1201"/>
+      <location filename="../src/mudlet.cpp" line="1209"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1256 (árabe)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1203"/>
+      <location filename="../src/mudlet.cpp" line="1211"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1257 (Báltico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1205"/>
+      <location filename="../src/mudlet.cpp" line="1213"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
       <translation>WINDOWS-1258 (vietnamita)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3053"/>
+      <location filename="../src/mudlet.cpp" line="3123"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3054"/>
+      <location filename="../src/mudlet.cpp" line="3124"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3831"/>
+      <location filename="../src/mudlet.cpp" line="3923"/>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
       <extracomment>%1 is the path and file name (i.e. the location) of the problem fil</extracomment>
@@ -11537,53 +11546,53 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
 Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico de perfil&apos; ou verifique novamente se %1 parece correto.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3056"/>
+      <location filename="../src/mudlet.cpp" line="3126"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
       <translation>[ INFO ] - Mudlet e sons de jogo são silenciados.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3056"/>
+      <location filename="../src/mudlet.cpp" line="3126"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
       <translation>[ INFO ] - Os sons do Mudlet e do jogo são ativados.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3068"/>
+      <location filename="../src/mudlet.cpp" line="3138"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
       <translation>Ativar som do Mudlet (Gatilhos, Scripts, etc.)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3073"/>
+      <location filename="../src/mudlet.cpp" line="3143"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
       <translation>Ativar som do jogo (MCMP, MSP)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3112"/>
+      <location filename="../src/mudlet.cpp" line="3182"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
       <translation>[ INFO ] - Conjunto de linhas de entrada compactas. Imprensa %1 para mostrar os botões inferiores direitos novamente.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3171"/>
+      <location filename="../src/mudlet.cpp" line="3263"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
       <translation>Não é possível carregar um replay, pois um já está em andamento neste ou em outro perfil.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3190"/>
+      <location filename="../src/mudlet.cpp" line="3282"/>
       <source>Replay each step with a shorter time interval between steps.</source>
       <translation>Repita cada etapa com um intervalo de tempo menor entre as etapas.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3196"/>
+      <location filename="../src/mudlet.cpp" line="3288"/>
       <source>Replay each step with a longer time interval between steps.</source>
       <translation>Repita cada etapa com um intervalo de tempo mais longo entre as etapas.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4821"/>
+      <location filename="../src/mudlet.cpp" line="4913"/>
       <source>Hide tray icon</source>
       <translation>Ocultar ícone da bandeja</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4826"/>
+      <location filename="../src/mudlet.cpp" line="4918"/>
       <source>Quit Mudlet</source>
       <translation>Sair do Mudlet</translation>
     </message>
@@ -11601,7 +11610,7 @@ Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico 
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
-      <location filename="../src/mudlet.cpp" line="630"/>
+      <location filename="../src/mudlet.cpp" line="638"/>
       <source>Disconnect</source>
       <translation>Desconecte</translation>
     </message>
@@ -11723,7 +11732,7 @@ Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico 
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="397"/>
-      <location filename="../src/mudlet.cpp" line="624"/>
+      <location filename="../src/mudlet.cpp" line="632"/>
       <source>Notepad</source>
       <translation>Bloco de notas</translation>
     </message>
@@ -11760,7 +11769,7 @@ Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico 
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="435"/>
-      <location filename="../src/mudlet.cpp" line="631"/>
+      <location filename="../src/mudlet.cpp" line="639"/>
       <source>Reconnect</source>
       <translation>Reconectar</translation>
     </message>
@@ -11771,7 +11780,7 @@ Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico 
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="441"/>
-      <location filename="../src/mudlet.cpp" line="627"/>
+      <location filename="../src/mudlet.cpp" line="635"/>
       <source>MultiView</source>
       <translation>Multi-Visualização</translation>
     </message>
@@ -11782,130 +11791,129 @@ Tente carregar uma versão mais antiga em &apos;Connect - Opções - Histórico 
       <translation>Divide a tela do Mudlet para mostrar vários perfis de uma só vez; desabilitado quando menos de dois são carregados.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="464"/>
-      <location filename="../src/mudlet.cpp" line="3731"/>
+      <location filename="../src/mudlet.cpp" line="465"/>
+      <location filename="../src/mudlet.cpp" line="3823"/>
       <source>About</source>
       <translation>Sobre</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="466"/>
-      <location filename="../src/mudlet.cpp" line="3714"/>
+      <location filename="../src/mudlet.cpp" line="467"/>
+      <location filename="../src/mudlet.cpp" line="3806"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <extracomment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</extracomment>
       <translation>Informe-se sobre esta versão do Mudlet, as pessoas que o fizeram e a licença sob a qual você pode compartilhá-lo.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="995"/>
+      <location filename="../src/mudlet.cpp" line="1003"/>
       <source>Interlingue</source>
       <extracomment>, formerly known as Occidental, and not to be mistaken for Interlingua</extracomment>
       <translation>Interlingue</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1049"/>
+      <location filename="../src/mudlet.cpp" line="1057"/>
       <source>Shtokavian</source>
       <extracomment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication</extracomment>
       <translation>Shtokaviano</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1051"/>
+      <location filename="../src/mudlet.cpp" line="1059"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <extracomment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</extracomment>
       <translation>Shtokavian (antigo estado da Iugoslávia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1089"/>
+      <location filename="../src/mudlet.cpp" line="1097"/>
       <source>Turkish (Turkey)</source>
       <translation>Turco (Turquia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1099"/>
-      <location filename="../src/mudlet.cpp" line="1103"/>
+      <location filename="../src/mudlet.cpp" line="1107"/>
+      <location filename="../src/mudlet.cpp" line="1111"/>
       <source>Vietnamese (DauCu variant - old-style diacritics)</source>
       <translation>Vietnamita (variante DauCu - diacríticos de estilo antigo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1100"/>
-      <location filename="../src/mudlet.cpp" line="1104"/>
+      <location filename="../src/mudlet.cpp" line="1108"/>
+      <location filename="../src/mudlet.cpp" line="1112"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
       <translation>Vietnamita (variante DauMoi - diacríticos de novo estilo)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1732"/>
-      <location filename="../src/mudlet.cpp" line="3267"/>
+      <location filename="../src/mudlet.cpp" line="1788"/>
+      <location filename="../src/mudlet.cpp" line="3359"/>
       <source>Load a Mudlet replay.</source>
       <translation>Carregar uma reprodução do Mudlet.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2822"/>
+      <location filename="../src/mudlet.cpp" line="2892"/>
       <source>Central Debug Console</source>
       <translation>Console de depuração central</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="475"/>
-      <location filename="../src/mudlet.cpp" line="476"/>
+      <location filename="../src/mudlet.cpp" line="481"/>
       <source>Toggle Full Screen View</source>
       <translation>Alternar visualização em tela cheia</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="457"/>
+      <location filename="../src/mudlet.cpp" line="458"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
       <translation>A compilação de teste público fornece recursos mais recentes para você mais rapidamente e você nos ajuda a encontrar problemas neles mais rapidamente. Viu algo estranho? Deixe-nos saber o mais rápido possível!</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1695"/>
+      <location filename="../src/mudlet.cpp" line="1726"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Carregue um replay do Mudlet.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Desabilitado até que um perfil seja carregado.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2570"/>
+      <location filename="../src/mudlet.cpp" line="2638"/>
       <source>%1 - notes</source>
       <translation>%1 -anotações</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2654"/>
+      <location filename="../src/mudlet.cpp" line="2724"/>
       <source>Select Replay</source>
       <translation>Selecione Replay</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2656"/>
+      <location filename="../src/mudlet.cpp" line="2726"/>
       <source>*.dat</source>
       <translation>*.Dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2934"/>
+      <location filename="../src/mudlet.cpp" line="3004"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[ OK ] - Perfil &quot;%1&quot; carregado no modo offline.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3188"/>
+      <location filename="../src/mudlet.cpp" line="3280"/>
       <source>Faster</source>
       <translation>Mais Rápido</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3194"/>
+      <location filename="../src/mudlet.cpp" line="3286"/>
       <source>Slower</source>
       <translation>Mais lento</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3206"/>
-      <location filename="../src/mudlet.cpp" line="3275"/>
-      <location filename="../src/mudlet.cpp" line="3284"/>
+      <location filename="../src/mudlet.cpp" line="3298"/>
+      <location filename="../src/mudlet.cpp" line="3367"/>
+      <location filename="../src/mudlet.cpp" line="3376"/>
       <source>Speed: X%1</source>
       <translation>Velocidade: X%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3213"/>
-      <location filename="../src/mudlet.cpp" line="3230"/>
+      <location filename="../src/mudlet.cpp" line="3305"/>
+      <location filename="../src/mudlet.cpp" line="3322"/>
       <source>Time: %1</source>
       <translation>Tempo: %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3769"/>
+      <location filename="../src/mudlet.cpp" line="3861"/>
       <source>Update installed - restart to apply</source>
       <translation>Atualização instalada - reinicie para aplicar</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3881"/>
+      <location filename="../src/mudlet.cpp" line="3973"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ AVISAR ] - Não é possível realizar replay, outro pode já estar em andamento,
