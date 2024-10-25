@@ -63,6 +63,14 @@
 #include <memory>
 #include "post_guard.h"
 
+// We are now using code that won't work with really old versions of libzip;
+// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
+// (and one or two other recent versions) forgot to include the version defines
+// and thus broke a test depending on them:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
+#error Mudlet requires a version of libzip of at least 1.0
+#endif
+
 using namespace std::chrono;
 
 stopWatch::stopWatch()
@@ -733,6 +741,17 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     int err = 0;
     zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
     if (!zipFile) {
+        zip_error_t zipError;
+        zip_error_init_with_code(&zipError, err);
+        /*: This zipError message is shown when the libzip library code is unable
+         * to open the file that was to be the end result of the export process.
+         * As this may be an existing file anywhere in the computer's
+         * file-system(s) it is possible that permissions on the directory or an
+         * existing file that is to be overwritten may be a source of problems
+         * here.
+        */
+        qWarning().noquote().nospace() << "Host::updateModuleZips(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \"" << zip_error_strerror(&zipError) << "\"";
+        zip_error_fini(&zipError);
         return;
     }
     const QDir packageDir = QDir(packagePathName);
@@ -750,13 +769,20 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
     if (zipFile) {
+        // This is the point at which the data is written out to the archive,
+        // might take a bit of time:
         err = zip_close(zipFile);
     }
 
-    if (mudlet::smDebugMode && err == -1) {
-        //: This error message will appear when a module is saved as package but cannot be done for some reason.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".")
-                                                              .arg(moduleName, zipName, zip_strerror(zipFile));
+    if (err == -1) {
+        if (mudlet::smDebugMode && err == -1) {
+            //: This error message will appear when a module is saved as package but cannot be done for some reason.
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".")
+                                                                  .arg(moduleName, zipName, zip_strerror(zipFile));
+        }
+        // Properly dispose of things after failing to zip_close(...) the
+        // archive:
+        zip_discard(zipFile);
     }
 }
 
