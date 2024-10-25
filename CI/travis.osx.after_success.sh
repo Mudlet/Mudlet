@@ -76,10 +76,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     echo "=== ... later, via Github ==="
     # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
-    mkdir "upload/"
-    mv "${HOME}/Desktop/${appBaseName}.dmg" "upload/"
+    mkdir -p "${BUILD_DIR}/upload/"
+    mv "${HOME}/Desktop/${appBaseName}.dmg" "${BUILD_DIR}/upload/"
     {
-      echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+      echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
       echo "UPLOAD_FILENAME=${appBaseName}"
     } >> "$GITHUB_ENV"
     DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
@@ -126,10 +126,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
-      mkdir "upload/"
-      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "upload/"
+      mkdir -p "${BUILD_DIR}/upload/"
+      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
       {
-        echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+        echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -42,7 +42,7 @@ jobs:
           cat "${LATEST_FEED}" | jq
         fi
 
-        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"linux\") | .url")
+        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "linux" and (.url | contains("-ptb-"))) | .url')
         export MACOS_X64_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "macos" and (.url | contains("x86_64"))) | .url')
         export MACOS_ARM64_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "macos" and (.url | contains("arm64"))) | .url')
 
