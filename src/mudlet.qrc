@@ -196,6 +196,8 @@
         <file>icons/variable.png</file>
         <file>icons/variables.png</file>
         <file>icons/view-filter.png</file>
+        <file>icons/view-fullscreen.png</file>
+        <file>icons/view-restore.png</file>
         <file>icons/view-split-left-right.png</file>
         <file>icons/view-statistics.png</file>
         <file>icons/window-close.png</file>
