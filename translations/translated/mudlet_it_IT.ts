@@ -9445,7 +9445,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Apri un collegamento a un server IRC (LiberaChat) nel browser web del tuo sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
@@ -10260,7 +10260,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="480"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>Schermo Intero</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="628"/>
