@@ -2275,14 +2275,48 @@ void dlgConnectionProfiles::slot_reorderItems()
      *                     +-------+-------->  +-------+ +-------+ +-------+
      *                    /                            \----------\---------\ These will not reorder
      * This will become B4
+     *
+     * The two values needed are set after the first time the items are laid out
+     * to get the size and offset needed to "bin" the y coordinate of the
+     * position of each item. If there are not sufficient items to fill the
+     * first row then we will have to estimate the second - to, say (2 x A) +
+     * the height of an icon:
+     * +------------------------------~ =      -
+     * |   /point we track              #      |- topLeftCornerYOfFirstItemOnFirstRow (A)
+     * |  #----+  #----+          #---~ 1      _
+     * |  |    |  |    |  #----+  |     #
+     * |  +----+  +----+  |    |  +---~ #
+     * |                  +----+        = <- Bottom of where we will accept an item to be on row 1
+     * |  #----+  #----+  #----+  #---~ #
+     * |  |    |  |    |  |    |  |     2
+     * |  +----+  +----+  +----+  +---~ #
+     *                                  =
+     * If y of an item is in range 0 to (B - A) - 1 then make it be A
+     * If y of an item is in range (N * B - (A/2)) to (2B - (A/2)) - 1  then make it
+     * be A + ((B-A) * N) where N is the row.
+     *
      */
+    const bool hasVerticalSpacingDetails = (mTopLeftCornerYOfFirstItemOnFirstRow >=0)
+    QList<int> verticalBins;
+    if (hasVerticalSpacingDetails) {
+        int yBinNumber = 0;
+        int yLimit = mTopLeftCornerYOfFirstItemOnNextRow - ((mTopLeftCornerYOfFirstItemOnFirstRow)/2) - 1;
+        verticalBins << yLimit;
+        while (yLimit < profiles_tree_widget->geometry().height() {
+             yLimit = mTopLeftCornerYOfFirstItemOnNextRow
+        }
+    } else {
 
+    }
     QMap<QPair<int, int>, int> positionMap;
     for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
         auto pItem = profiles_tree_widget->item(i);
         auto itemRect = profiles_tree_widget->visualItemRect(pItem);
         const auto rawPosition = itemRect.topLeft();
-        QPair<int, int> itemInvertPos = qMakePair(rawPosition.y(), rawPosition.x());
+        // "invert" because we swap to make the y-coordinate the first one:
+        QPair<int, int> itemInvertPos;
+        itemInvertPos; = qMakePair(rawPosition.y(), rawPosition.x());
+        itemInvertPos; = qMakePair(rawPosition.y(), rawPosition.x());
         while (Q_UNLIKELY(positionMap.contains(itemInvertPos))) {
             itemInvertPos.second += 1;
         }
