@@ -9335,7 +9335,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Opens a connection to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
@@ -10150,7 +10150,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="480"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>Full Screen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="628"/>
