@@ -203,10 +203,6 @@ endif()
 
 if(APPLE)
   if(USE_UPDATER)
-    git_submodule_init(
-      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
-      "3rdparty/sparkle-glue" READABLE_NAME "Sparkle glue for updater")
-
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(
         STATUS "Sparkle is missing, fetching it..."
@@ -236,11 +232,6 @@ add_subdirectory(test)
 
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)
-
-  if(APPLE)
-    add_subdirectory(3rdparty/sparkle-glue)
-  endif()
-
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)

@@ -564,8 +564,8 @@ void mudlet::init()
 
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
-    // release OR a public test version:
-    dactionUpdate->setVisible(releaseVersion || publicTestVersion);
+    // release OR a public test version, or if you're specifically trying to test Sparkle.
+    dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
@@ -3773,9 +3773,9 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (releaseVersion || publicTestVersion) {
+    if (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // Only try and create an updater (which checks for updates online) if
-        // this is a release/public test version:
+        // this is a release/public test version, or if you are testing Sparkle (env flag set).
         pUpdater->checkUpdatesOnStart();
     }
 }

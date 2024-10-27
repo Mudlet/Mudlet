@@ -278,7 +278,7 @@ QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
              .arg((maker.big) ? qsl("<big>%1</big>").arg(maker.name) : maker.name)),
         (contactDetails.isEmpty()) ? QString() :
              qsl(" (%1)").arg(contactDetails.join(QChar::Space)),
-        maker.description);
+                 maker.description);
 }
 
 void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
@@ -907,10 +907,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                      "<h4>SUDSAVerifier.m:</h4>"
                                      "<h3>Copyright © 2011 Mark Hamlin.<br>"
                                      "All rights reserved.</h3>"));
-
-    QString SparkleGlueHeader(tr("<h2><u>Sparkle-glue</u></h2>"
-                                 "<h3>Copyright © 2008 Remko Troncon<br>"
-                                 "Copyright © 2017 Vadim Peretokin</h3>"));
 #endif // defined(Q_OS_MACOS)
 #endif // defined(INCLUDE_UPDATER)
 
@@ -996,7 +992,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                Sparkle3rdPartyHeader,          // 29 - Sparkle 3rd Party headers - translatable
                                                BSD2Clause_Body                 // 30 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
                                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
-                                               SparkleGlueHeader, // 31 - Sparkle glue header - translatable
                                                BSD2Clause_Body    // 32 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))));
 #endif // defined(Q_OS_MACOS))
@@ -1094,7 +1089,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
                 <p align="center"><br>%1<br></p>
                 %2
                 )")
-                    .arg(tr(R"(
+                                  .arg(tr(R"(
                             These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
                             )"), supporters_image_html);
     }
@@ -1155,14 +1150,14 @@ QString dlgAboutDialog::createBuildInfo() const
                       *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
                       */
                      isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                     /*: This is shown for 32-Bit or 64-Bit Windows builds when
+                                                                          /*: This is shown for 32-Bit or 64-Bit Windows builds when
                       *run on a Windows OS of the same bitness. It is the
                       *opposite case to that when \"WoW64\" is included - in
                       *those cases a 32-Bit application is run on 64-Bit
                       *hardware via an extra WindowOnWindows64 software layer.
                       */
                                                                           : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                     /*: This is shown for 32-Bit or 64-Bit Windows builds if
+                                                /*: This is shown for 32-Bit or 64-Bit Windows builds if
                       *the Windows API call to detect whether the WoW64 system
                       *is in use fails to work.
                       */
@@ -1174,7 +1169,7 @@ QString dlgAboutDialog::createBuildInfo() const
                       */
                      tr("Qt version (compilation)"), // %8
                      QLatin1String(QT_VERSION_STR)) // %9
-                     /*: This is shown when the Qt version used at run-time
+                                                     /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
                       *the usual case.
                       */
@@ -1201,14 +1196,14 @@ QString dlgAboutDialog::createBuildInfo() const
                   *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
                   */
                  isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                 /*: This is shown for 32-Bit or 64-Bit Windows builds when
+                                                                      /*: This is shown for 32-Bit or 64-Bit Windows builds when
                   *a Windows OS of the same size. It is the opposite case
                   *to that when \"WoW64\" is included - in those cases a
                   *32-Bit application is run on 64-Bit hardware via an
                   *extra WindowOnWindows64 software layer.
                   */
                                                                       : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                 /*: This is shown when something has gone wrong and it is not
+                                            /*: This is shown when something has gone wrong and it is not
                   *possible to correctly determine whether there is an extra
                   *software layer being used to run a 32-Bit Windows build
                   *on 64-Bit hardware/OS.
@@ -1247,7 +1242,7 @@ QString dlgAboutDialog::createBuildInfo() const
                       */
                      tr("Qt version (compilation)"), // %8
                      QLatin1String(QT_VERSION_STR)) // %9
-                     /*: This is shown when the Qt version used at run-time
+                                                     /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
                       *the usual case.
                       */
