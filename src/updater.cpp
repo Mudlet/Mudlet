@@ -71,15 +71,15 @@ void Updater::checkUpdatesOnStart()
 
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
-        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-        qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
-        if (updates.isEmpty()) {
-            return;
-        } else if (!updateAutomatically()) {
-            emit signal_updateAvailable(updates.size());
-        } else {
-            feed->downloadRelease(updates.first());
-        }
+          auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+          qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
+          if (updates.isEmpty()) {
+              return;
+          } else if (!updateAutomatically()) {
+              emit signal_updateAvailable(updates.size());
+          } else {
+              feed->downloadRelease(updates.first());
+          }
     });
     mDailyCheck->start();
 }
@@ -144,15 +144,7 @@ void Updater::finishSetup()
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
-    //CocoaInitializer initializer;
-    //msparkleUpdater = new SparkleAutoUpdater();
     // don't need to explicitly check for updates - sparkle will do so on its own
-    //  QAction *updaterAction = new QAction(tr("&Check for Updates…"), this);
-    //  updaterAction->setMenuRole(QAction::ApplicationSpecificRole);
-
-    //  QMenu *updaterMenu = menuBar()->addMenu("&Updater");
-    //  updaterMenu->addAction(updaterAction);
-
     msparkleUpdater = new SparkleUpdater();
 }
 #endif // Q_OS_MACOS
