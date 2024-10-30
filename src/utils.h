@@ -26,6 +26,7 @@
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QEnterEvent>
 #endif
+#include <QDir>
 #include <QString>
 #include "post_guard.h"
 
@@ -52,6 +53,19 @@ public:
     // defining a static function/method here we can save using the same
     // qsl all over the place:
     static QString richText(const QString& text) { return qsl("<p>%1</p>").arg(text); }
+
+    // Return a new QString with path made absolute, resolved against base and cleaned if it was relative
+    // Returns path unchanged if it was already absolute or an empty string
+    static QString pathResolveRelative(const QString& path, const QString& base)
+    {
+        if (path.size() == 0) {
+            return path;
+        }
+        if (QDir::isAbsolutePath(path)) {
+            return path;
+        }
+        return QDir::cleanPath(base + "/" + path);
+    }
 };
 
 #endif // UPDATER_H

@@ -1149,7 +1149,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
 void T2DMap::paintEvent(QPaintEvent* e)
 {
     Q_UNUSED(e)
-    if (!mpMap) {
+    if (!mpMap||mpHost.isNull()) {
         return;
     }
     QElapsedTimer renderTimer;
@@ -2895,7 +2895,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             it.next();
             QStringList menuInfo = it.value();
             const QString menuParent = menuInfo[0];
-            if (menuParent == "") { //parentless
+            if (menuParent.isEmpty()) { //parentless
                 popup->addMenu(userMenus[it.key()]);
             } else { //has a parent
                 userMenus[menuParent]->addMenu(userMenus[it.key()]);
@@ -2903,7 +2903,8 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         }
         //add our actions
         QMapIterator<QString, QStringList> it2(mUserActions);
-        auto mapper = new QSignalMapper(this);
+        auto mapper = new QSignalMapper(popup);
+        
         while (it2.hasNext()) {
             it2.next();
             QStringList actionInfo = it2.value();
@@ -2917,13 +2918,20 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                 continue;
             }
             mapper->setMapping(action, it2.key());
-            // TODO: QSignalMapper is not compatible with the functor (Qt5)
+            // TODO: QSignalMapper is not completely compatible with the functor
             // style of QObject::connect(...) - it has been declared obsolete
             // and should be replaced with lambda functions to perform what the
             // slot method did...
-            connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
+            connect(action, &QAction::triggered, mapper, qOverload<>(&QSignalMapper::map));
         }
-        connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        // In relation to above "TODO" in the meantime we can handle things
+        // by a change to one of a group of newer signals with a specific
+        // signature:
+        connect(mapper, &QSignalMapper::mappedString, this, &T2DMap::slot_userAction);
+#else
+        connect(mapper, qOverload<const QString&>(&QSignalMapper::mapped), this, &T2DMap::slot_userAction);
+#endif
 
         // After all has been added, finally have Qt display the context menu as a whole
         mPopupMenu = true;

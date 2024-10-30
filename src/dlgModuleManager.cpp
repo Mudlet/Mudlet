@@ -49,7 +49,6 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 
 dlgModuleManager::~dlgModuleManager()
 {
-    mpHost->mpModuleManager = nullptr;
 }
 
 void dlgModuleManager::layoutModules()

@@ -1056,6 +1056,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
   folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../../translations/lua") and luaGlobalPath.."/../../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
   assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
@@ -1250,18 +1251,18 @@ function getConfig(...)
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
       "logInHTML",
-      "mapExitSize", 
+      "mapExitSize",
       "mapperPanelVisible",
       "mapRoomSize",
-      "mapRoundRooms", 
+      "mapRoundRooms",
       "mapShowRoomBorders",
       "show3dMapView",
       "showRoomIdsOnMap",
       "showSentText",
-      "specialForceCompressionOff", 
+      "specialForceCompressionOff",
       "specialForceCharsetNegotiationOff",
-      "specialForceGAOff", 
-      "specialForceMxpNegotiationOff", 
+      "specialForceGAOff",
+      "specialForceMxpNegotiationOff",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

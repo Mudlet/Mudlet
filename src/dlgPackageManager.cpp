@@ -59,7 +59,6 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 
 dlgPackageManager::~dlgPackageManager()
 {
-    mpHost->mpPackageManager = nullptr;
 }
 
 void dlgPackageManager::resetPackageTable()
