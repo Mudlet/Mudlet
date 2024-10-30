@@ -907,10 +907,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                      "<h4>SUDSAVerifier.m:</h4>"
                                      "<h3>Copyright © 2011 Mark Hamlin.<br>"
                                      "All rights reserved.</h3>"));
-
-    QString SparkleGlueHeader(tr("<h2><u>Sparkle-glue</u></h2>"
-                                 "<h3>Copyright © 2008 Remko Troncon<br>"
-                                 "Copyright © 2017 Vadim Peretokin</h3>"));
 #endif // defined(Q_OS_MACOS)
 #endif // defined(INCLUDE_UPDATER)
 
@@ -996,7 +992,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                Sparkle3rdPartyHeader,          // 29 - Sparkle 3rd Party headers - translatable
                                                BSD2Clause_Body                 // 30 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
                                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
-                                               SparkleGlueHeader, // 31 - Sparkle glue header - translatable
                                                BSD2Clause_Body    // 32 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))));
 #endif // defined(Q_OS_MACOS))

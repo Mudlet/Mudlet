@@ -92,6 +92,14 @@
 #include <QSettings>
 #endif
 
+// We are now using code that won't work with really old versions of libzip;
+// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
+// (and one or two other recent versions) forgot to include the version defines
+// and thus broke a test depending on them:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
+#error Mudlet requires a version of libzip of at least 1.0
+#endif
+
 #if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
@@ -556,8 +564,8 @@ void mudlet::init()
 
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
-    // release OR a public test version:
-    dactionUpdate->setVisible(releaseVersion || publicTestVersion);
+    // release OR a public test version, or if you're specifically trying to test Sparkle.
+    dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
@@ -3398,13 +3406,12 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     struct zip_stat zs;
     struct zip_file* zf;
     zip_uint64_t bytesRead = 0;
-    char buf[4096]; // Was 100 but that seems unduly stingy...!
-    zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err) {
-        zip_error_t *error = zip_get_error(archive);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
-        zip_error_fini(error);
-        zip_discard(archive);
+    zip* archive = zip_open(archivePath.toUtf8().constData(), 0, &err);
+    if (!archive) {
+        zip_error_t error;
+        zip_error_init_with_code(&error, err);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \"" << zip_error_strerror(&error) << "\"";
+        zip_error_fini(&error);
         return false;
     }
 
@@ -3472,6 +3479,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
             bytesRead = 0;
             zip_uint64_t const bytesExpected = zs.size;
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
+                char buf[4096]; // Was 100 but that seems unduly stingy...!
                 zip_int64_t const len = zip_fread(zf, buf, sizeof(buf));
                 if (len < 0) {
                     fd.close();
@@ -3765,9 +3773,9 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (releaseVersion || publicTestVersion) {
+    if (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // Only try and create an updater (which checks for updates online) if
-        // this is a release/public test version:
+        // this is a release/public test version, or if you are testing Sparkle (env flag set).
         pUpdater->checkUpdatesOnStart();
     }
 }

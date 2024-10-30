@@ -43,13 +43,19 @@ jobs:
         fi
 
         export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "linux" and (.url | contains("-ptb-"))) | .url')
-        export MACOS_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"macos\") | .url")
+        export MACOS_X64_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "macos" and (.url | contains("x86_64"))) | .url')
+        export MACOS_ARM64_PTB_URL=$(cat $LATEST_FEED | jq --raw-output '.data[] | select(.platform == "macos" and (.url | contains("arm64"))) | .url')
 
         echo "Linux PTB link: $LINUX_PTB_URL"
-        echo "macOS PTB link: $MACOS_PTB_URL"
+        echo "macOS x64 PTB link: $MACOS_X64_PTB_URL"
+        echo "macOS ARM64 PTB link: $MACOS_ARM64_PTB_URL"
 
-        echo "LINUX_PTB_URL=$LINUX_PTB_URL" >> $GITHUB_ENV
-        echo "MACOS_PTB_URL=$MACOS_PTB_URL" >> $GITHUB_ENV
+        {
+          echo "LINUX_PTB_URL=$LINUX_PTB_URL"
+          echo "MACOS_X64_PTB_URL=$MACOS_X64_PTB_URL"
+          echo "MACOS_ARM64_PTB_URL=$MACOS_ARM64_PTB_URL"
+        } >> "$GITHUB_ENV"
+
 
     - name: Setup dblsqd client
       run: |
@@ -66,14 +72,17 @@ jobs:
         bold=$(tput bold)
         normal=$(tput sgr0)
         EXIT_CODE_LINUX=0
-        EXIT_CODE_MACOS=0
+        EXIT_CODE_MACOS_x64=0
+        EXIT_CODE_MACOS_ARM64=0
 
         echo "Linking ${bold}Linux PTB${normal} ${PTB_VERSION}..."
         dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}" || EXIT_CODE_LINUX=$?
-        echo "Linking ${bold}macOS PTB${normal} ${PTB_VERSION}..."
-        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}" || EXIT_CODE_MACOS=$?
+        echo "Linking ${bold}macOS x84 PTB${normal} ${PTB_VERSION}..."
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_ARM64_PTB_URL}" || EXIT_CODE_MACOS_x64=$?
+        echo "Linking ${bold}macOS arm64 PTB${normal} ${PTB_VERSION}..."
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:arm "${MACOS_ARM64_PTB_URL}" || EXIT_CODE_MACOS_ARM64=$?
 
-        if [ "${EXIT_CODE_LINUX}" != 0 ] && [ "${EXIT_CODE_MACOS}" != 0 ]; then
+        if [ "${EXIT_CODE_LINUX}" != 0 ] && [ "${EXIT_CODE_MACOS_x64}" != 0 ] && [ "${EXIT_CODE_MACOS_ARM64}" != 0 ]; then
           exit 1
         fi
 
