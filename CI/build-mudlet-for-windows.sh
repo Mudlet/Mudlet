@@ -150,6 +150,9 @@ export WITH_MAIN_BUILD_SYSTEM="NO"
 echo "Running qmake to make MAKEFILE ..."
 echo ""
 
+# Disable 3D Mapper for Qt 6.8 crash diagnosis
+export WITH_3DMAPPER="NO"
+
 if [ "${MSYSTEM}" = "MINGW64" ]; then
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 else
