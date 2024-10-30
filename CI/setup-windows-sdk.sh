@@ -93,18 +93,21 @@ echo ""
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
   echo "=== Installing Qt6 Packages ==="
+  
   pacman_attempts=1
   while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
+    if /usr/bin/pacman -U --noconfirm \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-base-6.7.2-2-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-shadertools-6.7.2-1-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-multimedia-ffmpeg-6.7.2-2-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-multimedia-6.7.2-2-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-multimedia-wmf-6.7.2-2-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-svg-6.7.2-1-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-speech-6.7.2-1-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-imageformats-6.7.2-1-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-tools-6.7.2-1-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qt6-5compat-6.7.2-1-any.pkg.tar.zst" \
+      "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-qtkeychain-qt6-0.14.3-1-any.pkg.tar.zst"; then
         break
     fi
 
