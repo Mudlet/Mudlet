@@ -619,6 +619,8 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getCharacterName(lua_State*);
+    static int getProfileInformation(lua_State*);
+    static int setProfileInformation(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State*);
     static int customHTTP(lua_State*);
