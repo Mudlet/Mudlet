@@ -38,6 +38,7 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TGameDetails.h"
 #include "TLabel.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -6640,8 +6641,26 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 int TLuaInterpreter::setProfileInformation(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString text = getVerifiedString(L, __func__, 1, "text");
-    host.writeProfileData(qsl("description"), text);
+
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        const QString text = getVerifiedString(L, __func__, 1, "text");
+        if (!text.isEmpty()) {
+            host.writeProfileData(qsl("description"), text);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+    }
+
+    QString desc = "";
+    // if this is a default game, return to the orginal text
+    auto itDetails = TGameDetails::findGame(host.getName().toUtf8().constData());
+    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+        if (!(*itDetails).description.isEmpty()) {
+            desc = (*itDetails).description;
+        }
+    }
+
+    host.writeProfileData(qsl("description"), desc);
     lua_pushboolean(L, true);
     return 1;
 }
