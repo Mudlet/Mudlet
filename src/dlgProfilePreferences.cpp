@@ -168,7 +168,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::self()->developmentVersion) {
+    if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -768,7 +768,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     setColors2();
 
 
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
 #else
     checkBox_debugShowAllCodepointProblems->hide();
@@ -1901,6 +1901,11 @@ void dlgProfilePreferences::slot_setDisplayFont()
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
     QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+#endif
+
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Add Apple Color Emoji fallback.
+    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
 #endif
 
     auto mainConsole = pHost->mpConsole;
@@ -3111,7 +3116,7 @@ void dlgProfilePreferences::slot_saveAndClose()
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
+    if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif

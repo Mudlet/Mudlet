@@ -55,6 +55,7 @@
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
+#include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
@@ -418,9 +419,12 @@ public:
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
-    auto showSplitscreenTutorial() -> bool;
-    auto showedSplitscreenTutorial() -> void;
-    auto experiencedMudletPlayer() -> bool;
+    bool profileExists(const QString& profileName);
+    bool showSplitscreenTutorial();
+    void showedSplitscreenTutorial();
+    bool showMuteAllMediaTutorial();
+    void showedMuteAllMediaTutorial();
+    bool experiencedMudletPlayer();
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -535,7 +539,7 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
-// Not used:    void slot_showHelpDialogIrc();
+    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
     void slot_tabChanged(int);
     void slot_timerFires();
@@ -545,6 +549,7 @@ public slots:
 
 protected:
     void closeEvent(QCloseEvent*) override;
+    void changeEvent(QEvent*) override;
 
 
 signals:
@@ -568,6 +573,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_windowStateChanged(const Qt::WindowStates);
 
 
 private slots:
@@ -595,6 +601,7 @@ private slots:
     void slot_updateInstalled();
 #endif
     void slot_updateShortcuts();
+    void slot_windowStateChanged(const Qt::WindowStates);
 
 
 private:
@@ -743,10 +750,12 @@ private:
     // The collection of words in what mpHunspell_sharedDictionary points to:
     QSet<QString> mWordSet_shared;
 
-    // amount of times the shortcut to cancel split screen has been shown help educate new users
-    int mScrollbackTutorialsShown = 0;
-    // show the split screen tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3;
+    // amount of times the shortcut has been shown help educate new users
+    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    // show the tutorial maximum 3 times on a new Mudlet
+    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

@@ -115,6 +115,7 @@ public:
     void copy();
     void cut();
     void paste();
+    void clear();
     void appendBuffer();
     void appendBuffer(const TBuffer&);
     int getButtonState();
