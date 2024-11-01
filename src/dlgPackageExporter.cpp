@@ -357,10 +357,15 @@ void dlgPackageExporter::checkToEnableExportButton()
 
 void dlgPackageExporter::slot_importIcon()
 {
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), lastDir, tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -1089,6 +1094,10 @@ void dlgPackageExporter::slot_addFiles()
     fDialog->setFileMode(QFileDialog::Directory);
     fDialog->setOption(QFileDialog::DontUseNativeDialog);
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    fDialog->setDirectory(lastDir);
+
     QStringList selectedFiles;
     //change file dialog children functions to support multiple folder+file selection
     //as qt doesn't seem to support that out of the box
@@ -1112,17 +1121,26 @@ void dlgPackageExporter::slot_addFiles()
     }
     if (!selectedFiles.isEmpty()) {
         ui->listWidget_addedFiles->addItems(selectedFiles);
+
+        lastDir = fDialog->directory().absolutePath();
+        settings.setValue("lastFileDialogLocation", lastDir);
     }
     fDialog->deleteLater();
 }
 
 void dlgPackageExporter::slot_openPackageLocation()
 {
-    const QString profileName(mpHost->getName());
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     mPackagePath = QFileDialog::getExistingDirectory(
-            nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
+            nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
 
+    if (mPackagePath.isEmpty()) {
+        return;
+    }
+    lastDir = QFileInfo(mPackagePath).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
     emit signal_exportLocationChanged(mPackagePath);
 }
 
@@ -1523,7 +1541,10 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 
 QString dlgPackageExporter::getActualPath() const
 {
-    return mPackagePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) : mPackagePath;
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    return mPackagePath.isEmpty() ? lastDir : mPackagePath;
 }
 
 void dlgPackageExporter::slot_cancelExport()
