@@ -1560,6 +1560,36 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubsNames
+int TLuaInterpreter::getExitStubsNames(lua_State* L)
+{
+    const QStringList stubmap = { "north", "northeast", "northwest", "east", "west",
+                                  "south", "southeast", "southwest", "up", "down", "in",
+                                  "out", "other"
+    };
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
+
+    // Previously threw a Lua error on non-existent room!
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+    }
+    QList<int> const stubs = pR->exitStubs;
+    lua_newtable(L);
+    for (int i = 0, total = stubs.size(); i < total; ++i) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, stubmap[stubs.at(i) - 1].toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getGridMode
 int TLuaInterpreter::getGridMode(lua_State* L)
 {

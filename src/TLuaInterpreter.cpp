@@ -5281,6 +5281,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "connectExitStub", TLuaInterpreter::connectExitStub);
     lua_register(pGlobalLua, "getExitStubs", TLuaInterpreter::getExitStubs);
     lua_register(pGlobalLua, "getExitStubs1", TLuaInterpreter::getExitStubs1);
+    lua_register(pGlobalLua, "getExitStubsNames", TLuaInterpreter::getExitStubsNames);
     lua_register(pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority);
     lua_register(pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority);
     lua_register(pGlobalLua, "updateMap", TLuaInterpreter::updateMap);
