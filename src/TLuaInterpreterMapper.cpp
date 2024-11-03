@@ -1378,6 +1378,30 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaRooms1
+int TLuaInterpreter::getAreaRooms1(lua_State* L)
+{
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_newtable(L);
+    QSetIterator<int> itAreaRoom(pA->getAreaRooms());
+    int i = 0;
+    while (itAreaRoom.hasNext()) {
+        lua_pushnumber(L, ++i);
+        // We should have started at 1 but past code had incorrectly started
+        // with a zero index and we must maintain compatibility with code written
+        // for that
+        lua_pushnumber(L, itAreaRoom.next());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaTable
 int TLuaInterpreter::getAreaTable(lua_State* L)
 {

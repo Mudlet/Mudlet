@@ -277,6 +277,7 @@ public:
     static int getAreaTableSwap(lua_State*);
     static int getPath(lua_State*);
     static int getAreaRooms(lua_State*);
+    static int getAreaRooms1(lua_State*);
     static int clearCmdLine(lua_State*);
     static int printCmdLine(lua_State*);
     static int searchRoom(lua_State*);
