@@ -2729,13 +2729,19 @@ void mudlet::slot_replay()
         return;
     }
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName())).toString();
+
+
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
-                                                    getMudletPath(profileReplayAndLogFilesPath, pHost->getName()),
+                                                    lastDir,
                                                     tr("*.dat"));
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
     loadReplay(pHost, fileName);

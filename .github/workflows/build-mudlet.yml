@@ -375,8 +375,10 @@ jobs:
         echo "ARCH=$ARCH" >> $GITHUB_ENV
         if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
           # dblsqd only supports 'arm' as an architecture and not 'arm64'
+          export ARCH_DBLSQD=arm
           echo "ARCH_DBLSQD=arm" >> $GITHUB_ENV
         else
+          export ARCH_DBLSQD=$ARCH
           echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
         fi
         ${{github.workspace}}/CI/travis.after_success.sh

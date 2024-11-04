@@ -610,7 +610,7 @@ void dlgConnectionProfiles::slot_addProfile()
     fillout_form();
     welcome_message->hide();
 
-    informationalArea->show();
+    informationArea->show();
     tabWidget_connectionInfo->show();
 
     const QString newname = tr("new profile name");
@@ -778,16 +778,18 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 {
-    auto itDetails = TGameDetails::findGame(profile_name);
-    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
-        if (!(*itDetails).description.isEmpty()) {
-            return (*itDetails).description;
+    QString profileDesc = readProfileData(profile_name, qsl("description"));
+
+    if (profileDesc.isEmpty()) {
+        auto itDetails = TGameDetails::findGame(profile_name);
+        if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+            if (!(*itDetails).description.isEmpty()) {
+                return (*itDetails).description;
+            }
         }
     }
 
-    // Else, if there isn't a predefined text, return whatever the user might
-    // have stored:
-    return readProfileData(profile_name, qsl("description"));
+    return profileDesc;
 }
 
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
@@ -1020,7 +1022,7 @@ void dlgConnectionProfiles::fillout_form()
     if (mProfileList.isEmpty()) {
         welcome_message->show();
         tabWidget_connectionInfo->hide();
-        informationalArea->hide();
+        informationArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1034,7 +1036,7 @@ void dlgConnectionProfiles::fillout_form()
         welcome_message->hide();
 
         tabWidget_connectionInfo->show();
-        informationalArea->show();
+        informationArea->show();
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
@@ -1278,11 +1280,17 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
     const QString imageLocation = QFileDialog::getOpenFileName(
-            this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
+            this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(imageLocation).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {

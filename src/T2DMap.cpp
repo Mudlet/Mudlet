@@ -4070,16 +4070,23 @@ void T2DMap::slot_loadMap() {
         return;
     }
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())).toString();
+
+
     const QString fileName = QFileDialog::getOpenFileName(
                            this,
                            tr("Load Mudlet map"),
-                           mudlet::getMudletPath(mudlet::profileMapsPath, mpMap->mProfileName),
+                           lastDir,
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
                               // Intentional comment to separate arguments
                               "Do not change extensions (in braces) or the ;;s as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         mpHost->mpConsole->importMap(fileName);

@@ -38,6 +38,7 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TGameDetails.h"
 #include "TLabel.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -5411,6 +5412,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
+    lua_register(pGlobalLua, "getProfileInformation", TLuaInterpreter::getProfileInformation);
+    lua_register(pGlobalLua, "setProfileInformation", TLuaInterpreter::setProfileInformation);
+    lua_register(pGlobalLua, "clearProfileInformation", TLuaInterpreter::clearProfileInformation);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -6622,6 +6626,47 @@ int TLuaInterpreter::getCharacterName(lua_State* L)
     }
 
     lua_pushstring(L, name.toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getProfileInformation
+int TLuaInterpreter::getProfileInformation(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString info = host.readProfileData(qsl("description"));
+    lua_pushstring(L, info.toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#setProfileInformation
+int TLuaInterpreter::setProfileInformation(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    const QString text = getVerifiedString(L, __func__, 1, "text");
+    if (text.isEmpty()) {
+        return warnArgumentValue(L, __func__, "empty text supplied to setProfileInformation");
+    }
+    host.writeProfileData(qsl("description"), text);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#clearProfileInformation
+int TLuaInterpreter::clearProfileInformation(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString desc = "";
+
+    // if this is a default game, return to the orginal text
+    auto itDetails = TGameDetails::findGame(host.getName().toUtf8().constData());
+    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+        if (!(*itDetails).description.isEmpty()) {
+            desc = (*itDetails).description;
+        }
+    }
+
+    host.writeProfileData(qsl("description"), desc);
+    lua_pushboolean(L, true);
     return 1;
 }
 

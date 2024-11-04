@@ -1258,6 +1258,8 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
         return false;
     }
 
+    // createColorPatternText(...) now returns an empty string if BOTH color
+    // codes are the scmIgnored ones:
     mPatterns << createColorPatternText(ansiFg, ansiBg);
     mPatternKinds << REGEX_COLOR_PATTERN;
     mColorPatternList.push_back(pCT);
@@ -1461,7 +1463,11 @@ QString TTrigger::createColorPatternText(const int fgColorCode, const int bgColo
         bgText = qsl("%1").arg(bgColorCode, 3, 10, QLatin1Char('0'));
     }
 
-    return qsl("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText);
+    // QString::compare(...) returns zero (boolean false) on a match, or a
+    // non-zero (boolean true) on no match - and we want to detect when BOTH
+    // texts are IGNORE so we return an empty string in that case only - so that
+    // it is equivalent to an empty other trigger type:
+    return (fgText.compare(QLatin1String("IGNORE")) || bgText.compare(QLatin1String("IGNORE"))) ? qsl("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText) : QString();
 }
 
 void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode)
