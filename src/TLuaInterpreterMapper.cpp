@@ -1520,7 +1520,6 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
@@ -1545,7 +1544,6 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
@@ -1575,7 +1573,6 @@ int TLuaInterpreter::getExitStubsNames(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
