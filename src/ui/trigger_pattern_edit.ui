@@ -177,14 +177,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="lineEdit_pattern">
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>33</height>
-      </size>
-     </property>
-    </widget>
+    <widget class="SingleLineTextEdit" name="lineEdit_pattern"/>
    </item>
    <item>
     <widget class="QSpinBox" name="spinBox_lineSpacer">
@@ -214,6 +207,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SingleLineTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header>SingleLineTextEdit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
