@@ -2796,6 +2796,17 @@ void TBuffer::logRemainingOutput()
     mpHost->mpConsole->mLogStream.flush();
 }
 
+// logs a string directly to the log file
+void TBuffer::appendLog(const QString &text)
+{
+    TBuffer* pB = &mpHost->mpConsole->buffer;
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+        return;
+    }
+
+    mpHost->mpConsole->mLogStream << text;
+}
+
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format)
 {

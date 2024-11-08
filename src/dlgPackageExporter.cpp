@@ -41,11 +41,12 @@
 #include <QMimeData>
 #include "post_guard.h"
 
-// We are now using code that won't work with really old versions of libzip:
-// Unfortunately libzip 1.70 forgot to include these defines and thus broke the
-// original tests:
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR < 1) && (LIBZIP_VERSION_MINOR < 11)
-#error Mudlet requires a version of libzip of at least 0.11
+// We are now using code that won't work with really old versions of libzip;
+// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
+// (and one or two other recent versions) forgot to include the version defines
+// and thus broke a test depending on them:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
+#error Mudlet requires a version of libzip of at least 1.0
 #endif
 
 dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
@@ -356,10 +357,15 @@ void dlgPackageExporter::checkToEnableExportButton()
 
 void dlgPackageExporter::slot_importIcon()
 {
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), lastDir, tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -895,10 +901,12 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     if (!archive) {
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
-        /*:
-        This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing
-        file anywhere
-        in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.
+        /*: This zipError message is shown when the libzip library code is unable
+         * to open the file that was to be the end result of the export process.
+         * As this may be an existing file anywhere in the computer's
+         * file-system(s) it is possible that permissions on the directory or an
+         * existing file that is to be overwritten may be a source of problems
+         * here.
         */
         const QString errMsg = tr("Failed to open package file. Error is: \"%1\".")
                                  .arg(zip_error_strerror(&zipError));
@@ -1058,10 +1066,12 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                 return {false, tr("Export cancelled.")};
             }
 
-            /*:
-            This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be
-            the point at which something breaks because a problem was not spotted/detected in the process earlier...
-            */
+            /*: This error message is displayed at the final stage of exporting
+             * a package when all the sourced files are finally put into the
+             * archive. Unfortunately this may be the point at which something
+             * breaks because a problem was not spotted/detected in the process
+             * earlier...
+             */
             const QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".").arg(zipError);
             zip_discard(archive);
             // In libzip 0.11 a function was added to clean up
@@ -1070,10 +1080,10 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             // - before that version the memory just leaked away...
             return {false, errorMsg};
         }
+
     } else {
         zip_discard(archive);
     }
-
 
     return {isOk, error};
 }
@@ -1083,6 +1093,10 @@ void dlgPackageExporter::slot_addFiles()
     QFileDialog* fDialog = new QFileDialog;
     fDialog->setFileMode(QFileDialog::Directory);
     fDialog->setOption(QFileDialog::DontUseNativeDialog);
+
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    fDialog->setDirectory(lastDir);
 
     QStringList selectedFiles;
     //change file dialog children functions to support multiple folder+file selection
@@ -1107,17 +1121,26 @@ void dlgPackageExporter::slot_addFiles()
     }
     if (!selectedFiles.isEmpty()) {
         ui->listWidget_addedFiles->addItems(selectedFiles);
+
+        lastDir = fDialog->directory().absolutePath();
+        settings.setValue("lastFileDialogLocation", lastDir);
     }
     fDialog->deleteLater();
 }
 
 void dlgPackageExporter::slot_openPackageLocation()
 {
-    const QString profileName(mpHost->getName());
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     mPackagePath = QFileDialog::getExistingDirectory(
-            nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
+            nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
 
+    if (mPackagePath.isEmpty()) {
+        return;
+    }
+    lastDir = QFileInfo(mPackagePath).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
     emit signal_exportLocationChanged(mPackagePath);
 }
 
@@ -1518,7 +1541,10 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 
 QString dlgPackageExporter::getActualPath() const
 {
-    return mPackagePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) : mPackagePath;
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    return mPackagePath.isEmpty() ? lastDir : mPackagePath;
 }
 
 void dlgPackageExporter::slot_cancelExport()
