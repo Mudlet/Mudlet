@@ -38,7 +38,7 @@ void TriggerHighlighter::initialiseRules()
     highlightingRules.append({QRegularExpression(R"([*+.]|{[0-9,]*})"), quantifierFormat});
     highlightingRules.append({QRegularExpression(R"((\\[dDsSwW]|\[[^\]]+\]))"), quantifierFormat});
 
-    //
+    // \n \r \t and octal codes
     escapeCharFormat.setForeground(Qt::black);
     escapeCharFormat.setBackground(yellow);
     escapeCharFormat.setFontWeight(QFont::Bold);
