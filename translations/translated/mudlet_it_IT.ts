@@ -4549,7 +4549,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="811"/>
       <source>Information</source>
-      <translation type="unfinished"/>
+      <translation>Informazioni</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
@@ -14436,19 +14436,19 @@ o script LUA</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
       <source>handle multiple items as a</source>
       <extracomment>This text preceeds (is above) the content of the spinBox_lineMargin which also contain text with the text in the label_multiLineTrigger suffixed on the end (underneath).</extracomment>
-      <translation type="unfinished"/>
+      <translation>gestisci più elementi come un</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
       <source>OR / Multi-item</source>
       <extracomment>This text represents what is shown in the spinBox_lineMargin control when it is at it minimum value and replaces the normal value and the normal prefix and suffix that would otherwise surround it before this or those elements are inserted in the middle of the groupBox_multiLineTrigger and the label_multiLineTrigger text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>OR / Multi-elemento</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="449"/>
       <source>)</source>
       <extracomment>This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
@@ -14465,7 +14465,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
       <source>&lt;p&gt;Do not pass whole line to children.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Non passare tutta la riga ai trigger figli.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
@@ -14512,7 +14512,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="211"/>
       <source>&lt;p&gt;Match all occurrences of the pattern in the line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Trova tutte le corrispondenze del pattern nella riga.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
