@@ -43,7 +43,6 @@
 #include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
-#include "TriggerHighlighter.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -839,8 +838,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                 << tr("color trigger")
                 << tr("prompt");
 
-    TriggerHighlighter *highlighter;
-
     for (int i = 0; i < 50; i++) {
         auto pItem = new dlgTriggerPatternEdit(mpWidget_triggerItems);
         QComboBox* pBox = pItem->comboBox_patternType;
@@ -874,9 +871,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         if (i == 0) {
             pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
         }
-
-        highlighter = new TriggerHighlighter(pItem->lineEdit_pattern->document());
-
     }
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:
@@ -5536,10 +5530,39 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
 
     switch (type) {
     case REGEX_SUBSTRING:
+        pItem->lineEdit_pattern->setHighlightingEnabled(false);
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        pItem->label_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
+        break;
     case REGEX_PERL:
+        pItem->lineEdit_pattern->setHighlightingEnabled(true);
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        pItem->label_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
+        break;
     case REGEX_BEGIN_OF_LINE_SUBSTRING:
+        pItem->lineEdit_pattern->setHighlightingEnabled(false);
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        pItem->label_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
+        break;
     case REGEX_EXACT_MATCH:
+        pItem->lineEdit_pattern->setHighlightingEnabled(false);
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        pItem->label_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
+        break;
     case REGEX_LUA_CODE:
+        pItem->lineEdit_pattern->setHighlightingEnabled(false);
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
