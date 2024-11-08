@@ -1389,14 +1389,10 @@ int TLuaInterpreter::getAreaRooms1(lua_State* L)
         return 1;
     }
     lua_newtable(L);
-    QSetIterator<int> itAreaRoom(pA->getAreaRooms());
     int i = 0;
-    while (itAreaRoom.hasNext()) {
+    for (int room : qAsConst(pA->getAreaRooms())) {
         lua_pushnumber(L, ++i);
-        // We should have started at 1 but past code had incorrectly started
-        // with a zero index and we must maintain compatibility with code written
-        // for that
-        lua_pushnumber(L, itAreaRoom.next());
+        lua_pushnumber(L, room);
         lua_settable(L, -3);
     }
     return 1;
