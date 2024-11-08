@@ -23,27 +23,22 @@ SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
 {
     highlighter = new TriggerHighlighter(this->document());
     highlighter->setHighlightingEnabled(true);
-    // Restrict the height to a single line by setting fixed height based on font size
-    //setFixedHeight(fontMetrics().height() + 10); // Adjust as needed for padding
-    setWordWrapMode(QTextOption::NoWrap); // Prevent text wrapping
+    setWordWrapMode(QTextOption::NoWrap);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 }
 
-// Override keyPressEvent to prevent new lines and handle Enter key
 void SingleLineTextEdit::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-        // Emit editingFinished signal similar to QLineEdit's behavior
-        emit editingFinished();
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Tab) {
+        return;
     }
-    QTextEdit::keyPressEvent(event); // Process other keys normally
+    QTextEdit::keyPressEvent(event);
 }
 
 // Override resizeEvent to ensure the height remains single-line fixed
 void SingleLineTextEdit::resizeEvent(QResizeEvent *event)
 {
-    //setFixedHeight(fontMetrics().height() + 10); // Adjust to desired padding
     QTextEdit::resizeEvent(event);
 }
 

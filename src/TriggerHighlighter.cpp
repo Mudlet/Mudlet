@@ -32,7 +32,7 @@ void TriggerHighlighter::initialiseRules()
     QColor yellow(255, 255, 186, 255);
     QColor green(186, 255, 201, 255);
     QColor blue(186, 225, 255, 255);
-    QColor gray(241, 241, 241);
+    QColor gray(230, 230, 230);
 
     // (pattern), (?:pattern), (?=pattern) (?<capture>)
     groupFormat.setForeground(Qt::darkGreen);
@@ -49,14 +49,14 @@ void TriggerHighlighter::initialiseRules()
     highlightingRules.append({QRegularExpression(R"(\^|\$|\?|\\[bB])"), anchorFormat});
 
     // * + ? . [a-z] {m,n}
-    quantifierFormat.setForeground(Qt::black);
+    quantifierFormat.setForeground(QColor("DarkOrange"));
     quantifierFormat.setBackground(QBrush(orange));
     quantifierFormat.setFontWeight(QFont::Bold);
     highlightingRules.append({QRegularExpression(R"([*+.]|{[0-9,]*})"), quantifierFormat});
     highlightingRules.append({QRegularExpression(R"((\\[dDsSwW]|\[[^\]]+\]))"), quantifierFormat});
 
     // \n \r \t and octal codes
-    escapeCharFormat.setForeground(Qt::black);
+    escapeCharFormat.setForeground(QColor("gold"));
     escapeCharFormat.setBackground(yellow);
     escapeCharFormat.setFontWeight(QFont::Bold);
     highlightingRules.append({QRegularExpression(R"(\\[nrtvfae]|\\[xXuU][0-9A-Fa-f]+|\\[0-7]{1,3})"), escapeCharFormat});

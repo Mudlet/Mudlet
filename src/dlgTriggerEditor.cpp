@@ -854,7 +854,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
-        //connect(pItem->lineEdit_pattern, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
+        connect(pItem->lineEdit_pattern, &QTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
         mpWidget_triggerItems->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
@@ -867,6 +867,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
         // Populate default of false
         //lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
+
+        pItem->lineEdit_pattern->setFont(mpHost->getDisplayFont());
 
         if (i == 0) {
             pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
