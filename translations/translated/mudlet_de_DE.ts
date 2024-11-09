@@ -10140,7 +10140,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Mute</source>
-      <translation>Stumm schalten</translation>
+      <translation>Ton aus</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
