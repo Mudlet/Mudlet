@@ -4510,7 +4510,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="811"/>
       <source>Information</source>
-      <translation type="unfinished"/>
+      <translation>Informationen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
@@ -9401,7 +9401,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="346"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Töne von Mudlet (Trigger, Skripte, etc.) stumm schalten</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="349"/>
@@ -9559,12 +9559,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="360"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Töne vom Spiel (MCMP, MSP, etc.) stumm schalten</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="363"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Medien aus dem Spiel (MCMP, MSP, etc.) werden stumm abgespielt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="374"/>
@@ -10156,7 +10156,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="341"/>
       <location filename="../src/mudlet.cpp" line="3152"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Medien von Mudlet (Trigger, Skripte, etc.) werden stumm abgespielt</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="369"/>
@@ -10681,7 +10681,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="347"/>
       <location filename="../src/mudlet.cpp" line="3157"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Töne vom Spiel (MCMP, MSP, etc.) stumm schalten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1013"/>
@@ -11474,22 +11474,22 @@ Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos
     <message>
       <location filename="../src/mudlet.cpp" line="3140"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet und Spielgeräusche sind stummgeschaltet.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3140"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet und Spielgeräusche sind nicht stummgeschaltet.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3152"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Töne von Mudlet (Trigger, Skripte, etc.) wieder einschalten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3157"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Töne vom Spiel (MCMP, MSP, etc.) wieder einschalten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3196"/>
