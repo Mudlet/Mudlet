@@ -50,10 +50,10 @@ jobs:
         echo "LINUX_PTB_URL=${LINUX_PTB_URL}" >> "$GITHUB_ENV"
         
         echo "macOS x64 PTB link: $MACOS_X64_PTB_URL"
-        echo "MACOS_X64_PTB_URL=${MACOS_X64_PTB_URL}" >> "$GITHUB_ENV"
+        echo "MACOS_X64_PTB_URL=\"${MACOS_X64_PTB_URL}\"" >> "${GITHUB_ENV}"
 
         echo "macOS ARM64 PTB link: $MACOS_ARM64_PTB_URL"
-        echo "MACOS_ARM64_PTB_URL=${MACOS_ARM64_PTB_URL}" >> "$GITHUB_ENV"
+        echo "MACOS_ARM64_PTB_URL=\"${MACOS_ARM64_PTB_URL}\"" >> "$GITHUB_ENV"
 
     - name: Setup dblsqd client
       run: |
