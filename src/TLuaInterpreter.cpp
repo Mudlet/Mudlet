@@ -5194,6 +5194,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAreaTable", TLuaInterpreter::getAreaTable);
     lua_register(pGlobalLua, "getAreaTableSwap", TLuaInterpreter::getAreaTableSwap);
     lua_register(pGlobalLua, "getAreaRooms", TLuaInterpreter::getAreaRooms);
+    lua_register(pGlobalLua, "getAreaRooms1", TLuaInterpreter::getAreaRooms1);
     lua_register(pGlobalLua, "getPath", TLuaInterpreter::getPath);
     lua_register(pGlobalLua, "centerview", TLuaInterpreter::centerview);
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
