@@ -82,13 +82,13 @@
       <location filename="../src/Host.cpp" line="766"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</extracomment>
-      <translation>无法打开并更新模块 %2 中的 xml 文件 &quot;%1&quot;。 错误消息为：&quot;%3&quot;。</translation>
+      <translation>無法開啟並更新 %2 模組中的 xml 文件 &quot;%1&quot;。錯誤訊息為：&quot;%3&quot;。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="780"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a module is saved as package but cannot be done for some reason.</extracomment>
-      <translation>无法将 &quot;%1&quot; 保存到模块 &quot;%2&quot;。错误信息为：&quot;%3&quot;。</translation>
+      <translation>無法將 &quot;%1&quot; 保存到模組 &quot;%2&quot;。錯誤訊息為：&quot;%3&quot;。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1095"/>
@@ -413,22 +413,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation>[WHOIS] %1 以 %2 的身份登录</translation>
+      <translation>[WHOIS] %1 以 %2 的身份登入</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="423"/>
       <source>[WHOIS] %1 is connected from %2</source>
-      <translation>[WHOIS] %1 通过 %2 连接</translation>
+      <translation>[WHOIS] %1 通過 %2 連結</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="426"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation>[WHOIS] %1 正在使用安全连接</translation>
+      <translation>[WHOIS] %1 正在使用安全連結</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="429"/>
       <source>[WHOIS] %1 is on %2</source>
-      <translation>[WHOIS] %1 位于 %2</translation>
+      <translation>[WHOIS] %1 位於 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
@@ -438,12 +438,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="439"/>
       <source>[WHOWAS] %1 was connected via %2 (%3)</source>
-      <translation>[WHOWAS] %1 通过 %2 (%3) 连接</translation>
+      <translation>[WHOWAS] %1 通過 %2 (%3) 連結</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation>[WHOWAS] %1 以 %2 的身份登录</translation>
+      <translation>[WHOWAS] %1 以 %2 的身份登入</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="449"/>
@@ -488,7 +488,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation>未找到启动元素！</translation>
+      <translation>未找到啟動元素！</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
@@ -508,7 +508,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation>找不到数据。</translation>
+      <translation>找不到資料。</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -619,7 +619,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
 ----------
 2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</extracomment>
-      <translation>属性</translation>
+      <translation>屬性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2586"/>
@@ -628,7 +628,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
 ----------
 2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</extracomment>
-      <translation>属性...</translation>
+      <translation>屬性...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2588"/>
@@ -652,19 +652,19 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2660"/>
       <source>Create new map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
-      <translation>新建地图</translation>
+      <translation>創建地圖</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2663"/>
       <source>Load map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
-      <translation>载入地图</translation>
+      <translation>載入地圖</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Create new room here</source>
       <extracomment>Menu option to create a new room in the mapper</extracomment>
-      <translation>在此创建一个新房间</translation>
+      <translation>在此處創建新房間</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2687"/>
@@ -673,7 +673,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (room) item
 ----------
 2D Mapper context menu (label) item</extracomment>
-      <translation>移动</translation>
+      <translation>移動</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2694"/>
@@ -691,7 +691,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2703"/>
       <source>Set exits...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation>设置出口...</translation>
+      <translation>設定出口...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2710"/>
@@ -715,7 +715,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Spread...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation>展开...</translation>
+      <translation>展開...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2729"/>
@@ -727,7 +727,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2736"/>
       <source>Shrink...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation>收缩...</translation>
+      <translation>收縮...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2738"/>
@@ -742,7 +742,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (room) item
 ----------
 2D Mapper context menu (label) item</extracomment>
-      <translation>删除</translation>
+      <translation>刪除</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2752"/>
@@ -885,19 +885,19 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3374"/>
       <location filename="../src/T2DMap.cpp" line="4899"/>
       <source>Solid line</source>
-      <translation>实线</translation>
+      <translation>實線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3375"/>
       <location filename="../src/T2DMap.cpp" line="4900"/>
       <source>Dot line</source>
-      <translation>点线</translation>
+      <translation>點線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3376"/>
       <location filename="../src/T2DMap.cpp" line="4901"/>
       <source>Dash line</source>
-      <translation>虚线</translation>
+      <translation>虛線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3377"/>
@@ -936,7 +936,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3705"/>
       <source>OK</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation>好</translation>
+      <translation>確定</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3711"/>
@@ -977,7 +977,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
       <source>ID</source>
-      <translation>编号</translation>
+      <translation>編號</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="94"/>
@@ -1071,7 +1071,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TAlias.cpp" line="127"/>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation>[别名错误:] %1 超出捕获组最大限制。</translation>
+      <translation>[别名錯誤:] %1 超出捕获组最大限制。</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="272"/>
@@ -1223,12 +1223,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1742"/>
       <source>System Message: %1</source>
-      <translation>系统消息: %1</translation>
+      <translation>系統訊息： %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="309"/>
       <source>Show Time Stamps.</source>
-      <translation>顯示時間戳記</translation>
+      <translation>顯示時間戳記。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1038"/>
@@ -1564,31 +1564,31 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4098"/>
       <location filename="../src/TLuaInterpreter.cpp" line="4132"/>
       <source>ERROR</source>
-      <translation>错误</translation>
+      <translation>錯誤</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5544"/>
       <source>Some functions may not be available.</source>
-      <translation>有些功能可能无法使用。</translation>
+      <translation>部分功能可能無法使用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4896"/>
       <source>No error message available from Lua</source>
-      <translation>Lua没有错误消息</translation>
+      <translation>沒有來自 Lua 的錯誤訊息</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4101"/>
       <location filename="../src/TLuaInterpreter.cpp" line="4120"/>
       <source>object</source>
       <extracomment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
-      <translation>对象</translation>
+      <translation>物件</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4104"/>
       <location filename="../src/TLuaInterpreter.cpp" line="4123"/>
       <source>function</source>
       <extracomment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
-      <translation>函式</translation>
+      <translation>函數</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4898"/>
@@ -1599,7 +1599,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4906"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
-      <translation>[ 错误 ] - 找不到 Lua 模块 %1.%2%3%4</translation>
+      <translation>[ 錯誤 ] - 找不到 Lua 模組 %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5531"/>
@@ -1629,12 +1629,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5751"/>
       <source>Lua error: %1.</source>
-      <translation>Lua 错误: %1.</translation>
+      <translation>Lua 錯誤：%1。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5753"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation>[ 错误 ] - 无法加载代码格式化程序，缩进功能将不可用。</translation>
+      <translation>[ 錯誤 ] - 無法載入程式碼格式化，縮排功能無法使用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5832"/>
@@ -1699,7 +1699,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="180"/>
       <source>logfile</source>
       <extracomment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).</extracomment>
-      <translation>日志文件</translation>
+      <translation>日誌文件</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="232"/>
@@ -1969,7 +1969,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="113"/>
       <source>[MAP ERROR:]%1</source>
-      <translation>[MAP 错误:]%1</translation>
+      <translation>[地圖錯誤:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="527"/>
@@ -12300,7 +12300,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2026"/>
       <source>Delete map:</source>
-      <translation>删除地图:</translation>
+      <translation>刪除地圖：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2218"/>
@@ -12310,12 +12310,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2469"/>
       <source>Map info background:</source>
-      <translation>地图信息背景:</translation>
+      <translation>地圖資訊背景：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2923"/>
       <source>Server password: </source>
-      <translation>服务器密码： </translation>
+      <translation>伺服器密碼： </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2943"/>
@@ -12325,7 +12325,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2946"/>
       <source>Use a secure connection</source>
-      <translation>使用安全连接</translation>
+      <translation>使用安全連線</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3476"/>
@@ -12355,7 +12355,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3629"/>
       <source>Reset to defaults</source>
-      <translation>恢复默认设置</translation>
+      <translation>重置設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3678"/>
@@ -12397,7 +12397,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1354"/>
       <source>Autocomplete</source>
-      <translation>自动补全</translation>
+      <translation>自動補全</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="274"/>
@@ -12427,7 +12427,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="238"/>
       <source>System setting</source>
-      <translation>系统设置</translation>
+      <translation>系統設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="243"/>
@@ -12442,7 +12442,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="230"/>
       <source>Appearance</source>
-      <translation>外观</translation>
+      <translation>外觀</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="261"/>
@@ -12514,12 +12514,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1221"/>
       <source>Display control characters as:</source>
-      <translation>将控制字符显示为:</translation>
+      <translation>顯示控制字元為：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1235"/>
       <source>nothing</source>
-      <translation>无</translation>
+      <translation>無</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1240"/>
@@ -12832,7 +12832,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="2039"/>
       <source>delete</source>
       <comment>Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox</comment>
-      <translation>删除</translation>
+      <translation>刪除</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2046"/>
@@ -13251,7 +13251,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3007"/>
       <source>Hide state</source>
-      <translation>隐藏状态</translation>
+      <translation>隱藏狀態</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3014"/>
@@ -13261,7 +13261,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2981"/>
       <source>Hide detail</source>
-      <translation>隐藏详情</translation>
+      <translation>隱藏詳情</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2843"/>
@@ -13276,7 +13276,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2869"/>
       <source>Port:</source>
-      <translation>端口:</translation>
+      <translation>連接埠：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2916"/>
@@ -13291,7 +13291,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2849"/>
       <source>Server address:</source>
-      <translation>服务器地址:</translation>
+      <translation>伺服器位址：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2906"/>
@@ -13336,7 +13336,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3134"/>
       <source>Connection</source>
-      <translation>连接​​​​​​​​</translation>
+      <translation>連接</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3489"/>
@@ -13351,18 +13351,18 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3524"/>
       <source>port</source>
-      <translation>端口</translation>
+      <translation>連接埠</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3540"/>
       <source>username (optional)</source>
-      <translation>帐号(选填)</translation>
+      <translation>帳號（選填）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2936"/>
       <location filename="../src/ui/profile_preferences.ui" line="3556"/>
       <source>password (optional)</source>
-      <translation>密码（选填）</translation>
+      <translation>密碼（選填）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4005"/>
@@ -13675,7 +13675,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="321"/>
       <source>Northeast</source>
-      <translation>东北</translation>
+      <translation>東北</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="455"/>
@@ -13714,12 +13714,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="729"/>
       <source>This room</source>
-      <translation>这个房间</translation>
+      <translation>這個房間</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="842"/>
       <source>East</source>
-      <translation>东</translation>
+      <translation>東</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="973"/>
@@ -13739,7 +13739,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1393"/>
       <source>Southeast</source>
-      <translation>东南</translation>
+      <translation>東南</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1527"/>
@@ -13961,7 +13961,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation>符号</translation>
+      <translation>符號</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
@@ -14112,7 +14112,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="67"/>
       <source>ID:</source>
-      <translation>编号:</translation>
+      <translation>編號：</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="141"/>
@@ -14244,12 +14244,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="355"/>
       <source>Choose file...</source>
-      <translation>选择文件...</translation>
+      <translation>選擇檔案⋯</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="380"/>
       <source>no file</source>
-      <translation>暂无文件</translation>
+      <translation>沒有檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="407"/>
@@ -14409,7 +14409,7 @@ or LUA script</source>
       <location filename="../src/ui/vars_main_area.ui" line="114"/>
       <location filename="../src/ui/vars_main_area.ui" line="171"/>
       <source>Auto-Type</source>
-      <translation>自动类型</translation>
+      <translation>自動類型</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
@@ -14458,7 +14458,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
       <source>⏷ Value type:</source>
-      <translation>⏷值类型：</translation>
+      <translation>⏷ 數值類型：</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="176"/>
@@ -14478,7 +14478,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="196"/>
       <source>function</source>
-      <translation>函式</translation>
+      <translation>函数</translation>
     </message>
   </context>
 </TS>
