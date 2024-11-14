@@ -19,7 +19,8 @@
 
 #include <QString>
 #include <QLineEdit>
-#include <QDebug>
+#include <SingleLineTextEdit.h>
+
 void unmarkQString(QString* text) {
     QChar middleDot(0x00B7);
     text->replace(middleDot, ' ');
@@ -69,7 +70,6 @@ void markQLineEdit(QLineEdit* lineEdit) {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursorPos);
 
-
     lineEdit->blockSignals(false);
 }
 
@@ -84,6 +84,36 @@ void unmarkQLineEdit(QLineEdit* lineEdit) {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursorPos);
 
-
     lineEdit->blockSignals(false);
+}
+
+void markQTextEdit(SingleLineTextEdit* textEdit) {
+    QString text = textEdit->toPlainText();
+
+    unmarkQString(&text);
+    markQString(&text);
+
+    textEdit->blockSignals(true);
+    int cursorPos = textEdit->textCursor().position();
+    textEdit->setText(text);
+
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.setPosition(cursorPos);
+    textEdit->setTextCursor(cursor);
+    textEdit->blockSignals(false);
+}
+
+void unmarkQTextEdit(SingleLineTextEdit* textEdit) {
+    QString text = textEdit->toPlainText();
+
+    unmarkQString(&text);
+
+    textEdit->blockSignals(true);
+    int cursorPos = textEdit->textCursor().position();
+    textEdit->setText(text);
+
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.setPosition(cursorPos);
+    textEdit->setTextCursor(cursor);
+    textEdit->blockSignals(false);
 }

@@ -28,14 +28,14 @@ class SingleLineTextEdit : public QTextEdit
 public:
     explicit SingleLineTextEdit(QWidget *parent = nullptr);
     void setHighlightingEnabled(bool enabled);
-
-signals:
-    void editingFinished();
+    void setTheme(const QString&);
+    void rehighlight();
 
 protected:
     // Overrides to handle key events and line wrapping
     void keyPressEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void focusOutEvent(QFocusEvent* event) override;
 
 private:
     TriggerHighlighter *highlighter;

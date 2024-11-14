@@ -15,55 +15,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "Host.h"
+#include "TrailingWhitespaceMarker.h"
 #include "TriggerHighlighter.h"
+#include "edbee/views/texttheme.h"
+#include "edbee/models/textdocumentscopes.h"
+
+#include <QDebug>
 
 TriggerHighlighter::TriggerHighlighter(QTextDocument *parent)
     : QSyntaxHighlighter(parent)
 {
-    initialiseRules();
-}
-
-// Processing starts from top to bottom, so put higher priority colours last.
-void TriggerHighlighter::initialiseRules()
-{
-    // a muted pastel colour range
-    QColor red(255, 239, 239);
-    QColor orange(255, 223, 186, 255);
-    QColor yellow(255, 255, 186, 255);
-    QColor green(186, 255, 201, 255);
-    QColor blue(186, 225, 255, 255);
-    QColor gray(230, 230, 230);
-
-    // (pattern), (?:pattern), (?=pattern) (?<capture>)
-    groupFormat.setForeground(Qt::darkGreen);
-    groupFormat.setBackground(QBrush(green));
-    groupFormat.setFontWeight(QFont::Bold);
-    //highlightingRules.append({QRegularExpression(R"(\([?][=:!<]|\\\(|\>|\))"), groupFormat});
-    highlightingRules.append({QRegularExpression(R"(\(.*\))"), groupFormat});
-    //highlightingRules.append({QRegularExpression(R"(\(|\))"), groupFormat});
-
-    // ^ $ ? \b \B
-    anchorFormat.setForeground(Qt::red);
-    anchorFormat.setBackground(QBrush(red));
-    anchorFormat.setFontWeight(QFont::Bold);
-    highlightingRules.append({QRegularExpression(R"(\^|\$|\?|\\[bB])"), anchorFormat});
-
-    // * + ? . [a-z] {m,n}
-    quantifierFormat.setForeground(QColor("DarkOrange"));
-    quantifierFormat.setBackground(QBrush(orange));
-    quantifierFormat.setFontWeight(QFont::Bold);
-    highlightingRules.append({QRegularExpression(R"([*+.]|{[0-9,]*})"), quantifierFormat});
-    highlightingRules.append({QRegularExpression(R"((\\[dDsSwW]|\[[^\]]+\]))"), quantifierFormat});
-
-    // \n \r \t and octal codes
-    escapeCharFormat.setForeground(QColor("gold"));
-    escapeCharFormat.setBackground(yellow);
-    escapeCharFormat.setFontWeight(QFont::Bold);
-    highlightingRules.append({QRegularExpression(R"(\\[nrtvfae]|\\[xXuU][0-9A-Fa-f]+|\\[0-7]{1,3})"), escapeCharFormat});
-
-    // highlight spaces
-    spaceCharFormat.setBackground(gray);
-    highlightingRules.append({QRegularExpression(R"(\s+)"), spaceCharFormat});
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+    setTheme("Mudlet"); // start with the default theme
 }
 
 void TriggerHighlighter::setHighlightingEnabled(bool enabled) {
@@ -84,4 +48,83 @@ void TriggerHighlighter::highlightBlock(const QString &text)
             setFormat(match.capturedStart(), match.capturedLength(), rule.format);
         }
     }
+}
+
+void TriggerHighlighter::setTheme(const QString& themeName)
+{
+    highlightingRules.clear();
+
+    auto edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+    edbee::TextTheme* theme = themeManager->theme(themeName);
+
+    // set defaults from chosen theme
+    edbee::TextThemeRule* defaultRule = new edbee::TextThemeRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
+    applyFormatting(anchorFormat, defaultRule);
+    applyFormatting(charClassFormat, defaultRule);
+    applyFormatting(escapeCharFormat, defaultRule);
+    applyFormatting(groupFormat, defaultRule);
+    applyFormatting(quantifierFormat, defaultRule);
+
+    QList<edbee::TextThemeRule*> rules = theme->rules();
+
+    // override defaults in theme using scopes which map to regex formats
+    // check a few as some themes don't provide all of them
+    std::map<QString, QTextCharFormat&> scopeMap = {
+        {"comment", anchorFormat},
+        {"keyword", charClassFormat},
+        {"keyword.control", charClassFormat},
+        {"keyword.operator", charClassFormat},
+        {"constant", escapeCharFormat},
+        {"constant.numeric", escapeCharFormat},
+        {"constant.language", escapeCharFormat},
+        {"constant.character.escape", escapeCharFormat},
+        {"string", groupFormat},
+        {"variable", quantifierFormat},
+        {"variable.language", quantifierFormat},
+        {"variable.parameter", quantifierFormat},
+        {"variable.function", quantifierFormat}
+    };
+
+    for (auto& rule : rules) {
+        QString scope = rule->scopeSelector()->toString();
+        auto it = scopeMap.find(scope);
+        if (it != scopeMap.end()) {
+            applyFormatting(it->second, rule);
+        }
+    }
+
+    const QRegularExpression anchorPattern(R"([$^])", QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpression charClassPattern(R"(\[.*?\])", QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpression escapePattern(R"(\\[.*?])", QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpression groupPattern(R"(\((?:\?[:=!])?.*?\))", QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpression quantifierPattern(R"([?+*]|\{\d+,?\d*\})", QRegularExpression::UseUnicodePropertiesOption);
+
+    highlightingRules.append({anchorPattern, anchorFormat});
+    highlightingRules.append({charClassPattern, charClassFormat});
+    highlightingRules.append({escapePattern, escapeCharFormat});
+    highlightingRules.append({groupPattern, groupFormat});
+    highlightingRules.append({quantifierPattern, quantifierFormat});
+
+    rehighlight();
+}
+
+void TriggerHighlighter::applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule) {
+    QColor foreground = rule->foregroundColor();
+    QColor background = rule->backgroundColor();
+
+    if (foreground.isValid()) {
+        format.setForeground(foreground);
+    }
+
+    if (background.isValid()) {
+        format.setBackground(background);
+    }
+    if (rule->bold()) {
+        format.setFontWeight(QFont::Bold);
+    } else {
+        format.setFontWeight(QFont::Normal);
+    }
+    format.setFontItalic(rule->italic());
+    format.setFontUnderline(rule->underline());
 }

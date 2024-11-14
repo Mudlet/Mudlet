@@ -39,11 +39,13 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
+#include "dlgProfilePreferences.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
+#include "edbee/models/textdocumentscopes.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
@@ -866,7 +868,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->label_patternNumber->show();
 
         // Populate default of false
-        //lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
 
         pItem->lineEdit_pattern->setFont(mpHost->getDisplayFont());
 
@@ -874,6 +876,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
         }
     }
+
+    connect(mpHost, &Host::signal_editorThemeChanged, this, &dlgTriggerEditor::slot_editorThemeChanged);
+    // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
+    mpHost->editorThemeChanged();
+
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:
     const int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
@@ -884,6 +891,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showIDLabels(mpHost->showIdsInEditor());
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
+    }
+}
+
+void dlgTriggerEditor::slot_editorThemeChanged()
+{
+    for (int i = 0; i < 50; i++) {
+        mTriggerPatternEdit.at(i)->lineEdit_pattern->setTheme(mpHost->mEditorTheme);
     }
 }
 
@@ -1052,7 +1066,8 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     if (pTriggerPattern->lineEdit_pattern->isVisible()) {
                         // If is a colour trigger the lineEdit_pattern is not shown
                         pTriggerPattern->lineEdit_pattern->setFocus();
-                        //pTriggerPattern->lineEdit_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                        pTriggerPattern->lineEdit_pattern->textCursor().setPosition(pItem->data(0, PositionRole).toInt());
+
                     }
                     break;
                 }
@@ -1310,7 +1325,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     if (pTriggerPattern->lineEdit_pattern->isVisible()) {
                         // If is a colour trigger the lineEdit_pattern is not shown
                         pTriggerPattern->lineEdit_pattern->setFocus();
-                        //pTriggerPattern->lineEdit_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                        pTriggerPattern->lineEdit_pattern->textCursor().setPosition(pItem->data(0, PositionRole).toInt());
                     }
                     break;
                 }
@@ -5520,15 +5535,17 @@ void dlgTriggerEditor::saveKey()
 
 void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
 {
-    /*
     // Display middle dots for potentially unwanted spaces in perl regex
     if (type == REGEX_PERL) {
-        markQLineEdit(pItem->lineEdit_pattern);
+        markQTextEdit(pItem->lineEdit_pattern);
         lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = true;
+        pItem->lineEdit_pattern->blockSignals(true);
+        pItem->lineEdit_pattern->rehighlight();
+        pItem->lineEdit_pattern->blockSignals(false);
     } else {
-        unmarkQLineEdit(pItem->lineEdit_pattern);
+        unmarkQTextEdit(pItem->lineEdit_pattern);
         lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
-    }*/
+    }
 
     switch (type) {
     case REGEX_SUBSTRING:
@@ -5608,12 +5625,15 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
 }
 
 void dlgTriggerEditor::slot_changedPattern()
-{   /*
-    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(sender());
-    if (lineEditShouldMarkSpaces[lineEdit]) {
-        markQLineEdit(lineEdit);
+{
+    SingleLineTextEdit* textEdit = qobject_cast<SingleLineTextEdit*>(sender());
+
+    if (lineEditShouldMarkSpaces[textEdit]) {
+        markQTextEdit(textEdit);
+        textEdit->blockSignals(true);
+        textEdit->rehighlight();
+        textEdit->blockSignals(false);
     }
-    */
 
     checkForMoreThanOneTriggerItem();
 }
@@ -5810,7 +5830,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             } else {
                 // Keep track of lineEdits that should have trailing spaces marked
                 if (pType == REGEX_PERL) {
-                    //lineEditShouldMarkSpaces[pPatternItem->lineEdit_pattern] = true;
+                    lineEditShouldMarkSpaces[pPatternItem->lineEdit_pattern] = true;
                 }
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
             }
@@ -9749,15 +9769,12 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
 
-// We do NOT want to change every profile's editor theme when the setting is
-// changed in the settings dialog so this has been moved out of a lambda wired
-// up as a slot to respond to a
-// mudlet::signal_editorThemeChanged(const QString& theme) signal
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
 {
     auto localConfig = mpSourceEditorEdbee->config();
     localConfig->beginChanges();
     localConfig->setThemeName(theme);
+    mpHost->editorThemeChanged();
     localConfig->setFont(mpHost->getDisplayFont());
     localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
                                                ? edbee::TextEditorConfig::ShowWhitespaces
@@ -10299,14 +10316,14 @@ void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
     for (qsizetype i = 0, total = pLayout->count(); i < total; ++i) {
         auto pLayoutItem = pLayout->itemAt(i)->widget();
         if (pLayoutItem) {
-            auto* pLineEdit_pattern = pLayoutItem->findChild<QLineEdit*>(qsl("lineEdit_pattern"));
+            auto* pLineEdit_pattern = pLayoutItem->findChild<SingleLineTextEdit*>(qsl("lineEdit_pattern"));
             auto* pComboBox_type = pLayoutItem->findChild<QComboBox*>(qsl("comboBox_patternType"));
             if (pComboBox_type && (pComboBox_type->currentIndex() == REGEX_PROMPT || pComboBox_type->currentIndex() == REGEX_LINE_SPACER)) {
                 // These automatically counts as an active item - though if there
                 // isn't any GA signals the first won't work...
                 ++activeItems;
             } else {
-                if (pLineEdit_pattern && !pLineEdit_pattern->text().isEmpty()) {
+                if (pLineEdit_pattern && !pLineEdit_pattern->toPlainText().isEmpty()) {
                     ++activeItems;
                 }
             }

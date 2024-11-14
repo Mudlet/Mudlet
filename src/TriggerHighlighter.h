@@ -22,6 +22,7 @@
 #include <QTextCharFormat>
 #include <QRegularExpression>
 #include <QVector>
+#include "edbee/views/texttheme.h"
 
 class TriggerHighlighter : public QSyntaxHighlighter
 {
@@ -30,13 +31,12 @@ class TriggerHighlighter : public QSyntaxHighlighter
 public:
     explicit TriggerHighlighter(QTextDocument *parent = nullptr);
     void setHighlightingEnabled(bool enabled);
+    void setTheme(const QString&);
 
 protected:
     void highlightBlock(const QString &text) override;
 
 private:
-    bool highlightingEnabled;
-
     struct HighlightingRule
     {
         QRegularExpression pattern;
@@ -45,14 +45,14 @@ private:
 
     QVector<HighlightingRule> highlightingRules;
 
-    QTextCharFormat characterClassFormat;
-    QTextCharFormat quantifierFormat;
-    QTextCharFormat groupFormat;
     QTextCharFormat anchorFormat;
+    QTextCharFormat charClassFormat;
     QTextCharFormat escapeCharFormat;
-    QTextCharFormat spaceCharFormat;
+    QTextCharFormat groupFormat;
+    QTextCharFormat quantifierFormat;
 
-    void initialiseRules();
+    bool highlightingEnabled;
+    void applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule);
 };
 
 #endif  // TRIGGERHIGHLIGHTER_H
