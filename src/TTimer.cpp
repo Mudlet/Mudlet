@@ -40,6 +40,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
+    mpQTimer->setTimerType(Qt::PreciseTimer);
 }
 
 TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
@@ -54,6 +55,7 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;
+    mpQTimer->setTimerType(Qt::PreciseTimer);
 }
 
 TTimer::~TTimer()
