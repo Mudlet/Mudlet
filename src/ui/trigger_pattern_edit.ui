@@ -177,7 +177,14 @@
     </widget>
    </item>
    <item>
-    <widget class="SingleLineTextEdit" name="lineEdit_pattern"/>
+    <widget class="SingleLineTextEdit" name="singleLineTextEdit_pattern">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>33</height>
+      </size>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QSpinBox" name="spinBox_lineSpacer">

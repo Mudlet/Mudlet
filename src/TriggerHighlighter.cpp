@@ -21,8 +21,6 @@
 #include "edbee/views/texttheme.h"
 #include "edbee/models/textdocumentscopes.h"
 
-#include <QDebug>
-
 TriggerHighlighter::TriggerHighlighter(QTextDocument *parent)
     : QSyntaxHighlighter(parent)
 {

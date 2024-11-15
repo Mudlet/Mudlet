@@ -17,15 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QString>
+#include "pre_guard.h"
 #include <QLineEdit>
+#include <QString>
+#include "post_guard.h"
+
 #include <SingleLineTextEdit.h>
 
-void unmarkQString(QString* text) {
+void unmarkQString(QString* text)
+{
     QChar middleDot(0x00B7);
-    text->replace(middleDot, ' ');
+    text->replace(middleDot, QChar::Space);
 }
-void markQString(QString* text) {
+void markQString(QString* text)
+{
     QChar middleDot(0x00B7);
 
     // Trim text, check first and last character for ^ or $
@@ -58,7 +63,8 @@ void markQString(QString* text) {
 
 }
 
-void markQLineEdit(QLineEdit* lineEdit) {
+void markQLineEdit(QLineEdit* lineEdit)
+{
 
     QString text = lineEdit->text();
 
@@ -73,7 +79,8 @@ void markQLineEdit(QLineEdit* lineEdit) {
     lineEdit->blockSignals(false);
 }
 
-void unmarkQLineEdit(QLineEdit* lineEdit) {
+void unmarkQLineEdit(QLineEdit* lineEdit)
+{
 
     QString text = lineEdit->text();
 
@@ -87,7 +94,8 @@ void unmarkQLineEdit(QLineEdit* lineEdit) {
     lineEdit->blockSignals(false);
 }
 
-void markQTextEdit(SingleLineTextEdit* textEdit) {
+void markQTextEdit(QTextEdit* textEdit)
+{
     QString text = textEdit->toPlainText();
 
     unmarkQString(&text);
@@ -103,7 +111,8 @@ void markQTextEdit(SingleLineTextEdit* textEdit) {
     textEdit->blockSignals(false);
 }
 
-void unmarkQTextEdit(SingleLineTextEdit* textEdit) {
+void unmarkQTextEdit(QTextEdit* textEdit)
+{
     QString text = textEdit->toPlainText();
 
     unmarkQString(&text);

@@ -27,6 +27,6 @@ void markQString(QString* input);
 void unmarkQString(QString* input);
 void markQLineEdit(QLineEdit* lineEdit);
 void unmarkQLineEdit(QLineEdit* lineEdit);
-void markQTextEdit(SingleLineTextEdit* textEdit);
-void unmarkQTextEdit(SingleLineTextEdit* textEdit);
+void markQTextEdit(QTextEdit* textEdit);
+void unmarkQTextEdit(QTextEdit* textEdit);
 #endif // MUDLET_TRAILINGWHITESPACEMARKER_H
