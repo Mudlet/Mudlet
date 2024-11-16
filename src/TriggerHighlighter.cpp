@@ -101,8 +101,8 @@ void TriggerHighlighter::setTheme(const QString& themeName)
     highlightingRules.append({anchorPattern, anchorFormat});
     highlightingRules.append({charClassPattern, charClassFormat});
     highlightingRules.append({escapePattern, escapeCharFormat});
-    highlightingRules.append({groupPattern, groupFormat});
     highlightingRules.append({quantifierPattern, quantifierFormat});
+    highlightingRules.append({groupPattern, groupFormat});
 
     rehighlight();
 }
