@@ -26,15 +26,17 @@ SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
 {
     highlighter = new TriggerHighlighter(this->document());
     highlighter->setHighlightingEnabled(true);
+    setAcceptRichText(false);
     setWordWrapMode(QTextOption::NoWrap);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setTabChangesFocus(true);
 }
 
 // trap some commonly used multi-line key shortcuts
 void SingleLineTextEdit::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Tab) {
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         return;
     }
     QTextEdit::keyPressEvent(event);

@@ -869,8 +869,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
         // Populate default of false
         lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = false;
-
-        pItem->singleLineTextEdit_pattern->setFont(mpHost->getDisplayFont());
+        pItem->singleLineTextEdit_pattern->setFontFamily(mpHost->getDisplayFont().family());
 
         if (i == 0) {
             pItem->singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
