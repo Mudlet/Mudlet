@@ -5146,6 +5146,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
     lua_register(pGlobalLua, "permExactMatchStringTrigger", TLuaInterpreter::permExactMatchStringTrigger);
     lua_register(pGlobalLua, "permColorTrigger", TLuaInterpreter::permColorTrigger);
+    lua_register(pGlobalLua, "permLuaFunctionTrigger", TLuaInterpreter::permLuaFunctionTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
     lua_register(pGlobalLua, "permScript", TLuaInterpreter::permScript);
@@ -6390,6 +6391,36 @@ std::pair<int, QString> TLuaInterpreter::startPermExactStringTrigger(const QStri
     QList<int> propertyList;
     for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_EXACT_MATCH;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger(name, patterns, propertyList, mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setName(name);
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->setIsMultiline(multilineDelta >= 0);
+    pT->setConditionLineDelta(std::max(0, multilineDelta));
+    pT->registerTrigger();
+    pT->setScript(function);
+
+    updateEditor();
+    return std::pair(pT->getID(), QString());
+}
+
+std::pair<int, QString> TLuaInterpreter::startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta)
+{
+    TTrigger* pT = nullptr;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_LUA_CODE;
     }
     if (parent.isEmpty()) {
         pT = new TTrigger(name, patterns, propertyList, mpHost);

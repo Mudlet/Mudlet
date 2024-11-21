@@ -153,6 +153,7 @@ public:
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
     std::pair<int, QString> startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
+    std::pair<int, QString> startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
     std::pair<int, QString> setScriptCode(const QString& name, const QString& luaCode, const int pos);
@@ -508,6 +509,7 @@ public:
     static int permBeginOfLineStringTrigger(lua_State*);
     static int permExactMatchStringTrigger(lua_State*);
     static int permColorTrigger(lua_State*);
+    static int permLuaFunctionTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);

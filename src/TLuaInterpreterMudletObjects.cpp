@@ -1324,6 +1324,59 @@ int TLuaInterpreter::permExactMatchStringTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permLuaFunctionTrigger
+int TLuaInterpreter::permLuaFunctionTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+
+    QStringList regList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "%s: bad argument #3 type (lua function strings list as table expected, got %s!)",
+                        __func__, luaL_typename(L, 3));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            regList << lua_tostring(L, -1);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "%s: bad argument #%d (%s)", __func__, 4, validationMessage.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    int multilineDelta = -1;
+    if (lua_gettop(L) > 4) {
+        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
+    } else {
+        // Reproduce old, prior to 4.19, behaviour in other trigger types, in
+        // absence of argument:
+        if (parent.isEmpty() && regList.count() > 1) {
+            multilineDelta = 0;
+        }
+    }
+
+    auto [triggerId, message] = pLuaInterpreter->startPermLuaFunctionTrigger(name, parent, regList, script, multilineDelta);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    lua_pushnumber(L, triggerId);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permPromptTrigger
 int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
