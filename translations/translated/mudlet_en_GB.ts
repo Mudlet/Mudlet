@@ -2747,9 +2747,9 @@ Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+        <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
 Look for further messages related to the rooms that are supposed
-to be in this/these area(s)...</numerusform>
+to be in this area...</numerusform>
         <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
 Look for further messages related to the rooms that are supposed
 to be in these areas...</numerusform>
@@ -2825,9 +2825,9 @@ Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
-Look for further messages related to the rooms that is/are supposed to
-be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
+Look for further messages related to the rooms that are supposed to
+be in this area...</numerusform>
         <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
 Look for further messages related to the rooms that are supposed to
 be in these areas...</numerusform>
@@ -3639,7 +3639,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <source>Trigger name=%1 will fire %n more time(s).</source>
       <translation>
         <numerusform>Trigger name=%1 will fire %n more time.</numerusform>
-        <numerusform>Trigger name=%1 will fire %n more time.</numerusform>
+        <numerusform>Trigger name=%1 will fire %n more times.</numerusform>
       </translation>
     </message>
   </context>
@@ -6465,7 +6465,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <source>copy to %n destination(s)</source>
       <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
       <translation>
-        <numerusform>copy to %n destination(s)</numerusform>
+        <numerusform>copy to %n destination</numerusform>
         <numerusform>copy to %n destinations</numerusform>
       </translation>
     </message>
@@ -10603,7 +10603,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
       <translation>
         <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;(%n update is now available!)&lt;/i&gt;&lt;p&gt;</numerusform>
-        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update is now available!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;(%n updates are now available!)&lt;/i&gt;&lt;p&gt;</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -10612,7 +10612,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
       <translation>
         <numerusform>Review %n update...</numerusform>
-        <numerusform>Review %n update...</numerusform>
+        <numerusform>Review %n updates...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
