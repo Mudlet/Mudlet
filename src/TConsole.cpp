@@ -306,7 +306,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     timeStampButton->setMaximumSize(QSize(30, 30));
     timeStampButton->setSizePolicy(sizePolicy5);
     timeStampButton->setFocusPolicy(Qt::NoFocus);
-    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps.")));
+#if defined(Q_OS_MACOS)
+    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps (<⌘>+T)")));
+#else
+    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps (<CTRL>+T)")));
+#endif
+    timeStampButton->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
     timeStampButton->setIcon(QIcon(qsl(":/icons/dialog-information.png")));
     connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
     connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
@@ -317,7 +322,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setToolTip(utils::richText(tr("Record a replay.")));
+#if defined(Q_OS_MACOS)
+    replayButton->setToolTip(utils::richText(tr("Record a replay (<⌘>+R)")));
+#else
+    replayButton->setToolTip(utils::richText(tr("Record a replay (<CTRL>+R)")));
+#endif
+    replayButton->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
@@ -327,7 +337,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
+#if defined(Q_OS_MACOS)
+    logButton->setToolTip(utils::richText(tr("Start logging game output to log file. (<⌘>+L)")));
+#else
+    logButton->setToolTip(utils::richText(tr("Start logging game output to log file. (<CTRL>+L)")));
+#endif
+    logButton->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
@@ -381,7 +396,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
+#if defined(Q_OS_MACOS)
+    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers. (<⌘>+P)")));
+#else
+    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers. (<CTRL>+P)")));
+#endif
+    emergencyStop->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
     mpBufferSearchBox->setClearButtonEnabled(true);
