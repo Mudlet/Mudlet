@@ -2750,9 +2750,9 @@ to be in this/these area(s)...</source>
         <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</numerusform>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+        <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
 Look for further messages related to the rooms that are supposed
-to be in this/these area(s)...</numerusform>
+to be in these areas...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -2828,9 +2828,9 @@ be in this/these area(s)...</source>
         <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</numerusform>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
-Look for further messages related to the rooms that is/are supposed to
-be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
+Look for further messages related to the rooms that are supposed to
+be in these areas...</numerusform>
       </translation>
     </message>
     <message>
@@ -6466,7 +6466,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
       <translation>
         <numerusform>copy to %n destination(s)</numerusform>
-        <numerusform>copy to %n destination(s)</numerusform>
+        <numerusform>copy to %n destinations</numerusform>
       </translation>
     </message>
     <message>
