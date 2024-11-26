@@ -1,6 +1,7 @@
+#ifndef SINGLELINETEXTEDIT_H
+#define SINGLELINETEXTEDIT_H
+
 /***************************************************************************
- *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
- *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -16,17 +17,28 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_TRAILINGWHITESPACEMARKER_H
-#define MUDLET_TRAILINGWHITESPACEMARKER_H
 
-#include <QString>
-#include <QLineEdit>
-#include <SingleLineTextEdit.h>
+#include <QTextEdit>
+#include <TriggerHighlighter.h>
 
-void markQString(QString* input);
-void unmarkQString(QString* input);
-void markQLineEdit(QLineEdit* lineEdit);
-void unmarkQLineEdit(QLineEdit* lineEdit);
-void markQTextEdit(QTextEdit* textEdit);
-void unmarkQTextEdit(QTextEdit* textEdit);
-#endif // MUDLET_TRAILINGWHITESPACEMARKER_H
+class SingleLineTextEdit : public QTextEdit
+{
+    Q_OBJECT
+
+public:
+    explicit SingleLineTextEdit(QWidget *parent = nullptr);
+    void setHighlightingEnabled(bool enabled);
+    void setTheme(const QString&);
+    void rehighlight();
+
+protected:
+    // Overrides to handle key events and line wrapping
+    void keyPressEvent(QKeyEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+
+private:
+    TriggerHighlighter *highlighter;
+};
+
+#endif // SINGLELINETEXTEDIT_H
