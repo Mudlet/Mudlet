@@ -10602,7 +10602,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
       <translation>
-        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update is now available!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;(%n update is now available!)&lt;/i&gt;&lt;p&gt;</numerusform>
         <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update is now available!&lt;/i&gt;&lt;p&gt;</numerusform>
       </translation>
     </message>
