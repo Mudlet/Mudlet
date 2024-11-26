@@ -43,7 +43,7 @@ class Host;
 class TArea;
 class TMap;
 class TRoom;
-class MapInfoProperties;
+struct MapInfoProperties;
 
 class QCheckBox;
 class QComboBox;
