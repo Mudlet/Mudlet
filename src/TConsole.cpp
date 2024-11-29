@@ -306,42 +306,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     timeStampButton->setMaximumSize(QSize(30, 30));
     timeStampButton->setSizePolicy(sizePolicy5);
     timeStampButton->setFocusPolicy(Qt::NoFocus);
-#if defined(Q_OS_MACOS)
-    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps (⌘+T)")));
-#else
-    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps (CTRL+T)")));
-#endif
     timeStampButton->setIcon(QIcon(qsl(":/icons/dialog-information.png")));
-
-    QShortcut *timestampsShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this);
-    connect(timestampsShortcut, &QShortcut::activated, this, [this]() {
-        if (mUpperPane->mShowTimeStamps == true) {
-            mUpperPane->slot_toggleTimeStamps(false);
-            mLowerPane->slot_toggleTimeStamps(false);
-        } else {
-            mUpperPane->slot_toggleTimeStamps(true);
-            mLowerPane->slot_toggleTimeStamps(true);
-        }
-    });
+    timeStampButton->setToolTip(utils::richText(tr("Toggle time stamps")));
 
     connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
     connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
-    auto replayButton = new QToolButton;
+    replayButton = new QToolButton;
     replayButton->setCheckable(true);
     replayButton->setMinimumSize(QSize(30, 30));
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-#if defined(Q_OS_MACOS)
-    replayButton->setToolTip(utils::richText(tr("Record a replay (⌘+R)")));
-#else
-    replayButton->setToolTip(utils::richText(tr("Record a replay (CTRL+R)")));
-#endif
-    QShortcut *replayShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_R), this);
-    connect(replayShortcut, &QShortcut::activated, this, &TConsole::slot_toggleReplayRecording);
-
     replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
+    replayButton->setToolTip(utils::richText(tr("Toggle recording of replays")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -350,13 +328,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-#if defined(Q_OS_MACOS)
-    logButton->setToolTip(utils::richText(tr("Start logging game output to log file. (⌘+L)")));
-#else
-    logButton->setToolTip(utils::richText(tr("Start logging game output to log file. (CTRL+L)")));
-#endif
-    QShortcut *loggingShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this);
-    connect(loggingShortcut, &QShortcut::activated, this, &TConsole::slot_toggleLogging);
+    logButton->setToolTip(utils::richText(tr("Toggle logging")));
 
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
@@ -411,19 +383,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-#if defined(Q_OS_MACOS)
-    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers. (⌘+P)")));
-#else
-    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers. (CTRL+P)")));
-#endif
-    QShortcut *emergencyShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_P), this);
-    connect(emergencyShortcut, &QShortcut::activated, this, [this]() {
-        if (emergencyStopEnabled) {
-            slot_stopAllItems(false);
-        } else {
-            slot_stopAllItems(true);
-        }
-    });
+    emergencyStop->setToolTip(utils::richText(tr("Emergency stop! Stop all scripts")));
 
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
@@ -1840,11 +1800,9 @@ void TConsole::appendBuffer(const TBuffer& bufferSlice)
 void TConsole::slot_stopAllItems(bool b)
 {
     if (b) {
-        emergencyStopEnabled = true;
         mpHost->stopAllTriggers();
         emergencyStop->setIcon(QIcon(qsl(":/icons/red-bomb.png")));
     } else {
-        emergencyStopEnabled = false;
         mpHost->reenableAllTriggers();
         emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     }

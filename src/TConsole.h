@@ -287,6 +287,7 @@ public:
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
+    QToolButton* replayButton = nullptr;
     QLineEdit* mpBufferSearchBox = nullptr;
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
@@ -304,7 +305,6 @@ public:
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
-    bool emergencyStopEnabled = false;
 
 
 public slots:

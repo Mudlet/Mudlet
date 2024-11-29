@@ -597,6 +597,10 @@ void mudlet::init()
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_showAboutDialog);
+    connect(dactionToggleTimeStamp, &QAction::triggered, this, &mudlet::slot_toggleTimeStamp);
+    connect(dactionToggleReplay, &QAction::triggered, this, &mudlet::slot_toggleReplay);
+    connect(dactionToggleLogging, &QAction::triggered, this, &mudlet::slot_toggleLogging);
+    connect(dactionToggleEmergencyStop, &QAction::triggered, this, &mudlet::slot_toggleEmergencyStop);
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -613,6 +617,10 @@ void mudlet::init()
     mKeySequenceDisconnect = QKeySequence(Qt::CTRL | Qt::Key_D);
     mKeySequenceReconnect = QKeySequence(Qt::CTRL | Qt::Key_R);
     mKeySequenceCloseProfile = QKeySequence(Qt::CTRL | Qt::Key_W);
+    mKeySequenceToggleTimeStamp = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
+    mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
+    mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
+    mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
 #else
     mKeySequenceTriggers = QKeySequence(Qt::ALT | Qt::Key_E);
     mKeySequenceShowMap = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -627,6 +635,10 @@ void mudlet::init()
     mKeySequenceDisconnect = QKeySequence(Qt::ALT | Qt::Key_D);
     mKeySequenceReconnect = QKeySequence(Qt::ALT | Qt::Key_R);
     mKeySequenceCloseProfile = QKeySequence(Qt::ALT | Qt::Key_W);
+    mKeySequenceToggleTimeStamp = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
+    mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
+    mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
+    mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
@@ -646,7 +658,10 @@ void mudlet::init()
     mpShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &mKeySequenceDisconnect);
     mpShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &mKeySequenceReconnect);
     mpShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &mKeySequenceCloseProfile);
-
+    mpShortcutsManager->registerShortcut(qsl("Toggle Time Stamps"), tr("Toggle Time Stamps"), &mKeySequenceToggleTimeStamp);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Replay"), tr("Toggle Replay"), &mKeySequenceToggleReplay);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Logging"), tr("Toggle Logging"), &mKeySequenceToggleLogging);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Emergency Stop"), tr("Toggle Emergency Stop"), &mKeySequenceToggleEmergencyStop);
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
@@ -2530,6 +2545,26 @@ void mudlet::assignKeySequences()
         mpShortcutCloseProfile = new QShortcut(mKeySequenceCloseProfile, this);
         connect(mpShortcutCloseProfile.data(), &QShortcut::activated, this, &mudlet::slot_closeCurrentProfile);
         dactionCloseProfile->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleTimeStamp.data();
+        mpShortcutToggleTimeStamp = new QShortcut(mKeySequenceToggleTimeStamp, this);
+        connect(mpShortcutToggleTimeStamp.data(), &QShortcut::activated, this, &mudlet::slot_toggleTimeStamp);
+        dactionToggleTimeStamp->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleReplay.data();
+        mpShortcutToggleReplay = new QShortcut(mKeySequenceToggleReplay, this);
+        connect(mpShortcutToggleReplay.data(), &QShortcut::activated, this, &mudlet::slot_toggleReplay);
+        dactionToggleReplay->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleLogging.data();
+        mpShortcutToggleLogging = new QShortcut(mKeySequenceToggleLogging, this);
+        connect(mpShortcutToggleLogging.data(), &QShortcut::activated, this, &mudlet::slot_toggleLogging);
+        dactionToggleLogging->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleEmergencyStop.data();
+        mpShortcutToggleEmergencyStop = new QShortcut(mKeySequenceToggleEmergencyStop, this);
+        connect(mpShortcutToggleEmergencyStop.data(), &QShortcut::activated, this, &mudlet::slot_toggleEmergencyStop);
+        dactionToggleEmergencyStop->setShortcut(QKeySequence());
     } else {
         // The menu is shown so tie the QKeySequences to the menu items and it
         // is those that will call the slots:
@@ -2574,6 +2609,18 @@ void mudlet::assignKeySequences()
 
         delete mpShortcutCloseProfile.data();
         dactionCloseProfile->setShortcut(mKeySequenceCloseProfile);
+
+        delete mpShortcutToggleTimeStamp.data();
+        dactionToggleTimeStamp->setShortcut(mKeySequenceToggleTimeStamp);
+
+        delete mpShortcutToggleReplay.data();
+        dactionToggleReplay->setShortcut(mKeySequenceToggleReplay);
+
+        delete mpShortcutToggleLogging.data();
+        dactionToggleLogging->setShortcut(mKeySequenceToggleLogging);
+
+        delete mpShortcutToggleEmergencyStop.data();
+        dactionToggleEmergencyStop->setShortcut(mKeySequenceToggleEmergencyStop);
     }
 }
 
@@ -2627,6 +2674,30 @@ void mudlet::slot_showAboutDialog()
 
     mpAboutDlg->raise();
     mpAboutDlg->show();
+}
+
+void mudlet::slot_toggleTimeStamp()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->timeStampButton->click();
+}
+
+void mudlet::slot_toggleReplay()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->replayButton->click();
+}
+
+void mudlet::slot_toggleLogging()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->logButton->click();
+}
+
+void mudlet::slot_toggleEmergencyStop()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->emergencyStop->click();
 }
 
 void mudlet::slot_notes()
@@ -5155,7 +5226,7 @@ bool mudlet::experiencedMudletPlayer()
     cachedResult = false;
     return false;
 }
-  
+
 dlgTriggerEditor* mudlet::createMudletEditor()
 {
     Host* pHost = getActiveHost();

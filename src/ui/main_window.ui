@@ -104,6 +104,10 @@
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionToggleTimeStamp"/>
+    <addaction name="dactionToggleReplay"/>
+    <addaction name="dactionToggleLogging"/>
+    <addaction name="dactionToggleEmergencyStop"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -410,6 +414,38 @@
   <action name="dactionCloseProfile">
    <property name="text">
     <string>Close profile</string>
+   </property>
+  </action>
+  <action name="dactionToggleTimeStamp">
+   <property name="text">
+    <string>Time Stamps</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleReplay">
+   <property name="text">
+    <string>Replay</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleLogging">
+   <property name="text">
+    <string>Logging</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleEmergencyStop">
+   <property name="text">
+    <string>Emergency Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</string>
    </property>
   </action>
  </widget>
