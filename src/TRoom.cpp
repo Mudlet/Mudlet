@@ -1748,7 +1748,7 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
 
     const QJsonArray coordinatesArray = roomObj.value(QLatin1String("coordinates")).toArray();
     mX = coordinatesArray.at(0).toInt();
-    mY= coordinatesArray.at(1).toInt();
+    mY = coordinatesArray.at(1).toInt();
     mZ = coordinatesArray.at(2).toInt();
 
     if (roomObj.contains(QLatin1String("locked")) && roomObj.value(QLatin1String("locked")).toBool()) {
