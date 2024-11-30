@@ -304,6 +304,7 @@ public:
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
+    bool emergencyStopEnabled = false;
 
 
 public slots:
