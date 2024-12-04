@@ -91,6 +91,7 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
     - name: Upload packaged Mudlet
