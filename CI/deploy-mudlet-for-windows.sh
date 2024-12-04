@@ -224,7 +224,7 @@ else
   # Create NuGet package
   nuget pack "$NuSpec" -Version "$VersionAndSha" -BasePath "$SQUIRRELWIN" -OutputDirectory "$SQUIRRELWIN"
 
-  echo "=== Creating installers from Nuget package ==="
+  echo "=== Preparing to create installer ==="
   if [[ "$PublicTestBuild" == "true" ]]; then
     TestBuildString="-PublicTestBuild"
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet_ptb.ico"
@@ -245,13 +245,16 @@ else
   fi
 
   # sign Mudlet.exe
+  echo "=== Signing Mudlet.exe ==="
   java -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
       --alias Mudlet/Mudlet \
       $PACKAGE_DIR/Mudlet.exe
 
+
   # Execute Squirrel to create the installer
+  echo "=== Creating installers from Nuget package ==="
   ./squirrel.windows/tools/Squirrel --releasify "$nupkg_path" \
     --releaseDir "$GITHUB_WORKSPACE/squirreloutput" \
     --loadingGif "$GITHUB_WORKSPACE/installers/windows/splash-installing-2x.png" \
@@ -265,6 +268,7 @@ else
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Sign the final installer
+  echo "=== Signing installer ==="
   java -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
