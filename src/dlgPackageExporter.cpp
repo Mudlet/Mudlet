@@ -98,6 +98,10 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
+    connect(ui->lineEdit_author, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->lineEdit_title, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->lineEdit_version, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->textEdit_description, &QTextEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
@@ -134,6 +138,11 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     //: Title of the window. The %1 will be replaced by the current profile's name
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
+
+    // Set the previous details if saved
+    QSettings settings("mudlet", "Mudlet");
+    auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
+    ui->lineEdit_author->setText(packageAuthor);
 
     // Ensure this dialog goes away if the Host (profile) is closed while we are
     // open - as this is parented to the mudlet instance rather than the Host
@@ -348,7 +357,11 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
 
 void dlgPackageExporter::checkToEnableExportButton()
 {
-    if (ui->lineEdit_packageName->text().isEmpty() || mExportingPackage) {
+    if (ui->lineEdit_packageName->text().isEmpty() ||
+        ui->lineEdit_author->text().isEmpty() ||
+        ui->lineEdit_title->text().isEmpty() ||
+        ui->lineEdit_version->text().isEmpty() ||
+        ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
         mExportButton->setEnabled(false);
     } else {
         mExportButton->setEnabled(true);
@@ -607,6 +620,10 @@ void dlgPackageExporter::slot_exportPackage()
         mCloseButton->setVisible(true);
         QApplication::restoreOverrideCursor();
     }
+
+    // save settings for future reuse
+    QSettings settings("mudlet", "Mudlet");
+    settings.setValue("packageAuthor", ui->lineEdit_author->text());
 }
 
 //copy the newly-added description image files
@@ -1509,7 +1526,7 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
             debounce = false;
-            
+
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 //: This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.
