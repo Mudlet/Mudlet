@@ -246,6 +246,7 @@ else
 
   # sign Mudlet.exe
   echo "=== Signing Mudlet.exe ==="
+  JAVA_HOME="$JAVA_HOME_21_X64"
   java -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
