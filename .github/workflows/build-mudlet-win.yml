@@ -56,6 +56,35 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
+    - name: Debug Java Environment
+      shell: msys2 {0}
+      run: |
+        echo "=== System PATH ==="
+        echo $PATH
+        
+        echo "=== Java Home Variables ==="
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+        echo "JAVA_HOME_21_X64: $JAVA_HOME_21_X64"
+        
+        echo "=== Which Java ==="
+        which java || echo "java not in PATH"
+        
+        echo "=== Java Version ==="
+        java -version || echo "java command failed"
+        
+        echo "=== Direct Java Executable Checks ==="
+        ls -l "$JAVA_HOME_8_X64/bin/java.exe" || echo "Not found in JAVA_HOME_8_X64"
+        ls -l "$JAVA_HOME_11_X64/bin/java.exe" || echo "Not found in JAVA_HOME_11_X64"
+        ls -l "$JAVA_HOME_17_X64/bin/java.exe" || echo "Not found in JAVA_HOME_17_X64"
+        ls -l "$JAVA_HOME_21_X64/bin/java.exe" || echo "Not found in JAVA_HOME_21_X64"
+        
+        echo "=== MSYS2 Environment Info ==="
+        uname -a
+        echo "MSYSTEM: $MSYSTEM"
+
     - name: restore ccache
       uses: actions/cache@v4
       with:
