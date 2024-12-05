@@ -244,9 +244,11 @@ else
     exit 4
   fi
 
-  # sign Mudlet.exe
+  echo "=== Setting up Java 21 for signing ==="
+  JAVA_HOME="C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\21.0.5-11.0\x64"
+  PATH="$JAVA_HOME\bin:$PATH"
+
   echo "=== Signing Mudlet.exe ==="
-  JAVA_HOME="$JAVA_HOME_21_X64"
   java -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
