@@ -249,7 +249,7 @@ else
   PATH="$JAVA_HOME\bin:$PATH"
 
   echo "=== Signing Mudlet.exe ==="
-  java -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+  java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
       --alias Mudlet/Mudlet \
@@ -272,7 +272,7 @@ else
 
   # Sign the final installer
   echo "=== Signing installer ==="
-  java -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+  java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
       --alias Mudlet/Mudlet \
