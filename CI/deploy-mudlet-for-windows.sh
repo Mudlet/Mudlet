@@ -245,8 +245,8 @@ else
   fi
 
   echo "=== Setting up Java 21 for signing ==="
-  JAVA_HOME="C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\21.0.5-11.0\x64"
-  PATH="$JAVA_HOME\bin:$PATH"
+  export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
+  export PATH="$JAVA_HOME/bin:$PATH"
 
   echo "=== Signing Mudlet.exe ==="
   java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
