@@ -191,7 +191,7 @@ else
   export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
   export PATH="$JAVA_HOME/bin:$PATH"
 
-  echo "=== Signing Mudlet.exe ==="
+  echo "=== Signing Mudlet and dll files ==="
   if [[ "$PublicTestBuild" == "true" ]]; then
     java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
         --keystore eus.codesigning.azure.net \
