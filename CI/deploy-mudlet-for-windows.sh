@@ -173,6 +173,7 @@ else
     echo "=== Creating a public test build ==="
     # Squirrel uses Start menu name from the binary, renaming it
     mv "$PACKAGE_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet PTB.exe"
+    echo "moved mudlet.exe to $PACKAGE_DIR/Mudlet PTB.exe"
     # ensure sha part always starts with a character due to a known issue
     VersionAndSha="${VERSION}-ptb-${BUILD_COMMIT}"
 
