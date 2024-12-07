@@ -255,7 +255,7 @@ else
         --keystore eus.codesigning.azure.net \
         --storepass ${AZURE_ACCESS_TOKEN} \
         --alias Mudlet/Mudlet \
-        "$PACKAGE_DIR/Mudlet PTB.exe"
+        "$(cygpath -w "$PACKAGE_DIR/Mudlet PTB.exe")"
   else
     java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
