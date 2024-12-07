@@ -187,6 +187,31 @@ else
   git clone https://github.com/Mudlet/installers.git -b azure-cloud-signing "$GITHUB_WORKSPACE/installers"
   cd "$GITHUB_WORKSPACE/installers/windows" || exit 1
 
+  echo "=== Setting up Java 21 for signing ==="
+  export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
+  export PATH="$JAVA_HOME/bin:$PATH"
+
+  echo "=== Signing Mudlet.exe ==="
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+        --keystore eus.codesigning.azure.net \
+        --storepass ${AZURE_ACCESS_TOKEN} \
+        --alias Mudlet/Mudlet \
+        "$PACKAGE_DIR/Mudlet PTB.exe"
+
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+        --keystore eus.codesigning.azure.net \
+        --storepass ${AZURE_ACCESS_TOKEN} \
+        --alias Mudlet/Mudlet \
+        "$(cygpath -w "$PACKAGE_DIR/Mudlet PTB.exe")"
+  else
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass ${AZURE_ACCESS_TOKEN} \
+      --alias Mudlet/Mudlet \
+      $PACKAGE_DIR/Mudlet.exe
+  fi
+
   echo "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
 
@@ -243,25 +268,6 @@ else
   if [[ ! -f "$nupkg_path" ]]; then
     echo "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 4
-  fi
-
-  echo "=== Setting up Java 21 for signing ==="
-  export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
-  export PATH="$JAVA_HOME/bin:$PATH"
-
-  echo "=== Signing Mudlet.exe ==="
-  if [[ "$PublicTestBuild" == "true" ]]; then
-    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
-        --keystore eus.codesigning.azure.net \
-        --storepass ${AZURE_ACCESS_TOKEN} \
-        --alias Mudlet/Mudlet \
-        "$(cygpath -w "$PACKAGE_DIR/Mudlet PTB.exe")"
-  else
-    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass ${AZURE_ACCESS_TOKEN} \
-      --alias Mudlet/Mudlet \
-      $PACKAGE_DIR/Mudlet.exe
   fi
 
   # Execute Squirrel to create the installer
