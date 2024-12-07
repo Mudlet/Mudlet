@@ -34,6 +34,17 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az account show
+
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
@@ -55,13 +66,6 @@ jobs:
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
-
-    - name: Debug Java Environment
-      shell: msys2 {0}
-      run: |
-        export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
-        export PATH="$JAVA_HOME/bin:$PATH"
-        java -version
 
     - name: restore ccache
       uses: actions/cache@v4
