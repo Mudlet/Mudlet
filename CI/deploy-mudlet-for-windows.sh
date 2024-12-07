@@ -297,7 +297,7 @@ else
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
       --alias Mudlet/Mudlet \
-      $installerExePath
+      "$installerExePath"
 
   # Check if the setup executable exists
   if [[ ! -f "$installerExePath" ]]; then
