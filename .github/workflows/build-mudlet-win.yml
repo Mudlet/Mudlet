@@ -96,7 +96,7 @@ jobs:
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         DEPLOY_SSH_KEY: ${{secrets.DEPLOY_SSH_KEY}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        AZURE_ACCESS_TOKEN: ${{ secrets.AZURE_ACCESS_TOKEN }}
+        AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
