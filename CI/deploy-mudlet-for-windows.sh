@@ -203,13 +203,20 @@ else
         --keystore eus.codesigning.azure.net \
         --storepass ${AZURE_ACCESS_TOKEN} \
         --alias Mudlet/Mudlet \
-        "$(cygpath -w "$PACKAGE_DIR/Mudlet PTB.exe")"
+        "$PACKAGE_DIR/**/*.dll"
+
   else
     java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass ${AZURE_ACCESS_TOKEN} \
       --alias Mudlet/Mudlet \
-      $PACKAGE_DIR/Mudlet.exe
+      "$PACKAGE_DIR/Mudlet.exe"
+    
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass ${AZURE_ACCESS_TOKEN} \
+      --alias Mudlet/Mudlet \
+      "$PACKAGE_DIR/**/*.dll"
   fi
 
   echo "=== Installing Squirrel for Windows ==="

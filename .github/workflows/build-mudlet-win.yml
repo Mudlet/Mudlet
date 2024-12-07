@@ -77,7 +77,8 @@ jobs:
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
 
-    - uses: azure/login@v2
+    - name: (Windows) Login to Azure
+      uses: azure/login@v2
       if: github.repository == 'Mudlet/Mudlet'
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
