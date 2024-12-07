@@ -38,8 +38,12 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Confirm Azure account
-      run: az account show
+    - name: Get Azure access token for code signing
+      run: |
+        token=$(az account get-access-token --resource https://codesigning.azure.net)
+        echo "::add-mask::$token"
+        echo "AZURE_ACCESS_TOKEN=$token" >> $GITHUB_ENV
+
 
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
@@ -54,10 +58,6 @@ jobs:
       with:
         msystem: MINGW32
         update: true
-
-    - name: Confirm Azure account in msys2
-      shell: msys2 {0}
-      run: az account show
 
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
