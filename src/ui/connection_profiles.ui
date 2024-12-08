@@ -731,7 +731,7 @@
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Informational</string>
+            <string>Information</string>
            </property>
            <layout class="QVBoxLayout" name="vBoxLayout_informationalArea">
             <property name="leftMargin">

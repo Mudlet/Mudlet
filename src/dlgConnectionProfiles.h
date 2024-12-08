@@ -160,7 +160,8 @@ private:
     QTimer mAlignItemsInLayoutTimer;
     bool mAutoAlignIcons = true;
 
-    int mTopOfFirstItem = -1;
+    int mTopLeftCornerYOfFirstItemOnFirstRow = -1;
+    int mTopLeftCornerYOfFirstItemOnNextRow = -1;
 
 
 private slots:

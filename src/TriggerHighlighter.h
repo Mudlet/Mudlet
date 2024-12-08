@@ -1,6 +1,7 @@
+#ifndef TRIGGERHIGHLIGHTER_H
+#define TRIGGERHIGHLIGHTER_H
+
 /***************************************************************************
- *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
- *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -16,17 +17,42 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_TRAILINGWHITESPACEMARKER_H
-#define MUDLET_TRAILINGWHITESPACEMARKER_H
 
-#include <QString>
-#include <QLineEdit>
-#include <SingleLineTextEdit.h>
+#include <QSyntaxHighlighter>
+#include <QTextCharFormat>
+#include <QRegularExpression>
+#include <QVector>
+#include "edbee/views/texttheme.h"
 
-void markQString(QString* input);
-void unmarkQString(QString* input);
-void markQLineEdit(QLineEdit* lineEdit);
-void unmarkQLineEdit(QLineEdit* lineEdit);
-void markQTextEdit(QTextEdit* textEdit);
-void unmarkQTextEdit(QTextEdit* textEdit);
-#endif // MUDLET_TRAILINGWHITESPACEMARKER_H
+class TriggerHighlighter : public QSyntaxHighlighter
+{
+    Q_OBJECT
+
+public:
+    explicit TriggerHighlighter(QTextDocument *parent = nullptr);
+    void setHighlightingEnabled(bool enabled);
+    void setTheme(const QString&);
+
+protected:
+    void highlightBlock(const QString &text) override;
+
+private:
+    struct HighlightingRule
+    {
+        QRegularExpression pattern;
+        QTextCharFormat format;
+    };
+
+    QVector<HighlightingRule> highlightingRules;
+
+    QTextCharFormat anchorFormat;
+    QTextCharFormat charClassFormat;
+    QTextCharFormat escapeCharFormat;
+    QTextCharFormat groupFormat;
+    QTextCharFormat quantifierFormat;
+
+    bool highlightingEnabled;
+    void applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule);
+};
+
+#endif  // TRIGGERHIGHLIGHTER_H
