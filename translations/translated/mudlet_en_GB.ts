@@ -1489,22 +1489,22 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="310"/>
       <source>Toggle time stamps</source>
-      <translation type="unfinished"/>
+      <translation>Toggle time stamps</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="322"/>
       <source>Toggle recording of replays</source>
-      <translation type="unfinished"/>
+      <translation>Toggle recording of replays</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="331"/>
       <source>Toggle logging</source>
-      <translation type="unfinished"/>
+      <translation>Toggle logging</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="386"/>
       <source>Emergency stop! Stop all scripts</source>
-      <translation type="unfinished"/>
+      <translation>Emergency stop! Stop all scripts</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
@@ -6025,7 +6025,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="328"/>
       <source>Version number. Required.</source>
-      <translation type="unfinished"/>
+      <translation>Version number. Required.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="338"/>
@@ -6060,12 +6060,12 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager. Required.</source>
-      <translation type="unfinished"/>
+      <translation>For attribution, displayed in the Package Manager. Required.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager. Required.</source>
-      <translation type="unfinished"/>
+      <translation>One-line package description shown in the Package Manager. Required.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="335"/>
@@ -9405,42 +9405,42 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="421"/>
       <source>Time Stamps</source>
-      <translation type="unfinished"/>
+      <translation>Time Stamps</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="424"/>
       <source>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="429"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Replay</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="432"/>
       <source>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="437"/>
       <source>Logging</source>
-      <translation type="unfinished"/>
+      <translation>Logging</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="440"/>
       <source>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="445"/>
       <source>Emergency Stop</source>
-      <translation type="unfinished"/>
+      <translation>Emergency Stop</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="448"/>
       <source>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="175"/>
@@ -10209,22 +10209,22 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="661"/>
       <source>Toggle Time Stamps</source>
-      <translation type="unfinished"/>
+      <translation>Toggle Time Stamps</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="662"/>
       <source>Toggle Replay</source>
-      <translation type="unfinished"/>
+      <translation>Toggle Replay</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="663"/>
       <source>Toggle Logging</source>
-      <translation type="unfinished"/>
+      <translation>Toggle Logging</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="664"/>
       <source>Toggle Emergency Stop</source>
-      <translation type="unfinished"/>
+      <translation>Toggle Emergency Stop</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="915"/>
