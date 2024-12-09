@@ -589,7 +589,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter,
+/* inline */ void T2DMap::drawRoom(QPainter& painter,
                              QFont& roomVNumFont,
                              QFont& mapNameFont,
                              QPen& pen,
@@ -600,7 +600,8 @@ inline void T2DMap::drawRoom(QPainter& painter,
                              const int speedWalkStartRoomId,
                              const float rx,
                              const float ry,
-                             const QMap<int, QPointF>& areaExitsMap)
+                             const QMap<int, QPointF>& areaExitsMap,
+                             const bool showRoomCollision)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -696,19 +697,25 @@ inline void T2DMap::drawRoom(QPainter& painter,
     roomPen.setWidth(borderWidth);
     painter.setBrush(roomColor);
 
-    if (shouldDrawBorder && mRoomWidth >= 12) {
-        roomPen.setColor(mpHost->mRoomBorderColor);
+    if (showRoomCollision) {
+        roomPen.setColor(mpHost->mRoomCollisionBorderColor);
     } else if (shouldDrawBorder) {
-        auto fadingColor = QColor(mpHost->mRoomBorderColor);
-        fadingColor.setAlpha(255 * (mRoomWidth / 12));
-        roomPen.setColor(fadingColor);
+        if (mRoomWidth >= 12) {
+            roomPen.setColor(mpHost->mRoomBorderColor);
+        } else if (shouldDrawBorder) {
+            auto fadingColor = QColor(mpHost->mRoomBorderColor);
+            fadingColor.setAlpha(255 * (mRoomWidth / 12));
+            roomPen.setColor(fadingColor);
+        }
     }
 
     if (isRoomSelected) {
         QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
         selectionBg.setColorAt(0.2, roomColor);
         selectionBg.setColorAt(1, Qt::blue);
-        roomPen.setColor(QColor(255, 50, 50));
+        if (!showRoomCollision) {
+            roomPen.setColor(QColor(255, 50, 50));
+        }
         painter.setBrush(selectionBg);
     }
 
@@ -1409,6 +1416,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
+    // QPoint doesn't work here as the key as it can't be hashed...!
+    QSet<QPair<int,int>> usedRoomPositions;
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -1433,13 +1442,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
             isPlayerRoomVisible = true;
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
-            // Not the player's room:
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
+            // Not the player's room
+            const QPair<int, int> roomPos{room->x(), room->y()};
+            const bool roomCollision = usedRoomPositions.contains(roomPos);
+            usedRoomPositions.insert(roomPos);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap, roomCollision);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+        const QPair<int, int> roomPos{pPlayerRoom->x(), pPlayerRoom->y()};
+        const bool roomCollision = usedRoomPositions.contains(roomPos);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap, roomCollision);
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
