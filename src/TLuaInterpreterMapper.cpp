@@ -231,7 +231,7 @@ int TLuaInterpreter::getCustomLines1(lua_State* L)
             lua_pushnumber(L, pointL.at(k).y());
             lua_settable(L, -3);
             lua_pushinteger(L, 3);
-            lua_pushnumber(L, pR->z);
+            lua_pushnumber(L, pR->z());
             lua_settable(L, -3);
             lua_settable(L, -3); //customLines[direction]["points"][3 x coordinates]
         }
@@ -339,9 +339,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                         (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
         }
 
-        x.append(static_cast<qreal>(pR_to->x));
-        y.append(static_cast<qreal>(pR_to->y));
-        z.append(pR->z);
+        x.append(static_cast<qreal>(pR_to->x()));
+        y.append(static_cast<qreal>(pR_to->y()));
+        z.append(pR->z());
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
         int i = 0; // Indexes groups of coordinates in the table
@@ -1988,9 +1988,9 @@ int TLuaInterpreter::getRoomCoordinates(lua_State* L)
         lua_pushnil(L);
         return 3;
     } else {
-        lua_pushnumber(L, pR->x);
-        lua_pushnumber(L, pR->y);
-        lua_pushnumber(L, pR->z);
+        lua_pushnumber(L, pR->x());
+        lua_pushnumber(L, pR->y());
+        lua_pushnumber(L, pR->z());
         return 3;
     }
 }
