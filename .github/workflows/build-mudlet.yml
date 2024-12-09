@@ -268,7 +268,6 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
-        save-always: true
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
