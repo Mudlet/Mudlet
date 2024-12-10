@@ -1417,7 +1417,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
     // QPoint doesn't work here as the key as it can't be hashed...!
-    QSet<QPair<int,int>> usedRoomPositions;
+    QSet<QPair<int, int>> usedRoomPositions;
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
     while (itRoom.hasNext()) {
