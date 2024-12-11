@@ -331,14 +331,6 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name: Restore Luarocks for packaging
-      id: restore-luarocks
-      uses: actions/cache/restore@v4
-      with:
-        path: $HOME/.luarocks
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
-
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
@@ -372,13 +364,6 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
-
-    - name: Save Luarocks cache
-      if: steps.restore-luarocks.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: $HOME/.luarocks
-        key: ${{ steps.restore-luarocks.outputs.cache-primary-key }}
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
