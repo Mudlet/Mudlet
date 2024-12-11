@@ -17,14 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QString>
+#include "pre_guard.h"
 #include <QLineEdit>
-#include <QDebug>
-void unmarkQString(QString* text) {
+#include <QString>
+#include "post_guard.h"
+
+#include <SingleLineTextEdit.h>
+
+void unmarkQString(QString* text)
+{
     QChar middleDot(0x00B7);
-    text->replace(middleDot, ' ');
+    text->replace(middleDot, QChar::Space);
 }
-void markQString(QString* text) {
+void markQString(QString* text)
+{
     QChar middleDot(0x00B7);
 
     // Trim text, check first and last character for ^ or $
@@ -57,7 +63,8 @@ void markQString(QString* text) {
 
 }
 
-void markQLineEdit(QLineEdit* lineEdit) {
+void markQLineEdit(QLineEdit* lineEdit)
+{
 
     QString text = lineEdit->text();
 
@@ -69,11 +76,11 @@ void markQLineEdit(QLineEdit* lineEdit) {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursorPos);
 
-
     lineEdit->blockSignals(false);
 }
 
-void unmarkQLineEdit(QLineEdit* lineEdit) {
+void unmarkQLineEdit(QLineEdit* lineEdit)
+{
 
     QString text = lineEdit->text();
 
@@ -84,6 +91,38 @@ void unmarkQLineEdit(QLineEdit* lineEdit) {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursorPos);
 
-
     lineEdit->blockSignals(false);
+}
+
+void markQTextEdit(QTextEdit* textEdit)
+{
+    QString text = textEdit->toPlainText();
+
+    unmarkQString(&text);
+    markQString(&text);
+
+    textEdit->blockSignals(true);
+    int cursorPos = textEdit->textCursor().position();
+    textEdit->setText(text);
+
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.setPosition(cursorPos);
+    textEdit->setTextCursor(cursor);
+    textEdit->blockSignals(false);
+}
+
+void unmarkQTextEdit(QTextEdit* textEdit)
+{
+    QString text = textEdit->toPlainText();
+
+    unmarkQString(&text);
+
+    textEdit->blockSignals(true);
+    int cursorPos = textEdit->textCursor().position();
+    textEdit->setText(text);
+
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.setPosition(cursorPos);
+    textEdit->setTextCursor(cursor);
+    textEdit->blockSignals(false);
 }

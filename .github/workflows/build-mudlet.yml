@@ -38,7 +38,7 @@ jobs:
             # We still need a gcc for some sub-stages - and it ain't always the same one:
             gcc_compiler_version: 9
             qt: '5.14.2'
-          - os: macos-12
+          - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
@@ -76,17 +76,16 @@ jobs:
         modules: ${{ startsWith(matrix.qt, '6') && 'qt5compat qtmultimedia' || '' }}
 
     - name: Restore Boost cache
-      uses: actions/cache@v4
-      id: cache-boost
+      id: restore-boost
+      uses: actions/cache/restore@v4
       with:
         path: ${{env.BOOST_ROOT}}
         key: boost
 
     - name: Install Boost
-      if: steps.cache-boost.outputs.cache-hit != 'true'
+      if: steps.restore-boost.outputs.cache-hit != 'true'
       run: |
         if [ "$OS" == "Windows_NT" ]; then
-          # fix up paths to be forward slashes consistently
           BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
         fi
         mkdir -p $BOOST_ROOT
@@ -97,6 +96,12 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
+    - name: Save Boost cache
+      if: steps.restore-boost.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: ${{ steps.restore-boost.outputs.cache-primary-key }}
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
@@ -256,16 +261,18 @@ jobs:
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    - name: restore ccache
-      uses: actions/cache@v4
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
-        save-always: true
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         sudo apt-get -y install pcregrep
         ${{github.workspace}}/CI/travis.validate_deployment.sh
@@ -273,6 +280,8 @@ jobs:
 
     - name: (macOS) Set build info
       if: runner.os == 'macOS'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         brew install pcre
         ${{github.workspace}}/CI/travis.validate_deployment.sh
@@ -293,14 +302,19 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        # enable for a debug build (1/2)
-        # buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: Save ccache
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
@@ -316,13 +330,6 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-
-    - name: restore Luarocks for packaging
-      uses: actions/cache@v4
-      with:
-        path: $HOME/.luarocks
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
 
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
@@ -351,7 +358,7 @@ jobs:
 
         # necessary for Qt multimedia and modern Qt
         if [ "${RUNNER_OS}" = "Linux" ]; then
-          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 -y
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb -y
         fi
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -367,9 +374,17 @@ jobs:
     - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
-       export ARCH=$(uname -m)
-       echo "ARCH=$ARCH" >> $GITHUB_ENV
-       ${{github.workspace}}/CI/travis.after_success.sh
+        export ARCH=$(uname -m)
+        echo "ARCH=$ARCH" >> $GITHUB_ENV
+        if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
+          # dblsqd only supports 'arm' as an architecture and not 'arm64'
+          export ARCH_DBLSQD=arm
+          echo "ARCH_DBLSQD=arm" >> $GITHUB_ENV
+        else
+          export ARCH_DBLSQD=$ARCH
+          echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
+        fi
+        ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
@@ -406,19 +421,19 @@ jobs:
       run: |
         if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
           cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
+        elif [ -d "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ]; then
+          cp -r "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ~/Desktop/Mudlet.app
         else
           cp -r ${{runner.workspace}}/b/ninja/src/mudlet.app ~/Desktop/Mudlet.app
         fi
         cd ~/Desktop
-        sudo codesign --remove-signature Mudlet.app
+        sudo codesign --remove-signature ~/Desktop/Mudlet.app
       shell: bash
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.6
-      with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
