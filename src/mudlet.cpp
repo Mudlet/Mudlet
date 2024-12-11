@@ -92,6 +92,14 @@
 #include <QSettings>
 #endif
 
+// We are now using code that won't work with really old versions of libzip;
+// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
+// (and one or two other recent versions) forgot to include the version defines
+// and thus broke a test depending on them:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
+#error Mudlet requires a version of libzip of at least 1.0
+#endif
+
 #if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
@@ -445,6 +453,7 @@ void mudlet::init()
     mpActionMultiView->setCheckable(true);
     mpActionMultiView->setChecked(false);
     mpActionMultiView->setEnabled(false);
+    dactionMultiView->setEnabled(false);
     mpActionMultiView->setObjectName(qsl("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
@@ -471,14 +480,21 @@ void mudlet::init()
     disableToolbarButtons();
 
     if (mEnableFullScreenMode) {
-        showFullScreen();
-        QAction* actionFullScreeniew = new QAction(QIcon(qsl(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
-        actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
-        mpMainToolBar->addAction(actionFullScreeniew);
-        actionFullScreeniew->setObjectName(qsl("fullscreen_action"));
-        mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
-        connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+        // We always start in full-screen mode if it is enabled:
+        setWindowState(windowState() & ~(Qt::WindowFullScreen|Qt::WindowActive));
+        QIcon icon;
+        icon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
+        icon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
+        mpActionFullScreenView = new QAction(icon, tr("Full Screen"), this);
+        mpActionFullScreenView->setStatusTip(tr("Toggle Full Screen View"));
+        mpActionFullScreenView->setCheckable(true);
+        mpActionFullScreenView->setChecked(true);
+        mpMainToolBar->addAction(mpActionFullScreenView);
+        mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
+        mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
+        connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
     }
+    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     #if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -528,7 +544,7 @@ void mudlet::init()
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
-    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_showHelpDialogIrc);
     connect(dactionShowErrors, &QAction::triggered, this, [=]() {
         auto host = getActiveHost();
         if (!host) {
@@ -548,8 +564,8 @@ void mudlet::init()
 
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
-    // release OR a public test version:
-    dactionUpdate->setVisible(releaseVersion || publicTestVersion);
+    // release OR a public test version, or if you're specifically trying to test Sparkle.
+    dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
@@ -581,6 +597,10 @@ void mudlet::init()
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_showAboutDialog);
+    connect(dactionToggleTimeStamp, &QAction::triggered, this, &mudlet::slot_toggleTimeStamp);
+    connect(dactionToggleReplay, &QAction::triggered, this, &mudlet::slot_toggleReplay);
+    connect(dactionToggleLogging, &QAction::triggered, this, &mudlet::slot_toggleLogging);
+    connect(dactionToggleEmergencyStop, &QAction::triggered, this, &mudlet::slot_toggleEmergencyStop);
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -597,6 +617,10 @@ void mudlet::init()
     mKeySequenceDisconnect = QKeySequence(Qt::CTRL | Qt::Key_D);
     mKeySequenceReconnect = QKeySequence(Qt::CTRL | Qt::Key_R);
     mKeySequenceCloseProfile = QKeySequence(Qt::CTRL | Qt::Key_W);
+    mKeySequenceToggleTimeStamp = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
+    mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
+    mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
+    mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
 #else
     mKeySequenceTriggers = QKeySequence(Qt::ALT | Qt::Key_E);
     mKeySequenceShowMap = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -611,6 +635,10 @@ void mudlet::init()
     mKeySequenceDisconnect = QKeySequence(Qt::ALT | Qt::Key_D);
     mKeySequenceReconnect = QKeySequence(Qt::ALT | Qt::Key_R);
     mKeySequenceCloseProfile = QKeySequence(Qt::ALT | Qt::Key_W);
+    mKeySequenceToggleTimeStamp = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
+    mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
+    mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
+    mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
@@ -630,7 +658,10 @@ void mudlet::init()
     mpShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &mKeySequenceDisconnect);
     mpShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &mKeySequenceReconnect);
     mpShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &mKeySequenceCloseProfile);
-
+    mpShortcutsManager->registerShortcut(qsl("Toggle Time Stamps"), tr("Toggle Time Stamps"), &mKeySequenceToggleTimeStamp);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Replay"), tr("Toggle Replay"), &mKeySequenceToggleReplay);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Logging"), tr("Toggle Logging"), &mKeySequenceToggleLogging);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Emergency Stop"), tr("Toggle Emergency Stop"), &mKeySequenceToggleEmergencyStop);
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
@@ -1517,7 +1548,7 @@ void mudlet::closeHost(const QString& name)
 
 void mudlet::updateMultiViewControls()
 {
-    const bool isEnabled = (mHostManager.getHostCount() - 1);
+    const bool isEnabled = (mHostManager.getHostCount() > 1);
     if (mpActionMultiView->isEnabled() != isEnabled){
         mpActionMultiView->setEnabled(isEnabled);
     }
@@ -1680,17 +1711,40 @@ void mudlet::slot_timerFires()
 void mudlet::disableToolbarButtons()
 {
     mpActionTriggers->setEnabled(false);
+    dactionScriptEditor->setEnabled(false);
+    dactionShowErrors->setEnabled(false);
+
     mpActionAliases->setEnabled(false);
+
     mpActionTimers->setEnabled(false);
+
     mpActionButtons->setEnabled(false);
+
     mpActionScripts->setEnabled(false);
+
     mpActionKeys->setEnabled(false);
+
     mpActionVariables->setEnabled(false);
+
     mpActionMudletDiscord->setEnabled(false);
+    dactionDiscord->setEnabled(false);
+
     mpActionMapper->setEnabled(false);
+    dactionShowMap->setEnabled(false);
+
     mpActionNotes->setEnabled(false);
+    dactionNotepad->setEnabled(false);
+
     mpButtonPackageManagers->setEnabled(false);
+    dactionPackageManager->setEnabled(false);
+    dactionModuleManager->setEnabled(false);
+    dactionPackageExporter->setEnabled(false);
+
     mpActionIRC->setEnabled(false);
+    dactionIRC->setEnabled(false);
+
+    dactionInputLine->setEnabled(false);
+
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(tr("<p>Load a Mudlet replay.</p>"
                                   "<p><i>Disabled until a profile is loaded.</i></p>"));
@@ -1699,10 +1753,13 @@ void mudlet::disableToolbarButtons()
     // more texts to show {the default is to repeat the menu text which is not
     // useful} with a call to menuEditor->setToolTipsVisible(true);
     dactionReplay->setToolTip(mpActionReplay->toolTip());
-
     dactionReplay->setEnabled(false);
+
     mpActionReconnect->setEnabled(false);
+    dactionReconnect->setEnabled(false);
+
     mpActionDisconnect->setEnabled(false);
+    dactionDisconnect->setEnabled(false);
 
     mpActionCloseProfile->setEnabled(false);
     dactionCloseProfile->setEnabled(false);
@@ -1711,17 +1768,39 @@ void mudlet::disableToolbarButtons()
 void mudlet::enableToolbarButtons()
 {
     mpActionTriggers->setEnabled(true);
+    dactionScriptEditor->setEnabled(true);
+    dactionShowErrors->setEnabled(true);
+
     mpActionAliases->setEnabled(true);
+
     mpActionTimers->setEnabled(true);
+
     mpActionButtons->setEnabled(true);
+
     mpActionScripts->setEnabled(true);
+
     mpActionKeys->setEnabled(true);
+
     mpActionVariables->setEnabled(true);
+
     mpActionMudletDiscord->setEnabled(true);
+    dactionDiscord->setEnabled(true);
+
     mpActionMapper->setEnabled(true);
+    dactionShowMap->setEnabled(true);
+
     mpActionNotes->setEnabled(true);
+    dactionNotepad->setEnabled(true);
+
     mpButtonPackageManagers->setEnabled(true);
+    dactionPackageManager->setEnabled(true);
+    dactionModuleManager->setEnabled(true);
+    dactionPackageExporter->setEnabled(true);
+
     mpActionIRC->setEnabled(true);
+    dactionIRC->setEnabled(true);
+
+    dactionInputLine->setEnabled(true);
 
     if (!mpToolBarReplay) {
         // Only enable the replay button if it is not disabled because there is
@@ -1738,7 +1817,10 @@ void mudlet::enableToolbarButtons()
     }
 
     mpActionReconnect->setEnabled(true);
+    dactionReconnect->setEnabled(true);
+
     mpActionDisconnect->setEnabled(true);
+    dactionDisconnect->setEnabled(true);
 
     mpActionCloseProfile->setEnabled(true);
     dactionCloseProfile->setEnabled(true);
@@ -1992,9 +2074,13 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     resize(size);
     move(pos);
-    if (settings.value("maximized", false).toBool()) {
-        showMaximized();
-    }
+
+    // Need to remove the Qt::WindowMaximized AND Qt::WindowActive from the
+    // state and then apply the result - If we are in, or go into,
+    // full-screen then this does not have any effect until we leave that:
+    setWindowState((windowState() & ~(Qt::WindowMaximized|Qt::WindowActive))
+                   |(settings.value("maximized", false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState));
+
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
@@ -2003,6 +2089,10 @@ void mudlet::readLateSettings(const QSettings& settings)
     // by calling the slot method that does that and ALSO carry out the
     // other things needed for it:
     bool multiView = false;
+    // The naming of this is a little mis-leading - it actually means: is the
+    // multiview mode going to be used if more than one profile is loaded, i.e.
+    // is this knob "checked", the "enabling" of the knob is down to the number
+    // of profiles in use!
     if (settings.contains(qsl("enableMultiViewMode"))) {
         // We have a setting stored for this
         multiView = settings.value(qsl("enableMultiViewMode"), QVariant(false)).toBool();
@@ -2135,7 +2225,7 @@ void mudlet::writeSettings()
 
     settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
     settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
-    settings.setValue("maximized", isMaximized());
+    settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
@@ -2455,6 +2545,26 @@ void mudlet::assignKeySequences()
         mpShortcutCloseProfile = new QShortcut(mKeySequenceCloseProfile, this);
         connect(mpShortcutCloseProfile.data(), &QShortcut::activated, this, &mudlet::slot_closeCurrentProfile);
         dactionCloseProfile->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleTimeStamp.data();
+        mpShortcutToggleTimeStamp = new QShortcut(mKeySequenceToggleTimeStamp, this);
+        connect(mpShortcutToggleTimeStamp.data(), &QShortcut::activated, this, &mudlet::slot_toggleTimeStamp);
+        dactionToggleTimeStamp->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleReplay.data();
+        mpShortcutToggleReplay = new QShortcut(mKeySequenceToggleReplay, this);
+        connect(mpShortcutToggleReplay.data(), &QShortcut::activated, this, &mudlet::slot_toggleReplay);
+        dactionToggleReplay->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleLogging.data();
+        mpShortcutToggleLogging = new QShortcut(mKeySequenceToggleLogging, this);
+        connect(mpShortcutToggleLogging.data(), &QShortcut::activated, this, &mudlet::slot_toggleLogging);
+        dactionToggleLogging->setShortcut(QKeySequence());
+
+        delete mpShortcutToggleEmergencyStop.data();
+        mpShortcutToggleEmergencyStop = new QShortcut(mKeySequenceToggleEmergencyStop, this);
+        connect(mpShortcutToggleEmergencyStop.data(), &QShortcut::activated, this, &mudlet::slot_toggleEmergencyStop);
+        dactionToggleEmergencyStop->setShortcut(QKeySequence());
     } else {
         // The menu is shown so tie the QKeySequences to the menu items and it
         // is those that will call the slots:
@@ -2499,6 +2609,18 @@ void mudlet::assignKeySequences()
 
         delete mpShortcutCloseProfile.data();
         dactionCloseProfile->setShortcut(mKeySequenceCloseProfile);
+
+        delete mpShortcutToggleTimeStamp.data();
+        dactionToggleTimeStamp->setShortcut(mKeySequenceToggleTimeStamp);
+
+        delete mpShortcutToggleReplay.data();
+        dactionToggleReplay->setShortcut(mKeySequenceToggleReplay);
+
+        delete mpShortcutToggleLogging.data();
+        dactionToggleLogging->setShortcut(mKeySequenceToggleLogging);
+
+        delete mpShortcutToggleEmergencyStop.data();
+        dactionToggleEmergencyStop->setShortcut(mKeySequenceToggleEmergencyStop);
     }
 }
 
@@ -2522,11 +2644,12 @@ void mudlet::slot_showHelpDialogForum()
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/"));
 }
 
-// Not used:
-//void mudlet::slot_showHelpDialogIrc()
-//{
-//    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
-//}
+// This uses a web-based IRC server and is NOT profile specific and can always
+// be enabled:
+void mudlet::slot_showHelpDialogIrc()
+{
+    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
+}
 
 void mudlet::slot_mapper()
 {
@@ -2553,6 +2676,30 @@ void mudlet::slot_showAboutDialog()
     mpAboutDlg->show();
 }
 
+void mudlet::slot_toggleTimeStamp()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->timeStampButton->click();
+}
+
+void mudlet::slot_toggleReplay()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->replayButton->click();
+}
+
+void mudlet::slot_toggleLogging()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->logButton->click();
+}
+
+void mudlet::slot_toggleEmergencyStop()
+{
+    Host* pHost = getActiveHost();
+    pHost->mpConsole->emergencyStop->click();
+}
+
 void mudlet::slot_notes()
 {
     Host* pHost = getActiveHost();
@@ -2576,6 +2723,8 @@ void mudlet::slot_notes()
     pNotes->show();
 }
 
+// This opens a profile specific IRC client for that client so should only be
+// enabled when a profile is loaded.
 void mudlet::slot_irc()
 {
     Host* pHost = getActiveHost();
@@ -2651,13 +2800,19 @@ void mudlet::slot_replay()
         return;
     }
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName())).toString();
+
+
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
-                                                    getMudletPath(profileReplayAndLogFilesPath, pHost->getName()),
+                                                    lastDir,
                                                     tr("*.dat"));
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
     loadReplay(pHost, fileName);
@@ -3146,10 +3301,32 @@ mudlet::~mudlet()
 
 void mudlet::slot_toggleFullScreenView()
 {
-    if (isFullScreen()) {
-        showNormal();
+    // This slot can only be called when the button is visible on the main
+    // toolbar - but there are other things that can change the full-screen
+    // state!
+
+    // In the following calls to setWindowState we must NOT include
+    // Qt::WindowActive in the flags to be applied:
+    auto state = windowState();
+    if (state & Qt::WindowFullScreen) {
+        // Need to remove the Qt::WindowFullScreen AND Qt::WindowActive from the
+        // state and then apply the result
+        setWindowState(state & ~(Qt::WindowFullScreen|Qt::WindowActive));
     } else {
-        showFullScreen();
+        // Need to apply the Qt::WindowFullScreen state after removing
+        // Qt::WindowActive from the flags we might read:
+        setWindowState((state & ~(Qt::WindowActive))|Qt::WindowFullScreen);
+    }
+}
+
+void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
+{
+    // Update the state of the button to match the actual state - if it doesn't
+    // match
+    if (mpActionFullScreenView
+        && (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen))) {
+
+        mpActionFullScreenView->setChecked(newState & Qt::WindowFullScreen);
     }
 }
 
@@ -3306,13 +3483,12 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     struct zip_stat zs;
     struct zip_file* zf;
     zip_uint64_t bytesRead = 0;
-    char buf[4096]; // Was 100 but that seems unduly stingy...!
-    zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err) {
-        zip_error_t *error = zip_get_error(archive);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
-        zip_error_fini(error);
-        zip_discard(archive);
+    zip* archive = zip_open(archivePath.toUtf8().constData(), 0, &err);
+    if (!archive) {
+        zip_error_t error;
+        zip_error_init_with_code(&error, err);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \"" << zip_error_strerror(&error) << "\"";
+        zip_error_fini(&error);
         return false;
     }
 
@@ -3380,6 +3556,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
             bytesRead = 0;
             zip_uint64_t const bytesExpected = zs.size;
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
+                char buf[4096]; // Was 100 but that seems unduly stingy...!
                 zip_int64_t const len = zip_fread(zf, buf, sizeof(buf));
                 if (len < 0) {
                     fd.close();
@@ -3673,9 +3850,9 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (releaseVersion || publicTestVersion) {
+    if (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // Only try and create an updater (which checks for updates online) if
-        // this is a release/public test version:
+        // this is a release/public test version, or if you are testing Sparkle (env flag set).
         pUpdater->checkUpdatesOnStart();
     }
 }
@@ -4890,6 +5067,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
                                                       qsl("stickmud.com")}},
+        {qsl(":/MedBootstrap.xml"),       {qsl("medievia.com")}}
         // clang-format on
     };
 
@@ -5048,7 +5226,7 @@ bool mudlet::experiencedMudletPlayer()
     cachedResult = false;
     return false;
 }
-  
+
 dlgTriggerEditor* mudlet::createMudletEditor()
 {
     Host* pHost = getActiveHost();
@@ -5067,6 +5245,18 @@ dlgTriggerEditor* mudlet::createMudletEditor()
     pEditor->fillout_form();
 
     return pEditor;
+}
+
+// Getting a QWidget to emit a signal that normally comes from a QWindow;
+// especially when QWidget::window() actually returns a QWidget* and not a
+// QWindow* required an unexpected diversion into events, using code from:
+// https://stackoverflow.com/a/62449220/4805858
+void mudlet::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::WindowStateChange) {
+        emit signal_windowStateChanged(windowState());
+    }
+    QWidget::changeEvent(event);
 }
 
 bool mudlet::profileExists(const QString& profileName)

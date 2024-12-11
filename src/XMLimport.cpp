@@ -564,9 +564,9 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                 continue;
             }
 
-            pT->x = attributes().value(qsl("x")).toString().toInt();
-            pT->y = attributes().value(qsl("y")).toString().toInt();
-            pT->z = attributes().value(qsl("z")).toString().toInt();
+            pT->setCoordinates(attributes().value(qsl("x")).toString().toInt(),
+                               attributes().value(qsl("y")).toString().toInt(),
+                               attributes().value(qsl("z")).toString().toInt());
             continue;
         } else if (name() == qsl("features")) {
             readRoomFeatures(pT);

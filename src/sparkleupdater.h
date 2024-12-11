@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2024 by Mudlet makers                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,17 +16,41 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_TRAILINGWHITESPACEMARKER_H
-#define MUDLET_TRAILINGWHITESPACEMARKER_H
+#ifndef SPARKLEUPDATER_H
+#define SPARKLEUPDATER_H
+#include <QObject>
 
-#include <QString>
-#include <QLineEdit>
-#include <SingleLineTextEdit.h>
+class QAction;
 
-void markQString(QString* input);
-void unmarkQString(QString* input);
-void markQLineEdit(QLineEdit* lineEdit);
-void unmarkQLineEdit(QLineEdit* lineEdit);
-void markQTextEdit(QTextEdit* textEdit);
-void unmarkQTextEdit(QTextEdit* textEdit);
-#endif // MUDLET_TRAILINGWHITESPACEMARKER_H
+#ifdef __OBJC__
+@class SparkleUpdaterDelegate;
+#endif
+
+class SparkleUpdater : public QObject
+{
+    Q_OBJECT
+
+public:
+    SparkleUpdater();
+    ~SparkleUpdater();
+
+
+    void checkForUpdates();
+
+    void setAutomaticallyChecksForUpdates(bool on);
+    bool automaticallyChecksForUpdates();
+
+    void setAutomaticallyDownloadsUpdates(bool on);
+    bool automaticallyDownloadsUpdates();
+    // private slots:
+    //     void checkForUpdates();
+
+private:
+#ifdef __OBJC__
+    // for ARC tracking.
+    SparkleUpdaterDelegate* _updaterDelegate;
+#else
+    void* _updaterDelegate;
+#endif
+};
+#endif
