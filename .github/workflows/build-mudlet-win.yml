@@ -77,6 +77,20 @@ jobs:
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
 
+    - name: (Windows) Login to Azure
+      uses: azure/login@v2
+      if: github.repository == 'Mudlet/Mudlet'
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get Azure access token for code signing
+      shell: pwsh
+      if: github.repository == 'Mudlet/Mudlet'
+      run: |
+        $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
+        "::add-mask::$token"
+        "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
+
     - name: (Windows) Deploy
       shell: msys2 {0}
       env:
@@ -85,7 +99,7 @@ jobs:
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         DEPLOY_SSH_KEY: ${{secrets.DEPLOY_SSH_KEY}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
+        AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}

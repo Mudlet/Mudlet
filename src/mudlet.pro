@@ -647,6 +647,7 @@ SOURCES += \
     MxpTag.cpp \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
+    SingleLineTextEdit.cpp \
     T2DMap.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
@@ -702,6 +703,7 @@ SOURCES += \
     TMxpTagProcessor.cpp \
     TMxpVersionTagHandler.cpp \
     TMxpVarTagHandler.cpp \
+    TriggerHighlighter.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -776,6 +778,7 @@ HEADERS += \
     post_guard.h \
     ScriptUnit.h \
     ShortcutsManager.h \
+    SingleLineTextEdit.h \
     T2DMap.h \
     TAccessibleConsole.h \
     TAccessibleTextEdit.h \
@@ -841,6 +844,7 @@ HEADERS += \
     TSplitter.h \
     TSplitterHandle.h \
     TStringUtils.h \
+    TriggerHighlighter.h \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \

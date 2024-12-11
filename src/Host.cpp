@@ -4416,3 +4416,8 @@ void Host::setCommandLineHistorySaveSize(const int lines)
         mCommandLineHistorySaveSize = lines;
     }
 }
+
+void Host::editorThemeChanged()
+{
+    emit signal_editorThemeChanged();
+}

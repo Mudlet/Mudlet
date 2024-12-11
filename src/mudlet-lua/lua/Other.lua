@@ -100,8 +100,9 @@ SavedVariables = {}
 
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having
---- to use multiple send() commands one after another.
+--- to use multiple send() commands one after another.  Optionally you can delay the sends using a number.
 ---
+--- @param seconds [optional] number of seconds to delay the sending of commands
 --- @param ... list of commands
 --- @param echoTheValue optional boolean flag (default value is true) which determine if value should
 ---   be echoed back on client.
@@ -116,6 +117,10 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
+---   with a time delay of 2 seconds between each command:
+---   <pre>
+---   sendAll(2, "stand", "wield shield", "say ha!")
+---   </pre>
 --- @usage Use sendAll and do not echo sent command on the main window.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!", false)
@@ -123,14 +128,18 @@ SavedVariables = {}
 ---
 --- @see send
 function sendAll(...)
+  local time = 0
   local args = { ... }
   local echo = true
+  if type(args[1]) == 'number' then
+    time = table.remove(args, 1)
+  end
   if type(args[#args]) == 'boolean' then
     echo = table.remove(args, #args)
   end
   for i, v in ipairs(args) do
     if type(v) == 'string' then
-      send(v, echo)
+      tempTimer(time*i, function() send(v, echo) end, false)
     end
   end
 end
