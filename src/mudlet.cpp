@@ -3725,7 +3725,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.tmTheme" that
+        // handles the special case of the default theme "Mudlet.tmTheme" that
         // is carried internally in the resource file:
         if (extra1.compare(qsl("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match

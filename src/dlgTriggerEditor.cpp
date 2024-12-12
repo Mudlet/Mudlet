@@ -895,8 +895,21 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
+    auto pEdbee = edbee::Edbee::instance();
+    edbee::TextThemeManager* pThemeManager = nullptr;
+    edbee::TextTheme* pTheme = nullptr;
+    if (pEdbee) {
+        pThemeManager = pEdbee->themeManager();
+        if (pThemeManager) {
+            pTheme = pThemeManager->theme(mpHost->mEditorTheme);
+        }
+    }
+    if (!pTheme) {
+        qDebug().noquote().nospace() << "dlgTriggerEditor::slot_editorThemeChanged() WARNING - no valid theme set falling back to built-in \"Mudlet\" one.";
+    }
+
     for (int i = 0; i < 50; i++) {
-        mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->setTheme(mpHost->mEditorTheme);
+        mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->setTheme(pTheme ? mpHost->mEditorTheme : qsl("Mudlet"));
     }
 }
 

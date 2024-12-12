@@ -215,7 +215,7 @@ public:
         profileLogErrorsFilePath,
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.thTheme" that
+        // handles the special case of the default theme "Mudlet.tmTheme" that
         // is carried internally in the resource file:
         editorWidgetThemePathFile,
         // Returns the pathFileName to the external JSON file needed to process
