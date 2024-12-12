@@ -152,7 +152,8 @@ void mudlet::init()
 
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
-    publicTestVersion = mAppBuild.startsWith("-ptb");
+    // publicTestVersion = mAppBuild.startsWith("-ptb");
+    publicTestVersion = true;
     developmentVersion = !releaseVersion && !publicTestVersion;
 
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
