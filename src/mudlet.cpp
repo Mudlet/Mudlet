@@ -153,6 +153,7 @@ void mudlet::init()
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
     // publicTestVersion = mAppBuild.startsWith("-ptb");
+    // REMOVEME
     publicTestVersion = true;
     developmentVersion = !releaseVersion && !publicTestVersion;
 

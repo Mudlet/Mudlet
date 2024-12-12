@@ -69,6 +69,10 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
     MUDLET_VERSION_BUILD="-testing"
   fi
 
+  # REMOVEME
+  MUDLET_VERSION_BUILD="-ptb"
+  PublicTestBuild=true
+
   # Check if this is a pull request
   if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
     # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
