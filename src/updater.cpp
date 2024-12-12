@@ -44,13 +44,24 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObje
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            testVersion ? qsl("public-test-build") : qsl("release"));
+    QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
+    QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
+
+    // On 32-bit Windows, check if we can upgrade to 64-bit
+#if defined(Q_OS_WIN32)
+    QString arch = is64BitCompatible() ? QStringLiteral("x86_64") : QStringLiteral("x86");
+#else
+    QString arch = QString(); // Let Feed auto-detect for other platforms
+#endif
+
+    feed = new dblsqd::Feed();
+    feed->setUrl(baseUrl, channel, QString(), arch, QString());
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();
     }
 }
+
 Updater::~Updater()
 {
     delete (feed);
@@ -463,3 +474,20 @@ QString Updater::getPreviousVersion() const
 
     return previousVersion;
 }
+
+#if defined(Q_OS_WIN32)
+bool Updater::is64BitCompatible() const 
+{
+    BOOL isWow64 = FALSE;
+    typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)
+        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+
+    if (fnIsWow64Process) {
+        if (fnIsWow64Process(GetCurrentProcess(), &isWow64)) {
+            return isWow64 ? true : false;
+        }
+    }
+    return false;
+}
+#endif

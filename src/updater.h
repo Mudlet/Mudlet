@@ -62,6 +62,7 @@ private:
 #elif defined(Q_OS_WIN32)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
+    bool is64BitCompatible() const;
 #elif defined(Q_OS_MACOS)
     void setupOnMacOS();
 #endif
