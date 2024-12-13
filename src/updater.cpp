@@ -41,34 +41,34 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObje
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
 {
-     qDebug() << "Creating Updater object with parent, settings, and testVersion";
+    qWarning() << "Creating Updater object with parent, settings, and testVersion";
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
-    qDebug() << "Storing settings object";
+    qWarning() << "Storing settings object";
     this->settings = settings;
 
-    qDebug() << "Setting up base URL for updates";
+    qWarning() << "Setting up base URL for updates";
     QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
-    qDebug() << "Determining update channel based on testVersion:" << testVersion;
+    qWarning() << "Determining update channel based on testVersion:" << testVersion;
     QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
 
-    qDebug() << "Checking architecture requirements";
+    qWarning() << "Checking architecture requirements";
     // On 32-bit Windows, check if we can upgrade to 64-bit
 #if defined(Q_OS_WIN32)
-    qDebug() << "Windows platform detected, checking 64-bit compatibility";
+    qWarning() << "Windows platform detected, checking 64-bit compatibility";
     QString arch = is64BitCompatible() ? QStringLiteral("x86_64") : QStringLiteral("x86");
 #else
-    qDebug() << "Non-Windows platform detected, using auto-detect for architecture";
+    qWarning() << "Non-Windows platform detected, using auto-detect for architecture";
     QString arch = QString(); // Let Feed auto-detect for other platforms
 #endif
 
-    qDebug() << "Creating new feed object";
+    qWarning() << "Creating new feed object";
     feed = new dblsqd::Feed();
-    qDebug() << "Setting feed URL with parameters";
+    qWarning() << "Setting feed URL with parameters";
     feed->setUrl(baseUrl, channel, QString(), arch, QString());
 
-    qDebug() << "Setting up daily check timer if not exists";
+    qWarning() << "Setting up daily check timer if not exists";
     if (!mDailyCheck) {
-        qDebug() << "Creating new daily check timer";
+        qWarning() << "Creating new daily check timer";
         mDailyCheck = std::make_unique<QTimer>();
     }
 }
