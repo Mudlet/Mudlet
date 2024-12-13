@@ -2904,7 +2904,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         //add our actions
         QMapIterator<QString, QStringList> it2(mUserActions);
         auto mapper = new QSignalMapper(popup);
-        
+
         while (it2.hasNext()) {
             it2.next();
             QStringList actionInfo = it2.value();
@@ -4265,6 +4265,8 @@ void T2DMap::slot_setArea()
 
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
+
+    arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
 }
 
 
