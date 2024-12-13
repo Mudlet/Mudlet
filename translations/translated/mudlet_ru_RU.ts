@@ -3671,7 +3671,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="193"/>
       <source>error: this trigger has no patterns defined</source>
-      <translation type="unfinished"/>
+      <translation>ошибка: у этого триггера нет шаблонов</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="225"/>
