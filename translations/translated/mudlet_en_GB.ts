@@ -3600,7 +3600,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="193"/>
       <source>error: this trigger has no patterns defined</source>
-      <translation type="unfinished"/>
+      <translation>error: this trigger has no patterns defined</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="225"/>
@@ -7775,7 +7775,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="2864"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3053"/>
