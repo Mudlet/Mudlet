@@ -4159,6 +4159,7 @@ function map.eventHandler(event, ...)
         end
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
+        raiseEvent("mapperScriptLoaded", "generic_mapper")
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
             map.find_prompt()
