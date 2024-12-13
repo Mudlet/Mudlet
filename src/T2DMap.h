@@ -63,6 +63,7 @@ public:
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
+    bool isClickInEmptySpace(const QPoint& pos);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     bool event(QEvent* event) override;

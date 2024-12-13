@@ -2969,10 +2969,34 @@ bool T2DMap::event(QEvent* event)
     return QWidget::event(event);
 }
 
+bool T2DMap::isClickInEmptySpace(const QPoint& pos) {
+    const float mx = (pos.x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (pos.y() / mRoomHeight) - mMapCenterY;
+
+    for (const auto& roomId : mpMap->mpRoomDB->getArea(mAreaID)->getAreaRooms()) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) continue;
+
+        if (fabs(mx - room->x()) < mRoomWidth / 2.0 && fabs(my - room->y()) < mRoomHeight / 2.0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 void T2DMap::mousePressEvent(QMouseEvent* event)
 {
     if (!mpMap) {
         return;
+    }
+    if (event->button() == Qt::LeftButton) {
+        if (isClickInEmptySpace(event->pos())) {
+            mMultiSelectionSet.clear();
+            mMultiSelectionHighlightRoomId = 0;
+            update();
+            return;
+        }
     }
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
