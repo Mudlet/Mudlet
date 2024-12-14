@@ -74,7 +74,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
@@ -565,14 +565,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/dblsqd")
         }
-
-        # Sparkle glue code - only needed for MacOs
-        macx {
-            !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-                message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
-                system("cd $${PWD}/.. ; git submodule update --init 3rdparty/sparkle-glue")
-            }
-        }
     }
 }
 
@@ -602,14 +594,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
         include("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
     } else {
         error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
-    }
-
-    macx {
-        # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle compilation below
-        !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-            error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
-        }
     }
 }
 
@@ -668,6 +652,7 @@ SOURCES += \
     MxpTag.cpp \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
+    SingleLineTextEdit.cpp \
     T2DMap.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
@@ -723,6 +708,7 @@ SOURCES += \
     TMxpTagProcessor.cpp \
     TMxpVersionTagHandler.cpp \
     TMxpVarTagHandler.cpp \
+    TriggerHighlighter.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -800,6 +786,7 @@ HEADERS += \
     post_guard.h \
     ScriptUnit.h \
     ShortcutsManager.h \
+    SingleLineTextEdit.h \
     T2DMap.h \
     TAccessibleConsole.h \
     TAccessibleTextEdit.h \
@@ -865,6 +852,7 @@ HEADERS += \
     TSplitter.h \
     TSplitterHandle.h \
     TStringUtils.h \
+    TriggerHighlighter.h \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
@@ -1611,15 +1599,8 @@ macx {
         QMAKE_LFLAGS += -F $$SPARKLE_PATH
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
-        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-        OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-            ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-        HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
-            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-            ../3rdparty/sparkle-glue/CocoaInitializer.h
-
+        OBJECTIVE_SOURCES += sparkleupdater.mm
+        HEADERS += sparkleupdater.h        
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework

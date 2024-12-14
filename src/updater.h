@@ -25,11 +25,9 @@
 #if defined (INCLUDE_UPDATER)
 #include "dblsqd/feed.h"
 #include "dblsqd/update_dialog.h"
+#include "sparkleupdater.h"
 #endif
 
-#ifdef Q_OS_MACOS
-#include "../3rdparty/sparkle-glue/AutoUpdater.h"
-#endif
 
 #include "pre_guard.h"
 #include <QObject>
@@ -64,6 +62,7 @@ private:
 #elif defined(Q_OS_WIN32)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
+    bool is64BitCompatible() const;
 #elif defined(Q_OS_MACOS)
     void setupOnMacOS();
 #endif
@@ -77,7 +76,7 @@ private:
 #if defined(Q_OS_LINUX)
     QString unzippedBinaryName;
 #elif defined(Q_OS_MACOS)
-    AutoUpdater* msparkleUpdater;
+    SparkleUpdater* msparkleUpdater;
 #endif
 
 

@@ -68,6 +68,7 @@ public:
     bool hasPermanentLabels() const;
     qreal get2DMapZoom() const { return mLast2DMapZoom; }
     void set2DMapZoom(const qreal zoom);
+    void clean();
 
 
     QSet<int> rooms; // rooms of this area

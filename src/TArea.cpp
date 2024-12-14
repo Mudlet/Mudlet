@@ -80,9 +80,9 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
     QList<TRoom*> const roomList = mpRoomDB->getRoomPtrList();
     for (auto room : roomList) {
         const int id = room->getId();
-        const int x = room->x;
-        const int y = room->y;
-        const int z = room->z;
+        const int x = room->x();
+        const int y = room->y();
+        const int z = room->z();
         QMap<int, QMultiMap<int, int>> const _y;
         QMultiMap<int, int> const _z;
         if (!kS.contains(x)) {
@@ -104,7 +104,7 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
         const int roomId = itAreaRoom.next();
         TRoom* pR = mpRoomDB->getRoom(roomId);
         if (pR) {
-            if (pR->x == x && pR->y == y && pR->z == z) {
+            if (pR->x() == x && pR->y() == y && pR->z() == z) {
                 dL.push_back(roomId);
             }
         }
@@ -332,9 +332,9 @@ void TArea::fast_calcSpan(int id)
         return;
     }
 
-    const int x = pR->x;
-    const int y = pR->y;
-    const int z = pR->z;
+    const int x = pR->x();
+    const int y = pR->y();
+    const int z = pR->z();
     if (x > max_x) {
         max_x = x;
     }
@@ -389,72 +389,72 @@ void TArea::calcSpan()
 
         if (!isFirstDone) {
             // Only do this initialization for the first valid room
-            min_x = pR->x;
+            min_x = pR->x();
             max_x = min_x;
-            min_y = pR->y * -1;
+            min_y = pR->y() * -1;
             max_y = min_y;
-            min_z = pR->z;
+            min_z = pR->z();
             max_z = min_z;
-            zLevels.push_back(pR->z);
-            xminForZ.insert(pR->z, pR->x);
-            xmaxForZ.insert(pR->z, pR->x);
-            yminForZ.insert(pR->z, pR->y);
-            ymaxForZ.insert(pR->z, pR->y);
+            zLevels.push_back(pR->z());
+            xminForZ.insert(pR->z(), pR->x());
+            xmaxForZ.insert(pR->z(), pR->x());
+            yminForZ.insert(pR->z(), pR->y());
+            ymaxForZ.insert(pR->z(), pR->y());
             isFirstDone = true;
             continue;
         } else {
             // Already had one valid room so now must check more things
 
-            if (!zLevels.contains(pR->z)) {
-                zLevels.push_back(pR->z);
+            if (!zLevels.contains(pR->z())) {
+                zLevels.push_back(pR->z());
             }
 
-            if (!xminForZ.contains(pR->z)) {
-                xminForZ.insert(pR->z, pR->x);
-            } else if (pR->x < xminForZ.value(pR->z)) {
-                xminForZ.insert(pR->z, pR->x);
+            if (!xminForZ.contains(pR->z())) {
+                xminForZ.insert(pR->z(), pR->x());
+            } else if (pR->x() < xminForZ.value(pR->z())) {
+                xminForZ.insert(pR->z(), pR->x());
             }
 
-            if (pR->x < min_x) {
-                min_x = pR->x;
+            if (pR->x() < min_x) {
+                min_x = pR->x();
             }
 
-            if (!xmaxForZ.contains(pR->z)) {
-                xmaxForZ.insert(pR->z, pR->x);
-            } else if (pR->x > xmaxForZ.value(pR->z)) {
-                xmaxForZ.insert(pR->z, pR->x);
+            if (!xmaxForZ.contains(pR->z())) {
+                xmaxForZ.insert(pR->z(), pR->x());
+            } else if (pR->x() > xmaxForZ.value(pR->z())) {
+                xmaxForZ.insert(pR->z(), pR->x());
             }
 
-            if (pR->x > max_x) {
-                max_x = pR->x;
+            if (pR->x() > max_x) {
+                max_x = pR->x();
             }
 
-            if (!yminForZ.contains(pR->z)) {
-                yminForZ.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) < yminForZ.value(pR->z)) {
-                yminForZ.insert(pR->z, (-1 * pR->y));
+            if (!yminForZ.contains(pR->z())) {
+                yminForZ.insert(pR->z(), (-1 * pR->y()));
+            } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
+                yminForZ.insert(pR->z(), (-1 * pR->y()));
             }
 
-            if ((-1 * pR->y) < min_y) {
-                min_y = (-1 * pR->y);
+            if ((-1 * pR->y()) < min_y) {
+                min_y = (-1 * pR->y());
             }
 
-            if ((-1 * pR->y) > max_y) {
-                max_y = (-1 * pR->y);
+            if ((-1 * pR->y()) > max_y) {
+                max_y = (-1 * pR->y());
             }
 
-            if (!ymaxForZ.contains(pR->z)) {
-                ymaxForZ.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) > ymaxForZ.value(pR->z)) {
-                ymaxForZ.insert(pR->z, (-1 * pR->y));
+            if (!ymaxForZ.contains(pR->z())) {
+                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+            } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
+                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             }
 
-            if (pR->z < min_z) {
-                min_z = pR->z;
+            if (pR->z() < min_z) {
+                min_z = pR->z();
             }
 
-            if (pR->z > max_z) {
-                max_z = pR->z;
+            if (pR->z() > max_z) {
+                max_z = pR->z();
             }
         }
     }
@@ -487,15 +487,15 @@ void TArea::removeRoom(int room, bool deferAreaRecalculations)
         if (pR) {
             // Now see if the room is on an extreme - if it the only room on a
             // particular z-coordinate it will be on all four
-            if (xminForZ.contains(pR->z) && xminForZ.value(pR->z) >= pR->x) {
+            if (xminForZ.contains(pR->z()) && xminForZ.value(pR->z()) >= pR->x()) {
                 isOnExtreme = true;
-            } else if (xmaxForZ.contains(pR->z) && xmaxForZ.value(pR->z) <= pR->x) {
+            } else if (xmaxForZ.contains(pR->z()) && xmaxForZ.value(pR->z()) <= pR->x()) {
                 isOnExtreme = true;
-            } else if (yminForZ.contains(pR->z) && yminForZ.value(pR->z) >= (-1 * pR->y)) {
+            } else if (yminForZ.contains(pR->z()) && yminForZ.value(pR->z()) >= (-1 * pR->y())) {
                 isOnExtreme = true;
-            } else if (ymaxForZ.contains(pR->z) && ymaxForZ.value(pR->z) <= (-1 * pR->y)) {
+            } else if (ymaxForZ.contains(pR->z()) && ymaxForZ.value(pR->z()) <= (-1 * pR->y())) {
                 isOnExtreme = true;
-            } else if (min_x >= pR->x || min_y >= (-1 * pR->y) || max_x <= pR->x || max_y <= (-1 * pR->y)) {
+            } else if (min_x >= pR->x() || min_y >= (-1 * pR->y()) || max_x <= pR->x() || max_y <= (-1 * pR->y())) {
                 isOnExtreme = true;
             }
         }
@@ -979,5 +979,14 @@ void TArea::set2DMapZoom(const qreal zoom)
 {
     if (zoom >= T2DMap::csmMinXYZoom) {
         mLast2DMapZoom = zoom;
+    }
+}
+
+void TArea::clean()
+{
+    if (mIsDirty) {
+        determineAreaExits();
+        calcSpan();
+        mIsDirty = false;
     }
 }

@@ -2479,14 +2479,34 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="4">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_pushButton_roomCollisionBorderColor">
+            <property name="text">
+             <string>Overlapping rooms border:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_roomCollisionBorderColor</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_roomCollisionBorderColor">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="4">
            <widget class="Line" name="line_mapperColorsSeparator">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="label_17">
             <property name="text">
              <string>Black:</string>
@@ -2496,7 +2516,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_black_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2506,7 +2526,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="4" column="2">
            <widget class="QLabel" name="label_49">
             <property name="text">
              <string>Light black:</string>
@@ -2516,7 +2536,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="3">
+          <item row="4" column="3">
            <widget class="QPushButton" name="pushButton_Lblack_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2526,7 +2546,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_42">
             <property name="text">
              <string>Red:</string>
@@ -2536,7 +2556,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="5" column="1">
            <widget class="QPushButton" name="pushButton_red_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2546,7 +2566,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="2">
+          <item row="5" column="2">
            <widget class="QLabel" name="label_50">
             <property name="text">
              <string>Light red:</string>
@@ -2556,7 +2576,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="3">
+          <item row="5" column="3">
            <widget class="QPushButton" name="pushButton_Lred_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2566,7 +2586,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_43">
             <property name="text">
              <string>Green:</string>
@@ -2576,7 +2596,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
+          <item row="6" column="1">
            <widget class="QPushButton" name="pushButton_green_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2586,7 +2606,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="2">
+          <item row="6" column="2">
            <widget class="QLabel" name="label_51">
             <property name="text">
              <string>Light green:</string>
@@ -2596,7 +2616,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="3">
+          <item row="6" column="3">
            <widget class="QPushButton" name="pushButton_Lgreen_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2606,7 +2626,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="0">
+          <item row="7" column="0">
            <widget class="QLabel" name="label_48">
             <property name="text">
              <string>Yellow:</string>
@@ -2616,7 +2636,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
+          <item row="7" column="1">
            <widget class="QPushButton" name="pushButton_yellow_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2626,7 +2646,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="2">
+          <item row="7" column="2">
            <widget class="QLabel" name="label_52">
             <property name="text">
              <string>Light yellow:</string>
@@ -2636,7 +2656,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="3">
+          <item row="7" column="3">
            <widget class="QPushButton" name="pushButton_Lyellow_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2646,7 +2666,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
+          <item row="8" column="0">
            <widget class="QLabel" name="label_44">
             <property name="text">
              <string>Blue:</string>
@@ -2656,7 +2676,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="1">
+          <item row="8" column="1">
            <widget class="QPushButton" name="pushButton_blue_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2666,7 +2686,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="2">
+          <item row="8" column="2">
            <widget class="QLabel" name="label_53">
             <property name="text">
              <string>Light blue:</string>
@@ -2676,7 +2696,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="3">
+          <item row="8" column="3">
            <widget class="QPushButton" name="pushButton_Lblue_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2686,7 +2706,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="0">
+          <item row="9" column="0">
            <widget class="QLabel" name="label_45">
             <property name="text">
              <string>Magenta:</string>
@@ -2696,7 +2716,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="1">
+          <item row="9" column="1">
            <widget class="QPushButton" name="pushButton_magenta_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2706,7 +2726,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="2">
+          <item row="9" column="2">
            <widget class="QLabel" name="label_54">
             <property name="text">
              <string>Light magenta:</string>
@@ -2716,7 +2736,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="3">
+          <item row="9" column="3">
            <widget class="QPushButton" name="pushButton_Lmagenta_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2726,7 +2746,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="0">
+          <item row="10" column="0">
            <widget class="QLabel" name="label_46">
             <property name="text">
              <string>Cyan:</string>
@@ -2736,7 +2756,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="1">
+          <item row="10" column="1">
            <widget class="QPushButton" name="pushButton_cyan_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2746,7 +2766,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="2">
+          <item row="10" column="2">
            <widget class="QLabel" name="label_55">
             <property name="text">
              <string>Light cyan:</string>
@@ -2756,7 +2776,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="3">
+          <item row="10" column="3">
            <widget class="QPushButton" name="pushButton_Lcyan_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2766,7 +2786,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="0">
+          <item row="11" column="0">
            <widget class="QLabel" name="label_47">
             <property name="text">
              <string>White:</string>
@@ -2776,7 +2796,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="1">
+          <item row="11" column="1">
            <widget class="QPushButton" name="pushButton_white_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2786,7 +2806,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="2">
+          <item row="11" column="2">
            <widget class="QLabel" name="label_56">
             <property name="text">
              <string>Light white:</string>
@@ -2796,7 +2816,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="3">
+          <item row="11" column="3">
            <widget class="QPushButton" name="pushButton_Lwhite_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -2806,7 +2826,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="11" column="2" colspan="2">
+          <item row="12" column="2" colspan="2">
            <widget class="QPushButton" name="reset_colors_button_2">
             <property name="text">
              <string>Reset all colors to default</string>
@@ -4310,6 +4330,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>spinBox_playerRoomInnerDiameter</tabstop>
   <tabstop>pushButton_foreground_color_2</tabstop>
   <tabstop>pushButton_roomBorderColor</tabstop>
+  <tabstop>pushButton_roomCollisionBorderColor</tabstop>
   <tabstop>pushButton_background_color_2</tabstop>
   <tabstop>pushButton_mapInfoBg</tabstop>
   <tabstop>pushButton_black_2</tabstop>

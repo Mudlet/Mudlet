@@ -106,7 +106,7 @@ dlgIRC::~dlgIRC()
         connection->close();
     }
 
-    if (mpHost->mpDlgIRC) {
+    if (mpHost && mpHost->mpDlgIRC) {
         mpHost->mpDlgIRC = nullptr;
     }
 }
@@ -606,7 +606,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
             // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
             if (!message->isOwn()) {
                 const QString textToLua = IrcMessageFormatter::formatMessage(message, true);
-                if (!textToLua.isEmpty()) {
+                if (!textToLua.isEmpty() && mpHost) {
                     const QString from = message->nick();
                     const QString to = getMessageTarget(message, buffer->title());
                     mpHost->postIrcMessage(from, to, textToLua);
@@ -638,7 +638,7 @@ void dlgIRC::slot_nickNameRequired(const QString& reserved, QString* alt)
 
 void dlgIRC::slot_nickNameChanged(const QString& nick)
 {
-    if (nick == mNickName) {
+    if (!mpHost || nick == mNickName) {
         return;
     }
 
@@ -651,6 +651,10 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
 
 void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 {
+    if (!mpHost) {
+        return;
+    }
+
     if (!mReadyForSending) {
         mReadyForSending = true;
     }
@@ -668,6 +672,10 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 
 void dlgIRC::slot_partedChannel(IrcPartMessage* message)
 {
+    if (!mpHost) {
+        return;
+    }
+
     const QString chan = message->channel();
     if (mChannels.contains(chan)) {
         mChannels.removeAll(chan);
