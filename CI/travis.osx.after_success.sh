@@ -8,8 +8,7 @@ sign_and_notarize () {
   codesign --deep -o runtime -s "$IDENTITY" "${appBundle}"
   echo "Signed final .dmg"
 
-  xcrun notarytool submit "${appBundle}" --apple-id "$AC_USERNAME" --password "$AC_PASSWORD" --wait
-
+  xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
 }
 
 BUILD_DIR="${BUILD_FOLDER}"
