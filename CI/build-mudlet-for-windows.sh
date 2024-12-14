@@ -70,9 +70,6 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
     MUDLET_VERSION_BUILD="-testing"
   fi
 
-  # REMOVEME
-  MUDLET_VERSION_BUILD="-ptb"
-
   # Check if this is a pull request
   if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
     # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
@@ -145,9 +142,6 @@ else
     # Tagged build, this is a release or a PTB build, include the updater
     export WITH_UPDATER="YES"
 fi
-
-# REMOVE ME
-export WITH_UPDATER="YES"
 
 # This one is VITAL as some things in the code have to be tweaked to be
 # different compared to the CI/CB build environment (or the
