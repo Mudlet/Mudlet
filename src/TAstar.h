@@ -78,9 +78,9 @@ public:
         if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
             return 1;
         }
-        CostType dx = m_location[m_goal].pR->x - m_location[u].pR->x;
-        CostType dy = m_location[m_goal].pR->y - m_location[u].pR->y;
-        CostType dz = m_location[m_goal].pR->z - m_location[u].pR->z;
+        CostType dx = m_location[m_goal].pR->x() - m_location[u].pR->x();
+        CostType dy = m_location[m_goal].pR->y() - m_location[u].pR->y();
+        CostType dz = m_location[m_goal].pR->z() - m_location[u].pR->z();
 
         return std::sqrt(dx * dx + dy * dy + dz * dz);
     }

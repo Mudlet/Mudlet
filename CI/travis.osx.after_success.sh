@@ -110,7 +110,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
-      mkdir -p "${BUILLD_DIR}/upload/"
+      mkdir -p "${BUILD_DIR}/upload/"
       mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
       {
         echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
@@ -155,7 +155,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Downloading release feed ==="
       downloadedfeed=$(mktemp)
-      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/${ARCH}" --output-document="$downloadedfeed"
+      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/${ARCH_DBLSQD}" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
       cd "${SOURCE_DIR}" || exit
       changelog=$(lua "${SOURCE_DIR}/CI/generate-changelog.lua" --mode ptb --releasefile "${downloadedfeed}")
@@ -166,7 +166,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH} "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}"
     fi
   fi
 

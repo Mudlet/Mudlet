@@ -99,11 +99,15 @@
     <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
-    <addaction name="dactionLiveHelpChat"/>
+    <addaction name="dactionIRC"/>
     <addaction name="dactionPackageManager"/>
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionToggleTimeStamp"/>
+    <addaction name="dactionToggleReplay"/>
+    <addaction name="dactionToggleLogging"/>
+    <addaction name="dactionToggleEmergencyStop"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -130,7 +134,7 @@
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
     <addaction name="dactionMudletDiscord"/>
-    <addaction name="dactionIRC"/>
+    <addaction name="dactionLiveHelpChat"/>
     <addaction name="dactionForum"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
@@ -272,7 +276,7 @@
     <string>Live help chat</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionShowMap">
@@ -314,9 +318,6 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>MultiView</string>
    </property>
@@ -329,9 +330,6 @@
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
@@ -348,9 +346,6 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Mute sounds from Mudlet (triggers, scripts, etc.)</string>
    </property>
@@ -363,9 +358,6 @@
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
@@ -422,6 +414,38 @@
   <action name="dactionCloseProfile">
    <property name="text">
     <string>Close profile</string>
+   </property>
+  </action>
+  <action name="dactionToggleTimeStamp">
+   <property name="text">
+    <string>Time Stamps</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleReplay">
+   <property name="text">
+    <string>Replay</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleLogging">
+   <property name="text">
+    <string>Logging</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleEmergencyStop">
+   <property name="text">
+    <string>Emergency Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</string>
    </property>
   </action>
  </widget>

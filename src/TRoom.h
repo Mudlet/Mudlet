@@ -76,6 +76,19 @@ public:
     bool setArea(int, bool deferAreaRecalculations = false);
     int getExitWeight(const QString& cmd);
 
+    inline int x() const { return mX; }
+    inline int y() const { return mY; }
+    inline int z() const { return mZ; }
+    inline void setCoordinates(const int x, const int y, const int z) {
+        mX = x;
+        mY = y;
+        mZ = z;
+    }
+    inline void offset(const int deltaX, const int deltaY, const int deltaZ) {
+        mX += deltaX;
+        mY += deltaY;
+        mZ += deltaZ;
+    }
     int getWeight() const { return weight; }
     int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
@@ -127,10 +140,6 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
-
-    int x = 0;
-    int y = 0;
-    int z = 0;
     int environment = -1;
 
     bool isLocked = false;
@@ -185,6 +194,10 @@ private:
     int id = 0;
     int area = -1;
     int weight = 1;
+    // Made private so we can catch all cases where they are to be modified:
+    int mX = 0;
+    int mY = 0;
+    int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
     int north = -1;
@@ -220,7 +233,7 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     debug.nospace() << "TRoom(" << room->getId() << ")";
     debug.nospace() << ", name=" << room->name;
     debug.nospace() << ", area=" << room->getArea();
-    debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
+    debug.nospace() << ", pos=" << room->x() << "," << room->y() << "," << room->z();
 
     debug.nospace() << ", exits:";
     if (room->getNorth() != -1) {

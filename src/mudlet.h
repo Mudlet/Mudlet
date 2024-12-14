@@ -55,6 +55,7 @@
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
+#include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
@@ -538,16 +539,21 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
-// Not used:    void slot_showHelpDialogIrc();
+    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
     void slot_tabChanged(int);
     void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
+    void slot_toggleTimeStamp();
+    void slot_toggleReplay();
+    void slot_toggleLogging();
+    void slot_toggleEmergencyStop();
 
 
 protected:
     void closeEvent(QCloseEvent*) override;
+    void changeEvent(QEvent*) override;
 
 
 signals:
@@ -571,6 +577,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_windowStateChanged(const Qt::WindowStates);
 
 
 private slots:
@@ -598,6 +605,7 @@ private slots:
     void slot_updateInstalled();
 #endif
     void slot_updateShortcuts();
+    void slot_windowStateChanged(const Qt::WindowStates);
 
 
 private:
@@ -652,6 +660,10 @@ private:
     QKeySequence mKeySequenceReconnect;
     QKeySequence mKeySequenceShowMap;
     QKeySequence mKeySequenceTriggers;
+    QKeySequence mKeySequenceToggleTimeStamp;
+    QKeySequence mKeySequenceToggleReplay;
+    QKeySequence mKeySequenceToggleLogging;
+    QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
     controlsVisibility mMenuBarVisibility = visibleAlways;
@@ -726,6 +738,10 @@ private:
     QPointer<QShortcut> mpShortcutReconnect;
     QPointer<QShortcut> mpShortcutShowMap;
     QPointer<QShortcut> mpShortcutTriggers;
+    QPointer<QShortcut> mpShortcutToggleTimeStamp;
+    QPointer<QShortcut> mpShortcutToggleReplay;
+    QPointer<QShortcut> mpShortcutToggleLogging;
+    QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
