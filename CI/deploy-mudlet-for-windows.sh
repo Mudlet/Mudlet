@@ -69,7 +69,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
     MUDLET_VERSION_BUILD="-testing"
   fi
 
-  # REMOVEME
+  # REMOVE ME
   MUDLET_VERSION_BUILD="-ptb"
   PublicTestBuild=true
 
