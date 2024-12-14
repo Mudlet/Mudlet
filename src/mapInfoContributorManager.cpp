@@ -167,9 +167,9 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location")
                                     .arg(QChar(160),
                                         QString::number(roomID),
-                                        QString::number(room->x),
-                                        QString::number(room->y),
-                                        QString::number(room->z))));
+                                        QString::number(room->x()),
+                                        QString::number(room->y()),
+                                        QString::number(room->z()))));
             if (areaId != displayAreaId) {
                 isItalic = true;
             } else {
@@ -190,9 +190,9 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room")
                                     .arg(QChar(160),
                                         QString::number(roomID),
-                                        QString::number(room->x),
-                                        QString::number(room->y),
-                                        QString::number(room->z))));
+                                        QString::number(room->x()),
+                                        QString::number(room->y()),
+                                        QString::number(room->z()))));
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
@@ -218,9 +218,9 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms", nullptr, selectionSize)
                                     .arg(QChar(160),
                                         QString::number(roomID),
-                                        QString::number(room->x),
-                                        QString::number(room->y),
-                                        QString::number(room->z))));
+                                        QString::number(room->x()),
+                                        QString::number(room->y()),
+                                        QString::number(room->z()))));
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white

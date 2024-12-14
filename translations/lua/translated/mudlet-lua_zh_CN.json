@@ -4,11 +4,11 @@
     "description": "attaches your container to a border"
   },
   "AdjustableContainer.bottom": {
-    "message": "bottom",
+    "message": "按钮",
     "description": "one of the borders the container can be attached to"
   },
   "AdjustableContainer.top": {
-    "message": "top",
+    "message": "顶部",
     "description": "one of the borders the container can be attached to"
   },
   "AdjustableContainer.left": {
@@ -75,6 +75,10 @@
     "message": "安装 '%s' 失败: %s",
     "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
   },
+  "Mudlet.moduleInstallSuccess": {
+    "message": "包 '%s' 已成功安装。",
+    "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
   "Mudlet.moduleInstallFail": {
     "message": "安装 '%s' 失败: %s",
     "description": "Failure message after drag&drop of module file onto Mudlet - %s is the file name"
@@ -84,7 +88,7 @@
     "description": "Download package from Url for installation - %s is source url"
   },
   "Mudlet.prefixOk": {
-    "message": "[ 确定 ] - ",
+    "message": "[ 完成 ] - ",
     "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefixWarn": {

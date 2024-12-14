@@ -134,6 +134,11 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 }
 
+int dlgMapper::getCurrentShownAreaIndex()
+{
+    return comboBox_showArea->currentIndex();
+}
+
 void dlgMapper::updateAreaComboBox()
 {
     if (!mpMap) {

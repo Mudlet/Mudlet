@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -194,7 +194,12 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     if (async) {
         auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
         auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+            if (!mpHost) {
+                return;
+            }
+            mpHost->xmlSaved(fileName);
+        });
         watcher->setFuture(future);
         saveFutures.append(future);
     } else {
@@ -210,7 +215,12 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        if (!mpHost) {
+            return;
+        }
+        mpHost->xmlSaved(qsl("profile"));
+    });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -486,8 +496,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     if (pHost->getLargeAreaExitArrows()) {
         host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
-
-    host.append_attribute("BoldIsBright") = pHost->mBoldIsBright ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -771,7 +779,12 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+            if (!mpHost) {
+                return;
+            }
+            mpHost->xmlSaved(qsl("profile"));
+        });
         watcher->setFuture(future);
         saveFutures.append(future);
 

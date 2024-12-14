@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -564,9 +564,9 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                 continue;
             }
 
-            pT->x = attributes().value(qsl("x")).toString().toInt();
-            pT->y = attributes().value(qsl("y")).toString().toInt();
-            pT->z = attributes().value(qsl("z")).toString().toInt();
+            pT->setCoordinates(attributes().value(qsl("x")).toString().toInt(),
+                               attributes().value(qsl("y")).toString().toInt(),
+                               attributes().value(qsl("z")).toString().toInt());
             continue;
         } else if (name() == qsl("features")) {
             readRoomFeatures(pT);
@@ -991,13 +991,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
-    if (attributes().hasAttribute(qsl("BoldIsBright"))) {
-        pHost->mBoldIsBright = (attributes().value(qsl("BoldIsBright")) == YES);
-    } else {
-        // The default, backwards compatible, option is true, though false would be "better":
-        pHost->mBoldIsBright = true;
-    }
-
     if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
         mpHost->mMapInfoContributors.clear();
     }
@@ -1166,6 +1159,10 @@ void XMLimport::readHost(Host* pHost)
                 // On Linux ensure that emojis are displayed in colour even if
                 // this font doesn't support it:
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+#endif
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                // Add Apple Color Emoji fallback.
+                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
 #endif
                 pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {

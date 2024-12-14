@@ -34,19 +34,20 @@ public:
     : mpEntityResolver(pResolver)
     {}
 
-    bool handle(char character);
+    bool handle(char character, bool resolveCustomEntities);
     void reset();
 
     bool isEntityResolved() const;
-    char getResultAndReset();
+    QString getResultAndReset();
+    inline TEntityType getEntityType(void) {return entityType;}
 
 private:
     const TEntityResolver& mpEntityResolver;
 
     QString mCurrentEntity;
     bool mIsResolved = false;
-    char mResult = '\0';
-
+    QString mResult;
+    TEntityType entityType = ENTITY_TYPE_UNKNOWN;
 };
 
 #endif //MUDLET_TENTITYHANDLER_H

@@ -610,7 +610,7 @@ void dlgConnectionProfiles::slot_addProfile()
     fillout_form();
     welcome_message->hide();
 
-    informationalArea->show();
+    informationArea->show();
     tabWidget_connectionInfo->show();
 
     const QString newname = tr("new profile name");
@@ -778,16 +778,18 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 {
-    auto itDetails = TGameDetails::findGame(profile_name);
-    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
-        if (!(*itDetails).description.isEmpty()) {
-            return (*itDetails).description;
+    QString profileDesc = readProfileData(profile_name, qsl("description"));
+
+    if (profileDesc.isEmpty()) {
+        auto itDetails = TGameDetails::findGame(profile_name);
+        if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+            if (!(*itDetails).description.isEmpty()) {
+                return (*itDetails).description;
+            }
         }
     }
 
-    // Else, if there isn't a predefined text, return whatever the user might
-    // have stored:
-    return readProfileData(profile_name, qsl("description"));
+    return profileDesc;
 }
 
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
@@ -945,6 +947,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
+        remove_profile_button->setEnabled(false);
+        remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
         port_entry->setReadOnly(true);
@@ -979,6 +984,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
             clearNotificationArea();
         }
+        remove_profile_button->setEnabled(true);
+        remove_profile_button->setToolTip(QString());
     }
 }
 
@@ -1015,7 +1022,7 @@ void dlgConnectionProfiles::fillout_form()
     if (mProfileList.isEmpty()) {
         welcome_message->show();
         tabWidget_connectionInfo->hide();
-        informationalArea->hide();
+        informationArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1029,7 +1036,7 @@ void dlgConnectionProfiles::fillout_form()
         welcome_message->hide();
 
         tabWidget_connectionInfo->show();
-        informationalArea->show();
+        informationArea->show();
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
@@ -1273,11 +1280,17 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
     const QString imageLocation = QFileDialog::getOpenFileName(
-            this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
+            this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(imageLocation).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {
@@ -1555,59 +1568,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
-    HostManager& hostManager = mudlet::self()->getHostManager();
-    Host* pHost = hostManager.getHost(profile_name);
-    if (pHost) {
-        if (alsoConnect) {
-            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
-        }
-        QDialog::accept();
-        return;
-    }
-    // load an old profile if there is any
-    // PLACEMARKER: Host creation (1) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
-        pHost = hostManager.getHost(profile_name);
-        if (!pHost) {
-            return;
-        }
-    } else {
-        return;
-    }
-
-    const QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // pre-install packages when loading this profile for the first time
-    bool preInstallPackages = false;
-    pHost->hideMudletsVariables();
-    if (entries.isEmpty()) {
-        preInstallPackages = true;
-        pHost->mLoadedOk = true;
-    } else {
-        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
-        file.open(QFile::ReadOnly | QFile::Text);
-        XMLimport importer(pHost);
-
-        qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
-            //: %1 is the path and file name (i.e. the location) of the problem fil
-            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
-
-            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
-        } else {
-            pHost->mLoadedOk = true;
-        }
-
-        pHost->refreshPackageFonts();
-
-        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
-        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
-        }
-    }
+    Host *pHost = mudlet::self()->loadProfile(profile_name, alsoConnect);
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
@@ -1650,16 +1611,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
-        pHost->setupIreDriverBugfix();
-    }
-
-    mudlet::self()->updateMultiViewControls();
-
-    emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
-    emit mudlet::self()->signal_adjustAccessibleNames();
     emit signal_load_profile(profile_name, alsoConnect);
+    QDialog::accept();
 }
 
 bool dlgConnectionProfiles::validateProfile()

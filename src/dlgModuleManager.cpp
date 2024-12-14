@@ -49,7 +49,6 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 
 dlgModuleManager::~dlgModuleManager()
 {
-    mpHost->mpModuleManager = nullptr;
 }
 
 void dlgModuleManager::layoutModules()
@@ -130,10 +129,16 @@ void dlgModuleManager::slot_installModule()
         return;
     }
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), lastDir);
     if (fileName.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {

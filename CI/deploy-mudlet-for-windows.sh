@@ -25,7 +25,7 @@
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported fork
-# 3 - No new commits for PTB
+# 3 - Not used
 # 4 - nuget error
 # 5 - squirrel error
 
@@ -167,12 +167,13 @@ else
 
     if [[ "$COMMIT_DATE" < "$YESTERDAY_DATE" ]]; then
       echo "=== No new commits, aborting public test build generation ==="
-      exit 3
+      exit 0
     fi
 
     echo "=== Creating a public test build ==="
     # Squirrel uses Start menu name from the binary, renaming it
     mv "$PACKAGE_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet PTB.exe"
+    echo "moved mudlet.exe to $PACKAGE_DIR/Mudlet PTB.exe"
     # ensure sha part always starts with a character due to a known issue
     VersionAndSha="${VERSION}-ptb-${BUILD_COMMIT}"
 
@@ -185,6 +186,26 @@ else
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "$GITHUB_WORKSPACE/installers"
   cd "$GITHUB_WORKSPACE/installers/windows" || exit 1
+
+  echo "=== Setting up Java 21 for signing ==="
+  export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
+  export PATH="$JAVA_HOME/bin:$PATH"
+
+  echo "=== Signing Mudlet and dll files ==="
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+        --keystore eus.codesigning.azure.net \
+        --storepass ${AZURE_ACCESS_TOKEN} \
+        --alias Mudlet/Mudlet \
+        "$PACKAGE_DIR/Mudlet PTB.exe" "$PACKAGE_DIR/**/*.dll"
+
+  else
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass ${AZURE_ACCESS_TOKEN} \
+      --alias Mudlet/Mudlet \
+      "$PACKAGE_DIR/Mudlet.exe" "$PACKAGE_DIR/**/*.dll"
+  fi
 
   echo "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
@@ -224,7 +245,7 @@ else
   # Create NuGet package
   nuget pack "$NuSpec" -Version "$VersionAndSha" -BasePath "$SQUIRRELWIN" -OutputDirectory "$SQUIRRELWIN"
 
-  echo "=== Creating installers from Nuget package ==="
+  echo "=== Preparing to create installer ==="
   if [[ "$PublicTestBuild" == "true" ]]; then
     TestBuildString="-PublicTestBuild"
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet_ptb.ico"
@@ -245,18 +266,26 @@ else
   fi
 
   # Execute Squirrel to create the installer
+  echo "=== Creating installers from Nuget package ==="
   ./squirrel.windows/tools/Squirrel --releasify "$nupkg_path" \
     --releaseDir "$GITHUB_WORKSPACE/squirreloutput" \
     --loadingGif "$GITHUB_WORKSPACE/installers/windows/splash-installing-2x.png" \
-    --no-msi --setupIcon "$InstallerIconFile" \
-    -n "/a /f $GITHUB_WORKSPACE/installers/windows/code-signing-certificate.p12 /p $WIN_SIGNING_PASS /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-
+    --no-msi --setupIcon "$InstallerIconFile" 
+    
   echo "=== Removing old directory content of release folder ==="
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
   installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
+
+  # Sign the final installer
+  echo "=== Signing installer ==="
+  java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass ${AZURE_ACCESS_TOKEN} \
+      --alias Mudlet/Mudlet \
+      "$installerExePath"
 
   # Check if the setup executable exists
   if [[ ! -f "$installerExePath" ]]; then
@@ -284,25 +313,38 @@ else
 
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
+    RELEASE_TAG="public-test-build"
+    CHANGELOG_MODE="ptb"
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+    read -r day month year hour minute second <<< "$current_timestamp"
 
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
-    curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
-    -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+    curl -X POST 'https://www.mudlet.org/download-add.php' \
+    -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
     -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
     -F "file_des=sha256: $SHA256SUM" \
     -F "file_cat=0" \
     -F "file_permission=-1" \
+    -F "file_timestamp_day=$day" \
+    -F "file_timestamp_month=$month" \
+    -F "file_timestamp_year=$year" \
+    -F "file_timestamp_hour=$hour" \
+    -F "file_timestamp_minute=$minute" \
+    -F "file_timestamp_second=$second" \
     -F "output=json" \
     -F "do=Add File"
+    
+    RELEASE_TAG="release"
+    CHANGELOG_MODE="release"
   fi
 
   echo "=== Installing NodeJS ==="
@@ -314,26 +356,33 @@ else
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
 
-  if [[ "$PublicTestBuild" == "true" ]]; then
-    echo "=== Downloading release feed ==="
-    DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${ARCH}" -o "$DownloadedFeed"
+  echo "=== Downloading release feed ==="
+  DownloadedFeed=$(mktemp)
+  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
 
-    echo "=== Generating a changelog ==="
-    cd "$GITHUB_WORKSPACE/CI" || exit 1
-    Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
-    cd - || exit 1
-    echo "$Changelog"
+  echo "=== Generating a changelog ==="
+  cd "$GITHUB_WORKSPACE/CI" || exit 1
+  
+  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode "$CHANGELOG_MODE" --releasefile "$DownloadedFeed")
+  cd - || exit 1
+  echo "$Changelog"
 
-    echo "=== Creating release in Dblsqd ==="
-    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
-    export VersionString
+  echo "=== Creating release in Dblsqd ==="
+  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  export VersionString
 
-    # This may fail as a build from another architecture may have already registered a release with dblsqd,
-    # if so, that is OK...
-    echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
-    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}" || true
+  # This may fail as a build from another architecture may have already registered a release with dblsqd,
+  # if so, that is OK...
+  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"${Changelog}\" \"${VersionString}\""
+  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "${Changelog}" "${VersionString}" || true
+
+  # PTB's are handled by the register script, release builds are just pushed here
+  if [[ "$RELEASE_TAG" == "release" ]]; then
+    echo "=== Registering release with Dblsqd ==="
+    echo "dblsqd push -a mudlet -c release -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c release -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
   fi
+
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
@@ -346,7 +395,6 @@ fi
   echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${VersionString}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
-  echo "PATH=${PATH}"
 } >> "$GITHUB_ENV"
 
 echo ""

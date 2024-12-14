@@ -55,6 +55,7 @@
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
+#include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
@@ -235,6 +236,7 @@ public:
 
 
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
@@ -297,6 +299,7 @@ public:
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
+    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
@@ -313,6 +316,8 @@ public:
     void hideEvent(QHideEvent*) override;
 
 
+    void init();
+    void setupConfig();
     void activateProfile(Host*);
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
@@ -338,7 +343,6 @@ public:
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
-    QSettings* getQSettings();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }
@@ -346,6 +350,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    Host* loadProfile(const QString&, bool);
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
@@ -411,10 +416,15 @@ public:
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
-    bool muteMCMP() const { return mMuteMCMP; }
-    bool muteMSP() const { return mMuteMSP; }
-    bool mediaMuted() const { return mMuteAPI && mMuteMCMP && mMuteMSP; }
-    bool mediaUnmuted() const { return !mMuteAPI && !mMuteMCMP && !mMuteMSP; }
+    bool muteGame() const { return mMuteGame; }
+    bool mediaMuted() const { return mMuteAPI && mMuteGame; }
+    bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
+    bool profileExists(const QString& profileName);
+    bool showSplitscreenTutorial();
+    void showedSplitscreenTutorial();
+    bool showMuteAllMediaTutorial();
+    void showedMuteAllMediaTutorial();
+    bool experiencedMudletPlayer();
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -423,6 +433,7 @@ public:
     // approximate max duration that 'Copy as image' is allowed to take
     // (seconds):
     int mCopyAsImageTimeout = 3;
+
     // A list of potential dictionary languages - probably will cover a much
     // wider range of languages compared to the translations - and is intended
     // for Dictionary identification - there is a request for users to submit
@@ -511,8 +522,7 @@ public slots:
     void slot_multiView(const bool);
     void slot_muteMedia();
     void slot_muteAPI(const bool);
-    void slot_muteMCMP(const bool);
-    void slot_muteMSP(const bool);
+    void slot_muteGame(const bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
     void slot_openMappingScriptsPage();
@@ -529,16 +539,21 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
-// Not used:    void slot_showHelpDialogIrc();
+    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
     void slot_tabChanged(int);
     void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
+    void slot_toggleTimeStamp();
+    void slot_toggleReplay();
+    void slot_toggleLogging();
+    void slot_toggleEmergencyStop();
 
 
 protected:
     void closeEvent(QCloseEvent*) override;
+    void changeEvent(QEvent*) override;
 
 
 signals:
@@ -562,6 +577,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_windowStateChanged(const Qt::WindowStates);
 
 
 private slots:
@@ -589,6 +605,7 @@ private slots:
     void slot_updateInstalled();
 #endif
     void slot_updateShortcuts();
+    void slot_windowStateChanged(const Qt::WindowStates);
 
 
 private:
@@ -611,7 +628,7 @@ private:
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
     void reshowRequiredMainConsoles();
-    void toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText);
+    void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
 
     inline static QPointer<mudlet> smpSelf = nullptr;
@@ -643,6 +660,10 @@ private:
     QKeySequence mKeySequenceReconnect;
     QKeySequence mKeySequenceShowMap;
     QKeySequence mKeySequenceTriggers;
+    QKeySequence mKeySequenceToggleTimeStamp;
+    QKeySequence mKeySequenceToggleReplay;
+    QKeySequence mKeySequenceToggleLogging;
+    QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
     controlsVisibility mMenuBarVisibility = visibleAlways;
@@ -653,8 +674,7 @@ private:
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
     bool mMuteAPI = false;
-    bool mMuteMCMP = false;
-    bool mMuteMSP = false;
+    bool mMuteGame = false;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -673,8 +693,7 @@ private:
     QPointer<QAction> mpActionMultiView;
     QPointer<QAction> mpActionMuteMedia;
     QPointer<QAction> mpActionMuteAPI;
-    QPointer<QAction> mpActionMuteMCMP;
-    QPointer<QAction> mpActionMuteMSP;
+    QPointer<QAction> mpActionMuteGame;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
     QPointer<QAction> mpActionPackageExporter;
@@ -719,6 +738,10 @@ private:
     QPointer<QShortcut> mpShortcutReconnect;
     QPointer<QShortcut> mpShortcutShowMap;
     QPointer<QShortcut> mpShortcutTriggers;
+    QPointer<QShortcut> mpShortcutToggleTimeStamp;
+    QPointer<QShortcut> mpShortcutToggleReplay;
+    QPointer<QShortcut> mpShortcutToggleLogging;
+    QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
@@ -738,6 +761,13 @@ private:
     QMap<Host*, QToolBar*> mUserToolbarMap;
     // The collection of words in what mpHunspell_sharedDictionary points to:
     QSet<QString> mWordSet_shared;
+
+    // amount of times the shortcut has been shown help educate new users
+    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    // show the tutorial maximum 3 times on a new Mudlet
+    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

@@ -20,11 +20,6 @@
 #include "updater.h"
 #include "mudlet.h"
 
-#if defined(Q_OS_MACOS)
-#include "../3rdparty/sparkle-glue/CocoaInitializer.h"
-#include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
-#endif
-
 #include "pre_guard.h"
 #include <QPushButton>
 #include <QtConcurrent>
@@ -149,9 +144,8 @@ void Updater::finishSetup()
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
-    CocoaInitializer initializer;
-    msparkleUpdater = new SparkleAutoUpdater(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
+    msparkleUpdater = new SparkleUpdater();
 }
 #endif // Q_OS_MACOS
 
