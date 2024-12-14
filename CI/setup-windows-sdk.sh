@@ -98,11 +98,13 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
     if /usr/bin/pacman -Su --needed --noconfirm \
       "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+      "mingw-w64-${BUILDCOMPONENT}-angleproject" \
       "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
         break
     fi
@@ -162,6 +164,8 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
@@ -174,6 +178,16 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
+
+echo "Removing harfbuzz installed by qt"
+pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
+
+echo "Building harfbuzz without graphite2"
+git clone https://github.com/harfbuzz/harfbuzz.git
+cd harfbuzz
+meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson compile -C build
+meson install -C build
 
 echo ""
 echo "    Completed"
@@ -201,27 +215,6 @@ echo "- Use '--tree \"user\"' (literally) instead of '--local'"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
-# Need to overcome a problem with luarock 3.9.0 which uses Windows CMD MKDIR
-# but which cannot make any missing intermediate directories if the
-# luafilesystem module for Lua 5.4 is not present, see:
-# https://github.com/msys2/MINGW-packages/pull/12002
-if [ "$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")" -eq 0 ]; then
-  # Need to install the 5.4 luafilesystem rock
-  echo "  Improving the luarocks operation by installing the 5.4 luafilesystem rock."
-  neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
-  until [ -z "${neededPath}" ]; do
-    echo "    Inserting a needed directory: ${neededPath} ..."
-    mkdir -p "${neededPath}"
-    neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
-    echo ""
-  done
-  echo "    Completed"
-  echo ""
-fi
-
-# Doing the above fixes things for 5.1 luarocks subsequently (as luarocks
-# itself runs in a Lua 5.4 environment) - otherwise one has to do the same thing
-# for EVERY luarock!
 
 ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""
@@ -262,5 +255,13 @@ fi
 cd ~ || exit 1
 echo "  ... setup-windows-sdk.sh shell script finished."
 echo ""
+
+echo "Copy the following lines into the build environment for a project in Qt Creator:"
+echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
+echo ""
+MSYS_ROOT=$(cygpath -aw /)
+echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo ${MSYSTEM_PREFIX} | sed 's/\//\\/g')"
+echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
+echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 
 exit 0

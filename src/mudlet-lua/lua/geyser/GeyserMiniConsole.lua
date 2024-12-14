@@ -132,16 +132,6 @@ function Geyser.MiniConsole:disableHorizontalScrollBar()
   self.horizontalScrollBar = false
 end
 
---- Enables scrolling in the miniconsole
-function Geyser.MiniConsole:enableScrolling()
-  enableScrolling(self.name)
-end
-
---- Disables scrolling in the miniconsole
-function Geyser.MiniConsole:disableScrolling()
-  disableScrolling(self.name)
-end
-
 --- Check if scrolling is enabled in the miniconsole
 function Geyser.MiniConsole:scrollingActive()
   return scrollingActive(self.name)

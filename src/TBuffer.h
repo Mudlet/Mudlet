@@ -253,7 +253,6 @@ public:
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
-    QString wrapText(const QString& text) const;
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
@@ -293,6 +292,8 @@ public:
     int getMaxBufferSize();
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
+    void appendLog(const QString &text);
+
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
@@ -318,6 +319,8 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
+    inline static const QString csmTimeStampFormat = qsl("hh:mm:ss.zzz ");
+    inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
     void shrinkBuffer();

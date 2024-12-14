@@ -215,6 +215,14 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(Announcer::accessibleFactory);
 #endif
 
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Apple Color Emoji Fallback
+    QFont defaultFont;
+    defaultFont.setFamily(defaultFont.defaultFamily());
+    QFont::insertSubstitution(defaultFont.family(), qsl("Apple Color Emoji"));
+    app->setFont(defaultFont);
+#endif
+
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
@@ -430,7 +438,38 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    const QStringList cliProfiles = parser.values(profileToOpen);
+    // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if defined(Q_OS_WIN32)
+    if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        // This variable is not set - and later versions of Qt 6.x need it for
+        // sound to work:
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        } else {
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+        }
+    } else {
+        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+    }
+#endif
+#endif
+
+    QStringList cliProfiles = parser.values(profileToOpen);
+    qDebug() << "Got CLI profiles:" << cliProfiles;
+    
+    if (cliProfiles.isEmpty()) {
+        qDebug() << "No CLI profiles specified, checking environment variable";
+        const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
+        qDebug() << "Environment MUDLET_PROFILES value:" << envProfiles;
+        if (!envProfiles.isEmpty()) {
+            qDebug() << "Found environment profiles, splitting on ':'";
+            // : is not an allowed character in a profile name, so we can use it to split the list
+            cliProfiles = envProfiles.split(':');
+            qDebug() << "Final profile list from environment:" << cliProfiles;
+        }
+    }
+
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
     
     const bool showSplash = parser.isSet(showSplashscreen);

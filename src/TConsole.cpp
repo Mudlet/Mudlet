@@ -217,22 +217,23 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
 
-    splitter = new TSplitter(Qt::Vertical);
+    splitter = new TSplitter(Qt::Vertical, layer);
+    splitter->setObjectName(qsl("splitter_%1_%2").arg(mProfileName, mConsoleName));
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
-    splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
     //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
     auto styleSheet = qsl("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
-    splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
+    mUpperPane->setObjectName(qsl("upperPane_%1_%2").arg(mProfileName, mConsoleName));
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
+    mLowerPane->setObjectName(qsl("lowerPane_%1_%2").arg(mProfileName, mConsoleName));
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
 
@@ -305,19 +306,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     timeStampButton->setMaximumSize(QSize(30, 30));
     timeStampButton->setSizePolicy(sizePolicy5);
     timeStampButton->setFocusPolicy(Qt::NoFocus);
-    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(qsl(":/icons/dialog-information.png")));
+    timeStampButton->setToolTip(utils::richText(tr("Toggle time stamps")));
+
     connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
     connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
-    auto replayButton = new QToolButton;
+    replayButton = new QToolButton;
     replayButton->setCheckable(true);
     replayButton->setMinimumSize(QSize(30, 30));
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setToolTip(utils::richText(tr("Record a replay.")));
     replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
+    replayButton->setToolTip(utils::richText(tr("Toggle recording of replays")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -326,7 +328,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
+    logButton->setToolTip(utils::richText(tr("Toggle logging")));
+
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
@@ -380,7 +383,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
+    emergencyStop->setToolTip(utils::richText(tr("Emergency stop! Stop all scripts")));
+
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
     mpBufferSearchBox->setClearButtonEnabled(true);
@@ -392,8 +396,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         }
     }
 
-    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
+    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -553,7 +557,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
         mUpperPane->reportCodepointErrors();
@@ -705,6 +709,15 @@ void TConsole::refresh()
     const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
+}
+
+void TConsole::clear()
+{
+    mUpperPane->resetHScrollbar();
+    buffer.clear();
+    clearSplit();
+    mUpperPane->update();
+    mLowerPane->update();
 }
 
 void TConsole::clearSelection() const
@@ -1023,14 +1036,14 @@ void TConsole::scrollUp(int lines)
 
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
-        if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
+        if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
 #endif
             mpHost->postMessage(infoMsg);
-            mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
+            mudlet::self()->showedSplitscreenTutorial();
         }
     }
     mUpperPane->scrollUp(lines);
@@ -1705,8 +1718,7 @@ void TConsole::print(const char* txt)
 // echoUserWindow(const QString& msg) was a redundant wrapper around this method:
 void TConsole::print(const QString& msg)
 {
-    const QString wrappedText = buffer.wrapText(msg);
-    buffer.append(wrappedText, 0, wrappedText.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
@@ -1719,8 +1731,7 @@ void TConsole::print(const QString& msg)
 // same as this method it was just that the arguments were in a different order
 void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor)
 {
-    const QString wrappedText = buffer.wrapText(msg);
-    buffer.append(wrappedText, 0, wrappedText.size(), fgColor, bgColor);
+    buffer.append(msg, 0, msg.size(), fgColor, bgColor);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 

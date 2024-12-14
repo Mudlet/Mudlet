@@ -55,6 +55,7 @@
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
+#include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
@@ -349,6 +350,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    Host* loadProfile(const QString&, bool);
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
@@ -417,6 +419,12 @@ public:
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
+    bool profileExists(const QString& profileName);
+    bool showSplitscreenTutorial();
+    void showedSplitscreenTutorial();
+    bool showMuteAllMediaTutorial();
+    void showedMuteAllMediaTutorial();
+    bool experiencedMudletPlayer();
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -425,6 +433,7 @@ public:
     // approximate max duration that 'Copy as image' is allowed to take
     // (seconds):
     int mCopyAsImageTimeout = 3;
+
     // A list of potential dictionary languages - probably will cover a much
     // wider range of languages compared to the translations - and is intended
     // for Dictionary identification - there is a request for users to submit
@@ -530,16 +539,21 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
-// Not used:    void slot_showHelpDialogIrc();
+    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
     void slot_tabChanged(int);
     void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
+    void slot_toggleTimeStamp();
+    void slot_toggleReplay();
+    void slot_toggleLogging();
+    void slot_toggleEmergencyStop();
 
 
 protected:
     void closeEvent(QCloseEvent*) override;
+    void changeEvent(QEvent*) override;
 
 
 signals:
@@ -563,6 +577,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_windowStateChanged(const Qt::WindowStates);
 
 
 private slots:
@@ -590,6 +605,7 @@ private slots:
     void slot_updateInstalled();
 #endif
     void slot_updateShortcuts();
+    void slot_windowStateChanged(const Qt::WindowStates);
 
 
 private:
@@ -644,6 +660,10 @@ private:
     QKeySequence mKeySequenceReconnect;
     QKeySequence mKeySequenceShowMap;
     QKeySequence mKeySequenceTriggers;
+    QKeySequence mKeySequenceToggleTimeStamp;
+    QKeySequence mKeySequenceToggleReplay;
+    QKeySequence mKeySequenceToggleLogging;
+    QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
     controlsVisibility mMenuBarVisibility = visibleAlways;
@@ -718,6 +738,10 @@ private:
     QPointer<QShortcut> mpShortcutReconnect;
     QPointer<QShortcut> mpShortcutShowMap;
     QPointer<QShortcut> mpShortcutTriggers;
+    QPointer<QShortcut> mpShortcutToggleTimeStamp;
+    QPointer<QShortcut> mpShortcutToggleReplay;
+    QPointer<QShortcut> mpShortcutToggleLogging;
+    QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
@@ -737,6 +761,13 @@ private:
     QMap<Host*, QToolBar*> mUserToolbarMap;
     // The collection of words in what mpHunspell_sharedDictionary points to:
     QSet<QString> mWordSet_shared;
+
+    // amount of times the shortcut has been shown help educate new users
+    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mMuteAllMediaTutorialsShown = 0; // Mute all media
+    // show the tutorial maximum 3 times on a new Mudlet
+    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
