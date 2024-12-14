@@ -11,5 +11,21 @@
   "files.exclude": {
     "3rdparty/": true,
     ".cache": true,
+  },
+  "files.associations": {
+    "typeindex": "cpp",
+    "typeinfo": "cpp",
+    "string": "cpp",
+    "complex": "cpp",
+    "*.ipp": "cpp",
+    "optional": "cpp",
+    "ratio": "cpp",
+    "system_error": "cpp",
+    "array": "cpp",
+    "functional": "cpp",
+    "tuple": "cpp",
+    "type_traits": "cpp",
+    "utility": "cpp",
+    "variant": "cpp"
   }
 }

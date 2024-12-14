@@ -106,6 +106,7 @@ public slots:
     void slot_setMapBgColor();
     void slot_setMapRoomBorderColor();
     void slot_setMapInfoBgColor();
+    void slot_setMapRoomCollisionBorderColor();
     void slot_resetMapColors();
 
     // Map.
@@ -176,7 +177,6 @@ private slots:
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
-
 
 signals:
     void signal_themeUpdateCompleted();

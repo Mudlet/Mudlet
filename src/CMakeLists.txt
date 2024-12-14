@@ -106,6 +106,7 @@ set(mudlet_SRCS
     MxpTag.cpp
     ScriptUnit.cpp
     ShortcutsManager.cpp
+    SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -165,6 +166,7 @@ set(mudlet_SRCS
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
+    TriggerHighlighter.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -187,6 +189,16 @@ set(mudlet_SRCS
 
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
+  # Sparkle updater for macOS
+  list(APPEND mudlet_SRCS sparkleupdater.mm)
+  list(APPEND mudlet_HDRS sparkleupdater.h)
+  set_source_files_properties(
+    src/sparkleupdater.mm
+    src/sparkleupdater.h
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
@@ -280,6 +292,7 @@ set(mudlet_HDRS
     pre_guard.h
     ScriptUnit.h
     ShortcutsManager.h
+    SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -336,6 +349,7 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TrailingWhitespaceMarker.h
     Tree.h
+    TriggerHighlighter.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
@@ -639,7 +653,12 @@ if(APPLE)
   target_link_libraries(mudlet "-framework AppKit")
 
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue)
+    # need to specifically call out Objective-C sources so that automoc builds them.
+    target_sources(mudlet PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
+    find_package(Sparkle)
+    target_link_libraries(mudlet "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES
