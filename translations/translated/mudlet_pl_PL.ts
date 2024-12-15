@@ -687,7 +687,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ustaw pomieszczenie nazwę i kolor ikony, wagę i blokadę dla chodzenia automatycznego oraz symbol oznaczający pomieszczenia specjalne</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2703"/>
@@ -1181,25 +1181,25 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TCommandLine.cpp" line="1425"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Dodatkowa linia wejściowa &quot;%1&quot; na &quot;%2&quot; okno &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1441"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Dodatkowa linia wejścia &quot;%1&quot; w oknie &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1460"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linia wejściowa &quot;%1&quot; okno &quot;%2&quot; profilu</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1474"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linia wejściowa &quot;%1&quot; okno.</translation>
     </message>
   </context>
   <context>
@@ -1212,7 +1212,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="344"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; to opóźnienie serwera gry i sieci (tzw. ping, w sekundach),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; to czas przetwarzania przez system — czas, jaki zajęło wyzwalaczom przetworzenie ostatnich wierszy.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="359"/>
@@ -1234,12 +1234,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1041"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Rozdzielanie ekranu włączone. Naciśnij &lt;&lt;unk>&gt;+&lt;ENTER&gt; aby anulować.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1043"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Rozdzielanie ekranu włączone. Naciśnij &lt;CTRL&gt;+&lt;ENTER&gt; , aby anulować.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
@@ -1280,25 +1280,25 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2090"/>
       <source>Editor&apos;s error window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Edytor&apos;s błąd w oknie przeszłej zawartości.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2092"/>
       <source>Editor&apos;s error window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Edytor okno błędu na żywo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Edytorokno błędu dla profilu &quot;%1&quot;, aktualna zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2101"/>
       <source>Editor&apos;s error window</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Okno błędu edytora</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2108"/>
@@ -1473,7 +1473,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2192"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Okno użytkownika profilu &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2081"/>
@@ -1483,37 +1483,37 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="310"/>
       <source>Toggle time stamps</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz znaczniki czasu</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="322"/>
       <source>Toggle recording of replays</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz nagrywanie powtórzeń</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="331"/>
       <source>Toggle logging</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz logowanie</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="386"/>
       <source>Emergency stop! Stop all scripts</source>
-      <translation type="unfinished"/>
+      <translation>Awaryjne zatrzymanie! Zatrzymaj wszystkie skrypty</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Komunikaty o błędach dla profilu &quot;%1&quot; są pokazane tutaj w edytorze.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2104"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Komunikaty o błędach są wyświetlane tutaj w edytorze.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Główne okno dla profilu &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
@@ -1523,12 +1523,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2139"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Osadzone okno &quot;%1&quot; dla profilu &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2141"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Osadzone okno &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
@@ -1538,17 +1538,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2169"/>
       <source>User window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Okno użytkownika &quot;%1&quot; dla profilu &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2171"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Okno użytkownika &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2173"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>Do tego okna może być wysyłana zawartość gry lub lokalnie generowany tekst, który może być oddalony od aplikacji Mudlet lub zadokowany w głównym oknie aplikacji.</translation>
     </message>
   </context>
   <context>
@@ -3622,7 +3622,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="193"/>
       <source>error: this trigger has no patterns defined</source>
-      <translation type="unfinished"/>
+      <translation>błąd: ten wyzwalacz nie ma zdefiniowanych wzorów</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="225"/>
@@ -4092,12 +4092,12 @@ Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie
       <location filename="../src/ctelnet.cpp" line="2377"/>
       <location filename="../src/ctelnet.cpp" line="2735"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Uaktualnienie GUI do nowej wersji &apos;%1&apos; z wersji &apos;%2&apos; (url=&apos;%3&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2684"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pobieranie i instalowanie pakietu &apos;%1&apos; (url=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2693"/>
@@ -4491,7 +4491,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="811"/>
       <source>Information</source>
-      <translation type="unfinished"/>
+      <translation>Informacje</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
@@ -5274,12 +5274,12 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1128"/>
       <source>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</source>
-      <translation type="unfinished"/>
+      <translation>Używasz 32-bitowej wersji Mudlet w 64-bitowej wersji systemu Windows. Możesz chcieć dokonać aktualizacji (pobierając, a następnie instalując wersję 64-bitową, która jest teraz dostępna w Mudlet&apos;s stronie internetowej).Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1131"/>
       <source>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</source>
-      <translation type="unfinished"/>
+      <translation>Jest to 32-bitowa wersja Mudleta działająca w 64-bitowej wersji systemu Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1144"/>
@@ -5310,13 +5310,13 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1198"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Procesor (WoW64)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1159"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1205"/>
       <source>CPU (%1-bits)</source>
-      <translation type="unfinished"/>
+      <translation>Procesor (%1-bity)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1164"/>
@@ -5332,21 +5332,21 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1243"/>
       <source>Qt version (compilation)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wersja Qt (kompilacja)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1176"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1249"/>
       <source>Qt version (run-time)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wersja Qt (czas wykonywania)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1216"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1272"/>
       <source>Qt version</source>
       <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wersja Qt</translation>
     </message>
   </context>
   <context>
@@ -5643,7 +5643,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="951"/>
       <source>A profile that is in use cannot be removed</source>
-      <translation type="unfinished"/>
+      <translation>Profil który jest w użyciu nie może zostać usunięty</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="999"/>
@@ -6045,7 +6045,7 @@ Dalszy odczyt materiału. Np. link do wiki Mudlet, forum, repozytorium pakietów
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="328"/>
       <source>Version number. Required.</source>
-      <translation type="unfinished"/>
+      <translation>Numer wersji. Wymagane.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="338"/>
@@ -6080,12 +6080,12 @@ Dalszy odczyt materiału. Np. link do wiki Mudlet, forum, repozytorium pakietów
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager. Required.</source>
-      <translation type="unfinished"/>
+      <translation>Do przypisania, wyświetlanego w Menedżerze pakietów. Wymagane.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager. Required.</source>
-      <translation type="unfinished"/>
+      <translation>Jednowierszowy opis pakietu wyświetlany w Menedżerze pakietów. Wymagane.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="335"/>
@@ -7054,7 +7054,7 @@ powód: %2.</translation>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>Niektóre skrypty mapowania mogą wymagać poprzedzenia słowa kluczowego &quot;skrypt:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
@@ -7763,13 +7763,15 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="2864"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nie można aktywować &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Po rozwiązaniu problemu konieczne będzie ponowne aktywowanie tej funkcji.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3053"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Nie można aktywować &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Po rozwiązaniu problemu konieczne będzie ponowne aktywowanie tej funkcji.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3190"/>
@@ -7778,7 +7780,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="3624"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Nie można aktywować &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Po rozwiązaniu problemu konieczne będzie ponowne aktywowanie tej funkcji.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5636"/>
@@ -8971,13 +8974,15 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/main.cpp" line="325"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -p, --profil=&lt;profile&gt;      dodatkowy profil do otwarcia, może być
+                                    powtórzony.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="327"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --only=&lt;predefined&gt;      spraw, aby Mudlet pokazywał tylko konkretne
+                                    predefiniowana gra, może być powtarzana.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="329"/>
@@ -8998,25 +9003,30 @@ mniej prawdopodobne, że będą przydatne w normalnym użyciu tej aplikacji:</tr
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb ignoruje wszelkie niejawne lub jawne -nograb.
+                                    --dograb wygrywa z --nograb nawet jeśli --nograb jest ostatni na
+                                    w wierszu poleceń.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="338"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nobrab aplikacja nigdy nie powinna przechwycić myszy ani klawiatury
+                                    . Ta opcja jest ustawiona domyślnie, gdy Mudlet jest
+                                    uruchomiony w gdb debugerze pod Linux.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="342"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nobrab aplikacja nigdy nie powinna przechwycić myszy ani klawiatury
+.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="345"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse ustawia kierunek układu aplikacji&apos;w prawo na lewo;</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="346"/>
@@ -9027,12 +9037,18 @@ mniej prawdopodobne, że będą przydatne w normalnym użyciu tej aplikacji:</tr
                                     option. You can also set the style for all Qt
                                     applications by setting the QT_STYLE_OVERRIDE environment
                                     variable.</source>
-      <translation type="unfinished"/>
+      <translation>       --style=styl ustawia styl GUI aplikacji. Możliwe wartości zależą od
+                                    konfiguracji systemu. Jeśli Qt został skompilowany z
+                                    dodatkowe style lub ma dodatkowe style jako wtyczki
+                                    Będą one dostępne w wierszu poleceń -style
+                                    opcja. Możesz także ustawić styl dla wszystkich Qt
+                                    aplikacji, ustawiając środowisko QT_STYLE_OVERRIDE
+                                    zmienna.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="353"/>
       <source>       --style style                is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --style styl jest taki sam, jak wymieniony powyżej.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="354"/>
@@ -9040,12 +9056,15 @@ mniej prawdopodobne, że będą przydatne w normalnym użyciu tej aplikacji:</tr
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
                                     are relative to the Style Sheet file&apos;s path.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet=arkusz stylów ustawia aplikację styleSheet.
+                                    Wartość musi być ścieżką do pliku, który zawiera
+                                    Arkusz stylów. Uwaga: Względne adresy URL w pliku arkusza stylów
+                                    są względne w stosunku do pliku arkusza stylów&apos;s ścieżka.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="359"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet arkusz stylów jest taki sam, jak wymieniony powyżej.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="362"/>
@@ -9053,14 +9072,19 @@ mniej prawdopodobne, że będą przydatne w normalnym użyciu tej aplikacji:</tr
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
                                     option is only valid for the X11 version of Qt.</source>
-      <translation type="unfinished"/>
+      <translation>       --sync wymusza na serwerze X wykonanie każdego żądania klienta X
+                                    natychmiast i nie korzystać z optymalizacji bufora. To sprawia, że
+                                    Program łatwiejszy do debugowania i często znacznie wolniejszy. Opcja --sync
+                                    opcja jest ważna tylko dla wersji Qt X11.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="367"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount wypisuje na końcu komunikat debugowania o liczbie widżetów
+                                    pozostawione niezniszczone i maksymalna liczba istniejących widżetów
+                                    w tym samym czasie.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="370"/>
@@ -9068,7 +9092,10 @@ mniej prawdopodobne, że będą przydatne w normalnym użyciu tej aplikacji:</tr
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
-      <translation type="unfinished"/>
+      <translation>       --qmljsdebugger=1234[,block] aktywuje debugger QML/JS za pomocą
+                                    określony port. Liczba to wartość portu, a blok to
+                                    opcjonalny i sprawi, że aplikacja będzie czekać, aż
+                                    Debugger łączy się z nim.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="374"/>
@@ -9211,7 +9238,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
       <source>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokaż błędy ze skryptów, które są uruchomione&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="239"/>
@@ -9236,7 +9263,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="279"/>
       <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera połączenie z serwerem IRC (LiberaChat) w przeglądarce internetowej systemu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
@@ -9276,7 +9303,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="350"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz dźwięki z Mudleta (wyzwalacze, skrypty itp.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="353"/>
@@ -9306,7 +9333,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="400"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz link do serwera Mudlet na Discordzie</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="405"/>
@@ -9327,12 +9354,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="421"/>
       <source>Time Stamps</source>
-      <translation type="unfinished"/>
+      <translation>Znaczniki Czasu</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="424"/>
       <source>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Przełącz znaczniki czasu na konsoli głównej.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="429"/>
@@ -9342,27 +9369,27 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="432"/>
       <source>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Przełącz nagrywanie powtórzeń.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="437"/>
       <source>Logging</source>
-      <translation type="unfinished"/>
+      <translation>Logowanie</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="440"/>
       <source>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Przełącz funkcje logowania.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="445"/>
       <source>Emergency Stop</source>
-      <translation type="unfinished"/>
+      <translation>Awaryjne Zatrzymanie</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="448"/>
       <source>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącz lub wyłącz wszystkie skrypty.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="175"/>
@@ -9423,7 +9450,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera wbudowany czat IRC.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="247"/>
@@ -9563,7 +9590,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
       <source>&lt;p&gt;If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli ta opcja nie jest zaznaczona, etykieta będzie miała ten sam rozmiar po powiększeniu i pomniejszeniu mapowania. Jeśli ta opcja jest wybrana, etykieta będzie skalowana po powiększeniu mappera.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="168"/>
@@ -9689,7 +9716,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
 &lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Moduły to sposób na wykorzystanie wspólnego pakietu w wielu sesjach - w przeciwieństwie do pakietów, które są instalowane dla każdego profilu.&lt;/p&gt;
+&lt;p&gt;Moduły są ładowane w kolejności rosnącej (1 zostanie załadowany przed 2 i tak dalej), moduły o tym samym priorytecie zostaną załadowane w kolejności alfabetycznej.&lt;/p&gt;
+&lt;p&gt;Moduły o ujemnym priorytecie zostaną załadowane przed pakietami skryptów.&lt;/p&gt;
+&lt;p&gt;Ten &lt;b&gt;&lt;i&gt;Synchronizować&lt;/i&gt;&lt;/b&gt; opcja, jeśli jest włączona, będzie, gdy moduł w &lt;b&gt;Ten profil&lt;/b&gt; jest zapisany &lt;b&gt;na dysk&lt;/b&gt;, spowodować, że zostanie on ponownie załadowany do wszystkich profili, które również używają tego samego pliku, który zawiera moduł. Aby kilka profili korzystało z tego samego modułu, zainstaluj go w każdym profilu za pomocą tego menedżera modułów (który powinien być otwarty, gdy dany profil jest tym, który jest obecnie na pierwszym planie).&lt;/p&gt;&lt;p&gt;
+&lt;p&gt;Dla każdej operacji składowania tworzona jest kopia zapasowa modułów w katalogu, &lt;i&gt;modułKopie zapasowe&lt;/i&gt;, w katalogu profilu Mudlet.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
@@ -10066,7 +10098,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="341"/>
       <location filename="../src/mudlet.cpp" line="3223"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz dźwięki z Mudlet (wyzwalaczy, skrypty itp.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="369"/>
@@ -10086,7 +10118,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="488"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>Pełny Ekran</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="648"/>
@@ -10126,22 +10158,22 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="661"/>
       <source>Toggle Time Stamps</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz znaczniki czasu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="662"/>
       <source>Toggle Replay</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz Powtórkę</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="663"/>
       <source>Toggle Logging</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz Logowanie</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="664"/>
       <source>Toggle Emergency Stop</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz Zatrzymanie Awaryjne</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="915"/>
@@ -11387,12 +11419,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="3208"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Mudlet i dźwięki gry są wyciszone. Używać &lt;%1&gt; , aby wyłączyć wyciszenie.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3209"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Mudlet i dźwięki gry nie są wyciszone. Używać &lt;%1&gt; , aby wyciszyć.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4008"/>
@@ -11952,7 +11984,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="202"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli grasz w grę w języku innym niż angielski i widzisz zamiast tekstu lub liter specjalnych, takich jak &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren powiedział:&apos;t pokazuje się w prawo - spróbuj zmienić kodowanie na UTF-8 lub na sugerowane przez twoją grę.&lt;/p&gt;&lt;p&gt;W przypadku niektórych kodowań w niektórych systemach operacyjnych Mudlet sam musi zapewnić potrzebny kodek; jeśli tak jest w przypadku tego Mudleta, to będzie &lt;tt&gt;m &lt;/tt&gt; prefiks stosowany do tych nazw kodowania (więc jeśli mają błędy, adnotacja może być zastosowana poprawnie!)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="344"/>
@@ -11962,7 +11994,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="407"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Po zaznaczeniu spowoduje, że znacznik daty o nazwie plik dziennika będzie miał format HTML (rozszerzenie pliku &apos;.html&apos;), który może przekazywać kolor, czcionkę i inne informacje o formatowaniu, a nie zwykły tekst (rozszerzenie pliku &apos;.Txt&apos;) w formacie.  Jeśli zostanie zmieniona w trakcie rejestrowania, konieczne jest zatrzymanie i ponowne uruchomienie rejestrowania, aby to ustawienie zostało zastosowane w nowym pliku dziennika.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="576"/>
@@ -13428,7 +13460,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4069"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;i&gt;Zielone światło&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) oraz &lt;i&gt;Koniec zapisu&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) informuje Mudleta, kiedy serwer gry zakończył wysyłanie tekstu. W grach, które nie zapewniają &lt;tt&gt;GA&lt;/tt&gt; lub &lt;tt&gt;EOR&lt;/tt&gt;, ta opcja określa, jak długo Mudlet będzie czekał na nadejście większej ilości tekstu. Większe wartości pomogą zmniejszyć ryzyko, że Mudlet podzieli duży fragment tekstu (z niezamierzonymi podziałami wierszy w środku), co może uniemożliwić działanie niektórych wyzwalaczy. Mniejsze wartości zwiększają ryzyko przerwania tekstu, ale mogą sprawić, że gra będzie bardziej responsywna.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Wartość domyślna, która była używana przez Mudlet przed dodaniem tej kontrolki, to 0,300 sekundy.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4072"/>
@@ -13824,7 +13856,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/room_exits.ui" line="1930"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij element, aby go edytować/zmienić. Aby usunąć specjalne wyjście, ether: wybierz je i naciśnij Delete na klawiaturze; lub ustaw jego Exit roomID na mniej niż jeden; lub wyczyść wpis nazwy/polecenia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1973"/>
@@ -13836,27 +13868,27 @@ Status</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1977"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wskazuje, czy wyjście jest nieprawidłowe, prowadzi do innego pomieszczenia w tym obszarze, czy prowadzi do pokoju w innym obszarze.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2013"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zielony symbol (otwartych) drzwi jest rysowany na mapie 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2022"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pomarańczowy (zamknięty) symbol drzwi jest rysowany na mapie 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2031"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol czerwonych (zamkniętych) drzwi jest rysowany na mapie 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2108"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użyj tego przycisku, aby zapisać wszelkie zmiany, usunie również wszelkie nieprawidłowe wyjścia specjalne.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2124"/>
@@ -13866,7 +13898,7 @@ Status</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1968"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pomieszczenia, do którego prowadzi to wyjście, jeśli jest ustawione na zero, wyjście zostanie usunięte po zapisaniu wyjść.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
@@ -13961,7 +13993,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2040"/>
       <source>&lt;p&gt;Some mapper scripts may require prefixing the keyword &quot;script:&quot;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre skrypty mapowania mogą wymagać poprzedzenia słowa kluczowego &quot;skrypt:&quot;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2060"/>
@@ -14058,22 +14090,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="90"/>
       <source>Registered Events:</source>
-      <translation type="unfinished"/>
+      <translation>Zarejestrowane Wydarzenia:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="137"/>
       <source>&lt;p&gt;Remove (selected) event from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Usuń (wybrane) zdarzenie z listy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="147"/>
       <source>Add User Event:</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj zdarzenie użytkownika:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="181"/>
       <source>&lt;p&gt;Add entered event name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodaj wprowadzoną nazwę wydarzenia do listy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="140"/>
@@ -14303,19 +14335,19 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
       <source>handle multiple items as a</source>
       <extracomment>This text preceeds (is above) the content of the spinBox_lineMargin which also contain text with the text in the label_multiLineTrigger suffixed on the end (underneath).</extracomment>
-      <translation type="unfinished"/>
+      <translation>obsługuje wiele elementów jako</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
       <source>OR / Multi-item</source>
       <extracomment>This text represents what is shown in the spinBox_lineMargin control when it is at it minimum value and replaces the normal value and the normal prefix and suffix that would otherwise surround it before this or those elements are inserted in the middle of the groupBox_multiLineTrigger and the label_multiLineTrigger text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>LUB / Wiele elementów</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="449"/>
       <source>)</source>
       <extracomment>This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
@@ -14332,7 +14364,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
       <source>&lt;p&gt;Do not pass whole line to children.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Nie należy przekazywać całej linii pochodnym-dzieciom do dalszego przetwarzania.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
@@ -14379,7 +14411,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="211"/>
       <source>&lt;p&gt;Match all occurrences of the pattern in the line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dopasuj wszystkie wystąpienia wzorca w linii.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
