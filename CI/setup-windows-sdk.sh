@@ -215,27 +215,6 @@ echo "- Use '--tree \"user\"' (literally) instead of '--local'"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
-# Need to overcome a problem with luarock 3.9.0 which uses Windows CMD MKDIR
-# but which cannot make any missing intermediate directories if the
-# luafilesystem module for Lua 5.4 is not present, see:
-# https://github.com/msys2/MINGW-packages/pull/12002
-if [ "$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")" -eq 0 ]; then
-  # Need to install the 5.4 luafilesystem rock
-  echo "  Improving the luarocks operation by installing the 5.4 luafilesystem rock."
-  neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
-  until [ -z "${neededPath}" ]; do
-    echo "    Inserting a needed directory: ${neededPath} ..."
-    mkdir -p "${neededPath}"
-    neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
-    echo ""
-  done
-  echo "    Completed"
-  echo ""
-fi
-
-# Doing the above fixes things for 5.1 luarocks subsequently (as luarocks
-# itself runs in a Lua 5.4 environment) - otherwise one has to do the same thing
-# for EVERY luarock!
 
 ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""

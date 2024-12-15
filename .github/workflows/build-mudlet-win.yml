@@ -56,13 +56,13 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
-    - name: restore ccache
-      uses: actions/cache@v4
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
-        save-always: true
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -73,19 +73,26 @@ jobs:
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
+    - name: Save ccache
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
 
     - name: (Windows) Login to Azure
       uses: azure/login@v2
-      if: github.repository == 'Mudlet/Mudlet'
+      if: ${{ github.event.pull_request.head.repo.full_name == 'Mudlet/Mudlet' }}
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Get Azure access token for code signing
       shell: pwsh
-      if: github.repository == 'Mudlet/Mudlet'
+      if: ${{ github.event.pull_request.head.repo.full_name == 'Mudlet/Mudlet' }}
       run: |
         $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
         "::add-mask::$token"
@@ -113,9 +120,6 @@ jobs:
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
-
-    #- name: Setup tmate session
-    #  uses: mxschmitt/action-tmate@v3
 
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME

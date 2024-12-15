@@ -104,7 +104,7 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds);
+    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();

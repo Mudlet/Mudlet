@@ -199,11 +199,13 @@ int main(int argc, char* argv[])
     // is open - see https://bugreports.qt.io/browse/QTBUG-41257
     QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
 #elif defined(Q_OS_FREEBSD)
+#if defined(INCLUDE_3DMAPPER)
     // Cure for diagnostic:
     // "Qt WebEngine seems to be initialized from a plugin. Please set
     // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
     // before constructing QGuiApplication."
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif // INCLUDE_3DMAPPER
 #endif
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
@@ -455,7 +457,21 @@ int main(int argc, char* argv[])
 #endif
 #endif
 
-    const QStringList cliProfiles = parser.values(profileToOpen);
+    QStringList cliProfiles = parser.values(profileToOpen);
+    qDebug() << "Got CLI profiles:" << cliProfiles;
+    
+    if (cliProfiles.isEmpty()) {
+        qDebug() << "No CLI profiles specified, checking environment variable";
+        const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
+        qDebug() << "Environment MUDLET_PROFILES value:" << envProfiles;
+        if (!envProfiles.isEmpty()) {
+            qDebug() << "Found environment profiles, splitting on ':'";
+            // : is not an allowed character in a profile name, so we can use it to split the list
+            cliProfiles = envProfiles.split(':');
+            qDebug() << "Final profile list from environment:" << cliProfiles;
+        }
+    }
+
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
     
     const bool showSplash = parser.isSet(showSplashscreen);

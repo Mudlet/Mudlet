@@ -1233,6 +1233,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapBgColor);
     connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomBorderColor);
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor);
+    connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1351,6 +1352,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1651,6 +1653,7 @@ void dlgProfilePreferences::setColors2()
         pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
         pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
         pushButton_mapInfoBg->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMapInfoBg.name()));
+        pushButton_roomCollisionBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomCollisionBorderColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1673,6 +1676,7 @@ void dlgProfilePreferences::setColors2()
         pushButton_background_color_2->setStyleSheet(QString());
         pushButton_roomBorderColor->setStyleSheet(QString());
         pushButton_mapInfoBg->setStyleSheet(QString());
+        pushButton_roomCollisionBorderColor->setStyleSheet(QString());
     }
 }
 
@@ -1748,6 +1752,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mFgColor_2 = Qt::lightGray;
     pHost->mBgColor_2 = Qt::black;
     pHost->mRoomBorderColor = Qt::lightGray;
+    pHost->mRoomCollisionBorderColor = Qt::yellow;
     pHost->mBlack_2 = Qt::black;
     pHost->mLightBlack_2 = Qt::darkGray;
     pHost->mRed_2 = Qt::darkRed;
@@ -2097,6 +2102,14 @@ void dlgProfilePreferences::slot_setMapRoomBorderColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
+    }
+}
+
+void dlgProfilePreferences::slot_setMapRoomCollisionBorderColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
     }
 }
 
