@@ -785,7 +785,13 @@ void XMLimport::readHost(Host* pHost)
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
+    if (pHost->mEditorTheme.isEmpty()) {
+        pHost->mEditorTheme = qsl("Mudlet");
+    }
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    if (pHost->mEditorThemeFile.isEmpty()) {
+        pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
+    }
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
