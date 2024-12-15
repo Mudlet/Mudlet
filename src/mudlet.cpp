@@ -3957,7 +3957,7 @@ void mudlet::showChangelogIfUpdated()
 }
 #endif // INCLUDE_UPDATER
 
-Host* mudlet::loadProfile(const QString& profile_name, bool playOnline)
+Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, const QString& saveFileName)
 {
     Host* pHost = mHostManager.getHost(profile_name);
     if (pHost) {
@@ -3998,7 +3998,7 @@ Host* mudlet::loadProfile(const QString& profile_name, bool playOnline)
         preInstallPackages = true;
         pHost->mLoadedOk = true;
     } else {
-        QFile file(qsl("%1%2").arg(folder, entries.at(0)));
+        QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
 
