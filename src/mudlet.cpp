@@ -5116,7 +5116,7 @@ bool mudlet::desktopInDarkMode()
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
-    if(isPlain){
+    if (isPlain){
         mpAnnouncer->announce(text, processing);
     } else {
         QTextEdit convertor(text);
