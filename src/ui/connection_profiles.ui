@@ -739,6 +739,7 @@
                 <iconset resource="../mudlet.qrc">
                  <normaloff>:/icons/Discord-Logo+Wordmark-Color.png</normaloff>:/icons/Discord-Logo+Wordmark-Color.png
                 
+                
                 </iconset>
                </property>
                <property name="iconSize">

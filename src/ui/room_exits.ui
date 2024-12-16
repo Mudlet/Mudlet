@@ -15,6 +15,7 @@
    <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_room_exits.png</normaloff>:/icons/mudlet_room_exits.png
    
+   
    </iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_all" rowstretch="1,1,0">

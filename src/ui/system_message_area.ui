@@ -252,6 +252,7 @@ background-color: rgb(255, 254, 215);
             <iconset resource="../mudlet.qrc">
              <normaloff>:/icons/application-exit.png</normaloff>:/icons/application-exit.png
             
+            
             </iconset>
            </property>
            <property name="autoRaise">
