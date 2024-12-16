@@ -296,7 +296,7 @@ A full description of what this package achieves. If the package is game specifi
 
 If this package uses aliases, show a few examples and expected output.
 
-`> alias_1`
+`&gt; alias_1`
 
     output of alias_1  -- indent by four spaces
     more output        -- for code blocks

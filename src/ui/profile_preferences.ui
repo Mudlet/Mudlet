@@ -22,6 +22,7 @@
   <property name="windowIcon">
    <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png
+   
    </iconset>
   </property>
   <layout class="QVBoxLayout" name="vBoxLayout_main">
@@ -3692,7 +3693,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_advertiseScreenReader">
             <property name="toolTip">
-             <string></string>
+             <string/>
             </property>
             <property name="text">
              <string>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</string>
@@ -4164,6 +4165,7 @@ you can use it but there could be issues with aligning columns of text</string>
         <property name="icon">
          <iconset>
           <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png
+         
          </iconset>
         </property>
        </widget>

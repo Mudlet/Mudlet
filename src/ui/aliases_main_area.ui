@@ -130,6 +130,28 @@
      </property>
     </widget>
    </item>
+   <item row="1" column="1" colspan="4">
+    <widget class="QLineEdit" name="lineEdit_alias_pattern">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>21</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>21</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
+     </property>
+     <property name="placeholderText">
+      <string>^mycommand$ (example)</string>
+     </property>
+    </widget>
+   </item>
    <item row="2" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_alias_command">
      <property name="sizePolicy">
@@ -171,28 +193,6 @@
      </property>
      <property name="placeholderText">
       <string>Replacement text (optional)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1" colspan="4">
-    <widget class="QLineEdit" name="lineEdit_alias_pattern">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="toolTip">
-      <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
-     </property>
-     <property name="placeholderText">
-      <string>^mycommand$ (example)</string>
      </property>
     </widget>
    </item>
