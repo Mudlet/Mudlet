@@ -102,6 +102,7 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
       "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
       "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
       "mingw-w64-${BUILDCOMPONENT}-angleproject" \
@@ -130,7 +131,8 @@ else
       "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
       "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
       "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-tools"; then
+      "mingw-w64-${BUILDCOMPONENT}-qt5-tools" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-translations"; then
         break
     fi
 
