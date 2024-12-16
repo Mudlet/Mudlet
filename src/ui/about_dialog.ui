@@ -49,6 +49,7 @@
    
    
    
+   
    </iconset>
   </property>
   <property name="autoFillBackground">
@@ -164,6 +165,7 @@
       <attribute name="icon">
        <iconset resource="../mudlet.qrc">
         <normaloff>:/icons/Patreon_Mark_Primary.png</normaloff>:/icons/Patreon_Mark_Primary.png
+       
        
        
        

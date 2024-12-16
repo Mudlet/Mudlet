@@ -62,6 +62,7 @@
       
       
       
+      
       </iconset>
      </property>
      <property name="flat">
@@ -80,6 +81,7 @@
      <property name="icon">
       <iconset resource="../mudlet.qrc">
        <normaloff>:/icons/import.png</normaloff>:/icons/import.png
+      
       
       
       
@@ -120,6 +122,7 @@
       
       
       
+      
       </iconset>
      </property>
      <property name="flat">
@@ -150,6 +153,7 @@
      <property name="icon">
       <iconset resource="../mudlet.qrc">
        <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png
+      
       
       
       
