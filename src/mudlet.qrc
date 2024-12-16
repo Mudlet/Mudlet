@@ -6,6 +6,7 @@
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>
+        <file>MedBootstrap.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
@@ -35,6 +36,7 @@
         <file>icons/avalon.png</file>
         <file>icons/badge.png</file>
         <file>icons/batmud_mud.png</file>
+        <file>icons/blackmud.png</file>
         <file>icons/black_white_transparent_check_1x3_ratio.png</file>
         <file>icons/bookmarks.png</file>
         <file>icons/carrionfields.png</file>
@@ -131,6 +133,7 @@
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>
+        <file>icons/medievia.png</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
         <file>icons/morgengrauen_480x120.png</file>
@@ -195,6 +198,8 @@
         <file>icons/variable.png</file>
         <file>icons/variables.png</file>
         <file>icons/view-filter.png</file>
+        <file>icons/view-fullscreen.png</file>
+        <file>icons/view-restore.png</file>
         <file>icons/view-split-left-right.png</file>
         <file>icons/view-statistics.png</file>
         <file>icons/window-close.png</file>
@@ -203,6 +208,7 @@
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua/gui-drop/gui-drop.xml</file>
         <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>

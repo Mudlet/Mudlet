@@ -147,9 +147,9 @@ public:
     int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
-    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
-    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
-    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function, const int multilineDelta = -1);
+    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
+    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function, const int multilineDelta = -1);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
@@ -277,6 +277,7 @@ public:
     static int getAreaTableSwap(lua_State*);
     static int getPath(lua_State*);
     static int getAreaRooms(lua_State*);
+    static int getAreaRooms1(lua_State*);
     static int clearCmdLine(lua_State*);
     static int printCmdLine(lua_State*);
     static int searchRoom(lua_State*);
@@ -481,6 +482,7 @@ public:
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
     static int startLogging(lua_State*);
+    static int appendLog(lua_State*);
     static int calcFontWidth(int size);
     static int calcFontHeight(int size);
     static int calcFontSize(lua_State*);
@@ -522,6 +524,7 @@ public:
     static int connectExitStub(lua_State*);
     static int getExitStubs(lua_State*);
     static int getExitStubs1(lua_State*);
+    static int getExitStubsNames(lua_State*);
     static int getModulePriority(lua_State*);
     static int setModulePriority(lua_State*);
     static int updateMap(lua_State*);
@@ -618,6 +621,9 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getCharacterName(lua_State*);
+    static int getProfileInformation(lua_State*);
+    static int setProfileInformation(lua_State*);
+    static int clearProfileInformation(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State*);
     static int customHTTP(lua_State*);
@@ -663,6 +669,8 @@ public:
     static int clearMapSelection(lua_State*);
     static int findItems(lua_State*);
     static int holdingModifiers(lua_State*);
+    static int getProfiles(lua_State*);
+    static int loadProfile(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

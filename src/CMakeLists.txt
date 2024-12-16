@@ -103,6 +103,7 @@ set(mudlet_SRCS
     MxpTag.cpp
     ScriptUnit.cpp
     ShortcutsManager.cpp
+    SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -162,6 +163,7 @@ set(mudlet_SRCS
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
+    TriggerHighlighter.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -184,6 +186,16 @@ set(mudlet_SRCS
 
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
+  # Sparkle updater for macOS
+  list(APPEND mudlet_SRCS sparkleupdater.mm)
+  list(APPEND mudlet_HDRS sparkleupdater.h)
+  set_source_files_properties(
+    src/sparkleupdater.mm
+    src/sparkleupdater.h
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
@@ -274,6 +286,7 @@ set(mudlet_HDRS
     pre_guard.h
     ScriptUnit.h
     ShortcutsManager.h
+    SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -330,6 +343,7 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TrailingWhitespaceMarker.h
     Tree.h
+    TriggerHighlighter.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
@@ -510,9 +524,40 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
 #
 # * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+#   commands for suboptions - change the value to 2 to get a bit more detail
+#   about the size or nature of the command:
 target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+#   the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_UTF8_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+#   it is not the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_GB_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+#   single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_BIG5_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+#   the single bytes of pure ASCII text:
+# target_compile_definitions(mudlet PRIVATE DEBUG_EUC_KR_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+#   target_compile_definitions(mudlet PRIVATE DEBUG_SGR_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# target_compile_definitions(mudlet PRIVATE DEBUG_OSC_PROCESSING)
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+#   there is not much against this item at present {only an announcement of the
+#   type (?) of an `\x1b[?z` received}:
+# target_compile_definitions(mudlet PRIVATE DEBUG_MXP_PROCESSING)
+#
+# * Enable the features associated with reporting problems in processing Unicode
+#   codepoints that cannot be displayed on screen in a `TConsole`:
+# target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
@@ -602,7 +647,12 @@ if(APPLE)
   target_link_libraries(mudlet "-framework AppKit")
 
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue)
+    # need to specifically call out Objective-C sources so that automoc builds them.
+    target_sources(mudlet PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
+    find_package(Sparkle)
+    target_link_libraries(mudlet "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES

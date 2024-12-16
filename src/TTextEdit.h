@@ -94,7 +94,7 @@ public:
     int getColumnCount();
     int getRowCount();
 
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     void reportCodepointErrors();
 #endif
 
@@ -148,7 +148,7 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
-#if defined(DEBUG_UTF8_PROCESSING)
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     void slot_changeDebugShowAllProblemCodepoints(const bool);
 #endif
     void slot_mouseAction(const QString&);
@@ -229,8 +229,8 @@ private:
     // making this a const value for the moment:
     const int mTimeStampWidth;
 
-#if defined(DEBUG_UTF8_PROCESSING)
-    bool mShowAllCodepointIssues;
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
+    bool mShowAllCodepointIssues = false;
     // Marked mutable so that it is permissible to change this in class methods
     // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;

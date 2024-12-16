@@ -19,8 +19,9 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-
+#include "mudlet.h"
 #include "utils.h"
+#include <QSettings>
 
 static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
@@ -131,8 +132,19 @@ void dlgMapLabel::slot_pickFont()
 void dlgMapLabel::slot_pickFile()
 {
     //: 2D Mapper create label file dialog title
-    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
+
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);
+
+    if (imagePath.isEmpty()) {
+        return;
+    }
+
     emit updated();
+    lastDir = QFileInfo(imagePath).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 }
 
 void dlgMapLabel::slot_save()
