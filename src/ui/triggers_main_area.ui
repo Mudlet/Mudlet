@@ -97,6 +97,7 @@
          
          
          
+         
          </iconset>
         </property>
         <property name="checkable">
@@ -400,6 +401,7 @@
            <property name="icon">
             <iconset resource="../mudlet.qrc">
              <normaloff>:/icons/edit-clear-locationbar-rtl-green.png</normaloff>:/icons/edit-clear-locationbar-rtl-green.png
+            
             
             
             
