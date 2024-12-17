@@ -1151,7 +1151,11 @@ bool TCommandLine::historyMove(MoveDirection direction)
             moveCursor(QTextCursor::End);
         }
     } else {
-        if (direction == MOVE_DOWN && !toPlainText().isEmpty()) {
+        // Filtering history selects text in the command line. Check if any text is highlighted
+        // and don't initiate a clear if so. This allows cycling through history as well as clearing
+        // input *while* cycling through history if the user chooses to deselect text in the command
+        // line
+        if (direction == MOVE_DOWN && !toPlainText().isEmpty() && textCursor().selectedText().size() > 0) {
             shouldClearInput = true;
         } else {
             mAutoCompletionCount += shift;
