@@ -1155,7 +1155,7 @@ bool TCommandLine::historyMove(MoveDirection direction)
         // and don't initiate a clear if so. This allows cycling through history as well as clearing
         // input *while* cycling through history if the user chooses to deselect text in the command
         // line
-        if (direction == MOVE_DOWN && !toPlainText().isEmpty() && textCursor().selectedText().size() > 0) {
+        if (direction == MOVE_DOWN && !toPlainText().isEmpty() && textCursor().selectedText().size() == 0) {
             shouldClearInput = true;
         } else {
             mAutoCompletionCount += shift;
