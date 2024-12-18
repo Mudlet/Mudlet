@@ -908,6 +908,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
+        // If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
@@ -922,6 +923,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
+        // This is likely to be the save as the profile is closed
         qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
@@ -940,10 +942,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     auto watcher = new QFutureWatcher<void>;
     mModuleFuture = QtConcurrent::run([=]() {
+        // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+        // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
         }
