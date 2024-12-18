@@ -933,7 +933,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     // emit signal to notify the UI that the save button should get disabled momentarily
     // this needs to run after `writers` and `mWritingHostAndModules` have been set
-    // so that currentlySavingProfile() can check properly
+    // so that the currentlySavingProfile() check can run properly
     emit profileSaveStarted();
     qApp->processEvents();
 
