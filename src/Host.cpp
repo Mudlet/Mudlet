@@ -887,67 +887,97 @@ void Host::resetProfile_phase2()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
+    qDebug() << "Starting saveProfile function";
     QString directory_xml;
+    qDebug() << "Declaring directory_xml";
+    
     if (saveFolder.isEmpty()) {
+        qDebug() << "saveFolder is empty, using default path";
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
     } else {
+        qDebug() << "Using provided saveFolder:" << saveFolder;
         directory_xml = saveFolder;
     }
 
     QString filename_xml;
+    qDebug() << "Declaring filename_xml";
+    
     if (saveName.isEmpty()) {
+        qDebug() << "saveName is empty, generating timestamp-based filename";
         filename_xml = qsl("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     } else {
+        qDebug() << "Using provided saveName:" << saveName;
         filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
     }
 
     if (!mLoadedOk) {
+        qDebug() << "Profile was not loaded correctly, returning false";
         return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
+        qDebug() << "Profile loading in progress, returning false";
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
     const QDir dir_xml;
+    qDebug() << "Created QDir object";
+    
     if (!dir_xml.exists(directory_xml)) {
+        qDebug() << "Creating directory:" << directory_xml;
         dir_xml.mkpath(directory_xml);
     }
 
     if (currentlySavingProfile()) {
+        qDebug() << "Save already in progress, returning false";
         return {false, QString(), qsl("a save is already in progress")};
     }
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
-        // This is likely to be the save as the profile is closed
+        qDebug() << "End of session save detected, saving command line histories";
         qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
                                      << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
 
+    qDebug() << "Creating XMLexport writer";
+    auto writer = new XMLexport(this);
+    qDebug() << "Inserting writer into writers map";
+    writers.insert(qsl("profile"), writer);
+    qDebug() << "Exporting host to XML file:" << filename_xml;
+    writer->exportHost(filename_xml);
+    qDebug() << "Setting mWritingHostAndModules to true";
+    mWritingHostAndModules = true;
+
+    qDebug() << "Emitting profileSaveStarted signal";
+    // emit signal to notify the UI that the save button should get disabled momentarily
     emit profileSaveStarted();
+    qDebug() << "Processing events";
     qApp->processEvents();
 
-    auto writer = new XMLexport(this);
-    writers.insert(qsl("profile"), writer);
-    writer->exportHost(filename_xml);
-    mWritingHostAndModules = true;
+    qDebug() << "Creating QFutureWatcher";
     auto watcher = new QFutureWatcher<void>;
+    qDebug() << "Starting concurrent module save operation";
     mModuleFuture = QtConcurrent::run([=]() {
-        //wait for the host xml to be ready before starting to sync modules
+        qDebug() << "Waiting for async XML save";
         waitForAsyncXmlSave();
+        qDebug() << "Saving modules";
         saveModules(saveName != qsl("autosave"));
     });
+    qDebug() << "Connecting watcher finished signal";
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
-        // reload, or queue module reload for when xml is ready
+        qDebug() << "Watcher finished signal received";
         if (syncModules) {
+            qDebug() << "Reloading modules";
             reloadModules();
         }
+        qDebug() << "Setting mWritingHostAndModules to false";
         mWritingHostAndModules = false;
     });
+    qDebug() << "Setting future to watcher";
     watcher->setFuture(mModuleFuture);
+    qDebug() << "Returning success";
     return {true, filename_xml, QString()};
 }
 
