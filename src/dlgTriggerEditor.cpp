@@ -870,11 +870,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         // Populate default of false
         lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = false;
 
+/*
         auto mpFont = mpHost->getDisplayFont();
         mpFont.setPixelSize(pItem->singleLineTextEdit_pattern->height() / 2);
         pItem->singleLineTextEdit_pattern->setFont(mpFont);
+*/
         // align a fraction lower
-        pItem->singleLineTextEdit_pattern->setStyleSheet("SingleLineTextEdit { padding-top: 2px; }");
+        pItem->singleLineTextEdit_pattern->setStyleSheet("SingleLineTextEdit { padding-top: 3px; }");
 
         if (i == 0) {
             pItem->singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
