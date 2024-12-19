@@ -177,7 +177,7 @@
     </widget>
    </item>
    <item>
-    <widget class="SingleLineTextEdit" name="singleLineTextEdit_pattern">
+    <widget class="QLineEdit" name="lineEdit_pattern">
      <property name="maximumSize">
       <size>
        <width>16777215</width>
@@ -214,13 +214,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>SingleLineTextEdit</class>
-   <extends>QTextEdit</extends>
-   <header>SingleLineTextEdit.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

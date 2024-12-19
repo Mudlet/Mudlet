@@ -46,7 +46,6 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
-#include "SingleLineTextEdit.h"
 
 #include "pre_guard.h"
 #include <QDialog>
@@ -294,7 +293,6 @@ public slots:
     void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
-    void slot_editorThemeChanged();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -473,7 +471,7 @@ private:
         {tr("Debug"),      tr("Ctrl+0")}
     };
 
-    std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
+    std::unordered_map<QLineEdit*, bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
