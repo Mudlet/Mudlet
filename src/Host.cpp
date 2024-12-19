@@ -776,10 +776,10 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 moduleEntry << qsl("0");
                 mInstalledModules[moduleName] = moduleEntry;
                 //Write the module to the own profile directory to save it on restart
-                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-                auto writer = new XMLexport(this);
-                writers.insert(fileName, writer);
-                writer->writeModuleXML(moduleName, fileName, true);
+                // fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+                // auto writer = new XMLexport(this);
+                // writers.insert(fileName, writer);
+                // writer->writeModuleXML(moduleName, fileName, true);
             } else {
                 uninstallPackage(moduleName, 2);
                 installPackage(fileName, 2);
