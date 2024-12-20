@@ -13322,7 +13322,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2486"/>
       <source>Overlapping rooms border:</source>
-      <translation type="unfinished"/>
+      <translation>Bordo delle stanze sovrapposto:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3788"/>
@@ -14434,7 +14434,8 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="407"/>
       <source>&lt;p&gt;If set to any value but the first the trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;If set to the first value the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il trigger viene attivato solo se &lt;u&gt;Tutte&lt;/u&gt; le condizioni dell'elenco sono verificate all'interno di un determinato numero di linee (delta). Tutti i riscontri saranno salvati nella variabile &lt;tt&gt;multimatches&lt;/tt&gt; invece che &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Se questa opzione Non è selezionata il trigger verrà attivato quando &lt;u&gt;una qualsiasi&lt;/u&gt; condizione dell'elenco è soddisfatta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
