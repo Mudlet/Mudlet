@@ -13216,7 +13216,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2486"/>
       <source>Overlapping rooms border:</source>
-      <translation type="unfinished"/>
+      <translation>Overlapping rooms border:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3788"/>
