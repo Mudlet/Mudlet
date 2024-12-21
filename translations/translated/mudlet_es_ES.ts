@@ -1034,7 +1034,11 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Disminuya el espaciado de
+las salas seleccionadas,
+centradas en la
+sala resaltada por el
+factor de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4122"/>
@@ -1045,7 +1049,7 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="4124"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa de Mudlet (*.dat);;Datos del mapa Xml (*.xml);;Cualquier archivo (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4218"/>
@@ -1058,12 +1062,13 @@ factor of:</source>
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede agregar &quot;%1&quot; como un área del mapa.
+Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4242"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Añadido &quot;%1&quot; (%2) al área al mapa.</translation>
     </message>
   </context>
   <context>
@@ -1072,12 +1077,12 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TAlias.cpp" line="127"/>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Alias Error:] Se ha superado el límite de captura de grupos %1, captura menos grupos.</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="272"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Error: en &quot;Patrón:&quot;, expresión regular defectuosa, razón: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1085,7 +1090,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/TArea.cpp" line="368"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>roomID=%1 no existe, no se puede establecer las propiedades de una sala inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TArea.cpp" line="756"/>
@@ -1152,7 +1157,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
 Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Escriba el texto para enviar al servidor del juego para el perfil &quot;%1&quot; o introduce un alias para ejecutar los comandos localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1390"/>
@@ -1170,19 +1175,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
 Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Escriba el texto para enviar al servidor del juego, o introduzca un alias para ejecutar los comandos localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1408"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada adicional &quot;%1&quot; en &quot;%2&quot; ventana del perfil &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1424"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Línea adicional de entrada &quot;%1&quot; en &quot;%2&quot; ventana.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1443"/>
@@ -1207,51 +1212,51 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="344"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; es la latencia del servidor y la red del juego (también conocido como ping en segundos),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; es el tiempo de procesamiento del sistema - cuánto tiempo tardaron sus disparadores en procesar la(s) última(s) línea(s).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="359"/>
       <source>N:%1 S:%2</source>
       <extracomment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</extracomment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="367"/>
       <source>&lt;no GA&gt; S:%1</source>
       <extracomment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1745"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Mensaje del sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1041"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Desplazamiento de la pantalla dividida activada. Presione &lt;⌘&gt;+&lt;ENTER&gt; para cancelar.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1043"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Desplazamiento hacia atrás de la pantalla dividida activada. Presione &lt;CTRL&gt;+&lt;ENTER&gt; para cancelar.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Los mensajes de depuración de todos los perfiles se muestran aquí.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2071"/>
       <source>Central debug console past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Consola central de depuración de contenido pasado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
       <source>Central debug console live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contenido de la consola central de depuración.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
@@ -1298,7 +1303,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2108"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>El contenido del juego se muestra aquí. Puede contener subconsolas y la ventana de mapeo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="233"/>
@@ -1324,7 +1329,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="423"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Coincidir exactamente con el asunto</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="436"/>
