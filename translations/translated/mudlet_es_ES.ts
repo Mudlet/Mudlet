@@ -42,12 +42,15 @@
     <message>
       <location filename="../src/glwidget.cpp" line="2102"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: No se puede encontrar una ruta de %1 a %2 usando salidas conocidas.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Tienes un mapa cargado (%n habitación(es), pero Mudlet no desconoce dónde estás en este momento.</numerusform>
+        <numerusform>.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -55,13 +58,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se pudo iniciar sesión en el juego, ¿la información de acceso es correcta?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ADVERTENCIA] - No se pudo iniciar sesión en el juego: %1</translation>
     </message>
   </context>
   <context>
@@ -74,7 +77,7 @@
     <message>
       <location filename="../src/Host.cpp" line="456"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ALERTA] - Este perfil se guardará y cerrará.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="727"/>
@@ -162,7 +165,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Un widget invisible utilizado como solución para anunciar texto al lector de pantalla</translation>
     </message>
   </context>
   <context>
@@ -171,7 +174,7 @@ Por favor, espere...</translation>
       <location filename="../src/KeyUnit.cpp" line="352"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>Clave no definida %1 (código: 0x%2)</translation>
     </message>
   </context>
   <context>
