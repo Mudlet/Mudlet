@@ -47,10 +47,7 @@
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation>
-        <numerusform>Tienes un mapa cargado (%n habitación(es), pero Mudlet no desconoce dónde estás en este momento.</numerusform>
-        <numerusform>.</numerusform>
-      </translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -588,13 +585,13 @@ Por favor, espere...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="227"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Establece el número de la sala a la que se dirige esta salida especial.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="151"/>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Aquí se espera el ID de la sala a la que conduce a esta salida especial. Si se deja así, esta salida se eliminará cuando &lt;tt&gt;se grabe&lt;/tt&gt; se hace clic.</translation>
     </message>
   </context>
   <context>
@@ -684,13 +681,13 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2710"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establecer el nombre de la sala&apos; el color del icono, el peso, el bloqueo para el movimiento rápido y el símbolo para marcar las salas especiales</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2717"/>
       <source>Set exits...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establecer salidas...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
@@ -714,7 +711,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2741"/>
       <source>Spread...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Extensión...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2743"/>
@@ -753,7 +750,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2768"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Moverse a la sala seleccionada o al grupo de salas a las coordenadas especificadas en este área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2775"/>
@@ -783,7 +780,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2791"/>
       <source>Set the player&apos;s current location to here</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establecer aquí &apos; la ubicación actual del jugador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2800"/>
