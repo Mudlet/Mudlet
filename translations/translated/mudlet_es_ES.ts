@@ -846,7 +846,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2864"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
-      <translation type="unfinished"/>
+      <translation>usa &quot;borrar línea&quot; para eliminar el único segmento que termina en un punto editable</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2869"/>
@@ -1145,7 +1145,7 @@ Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
       <location filename="../src/TCommandLine.cpp" line="1375"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada para el perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1382"/>
@@ -1268,13 +1268,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2085"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana de error del editor&apos; para el perfil &quot;%1&quot;, contenido anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana de error del editor &apos; para el perfil &quot;%1&quot;, contenido en vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2090"/>
@@ -1344,17 +1344,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="847"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>La grabación ha comenzado. Archivo: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="851"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>La grabación ha sido detenida, pero no se pudo guardar&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="853"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>La grabación ha sido detenida. Archivo: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1849"/>
@@ -1371,7 +1371,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2117"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2119"/>
@@ -1401,7 +1401,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2132"/>
       <source>Profile main window.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana principal del perfil.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2147"/>
@@ -1478,17 +1478,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2081"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Consola de errores en el editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="310"/>
       <source>Toggle time stamps</source>
-      <translation type="unfinished"/>
+      <translation>Cambiar las marcas del tiempo</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="322"/>
       <source>Toggle recording of replays</source>
-      <translation type="unfinished"/>
+      <translation>Cambiar la grabación de repeticiones</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="331"/>
@@ -1503,17 +1503,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Los mensajes de error para el perfil &quot;%1&quot; se muestran aquí en el editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2104"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Los mensajes de error se muestran en el editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Ventana principal para el perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
@@ -1523,22 +1523,22 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2139"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Incorporar la ventana &quot;%1&quot; para el perfil &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2141"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Incorporar la ventana &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation type="unfinished"/>
+      <translation>El contenido del juego o del texto generado localmente pueden ser enviados aquí.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2169"/>
       <source>User window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Ventana del usuario &quot;%1&quot; para el perfil &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2171"/>
@@ -1556,7 +1556,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="66"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Barra de botones fáciles- %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1605,7 +1605,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4906"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se pudo encontrar el módulo Lua %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5532"/>
@@ -1615,7 +1615,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5550"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>El soporte de base de datos no está disponible.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5557"/>
@@ -1687,12 +1687,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="264"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, registro del perfil %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="326"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Dejar de guardar el juego en el archivo de registro.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="222"/>
