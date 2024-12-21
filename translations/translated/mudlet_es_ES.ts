@@ -911,7 +911,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3695"/>
       <source>Move the selection, centered on the highlighted room (%1) to:</source>
       <comment>%1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Mueve la selección, centrada en la sala resaltada (%1) a:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3701"/>
@@ -945,18 +945,18 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="5123"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Haga clic izquierdo para añadir punto, clic derecho para deshacer/cambiar/terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5134"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Haz clic izquierdo y arrastra un cuadrado para el tamaño y la posición de tu etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="579"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: No se puede encontrar una ruta de %1 a %2 usando salidas conocidas.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1232"/>
@@ -1002,7 +1002,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="96"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic en una línea para seleccionar o anular la selección del número de sala (con el nombre dado si se nombran las salas) para añadir o quitar la sala de la selección. Haga clic en la cabecera correspondiente para ordenar por ese método. Tenga en cuenta que la columna de nombre sólo se mostrará si al menos una de las salas tiene un nombre.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3964"/>
