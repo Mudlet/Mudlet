@@ -1813,17 +1813,17 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1419"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Solicitud de recarga de mapa recibida del sistema...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1424"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - ... Solicitud de recarga del mapa en el sistema ha sido completada.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1426"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - ... Falló en la solicitud de recarga del mapa en el sistema.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1453"/>
@@ -1831,7 +1831,9 @@ Tried these locations:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+------------------------------------------------------+
+| estadísticas del sistema |
++------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1464"/>
@@ -1861,7 +1863,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1485"/>
       <source>MSDP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos MSDP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1497"/>
@@ -2182,30 +2184,32 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3110"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>no se ha detectado una versión del formato</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3116"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>no se han detectado áreas</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3241"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>abortado por el usuario</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3126"/>
       <location filename="../src/TMap.cpp" line="3391"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Importando datos del mapa JSON a %1
+Áreas: %2 de: %3   Salas de: %4 de: %5   Etiquetas: %6 de: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1115"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - El formato de la versión &quot;%1&quot; que está intentando guardar el mapa es demasiado nueva
+para esta versión de Mudlet. Soportado solo formatos hasta la versión %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1131"/>
