@@ -1692,7 +1692,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="326"/>
       <source>Stop logging game output to log file.</source>
-      <translation>Dejar de guardar el juego en el archivo de registro.</translation>
+      <translation>Detener la grabación del juego en el archivo de registro.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="222"/>
@@ -1715,18 +1715,18 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="323"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;La sesión del registro comienza a las &apos;hh:mm:ss&apos; del &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="331"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;La sesión del registro finaliza a las &apos;hh:mm:ss&apos; del &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="342"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Iniciar la grabación del juego en el archivo de registro.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="697"/>
@@ -1741,19 +1741,19 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1120"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Ventana del usuario - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1173"/>
       <source>N:%1 S:%2</source>
       <extracomment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</extracomment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1182"/>
       <source>&lt;no GA&gt; S:%1</source>
       <extracomment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1280"/>
@@ -1768,12 +1768,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1300"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Cargando mapa(1) &quot;%1&quot; en el informe %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1344"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Informe de importación de pre-mapa(1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1367"/>
@@ -1786,22 +1786,23 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1373"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: mal argumento #1 valor (nombre del archivo usado: 
+&quot;%1&quot; no fue encontrado).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1382"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Archivo del mapa localizado y abierto, ahora se está analizando...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1389"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importando el mapa(1) &quot;%1&quot; en el informe %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1392"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Archivo del mapa localizado pero no se pudo abrir, por favor compruebe los permisos en:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1395"/>
@@ -1896,7 +1897,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1522"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Informe del gif:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1577"/>
@@ -1906,12 +1907,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1577"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>¿Desea guardar el perfil %1?</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1591"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo guardar el perfil</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
@@ -1924,27 +1925,27 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="136"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 no existe, no se puede establecer AreaID=%2 para una sala inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="147"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 no existe, no se puede establecer el RoomID=%1 en un área inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="555"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - CONVERTING: etiqueta de estilo antigua, areaID:%1 Etiqueta:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="558"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Convirtiendo la id de la etiqueta antigua: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="563"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - CONVERTIR: no se puede convertir la etiqueta de estilo antiguo en el área con la id: %1, la id de la etiqueta es: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="566"/>
@@ -1954,7 +1955,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="593"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Se completó el seguimiento del mapa (%1s). Disfruta de tu juego...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="600"/>
@@ -1974,26 +1975,30 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="113"/>
       <source>[MAP ERROR:]%1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR DE MAPA:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="525"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Iniciando la auditoría de mapas...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1556"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - ¡Es posible que desee donar ESTE archivo del mapa al Museo Mudlet!
+Hay tantos datos que NO tiene que seria
+mejor empezar de nuevo...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1619"/>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Error al cargar el archivo de mapa de Mudlet JSON, razón:
+%1; el archivo es:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1624"/>
@@ -2010,7 +2015,8 @@ area) not found, adding reserved -1 id.</source>
       <location filename="../src/TMap.cpp" line="1874"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Área predeterminada (restablecida para salas que no han sido asignadas a un área
+) no encontrada, agregando el reservado id -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1889"/>
@@ -2040,7 +2046,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2378"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Id del área: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2380"/>
@@ -2055,7 +2061,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2396"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Id de la sala: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2398"/>
@@ -2112,38 +2118,41 @@ and there is enough space. The download operation has failed.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2504"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Descarga de mapa iniciada, espere...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2671"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - La descarga del mapa encontró un error:
+%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2905"/>
       <source>Map JSON export</source>
       <extracomment>This is a title of a progress window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Exportar mapa JSON</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3142"/>
       <source>Map JSON import</source>
       <extracomment>This is a title of a progress window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Importar mapa JSON</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2889"/>
       <location filename="../src/TMap.cpp" line="3381"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Exportando los datos del mapa JSON de %1
+Áreas: %2 de: %3  Salas %4 de: %5  Etiquetas: %6 de: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3034"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>Exportando el archivo del mapa JSON de %1 - escribiendo datos al archivo:
+%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3062"/>
@@ -2163,7 +2172,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3089"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>el archivo Json vacío, no se detectaron datos de mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3104"/>
