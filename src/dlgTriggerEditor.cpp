@@ -39,13 +39,10 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
-#include "dlgProfilePreferences.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
-#include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
-#include "edbee/models/textdocumentscopes.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
@@ -856,7 +853,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
-        connect(pItem->singleLineTextEdit_pattern, &QTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
+        connect(pItem->lineEdit_pattern, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
         mpWidget_triggerItems->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
@@ -866,6 +863,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
+
 
         // Populate default of false
         lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = false;
@@ -879,14 +877,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         //pItem->singleLineTextEdit_pattern->setStyleSheet("SingleLineTextEdit { padding-top: 3px; }");
 
         if (i == 0) {
-            pItem->singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
+            pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
         }
     }
-
-    connect(mpHost, &Host::signal_editorThemeChanged, this, &dlgTriggerEditor::slot_editorThemeChanged);
-    // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
-    mpHost->editorThemeChanged();
-
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:
     const int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
@@ -897,13 +890,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showIDLabels(mpHost->showIdsInEditor());
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
-    }
-}
-
-void dlgTriggerEditor::slot_editorThemeChanged()
-{
-    for (int i = 0; i < 50; i++) {
-        mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->setTheme(mpHost->mEditorTheme);
     }
 }
 
@@ -1069,11 +1055,10 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 case SearchResultIsPattern: {
                     dlgTriggerPatternEdit * pTriggerPattern = mTriggerPatternEdit.at(pItem->data(0, PatternOrLineRole).toInt());
                     mpScrollArea->ensureWidgetVisible(pTriggerPattern);
-                    if (pTriggerPattern->singleLineTextEdit_pattern->isVisible()) {
-                        // If is a colour trigger the singleLineTextEdit_pattern is not shown
-                        pTriggerPattern->singleLineTextEdit_pattern->setFocus();
-                        pTriggerPattern->singleLineTextEdit_pattern->textCursor().setPosition(pItem->data(0, PositionRole).toInt());
-
+                    if (pTriggerPattern->lineEdit_pattern->isVisible()) {
+                        // If is a colour trigger the lineEdit_pattern is not shown
+                        pTriggerPattern->lineEdit_pattern->setFocus();
+                        pTriggerPattern->lineEdit_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
                     }
                     break;
                 }
@@ -1328,10 +1313,10 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 case SearchResultIsPattern: {
                     dlgTriggerPatternEdit * pTriggerPattern = mTriggerPatternEdit.at(pItem->data(0, PatternOrLineRole).toInt());
                     mpScrollArea->ensureWidgetVisible(pTriggerPattern);
-                    if (pTriggerPattern->singleLineTextEdit_pattern->isVisible()) {
-                        // If is a colour trigger the singleLineTextEdit_pattern is not shown
-                        pTriggerPattern->singleLineTextEdit_pattern->setFocus();
-                        pTriggerPattern->singleLineTextEdit_pattern->textCursor().setPosition(pItem->data(0, PositionRole).toInt());
+                    if (pTriggerPattern->lineEdit_pattern->isVisible()) {
+                        // If is a colour trigger the lineEdit_pattern is not shown
+                        pTriggerPattern->lineEdit_pattern->setFocus();
+                        pTriggerPattern->lineEdit_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
                     }
                     break;
                 }
@@ -4443,7 +4428,7 @@ void dlgTriggerEditor::saveTrigger()
     QStringList patterns;
     QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
-        QString pattern = mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->toPlainText();
+        QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
 
         // Spaces in the pattern may be marked with middle dots, convert them back
         unmarkQString(&pattern);
@@ -5520,14 +5505,11 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
 {
     // Display middle dots for potentially unwanted spaces in perl regex
     if (type == REGEX_PERL) {
-        markQTextEdit(pItem->singleLineTextEdit_pattern);
-        lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = true;
-        pItem->singleLineTextEdit_pattern->blockSignals(true);
-        pItem->singleLineTextEdit_pattern->rehighlight();
-        pItem->singleLineTextEdit_pattern->blockSignals(false);
+        markQLineEdit(pItem->lineEdit_pattern);
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = true;
     } else {
-        unmarkQTextEdit(pItem->singleLineTextEdit_pattern);
-        lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = false;
+        unmarkQLineEdit(pItem->lineEdit_pattern);
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
     }
 
     switch (type) {
@@ -5536,15 +5518,14 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
     case REGEX_BEGIN_OF_LINE_SUBSTRING:
     case REGEX_EXACT_MATCH:
     case REGEX_LUA_CODE:
-        pItem->singleLineTextEdit_pattern->setHighlightingEnabled(type == REGEX_PERL);
-        pItem->singleLineTextEdit_pattern->show();
+        pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->label_prompt->hide();
         pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_LINE_SPACER:
-        pItem->singleLineTextEdit_pattern->hide();
+        pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->label_prompt->hide();
@@ -5552,14 +5533,14 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         break;
     case REGEX_COLOR_PATTERN:
         // CHECKME: Do we need to regenerate (hidden patter text) and button texts/colors?
-        pItem->singleLineTextEdit_pattern->hide();
+        pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
         pItem->label_prompt->hide();
         pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_PROMPT:
-        pItem->singleLineTextEdit_pattern->hide();
+        pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         if (mpHost->mTelnet.mGA_Driver) {
@@ -5581,13 +5562,9 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
 
 void dlgTriggerEditor::slot_changedPattern()
 {
-    SingleLineTextEdit* textEdit = qobject_cast<SingleLineTextEdit*>(sender());
-
-    if (lineEditShouldMarkSpaces[textEdit]) {
-        markQTextEdit(textEdit);
-        textEdit->blockSignals(true);
-        textEdit->rehighlight();
-        textEdit->blockSignals(false);
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(sender());
+    if (lineEditShouldMarkSpaces[lineEdit]) {
+        markQLineEdit(lineEdit);
     }
 
     checkForMoreThanOneTriggerItem();
@@ -5613,25 +5590,25 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
     dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[row];
     setupPatternControls(type, pPatternItem);
     if (type == REGEX_COLOR_PATTERN) {
-        if (pPatternItem->singleLineTextEdit_pattern->toPlainText().isEmpty()) {
+        if (pPatternItem->lineEdit_pattern->text().isEmpty()) {
             // This COLOR trigger is a new one in that there is NO text
             // So set it to the default (ignore both) - which will generate an
             // error if saved without setting a color for at least one element:
 
-            pPatternItem->singleLineTextEdit_pattern->setText(TTrigger::createColorPatternText(TTrigger::scmIgnored, TTrigger::scmIgnored));
+            pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(TTrigger::scmIgnored, TTrigger::scmIgnored));
         }
 
         // Only process the text if it looks like it should:
-        if ((pPatternItem->singleLineTextEdit_pattern->toPlainText().startsWith(QLatin1String("ANSI_COLORS_F{"))
-              && pPatternItem->singleLineTextEdit_pattern->toPlainText().contains(QLatin1String("}_B{"))
-              && pPatternItem->singleLineTextEdit_pattern->toPlainText().endsWith(QLatin1String("}")))) {
+        if ((pPatternItem->lineEdit_pattern->text().startsWith(QLatin1String("ANSI_COLORS_F{"))
+              && pPatternItem->lineEdit_pattern->text().contains(QLatin1String("}_B{"))
+              && pPatternItem->lineEdit_pattern->text().endsWith(QLatin1String("}")))) {
 
             // It looks as though there IS a valid color pattern string in the
             // lineEdit, so, in case it has been edited by hand, regenerate the
             // colors that are used:
             int textAnsiFg = TTrigger::scmIgnored;
             int textAnsiBg = TTrigger::scmIgnored;
-            TTrigger::decodeColorPatternText(pPatternItem->singleLineTextEdit_pattern->toPlainText(), textAnsiFg, textAnsiBg);
+            TTrigger::decodeColorPatternText(pPatternItem->lineEdit_pattern->text(), textAnsiFg, textAnsiBg);
 
             if (textAnsiFg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
@@ -5665,7 +5642,7 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             qDebug() << "dlgTriggerEditor::slot_setupPatternControls(...) ERROR: Pattern listed as item:"
                      << row + 1
                      << "is supposed to be a color pattern trigger but the stored text that contains the color codes:"
-                     << pPatternItem->singleLineTextEdit_pattern->toPlainText()
+                     << pPatternItem->lineEdit_pattern->text()
                      << "does not fit the pattern!";
         }*/
 
@@ -5673,8 +5650,8 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
         // Is NOT a REGEX_COLOR_PATTERN - if the text corresponds to the color
         // pattern text equivalent to ignore both fore and back ground then
         // clear the text - otherwise leave as is:
-        if (pPatternItem->singleLineTextEdit_pattern->toPlainText().compare(QLatin1String("ANSI_COLORS_F{IGNORE}_B{IGNORE}")) == 0) {
-            pPatternItem->singleLineTextEdit_pattern->clear();
+        if (pPatternItem->lineEdit_pattern->text().compare(QLatin1String("ANSI_COLORS_F{IGNORE}_B{IGNORE}")) == 0) {
+            pPatternItem->lineEdit_pattern->clear();
         }
     }
 }
@@ -5736,10 +5713,10 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             pPatternItem->comboBox_patternType->setCurrentIndex(pType);
             setupPatternControls(pType, pPatternItem);
             if (pType == REGEX_PROMPT) {
-                pPatternItem->singleLineTextEdit_pattern->clear();
+                pPatternItem->lineEdit_pattern->clear();
 
             } else if (pType == REGEX_COLOR_PATTERN) {
-                pPatternItem->singleLineTextEdit_pattern->setText(patternList.at(i));
+                pPatternItem->lineEdit_pattern->setText(patternList.at(i));
                 if (pT->mColorPatternList.at(i)) {
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
@@ -5785,17 +5762,17 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             } else {
                 // Keep track of lineEdits that should have trailing spaces marked
                 if (pType == REGEX_PERL) {
-                    lineEditShouldMarkSpaces[pPatternItem->singleLineTextEdit_pattern] = true;
+                    lineEditShouldMarkSpaces[pPatternItem->lineEdit_pattern] = true;
                 }
-                pPatternItem->singleLineTextEdit_pattern->setText(patternList.at(i));
+                pPatternItem->lineEdit_pattern->setText(patternList.at(i));
             }
         }
 
         // reset the rest of the patterns that don't have any data
         for (int i = patternList.size(); i < 50; i++) {
-            mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
-            if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
-                mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+            mTriggerPatternEdit[i]->lineEdit_pattern->clear();
+            if (mTriggerPatternEdit[i]->lineEdit_pattern->isHidden()) {
+                mTriggerPatternEdit[i]->lineEdit_pattern->show();
             }
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
@@ -8360,7 +8337,7 @@ void dlgTriggerEditor::slot_nextSection()
             return;
         }
         if (mpTriggersMainArea->hasFocus()) {
-            mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setFocus();
+            mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
             return;
         }
         for (auto child : mpTriggersMainArea->scrollArea->findChildren<QWidget*>()) {
@@ -8371,7 +8348,7 @@ void dlgTriggerEditor::slot_nextSection()
         }
         for (auto child : mpTriggersMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setFocus();
+                mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
                 return;
             }
         }
@@ -8482,7 +8459,7 @@ void dlgTriggerEditor::slot_previousSection()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setFocus();
+            mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
             return;
         }
         if (treeWidget_triggers->hasFocus()) {
@@ -9545,7 +9522,7 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     // This method parses the pattern text and extracts the ansi color values
     // from it - including the special values of DEFAULT (-2) and IGNORE (-1)
     // and assigns the values to the other arguments:
-    TTrigger::decodeColorPatternText(pPatternItem->singleLineTextEdit_pattern->toPlainText(), pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi);
+    TTrigger::decodeColorPatternText(pPatternItem->lineEdit_pattern->text(), pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi);
 
     // The following method wants to know BOTH existing fore and backgrounds
     // it will select the appropriate as a result of the third argument and it
@@ -9567,7 +9544,7 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     }
     pB->setStyleSheet(styleSheet);
 
-    pPatternItem->singleLineTextEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+    pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
         //: Color trigger ignored foreground color button, ensure all three instances have the same text
@@ -9608,7 +9585,7 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     // This method parses the pattern text and extracts the ansi color values
     // from it - including the special values of DEFAULT (-2) and IGNORE (-1)
     // and assigns the values to the other arguments:
-    TTrigger::decodeColorPatternText(pPatternItem->singleLineTextEdit_pattern->toPlainText(), pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi);
+    TTrigger::decodeColorPatternText(pPatternItem->lineEdit_pattern->text(), pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi);
 
     // The following method wants to know BOTH existing fore and backgrounds
     // it will select the appropriate as a result of the third argument and it
@@ -9629,7 +9606,7 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     }
     pB->setStyleSheet(styleSheet);
 
-    pPatternItem->singleLineTextEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+    pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
         //: Color trigger ignored background color button, ensure all three instances have the same text
@@ -9724,12 +9701,15 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
 
+// We do NOT want to change every profile's editor theme when the setting is
+// changed in the settings dialog so this has been moved out of a lambda wired
+// up as a slot to respond to a
+// mudlet::signal_editorThemeChanged(const QString& theme) signal
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
 {
     auto localConfig = mpSourceEditorEdbee->config();
     localConfig->beginChanges();
     localConfig->setThemeName(theme);
-    mpHost->editorThemeChanged();
     localConfig->setFont(mpHost->getDisplayFont());
     localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
                                                ? edbee::TextEditorConfig::ShowWhitespaces
@@ -10271,14 +10251,14 @@ void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
     for (qsizetype i = 0, total = pLayout->count(); i < total; ++i) {
         auto pLayoutItem = pLayout->itemAt(i)->widget();
         if (pLayoutItem) {
-            auto* psingleLineTextEdit_pattern = pLayoutItem->findChild<SingleLineTextEdit*>(qsl("singleLineTextEdit_pattern"));
+            auto* pLineEdit_pattern = pLayoutItem->findChild<QLineEdit*>(qsl("lineEdit_pattern"));
             auto* pComboBox_type = pLayoutItem->findChild<QComboBox*>(qsl("comboBox_patternType"));
             if (pComboBox_type && (pComboBox_type->currentIndex() == REGEX_PROMPT || pComboBox_type->currentIndex() == REGEX_LINE_SPACER)) {
                 // These automatically counts as an active item - though if there
                 // isn't any GA signals the first won't work...
                 ++activeItems;
             } else {
-                if (psingleLineTextEdit_pattern && !psingleLineTextEdit_pattern->toPlainText().isEmpty()) {
+                if (pLineEdit_pattern && !pLineEdit_pattern->text().isEmpty()) {
                     ++activeItems;
                 }
             }

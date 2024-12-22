@@ -175,6 +175,7 @@ private slots:
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
 
+
 signals:
     void signal_themeUpdateCompleted();
     void signal_preferencesSaved();

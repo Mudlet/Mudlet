@@ -775,11 +775,6 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 moduleEntry << moduleLocation;
                 moduleEntry << qsl("0");
                 mInstalledModules[moduleName] = moduleEntry;
-                //Write the module to the own profile directory to save it on restart
-                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-                auto writer = new XMLexport(this);
-                writers.insert(fileName, writer);
-                writer->writeModuleXML(moduleName, fileName, true);
             } else {
                 uninstallPackage(moduleName, 2);
                 installPackage(fileName, 2);
@@ -906,7 +901,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
+        // If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
@@ -921,22 +916,25 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
-        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
-                                     << mHostName
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
-
-    emit profileSaveStarted();
-    qApp->processEvents();
 
     auto writer = new XMLexport(this);
     writers.insert(qsl("profile"), writer);
     writer->exportHost(filename_xml);
     mWritingHostAndModules = true;
+
+    // emit signal to notify the UI that the save button should get disabled momentarily
+    // this needs to run after `writers` and `mWritingHostAndModules` have been set
+    // so that the currentlySavingProfile() check can run properly
+    emit profileSaveStarted();
+    qApp->processEvents();
+
     auto watcher = new QFutureWatcher<void>;
     mModuleFuture = QtConcurrent::run([=]() {
-        //wait for the host xml to be ready before starting to sync modules
+        // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
@@ -4376,9 +4374,4 @@ void Host::setCommandLineHistorySaveSize(const int lines)
     if (mCommandLineHistorySaveSize != lines) {
         mCommandLineHistorySaveSize = lines;
     }
-}
-
-void Host::editorThemeChanged()
-{
-    emit signal_editorThemeChanged();
 }

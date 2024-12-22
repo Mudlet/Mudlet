@@ -103,7 +103,6 @@ set(mudlet_SRCS
     MxpTag.cpp
     ScriptUnit.cpp
     ShortcutsManager.cpp
-    SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -163,7 +162,6 @@ set(mudlet_SRCS
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
-    TriggerHighlighter.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -286,7 +284,6 @@ set(mudlet_HDRS
     pre_guard.h
     ScriptUnit.h
     ShortcutsManager.h
-    SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -343,7 +340,6 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TrailingWhitespaceMarker.h
     Tree.h
-    TriggerHighlighter.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
