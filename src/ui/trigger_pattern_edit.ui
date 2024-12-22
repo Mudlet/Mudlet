@@ -226,6 +226,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SingleLineTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header>SingleLineTextEdit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

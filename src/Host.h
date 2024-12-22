@@ -560,6 +560,7 @@ public:
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+    void editorThemeChanged();
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
@@ -722,6 +723,7 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void signal_editorThemeChanged();
 
 private slots:
     void slot_purgeTemps();
