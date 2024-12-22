@@ -398,7 +398,20 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
+# Enable sanitizers support
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
+set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
+set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
+
+set(MUDLET_SANITIZER
+      "address"
+      CACHE STRING
+      "Compile with sanitizers. Available sanitizers are: Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
+
+add_sanitizer_support(${MUDLET_SANITIZER})
+message(STATUS "Compiling with the following sanitizer(s) enabled: ${MUDLET_SANITIZER}")
+
 
 if(WITH_QT6)
 find_package(
