@@ -142,7 +142,9 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     // Set the previous details if saved
     QSettings settings("mudlet", "Mudlet");
     auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
-    ui->lineEdit_author->setText(packageAuthor);
+    if (!packageAuthor.isEmpty()) {
+        ui->lineEdit_author->setText(packageAuthor);
+    }
 
     // Ensure this dialog goes away if the Host (profile) is closed while we are
     // open - as this is parented to the mudlet instance rather than the Host
