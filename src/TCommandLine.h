@@ -105,7 +105,7 @@ private:
     void spellCheck();
     void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
-    bool historyMove(MoveDirection);
+    void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
