@@ -94,6 +94,9 @@ public:
     void setDataSaved() { if (mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
     void setDataChanged() { if (mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
     bool isDataChanged() { return mDataChanged; }
+    QString packageName(TAction* pAction);
+    QString moduleName(TAction* pAction);
+
 
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;

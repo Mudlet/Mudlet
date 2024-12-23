@@ -63,6 +63,10 @@ public:
     void setRegexCode(const QString&);
     void setCommand(const QString& command) { mCommand = command; }
     QString getCommand() const { return mCommand; }
+    QString packageName(TAlias* pAlias);
+    QString moduleName(TAlias* pAlias);
+
+
 
     bool match(const QString& toMatch);
     bool registerAlias();

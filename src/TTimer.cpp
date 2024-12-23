@@ -377,3 +377,36 @@ int TTimer::remainingTime()
     return mpQTimer->remainingTime();
 }
 
+QString TTimer::packageName(TTimer* pTimer)
+{
+    if (!pTimer) {
+        return QString();
+    }
+
+    if (!pTimer->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+    }
+
+    if (pTimer->getParent()) {
+        return packageName(pTimer->getParent());
+    }
+
+    return QString();
+}
+
+QString TTimer::moduleName(TTimer* pTimer)
+{
+    if (!pTimer) {
+        return QString();
+    }
+
+    if (!pTimer->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+    }
+
+    if (pTimer->getParent()) {
+        return moduleName(pTimer->getParent());
+    }
+
+    return QString();
+}
