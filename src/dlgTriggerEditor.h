@@ -310,7 +310,7 @@ private slots:
     void slot_floatingChangedEditorItemsToolbar();
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
-    void slot_triggerEdited();
+    void slot_itemEdited();
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -448,6 +448,13 @@ private:
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
     void checkForMoreThanOneTriggerItem();
+    TTrigger* getTriggerFromTreeItem(QTreeWidgetItem* item);
+    TAlias* getAliasFromTreeItem(QTreeWidgetItem* item);
+    TScript* getScriptFromTreeItem(QTreeWidgetItem* item);
+    TTimer* getTimerFromTreeItem(QTreeWidgetItem* item);
+    TKey* getKeyFromTreeItem(QTreeWidgetItem* item);
+    TAction* getActionFromTreeItem(QTreeWidgetItem* item);
+
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
     std::unordered_map<QString, QString> mButtonShortcuts = {
