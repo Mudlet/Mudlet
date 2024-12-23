@@ -136,19 +136,16 @@ void Updater::showDialogManually() const
 void Updater::showChangelog() const
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() {
-            qDebug() << "Changelog dialog is being shown, feed is ready";
-            qDebug() << feed;
-            showChangelog(); });
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() { showChangelog(); });
         feed->load();
-
         return;
     }
 
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
-    const auto previousVersion = getPreviousVersion();
-    qDebug() << "Updater::showChangelog() previous version is " << previousVersion;
-    changelogDialog->setPreviousVersion(previousVersion);
+    auto releases = feed->getReleases();
+    const auto firstVersion = releases.constLast().getVersion();
+    changelogDialog->setMinVersion(firstVersion);
+    changelogDialog->setMaxVersion(QApplication::applicationVersion());
     changelogDialog->show();
 }
 
