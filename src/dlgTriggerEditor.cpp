@@ -4444,7 +4444,8 @@ void dlgTriggerEditor::slot_triggerEdited()
     TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(triggerID);
 
     const auto packageName = trigger->packageName(trigger);
-    if (packageName.isEmpty() || mpHost->mModuleInfo.contains(packageName)) {
+    const auto moduleName = trigger->moduleName(trigger);
+    if (packageName.isEmpty()) {
         return;
     }
 
