@@ -357,16 +357,36 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
     ui->lineEdit_filePath->setPlaceholderText(path);
 }
 
-void dlgPackageExporter::checkToEnableExportButton()
+void dlgPackageExporter::checkToEnableExportButton() 
 {
-    if (ui->lineEdit_packageName->text().isEmpty() ||
-        ui->lineEdit_author->text().isEmpty() ||
-        ui->lineEdit_title->text().isEmpty() ||
-        ui->lineEdit_version->text().isEmpty() ||
-        ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
+    QStringList missingFields;
+    if (ui->lineEdit_packageName->text().isEmpty()) {
+        //: package name will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+        missingFields << tr("package name");
+    }
+    if (ui->lineEdit_author->text().isEmpty()) {
+        //: package author will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+        missingFields << tr("author"); 
+    }
+    if (ui->lineEdit_title->text().isEmpty()) {
+        //: package title will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+        missingFields << tr("title");
+    }
+    if (ui->lineEdit_version->text().isEmpty()) {
+        //: package version will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+        missingFields << tr("version");
+    }
+    if (ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
+        //: package description will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+        missingFields << tr("description");
+    }
+
+    if (!missingFields.isEmpty()) {
         mExportButton->setEnabled(false);
+        mExportButton->setToolTip(tr("Required fields missing: %1").arg(missingFields.join(qsl(", "))));
     } else {
-        mExportButton->setEnabled(true);
+        mExportButton->setEnabled(!mExportingPackage);
+        mExportButton->setToolTip(tr("Export package"));
     }
 }
 
