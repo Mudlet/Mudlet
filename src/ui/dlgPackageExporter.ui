@@ -285,7 +285,7 @@
              <property name="tabChangesFocus">
               <bool>true</bool>
              </property>
-             <property name="text" stdset="0">
+             <property name="text">
               <string>(required)
 
 This package description is shown in the package manager.  The editor supports Commonmark markdown.  Follow the description below for a thorough example of what to include in your package description.
