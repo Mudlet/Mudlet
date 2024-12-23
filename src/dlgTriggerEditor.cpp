@@ -4448,7 +4448,7 @@ void dlgTriggerEditor::slot_triggerEdited()
         return;
     }
 
-    showWarning(tr("Note: any changes you make to the package will be lost during the upgrade. Consider making a copy of the trigger outside the package first."));
+    showWarning(tr("For best preservation of your changes, consider copying this trigger before editing. Package upgrades may overwrite modifications."));
 }
 
 void dlgTriggerEditor::saveTrigger()
