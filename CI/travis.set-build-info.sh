@@ -59,7 +59,5 @@ if [ -n "$GITHUB_REPOSITORY" ]; then
 fi
 
 export VERSION
-# This no longer has a Git SHA1 appended, which it did previously for anything
-# other than a "Release" build:
 export MUDLET_VERSION_BUILD
 export BUILD_COMMIT

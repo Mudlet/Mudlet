@@ -8,23 +8,7 @@ sign_and_notarize () {
   codesign --deep -o runtime -s "$IDENTITY" "${appBundle}"
   echo "Signed final .dmg"
 
-  cat << EOF > gon.json
-{
-  "notarize": [{
-    "path": "${appBundle}",
-    "bundle_id": "mudlet",
-    "staple": true
-  }]
-}
-EOF
-
-  for i in {1..3}; do
-    echo "Trying to notarize (attempt ${i})"
-    if gon gon.json; then
-      break
-    fi
-  done
-
+  xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
 }
 
 BUILD_DIR="${BUILD_FOLDER}"
@@ -171,7 +155,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Downloading release feed ==="
       downloadedfeed=$(mktemp)
-      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/${ARCH}" --output-document="$downloadedfeed"
+      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/${ARCH_DBLSQD}" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
       cd "${SOURCE_DIR}" || exit
       changelog=$(lua "${SOURCE_DIR}/CI/generate-changelog.lua" --mode ptb --releasefile "${downloadedfeed}")
@@ -182,7 +166,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH} "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}"
     fi
   fi
 

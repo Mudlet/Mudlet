@@ -203,21 +203,17 @@ endif()
 
 if(APPLE)
   if(USE_UPDATER)
-    git_submodule_init(
-      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
-      "3rdparty/sparkle-glue" READABLE_NAME "Sparkle glue for updater")
-
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(
         STATUS "Sparkle is missing, fetching it..."
       )
-      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0/Sparkle-1.25.0.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.6.4.tar.xz"
         TIMEOUT 60  # seconds
         TLS_VERIFY ON
       )
-      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.6.4.tar.xz"
         DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.6.4.tar.xz")
     endif()
   endif()
 endif()
@@ -236,11 +232,6 @@ add_subdirectory(test)
 
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)
-
-  if(APPLE)
-    add_subdirectory(3rdparty/sparkle-glue)
-  endif()
-
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)

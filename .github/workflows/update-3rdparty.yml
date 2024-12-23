@@ -48,48 +48,6 @@ jobs:
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
 
-
-  update-sparkle-glue-fork:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: development
-          submodules: true
-          fetch-depth: 0
-
-      - name: update submodule to latest
-        run: git submodule update --remote 3rdparty/sparkle-glue/
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/sparkle-glue | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: 3rdparty/sparkle-glue
-          branch: update-sparkle-glue
-          commit-message: (autocommit) Updated sparkle-glue submodule to latest in our fork
-          title: "Infrastructure: Update sparkle-glue to latest in our fork"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update sparkle-glue to its latest in our fork.
-            #### Motivation for adding to Mudlet
-            Get new features, bugfixes, improvements! Stay modern.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-
   update-dblsqd-fork:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}

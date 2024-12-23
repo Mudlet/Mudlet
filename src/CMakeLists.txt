@@ -184,6 +184,16 @@ set(mudlet_SRCS
 
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
+  # Sparkle updater for macOS
+  list(APPEND mudlet_SRCS sparkleupdater.mm)
+  list(APPEND mudlet_HDRS sparkleupdater.h)
+  set_source_files_properties(
+    src/sparkleupdater.mm
+    src/sparkleupdater.h
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
@@ -388,7 +398,20 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
+# Enable sanitizers support
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
+set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
+set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
+
+set(MUDLET_SANITIZER
+      "address"
+      CACHE STRING
+      "Compile with sanitizers. Available sanitizers are: Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
+
+add_sanitizer_support(${MUDLET_SANITIZER})
+message(STATUS "Compiling with the following sanitizer(s) enabled: ${MUDLET_SANITIZER}")
+
 
 if(WITH_QT6)
 find_package(
@@ -633,7 +656,12 @@ if(APPLE)
   target_link_libraries(mudlet "-framework AppKit")
 
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue)
+    # need to specifically call out Objective-C sources so that automoc builds them.
+    target_sources(mudlet PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
+    find_package(Sparkle)
+    target_link_libraries(mudlet "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES

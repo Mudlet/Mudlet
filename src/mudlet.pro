@@ -562,14 +562,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/dblsqd")
         }
-
-        # Sparkle glue code - only needed for MacOs
-        macx {
-            !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-                message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
-                system("cd $${PWD}/.. ; git submodule update --init 3rdparty/sparkle-glue")
-            }
-        }
     }
 }
 
@@ -599,14 +591,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
         include("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
     } else {
         error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
-    }
-
-    macx {
-        # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle compilation below
-        !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-            error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
-        }
     }
 }
 
@@ -1603,15 +1587,8 @@ macx {
         QMAKE_LFLAGS += -F $$SPARKLE_PATH
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
-        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-        OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-            ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-        HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
-            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-            ../3rdparty/sparkle-glue/CocoaInitializer.h
-
+        OBJECTIVE_SOURCES += sparkleupdater.mm
+        HEADERS += sparkleupdater.h        
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework

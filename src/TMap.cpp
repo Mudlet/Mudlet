@@ -180,9 +180,7 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
         return false;
     }
 
-    pR->x = x;
-    pR->y = y;
-    pR->z = z;
+    pR->setCoordinates(x, y, z);
 
     setUnsaved(__func__);
     return true;
@@ -225,9 +223,9 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     const int ux = qRound(unitVector.x());
     const int uy = qRound(unitVector.y());
     const int uz = qRound(unitVector.z());
-    const int rx = pFromR->x;
-    const int ry = pFromR->y;
-    const int rz = pFromR->z;
+    const int rx = pFromR->x();
+    const int ry = pFromR->y();
+    const int rz = pFromR->z();
     int dx = 0;
     int dy = 0;
     int dz = 0;
@@ -251,20 +249,20 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
         }
 
         if (uz) {
-            dz = pToR->z - rz;
+            dz = pToR->z() - rz;
             if (!compSign(dz, uz) || !dz) {
                 continue;
             }
 
         } else {
             //to avoid lower/upper floors from stealing stubs
-            if (pToR->z != rz) {
+            if (pToR->z() != rz) {
                 continue;
             }
         }
 
         if (ux) {
-            dx = pToR->x - rx;
+            dx = pToR->x() - rx;
             if (!compSign(dx, ux) || !dx) {
                 //we do !dx pRto make sure we have a component in the desired direction
                 continue;
@@ -272,13 +270,13 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if (pToR->x != rx) {
+            if (pToR->x() != rx) {
                 continue;
             }
         }
 
         if (uy) {
-            dy = pToR->y - ry;
+            dy = pToR->y() - ry;
             //if the sign is the SAME here we keep it b/c we flip our y coordinate.
             if (compSign(dy, uy) || !dy) {
                 continue;
@@ -286,7 +284,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if (pToR->y != ry) {
+            if (pToR->y() != ry) {
                 continue;
             }
         }
@@ -588,9 +586,7 @@ void TMap::audit()
     QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     while (itArea.hasNext()) {
         itArea.next();
-        itArea.value()->determineAreaExits();
-        itArea.value()->calcSpan();
-        itArea.value()->mIsDirty = false;
+        itArea.value()->clean();
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
@@ -606,6 +602,7 @@ void TMap::audit()
     }
 }
 
+// This may be duplicating TArea class functionality:
 QList<int> TMap::detectRoomCollisions(int id)
 {
     QList<int> collList;
@@ -614,9 +611,9 @@ QList<int> TMap::detectRoomCollisions(int id)
         return collList;
     }
     const int area = pR->getArea();
-    const int x = pR->x;
-    const int y = pR->y;
-    const int z = pR->z;
+    const int x = pR->x();
+    const int y = pR->y();
+    const int z = pR->z();
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
         return collList;
@@ -629,7 +626,7 @@ QList<int> TMap::detectRoomCollisions(int id)
         if (!pR) {
             continue;
         }
-        if (pR->x == x && pR->y == y && pR->z == z) {
+        if (pR->x() == x && pR->y() == y && pR->z() == z) {
             collList.push_back(checkRoomId);
         }
     }
@@ -1304,9 +1301,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
         }
         ofs << pR->getArea();
-        ofs << pR->x;
-        ofs << pR->y;
-        ofs << pR->z;
+        ofs << pR->x();
+        ofs << pR->y();
+        ofs << pR->z();
         ofs << pR->getNorth();
         ofs << pR->getNortheast();
         ofs << pR->getEast();
