@@ -1261,7 +1261,7 @@ int TLuaInterpreter::permColorTrigger(lua_State* L)
         const QString warningMessage{tr("[ WARN ]  - a permanent Color trigger \"%1\" with ID: %2 has just been\n"
                                                     "created by a 'permColorTrigger(...)' call from the Lua API. However it\n"
                                                     "contained extra string arguments that are anticipated but not currently\n"
-                                                    "implimented in this Mudlet version. As such the trigger concerned will\n"
+                                                    "implemented in this Mudlet version. As such the trigger concerned will\n"
                                                     "probably not work as scripted.")
                                              .arg(name, QString::number(triggerId))};
         host.postMessage(warningMessage);
