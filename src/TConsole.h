@@ -115,6 +115,7 @@ public:
     void copy();
     void cut();
     void paste();
+    void clear();
     void appendBuffer();
     void appendBuffer(const TBuffer&);
     int getButtonState();
@@ -286,7 +287,7 @@ public:
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
-    bool mUserAgreedToCloseConsole = false;
+    QToolButton* replayButton = nullptr;
     QLineEdit* mpBufferSearchBox = nullptr;
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
@@ -345,7 +346,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
-    QDebugStateSaver const saver(debug);
+    const QDebugStateSaver saver(debug);
     switch (type) {
     case TConsole::UnknownType:           text = qsl("Unknown"); break;
     case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;

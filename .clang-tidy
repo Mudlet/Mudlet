@@ -7,6 +7,7 @@ Checks:  '# disable all checks by default
           bugprone-*
           clang-analyzer-*
           cppcoreguidelines-*
+          modernize-*
           mpi-*
           misc-*
           -readability-implicit-bool-conversion
@@ -15,6 +16,11 @@ Checks:  '# disable all checks by default
           -cppcoreguidelines-avoid-magic-numbers
           -readability-magic-numbers
           -readability-static-accessed-through-instance
+          -readability-avoid-nested-conditional-operator
+          -readability-avoid-return-with-void-value
+          -readability-redundant-casting
+          -readability-redundant-inline-specifier
+          -readability-use-std-min-max
           -cppcoreguidelines-pro-type-static-cast-downcast
           -bugprone-suspicious-enum-usage
           -readability-uppercase-literal-suffix

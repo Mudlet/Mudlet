@@ -46,6 +46,7 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
+#include "SingleLineTextEdit.h"
 
 #include "pre_guard.h"
 #include <QDialog>
@@ -293,6 +294,7 @@ public slots:
     void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
+    void slot_editorThemeChanged();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -440,12 +442,13 @@ private:
     void runScheduledCleanReset();
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
-    void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
+    void keyGrabCallback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
+    void checkForMoreThanOneTriggerItem();
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
     std::unordered_map<QString, QString> mButtonShortcuts = {
@@ -470,7 +473,7 @@ private:
         {tr("Debug"),      tr("Ctrl+0")}
     };
 
-    std::unordered_map<QLineEdit*, bool> lineEditShouldMarkSpaces;
+    std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
@@ -495,7 +498,7 @@ private:
     EditorViewType mCurrentView = EditorViewType::cmUnknownView;
 
     QScrollArea* mpScrollArea = nullptr;
-    QWidget* HpatternList = nullptr;
+    QWidget* mpWidget_triggerItems = nullptr;
     // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
     // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
     QWidget *mpNonCodeWidgets = nullptr;
@@ -562,6 +565,11 @@ private:
 
     // profile autosave interval in minutes
     int mAutosaveInterval = 2;
+
+    // The space recorded for the left side for "items" in the trigger area
+    // so as to be able to fit the right side with the extra controls,
+    // determined the first time the area is shrunk down by the user:
+    int mTriggerMainAreaMinimumHeightToShowAll = 0;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;

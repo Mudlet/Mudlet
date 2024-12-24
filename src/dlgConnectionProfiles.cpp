@@ -198,7 +198,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // Remove the marker:
         cursor.removeSelectedText();
         // Insert the current icon image into the same place:
-        QImage const image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
+        const QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
         cursor.insertImage(image_new);
         cursor.clearSelection();
 
@@ -207,7 +207,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                    "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
-        QImage const image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
+        const QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
         cursor.insertImage(image_connect);
         cursor.clearSelection();
     } else {
@@ -323,6 +323,29 @@ void dlgConnectionProfiles::slot_updateDescription()
 
         // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
     }
+}
+
+void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
+{
+    if (!packages.length()) {
+        return;
+    }
+
+    QWidget widget;
+    QGroupBox* packageGroupBox = new QGroupBox("Select and load a profile to install the following package(s) into:", this);
+    QVBoxLayout* packageInfoLayout = new QVBoxLayout(packageGroupBox);
+
+    packageInfoLayout->setContentsMargins(8, 8, 8, 8);
+    packageGroupBox->setStyleSheet("QGroupBox:title { padding-left: 8px; }");
+
+    for (const QString &package : packages) {
+        QFileInfo fileInfo(package);
+        QString packageName = fileInfo.baseName();
+        QLabel *packageLabel = new QLabel(packageName);
+        packageInfoLayout->addWidget(packageLabel);
+    }
+
+    layout()->addWidget(packageGroupBox);
 }
 
 // Not used:
@@ -587,12 +610,12 @@ void dlgConnectionProfiles::slot_addProfile()
     fillout_form();
     welcome_message->hide();
 
-    informationalArea->show();
+    informationArea->show();
     tabWidget_connectionInfo->show();
 
     const QString newname = tr("new profile name");
 
-    auto pItem = new QListWidgetItem();
+    auto pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
         return;
     }
@@ -755,16 +778,18 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 {
-    auto itDetails = TGameDetails::findGame(profile_name);
-    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
-        if (!(*itDetails).description.isEmpty()) {
-            return (*itDetails).description;
+    QString profileDesc = readProfileData(profile_name, qsl("description"));
+
+    if (profileDesc.isEmpty()) {
+        auto itDetails = TGameDetails::findGame(profile_name);
+        if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+            if (!(*itDetails).description.isEmpty()) {
+                return (*itDetails).description;
+            }
         }
     }
 
-    // Else, if there isn't a predefined text, return whatever the user might
-    // have stored:
-    return readProfileData(profile_name, qsl("description"));
+    return profileDesc;
 }
 
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
@@ -880,8 +905,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (const auto& entry : entries) {
-        QRegularExpression const rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        QRegularExpressionMatch const match = rx.match(entry);
+        const QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
+        const QRegularExpressionMatch match = rx.match(entry);
 
         if (match.capturedStart() != -1) {
             QString day;
@@ -922,6 +947,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
+        remove_profile_button->setEnabled(false);
+        remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
         port_entry->setReadOnly(true);
@@ -956,6 +984,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
             clearNotificationArea();
         }
+        remove_profile_button->setEnabled(true);
+        remove_profile_button->setToolTip(QString());
     }
 }
 
@@ -992,7 +1022,7 @@ void dlgConnectionProfiles::fillout_form()
     if (mProfileList.isEmpty()) {
         welcome_message->show();
         tabWidget_connectionInfo->hide();
-        informationalArea->hide();
+        informationArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1006,7 +1036,7 @@ void dlgConnectionProfiles::fillout_form()
         welcome_message->hide();
 
         tabWidget_connectionInfo->show();
-        informationalArea->show();
+        informationArea->show();
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
@@ -1067,7 +1097,7 @@ void dlgConnectionProfiles::fillout_form()
         const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
-            QDateTime const profile_lastRead = fileinfo.lastModified();
+            const QDateTime profile_lastRead = fileinfo.lastModified();
             // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
             // work as expected - so test for validity of the test_date value as well
             if ((!test_date.isValid()) || profile_lastRead > test_date) {
@@ -1250,11 +1280,17 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
     const QString imageLocation = QFileDialog::getOpenFileName(
-            this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
+            this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(imageLocation).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {
@@ -1422,7 +1458,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         profile_name = profile_name2;
     }
 
-    pItem = new QListWidgetItem();
+    pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
         return false;
     }
@@ -1532,59 +1568,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
-    HostManager& hostManager = mudlet::self()->getHostManager();
-    Host* pHost = hostManager.getHost(profile_name);
-    if (pHost) {
-        if (alsoConnect) {
-            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
-        }
-        QDialog::accept();
-        return;
-    }
-    // load an old profile if there is any
-    // PLACEMARKER: Host creation (1) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
-        pHost = hostManager.getHost(profile_name);
-        if (!pHost) {
-            return;
-        }
-    } else {
-        return;
-    }
-
-    const QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // pre-install packages when loading this profile for the first time
-    bool preInstallPackages = false;
-    pHost->hideMudletsVariables();
-    if (entries.isEmpty()) {
-        preInstallPackages = true;
-        pHost->mLoadedOk = true;
-    } else {
-        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
-        file.open(QFile::ReadOnly | QFile::Text);
-        XMLimport importer(pHost);
-
-        qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
-            //: %1 is the path and file name (i.e. the location) of the problem fil
-            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
-
-            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
-        } else {
-            pHost->mLoadedOk = true;
-        }
-
-        pHost->refreshPackageFonts();
-
-        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
-        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
-        }
-    }
+    Host *pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
@@ -1627,16 +1611,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
-        pHost->setupIreDriverBugfix();
-    }
-
-    mudlet::self()->updateMultiViewControls();
-
-    emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
-    emit mudlet::self()->signal_adjustAccessibleNames();
     emit signal_load_profile(profile_name, alsoConnect);
+    QDialog::accept();
 }
 
 bool dlgConnectionProfiles::validateProfile()
@@ -1899,7 +1875,7 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
-        QPixmap const pixmap(iconFileName);
+        const QPixmap pixmap(iconFileName);
         if (pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
@@ -1921,26 +1897,26 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 {
     QPixmap background(120, 30);
 
-    QColor const color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
+    const QColor color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
     background.fill(color);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
     QFont font(qsl("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
     // For an icon of size 120x30 allow 89x29 for the text:
-    QRect const textRectangle(0, 0, 89, 29);
+    const QRect textRectangle(0, 0, 89, 29);
     QRect testRect;
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
         font.setPointSize(--fontSize);
-        QFontMetrics const metrics(font);
+        const QFontMetrics metrics(font);
         testRect = metrics.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
         QPainter painter(&background);
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        QPixmap const pixmap(qsl(":/icons/mudlet_main_32px.png"));
+        const QPixmap pixmap(qsl(":/icons/mudlet_main_32px.png"));
         painter.drawPixmap(QRect(5, 5, 20, 20), pixmap);
         if (color.lightness() > 127) {
             painter.setPen(Qt::black);

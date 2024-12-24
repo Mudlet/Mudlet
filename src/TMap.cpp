@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -129,7 +129,7 @@ void TMap::logError(QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations)
+bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
@@ -155,7 +155,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
+    const bool result = pR->setArea(area, deferAreaRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
@@ -180,9 +180,7 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
         return false;
     }
 
-    pR->x = x;
-    pR->y = y;
-    pR->z = z;
+    pR->setCoordinates(x, y, z);
 
     setUnsaved(__func__);
     return true;
@@ -219,15 +217,15 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     }
 
     const int reverseDir = scmReverseDirections.value(dirType);
-    QVector3D const unitVector = scmUnitVectors.value(dirType);
+    const QVector3D unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!
     const int ux = qRound(unitVector.x());
     const int uy = qRound(unitVector.y());
     const int uz = qRound(unitVector.z());
-    const int rx = pFromR->x;
-    const int ry = pFromR->y;
-    const int rz = pFromR->z;
+    const int rx = pFromR->x();
+    const int ry = pFromR->y();
+    const int rz = pFromR->z();
     int dx = 0;
     int dy = 0;
     int dz = 0;
@@ -251,20 +249,20 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
         }
 
         if (uz) {
-            dz = pToR->z - rz;
+            dz = pToR->z() - rz;
             if (!compSign(dz, uz) || !dz) {
                 continue;
             }
 
         } else {
             //to avoid lower/upper floors from stealing stubs
-            if (pToR->z != rz) {
+            if (pToR->z() != rz) {
                 continue;
             }
         }
 
         if (ux) {
-            dx = pToR->x - rx;
+            dx = pToR->x() - rx;
             if (!compSign(dx, ux) || !dx) {
                 //we do !dx pRto make sure we have a component in the desired direction
                 continue;
@@ -272,13 +270,13 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if (pToR->x != rx) {
+            if (pToR->x() != rx) {
                 continue;
             }
         }
 
         if (uy) {
-            dy = pToR->y - ry;
+            dy = pToR->y() - ry;
             //if the sign is the SAME here we keep it b/c we flip our y coordinate.
             if (compSign(dy, uy) || !dy) {
                 continue;
@@ -286,7 +284,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if (pToR->y != ry) {
+            if (pToR->y() != ry) {
                 continue;
             }
         }
@@ -588,9 +586,7 @@ void TMap::audit()
     QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     while (itArea.hasNext()) {
         itArea.next();
-        itArea.value()->determineAreaExits();
-        itArea.value()->calcSpan();
-        itArea.value()->mIsDirty = false;
+        itArea.value()->clean();
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
@@ -606,6 +602,7 @@ void TMap::audit()
     }
 }
 
+// This may be duplicating TArea class functionality:
 QList<int> TMap::detectRoomCollisions(int id)
 {
     QList<int> collList;
@@ -614,9 +611,9 @@ QList<int> TMap::detectRoomCollisions(int id)
         return collList;
     }
     const int area = pR->getArea();
-    const int x = pR->x;
-    const int y = pR->y;
-    const int z = pR->z;
+    const int x = pR->x();
+    const int y = pR->y();
+    const int z = pR->z();
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
         return collList;
@@ -629,7 +626,7 @@ QList<int> TMap::detectRoomCollisions(int id)
         if (!pR) {
             continue;
         }
-        if (pR->x == x && pR->y == y && pR->z == z) {
+        if (pR->x() == x && pR->y() == y && pR->z() == z) {
             collList.push_back(checkRoomId);
         }
     }
@@ -1304,9 +1301,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
         }
         ofs << pR->getArea();
-        ofs << pR->x;
-        ofs << pR->y;
-        ofs << pR->z;
+        ofs << pR->x();
+        ofs << pR->y();
+        ofs << pR->z();
         ofs << pR->getNorth();
         ofs << pR->getNortheast();
         ofs << pR->getEast();
@@ -1344,7 +1341,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             qint8 oldCharacterCode = 0;
             if (pR->mSymbol.length()) {
                 // There is something for a symbol
-                QChar const firstChar = pR->mSymbol.at(0);
+                const QChar firstChar = pR->mSymbol.at(0);
                 if (pR->mSymbol.length() == 1 && firstChar.row() == 0 && firstChar.cell() > 32) {
                     // It is something that can be represented by the past unsigned short
                     oldCharacterCode = firstChar.toLatin1();
@@ -1768,7 +1765,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                     ifs >> pA->mUserData;
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
-                    qreal const fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
+                    const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
                     pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
                 }
                 if (mVersion >= 21) {
@@ -1956,7 +1953,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
+        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
             // This is a release/public test version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
@@ -2179,14 +2176,14 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    QRectF const lr = QRectF(0, 0, 1000, 1000);
+    const QRectF lr = QRectF(0, 0, 1000, 1000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
     lp.fillRect(lr, label.bgColor);
     QPen lpen;
     lpen.setColor(label.fgColor);
-    QFont const font(fontName.has_value() ? fontName.value() : QString(), fontSize);
+    const QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setRenderHint(QPainter::TextAntialiasing, true);
     lp.setPen(lpen);
     lp.setFont(font);
@@ -2195,7 +2192,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
 
     label.size = br.normalized().size();
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
-    QSizeF const s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
+    const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
 
@@ -2229,8 +2226,8 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.noScaling = false;
     label.temporary = temporary;
 
-    QRectF const drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
-    QPixmap const imagePixmap = QPixmap(imagePath);
+    const QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    const QPixmap imagePixmap = QPixmap(imagePath);
     QPixmap pix = QPixmap(drawRect.size().toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
@@ -3012,7 +3009,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
     // Convert the array of all the mCustomEnvColors into a QJsonValue so we
     // can add it to the map object:
-    QJsonValue const mCustomEnvColorsValue{customEnvColorArray};
+    const QJsonValue mCustomEnvColorsValue{customEnvColorArray};
     mapObj.insert(QLatin1String("customEnvColors"), mCustomEnvColorsValue);
 
     mapObj.insert(QLatin1String("mapSymbolFontDetails"), mMapSymbolFont.toString());
@@ -3024,11 +3021,11 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QJsonObject playerRoomInnerColorObj;
     writeJsonColor(playerRoomOuterColorObj, mPlayerRoomOuterColor);
     writeJsonColor(playerRoomInnerColorObj, mPlayerRoomInnerColor);
-    QJsonValue const playerRoomOuterColorValue{playerRoomOuterColorObj};
-    QJsonValue const playerRoomInnerColorValue{playerRoomInnerColorObj};
+    const QJsonValue playerRoomOuterColorValue{playerRoomOuterColorObj};
+    const QJsonValue playerRoomInnerColorValue{playerRoomInnerColorObj};
     playerRoomColorsArray.append(playerRoomOuterColorValue);
     playerRoomColorsArray.append(playerRoomInnerColorValue);
-    QJsonValue const playerRoomColorsValue{playerRoomColorsArray};
+    const QJsonValue playerRoomColorsValue{playerRoomColorsArray};
     mapObj.insert(QLatin1String("playerRoomColors"), playerRoomColorsValue);
     mapObj.insert(QLatin1String("playerRoomStyle"), static_cast<double>(mPlayerRoomStyle));
     mapObj.insert(QLatin1String("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
@@ -3074,10 +3071,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                     : qsl("could not open file \"%1\"").arg(source))};
     }
 
-    QByteArray const mapData = file.readAll();
+    const QByteArray mapData = file.readAll();
     file.close();
     QJsonParseError jsonErr;
-    QJsonDocument const doc(QJsonDocument::fromJson(mapData, &jsonErr));
+    const QJsonDocument doc(QJsonDocument::fromJson(mapData, &jsonErr));
     if (jsonErr.error != QJsonParseError::NoError) {
         return {false, (translatableTexts
                     ? tr("could not parse file, reason: \"%1\" at offset %2")
@@ -3165,7 +3162,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     QColor playerRoomInnerColor;
 
     if (mapObj.contains(QLatin1String("playerRoomColors")) && mapObj.value(QLatin1String("playerRoomColors")).isArray()) {
-        QJsonArray const playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
+        const QJsonArray playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
         if (playerRoomColorArray.size() == 2 && playerRoomColorArray.at(0).isObject() && playerRoomColorArray.at(1).isObject()) {
             playerRoomOuterColor = readJsonColor(playerRoomColorArray.at(0).toObject());
             playerRoomInnerColor = readJsonColor(playerRoomColorArray.at(1).toObject());
@@ -3191,7 +3188,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
         const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
         if (!customEnvColorArray.isEmpty()) {
-            for (const auto& customEnvColorValue : qAsConst(customEnvColorArray)) {
+            for (const auto& customEnvColorValue : std::as_const(customEnvColorArray)) {
                 const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
                 if (customEnvColorObj.contains(QLatin1String("id"))
                     && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
@@ -3322,10 +3319,10 @@ void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
     colorRGBAArray.append(static_cast<double>(color.blue()));
     if (color.alpha() < 255) {
         colorRGBAArray.append(static_cast<double>(color.alpha()));
-        QJsonValue const colorRGBAValue{colorRGBAArray};
+        const QJsonValue colorRGBAValue{colorRGBAArray};
         obj.insert(QLatin1String("color32RGBA"), colorRGBAValue);
     } else {
-        QJsonValue const colorRGBAValue{colorRGBAArray};
+        const QJsonValue colorRGBAValue{colorRGBAArray};
         obj.insert(QLatin1String("color24RGB"), colorRGBAValue);
     }
 }
@@ -3405,21 +3402,34 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     return mpProgressDialog->wasCanceled();
 }
 
+/**
+ * Update the the 2D and 3D map visually.
+ *
+ * It ensures debouncing internally to ensure that bulk calls are efficient.
+ */
 void TMap::update()
 {
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        mpM->update();
-    }
-#endif
-    if (mpMapper) {
-        mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+    static bool debounce;
+    if (!debounce) {
+        debounce = true;
+        QTimer::singleShot(0, this, [this]() {
+            debounce = false;
 
-        if (mpMapper->mp2dMap) {
-            mpMapper->mp2dMap->mNewMoveAction = true;
-            mpMapper->mp2dMap->update();
-        }
+#if defined(INCLUDE_3DMAPPER)
+            if (mpM) {
+                mpM->update();
+            }
+#endif
+            if (mpMapper) {
+                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+
+                if (mpMapper->mp2dMap) {
+                    mpMapper->mp2dMap->mNewMoveAction = true;
+                    mpMapper->mp2dMap->update();
+                }
+            }
+        });
     }
 }
 

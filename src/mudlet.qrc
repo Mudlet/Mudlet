@@ -2,18 +2,21 @@
     <qresource prefix="/">
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
+        <file>app-build.txt</file>
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>
+        <file>MedBootstrap.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
         <file>icons/3klogo.png</file>
         <file>icons/3slogo.png</file>
         <file>icons/aardwolf_mud.png</file>
-        <file>icons/accessories-text-editor.png</file>
-        <file>icons/achaea_120_30.png</file>
         <file>icons/abandonedrealms_icon.jpg</file>
+        <file>icons/accessories-text-editor.png</file>
+        <file>icons/accursed_lands.png</file>
+        <file>icons/achaea_120_30.png</file>
         <file>icons/aetolia_120_30.png</file>
         <file>icons/application-exit.png</file>
         <file>icons/application-json.png</file>
@@ -21,9 +24,9 @@
         <file>icons/applications-accessories.png</file>
         <file>icons/applications-engineering.png</file>
         <file>icons/applications-internet.png</file>
+        <file>icons/arrow-down_grey-16x.png</file>
         <file>icons/arrow-down-16x.png</file>
         <file>icons/arrow-down.png</file>
-        <file>icons/arrow-down_grey-16x.png</file>
         <file>icons/arrow-down_grey.png</file>
         <file>icons/arrow-right-16x.png</file>
         <file>icons/arrow-right.png</file>
@@ -33,6 +36,7 @@
         <file>icons/avalon.png</file>
         <file>icons/badge.png</file>
         <file>icons/batmud_mud.png</file>
+        <file>icons/blackmud.png</file>
         <file>icons/black_white_transparent_check_1x3_ratio.png</file>
         <file>icons/bookmarks.png</file>
         <file>icons/carrionfields.png</file>
@@ -120,6 +124,7 @@
         <file>icons/help-hint.png</file>
         <file>icons/imperian_120_30.png</file>
         <file>icons/import.png</file>
+        <file>icons/infinity_480x120.png</file>
         <file>icons/internet-telephony.png</file>
         <file>icons/legendsofthejedi_120x30.png</file>
         <file>icons/luminari_icon.png</file>
@@ -128,6 +133,7 @@
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>
+        <file>icons/medievia.png</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
         <file>icons/morgengrauen_480x120.png</file>
@@ -192,6 +198,8 @@
         <file>icons/variable.png</file>
         <file>icons/variables.png</file>
         <file>icons/view-filter.png</file>
+        <file>icons/view-fullscreen.png</file>
+        <file>icons/view-restore.png</file>
         <file>icons/view-split-left-right.png</file>
         <file>icons/view-statistics.png</file>
         <file>icons/window-close.png</file>
@@ -200,12 +208,13 @@
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua/gui-drop/gui-drop.xml</file>
         <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>splash/Mudlet_splashscreen_main.png</file>
-        <file>run-lua-code-v4.xml</file>
+        <file>run-lua-code.xml</file>
         <file>run-tests.xml</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>

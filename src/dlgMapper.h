@@ -53,6 +53,7 @@ public:
     // The button is the goto source for this bit of information:
     bool isIn3DMode() const { return pushButton_3D->isDown(); }
     bool isFloatAndDockable() const;
+    int getCurrentShownAreaIndex();
 
 public slots:
     void slot_toggleRoundRooms(const bool);

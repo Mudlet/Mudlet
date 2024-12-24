@@ -16,7 +16,7 @@
 				<packageName></packageName>
 				<script>function downloadPkg(a,b)
   echo("****Downloading package.")
-  downloadFile(getMudletHomeDir() .. "/CFGUI.zip", "https://github.com/Rahsael/CFGUI/releases/latest/download/CFGUI.zip")
+  downloadFile(getMudletHomeDir() .. "/CFGUI.zip", "https://github.com/carrionfields/CFGUI/releases/latest/download/CFGUI.zip")
 end
 
 function installReady(event, file)
@@ -24,7 +24,7 @@ function installReady(event, file)
   if not io.exists(getMudletHomeDir().."/CFGUI.zip") then 
     cecho([[&lt;gold&gt;To download the Carrion Fields Mudlet client, please copy and paste the following code into the command line:
     
-lua function d(a,b)if not b:find("CFGUI",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://github.com/Rahsael/CFGUI/releases/latest/download/CFGUI.zip")
+lua function d(a,b)if not b:find("CFGUI",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://github.com/carrionfields/CFGUI/releases/latest/download/CFGUI.zip")
     
 ]])
     return

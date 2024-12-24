@@ -80,9 +80,9 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
     QList<TRoom*> const roomList = mpRoomDB->getRoomPtrList();
     for (auto room : roomList) {
         const int id = room->getId();
-        const int x = room->x;
-        const int y = room->y;
-        const int z = room->z;
+        const int x = room->x();
+        const int y = room->y();
+        const int z = room->z();
         QMap<int, QMultiMap<int, int>> const _y;
         QMultiMap<int, int> const _z;
         if (!kS.contains(x)) {
@@ -104,7 +104,7 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
         const int roomId = itAreaRoom.next();
         TRoom* pR = mpRoomDB->getRoom(roomId);
         if (pR) {
-            if (pR->x == x && pR->y == y && pR->z == z) {
+            if (pR->x() == x && pR->y() == y && pR->z() == z) {
                 dL.push_back(roomId);
             }
         }
@@ -332,9 +332,9 @@ void TArea::fast_calcSpan(int id)
         return;
     }
 
-    const int x = pR->x;
-    const int y = pR->y;
-    const int z = pR->z;
+    const int x = pR->x();
+    const int y = pR->y();
+    const int z = pR->z();
     if (x > max_x) {
         max_x = x;
     }
@@ -389,72 +389,72 @@ void TArea::calcSpan()
 
         if (!isFirstDone) {
             // Only do this initialization for the first valid room
-            min_x = pR->x;
+            min_x = pR->x();
             max_x = min_x;
-            min_y = pR->y * -1;
+            min_y = pR->y() * -1;
             max_y = min_y;
-            min_z = pR->z;
+            min_z = pR->z();
             max_z = min_z;
-            zLevels.push_back(pR->z);
-            xminForZ.insert(pR->z, pR->x);
-            xmaxForZ.insert(pR->z, pR->x);
-            yminForZ.insert(pR->z, pR->y);
-            ymaxForZ.insert(pR->z, pR->y);
+            zLevels.push_back(pR->z());
+            xminForZ.insert(pR->z(), pR->x());
+            xmaxForZ.insert(pR->z(), pR->x());
+            yminForZ.insert(pR->z(), pR->y());
+            ymaxForZ.insert(pR->z(), pR->y());
             isFirstDone = true;
             continue;
         } else {
             // Already had one valid room so now must check more things
 
-            if (!zLevels.contains(pR->z)) {
-                zLevels.push_back(pR->z);
+            if (!zLevels.contains(pR->z())) {
+                zLevels.push_back(pR->z());
             }
 
-            if (!xminForZ.contains(pR->z)) {
-                xminForZ.insert(pR->z, pR->x);
-            } else if (pR->x < xminForZ.value(pR->z)) {
-                xminForZ.insert(pR->z, pR->x);
+            if (!xminForZ.contains(pR->z())) {
+                xminForZ.insert(pR->z(), pR->x());
+            } else if (pR->x() < xminForZ.value(pR->z())) {
+                xminForZ.insert(pR->z(), pR->x());
             }
 
-            if (pR->x < min_x) {
-                min_x = pR->x;
+            if (pR->x() < min_x) {
+                min_x = pR->x();
             }
 
-            if (!xmaxForZ.contains(pR->z)) {
-                xmaxForZ.insert(pR->z, pR->x);
-            } else if (pR->x > xmaxForZ.value(pR->z)) {
-                xmaxForZ.insert(pR->z, pR->x);
+            if (!xmaxForZ.contains(pR->z())) {
+                xmaxForZ.insert(pR->z(), pR->x());
+            } else if (pR->x() > xmaxForZ.value(pR->z())) {
+                xmaxForZ.insert(pR->z(), pR->x());
             }
 
-            if (pR->x > max_x) {
-                max_x = pR->x;
+            if (pR->x() > max_x) {
+                max_x = pR->x();
             }
 
-            if (!yminForZ.contains(pR->z)) {
-                yminForZ.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) < yminForZ.value(pR->z)) {
-                yminForZ.insert(pR->z, (-1 * pR->y));
+            if (!yminForZ.contains(pR->z())) {
+                yminForZ.insert(pR->z(), (-1 * pR->y()));
+            } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
+                yminForZ.insert(pR->z(), (-1 * pR->y()));
             }
 
-            if ((-1 * pR->y) < min_y) {
-                min_y = (-1 * pR->y);
+            if ((-1 * pR->y()) < min_y) {
+                min_y = (-1 * pR->y());
             }
 
-            if ((-1 * pR->y) > max_y) {
-                max_y = (-1 * pR->y);
+            if ((-1 * pR->y()) > max_y) {
+                max_y = (-1 * pR->y());
             }
 
-            if (!ymaxForZ.contains(pR->z)) {
-                ymaxForZ.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) > ymaxForZ.value(pR->z)) {
-                ymaxForZ.insert(pR->z, (-1 * pR->y));
+            if (!ymaxForZ.contains(pR->z())) {
+                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
+            } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
+                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             }
 
-            if (pR->z < min_z) {
-                min_z = pR->z;
+            if (pR->z() < min_z) {
+                min_z = pR->z();
             }
 
-            if (pR->z > max_z) {
-                max_z = pR->z;
+            if (pR->z() > max_z) {
+                max_z = pR->z();
             }
         }
     }
@@ -471,7 +471,7 @@ void TArea::calcSpan()
 // bool TRoom::setArea( int, bool )  -- the second arg there can be used for this
 // bool TRoomDB::__removeRoom( int ) -- automatically skipped for area deletion
 //                                      (when this would not be needed)
-void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
+void TArea::removeRoom(int room, bool deferAreaRecalculations)
 {
     static double cumulativeMean = 0.0;
     static quint64 runCount = 0;
@@ -480,22 +480,22 @@ void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
 
     // Will use to flag whether some things have to be recalculated.
     bool isOnExtreme = false;
-    if (rooms.contains(room) && !isToDeferAreaRelatedRecalculations) {
+    if (rooms.contains(room) && !deferAreaRecalculations) {
         // just a check, if the area DOESN'T have the room then it is not wise
         // to behave as if it did
         TRoom* pR = mpRoomDB->getRoom(room);
         if (pR) {
             // Now see if the room is on an extreme - if it the only room on a
             // particular z-coordinate it will be on all four
-            if (xminForZ.contains(pR->z) && xminForZ.value(pR->z) >= pR->x) {
+            if (xminForZ.contains(pR->z()) && xminForZ.value(pR->z()) >= pR->x()) {
                 isOnExtreme = true;
-            } else if (xmaxForZ.contains(pR->z) && xmaxForZ.value(pR->z) <= pR->x) {
+            } else if (xmaxForZ.contains(pR->z()) && xmaxForZ.value(pR->z()) <= pR->x()) {
                 isOnExtreme = true;
-            } else if (yminForZ.contains(pR->z) && yminForZ.value(pR->z) >= (-1 * pR->y)) {
+            } else if (yminForZ.contains(pR->z()) && yminForZ.value(pR->z()) >= (-1 * pR->y())) {
                 isOnExtreme = true;
-            } else if (ymaxForZ.contains(pR->z) && ymaxForZ.value(pR->z) <= (-1 * pR->y)) {
+            } else if (ymaxForZ.contains(pR->z()) && ymaxForZ.value(pR->z()) <= (-1 * pR->y())) {
                 isOnExtreme = true;
-            } else if (min_x >= pR->x || min_y >= (-1 * pR->y) || max_x <= pR->x || max_y <= (-1 * pR->y)) {
+            } else if (min_x >= pR->x() || min_y >= (-1 * pR->y()) || max_x <= pR->x() || max_y <= (-1 * pR->y())) {
                 isOnExtreme = true;
             }
         }
@@ -625,14 +625,14 @@ void TArea::writeJsonArea(QJsonArray& array) const
         // Must add on any remainder otherwise the total will be wrong:
         mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
     }
-    QJsonValue const roomsValue{roomsArray};
+    const QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
 
     // Process the labels after the rooms so that the first area shows something
     // quickly (from the rooms) even if it has a number of labels to do.
 
     writeJsonLabels(areaObj);
-    QJsonValue const areaValue{areaObj};
+    const QJsonValue areaValue{areaObj};
     array.append(areaValue);
 }
 
@@ -678,7 +678,7 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     QMapIterator<QString, QString> itDataItem(mUserData);
     while (itDataItem.hasNext()) {
         itDataItem.next();
-        QJsonValue const userDataValue{itDataItem.value()};
+        const QJsonValue userDataValue{itDataItem.value()};
         userDataObj.insert(itDataItem.key(), userDataValue);
     }
     const QJsonValue userDatasValue{userDataObj};
@@ -719,7 +719,7 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
             }
         }
     }
-    QJsonValue const labelsValue{labelArray};
+    const QJsonValue labelsValue{labelArray};
     obj.insert(QLatin1String("labels"), labelsValue);
 }
 
@@ -755,7 +755,7 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     //: Default text if a label is created in mapper with no text
     if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text")))) {
         // Don't include the text if it is am image:
-        QJsonValue const textValue{pLabel->text};
+        const QJsonValue textValue{pLabel->text};
         labelObj.insert(QLatin1String("text"), textValue);
     }
 
@@ -778,11 +778,11 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         QJsonObject backgroundColorObj;
         TMap::writeJsonColor(foregroundColorObj, pLabel->fgColor);
         TMap::writeJsonColor(backgroundColorObj, pLabel->bgColor);
-        QJsonValue const foregroundColorValue{foregroundColorObj};
-        QJsonValue const backgroundColorValue{backgroundColorObj};
+        const QJsonValue foregroundColorValue{foregroundColorObj};
+        const QJsonValue backgroundColorValue{backgroundColorObj};
         colorsArray.append(foregroundColorValue);
         colorsArray.append(backgroundColorValue);
-        QJsonValue const colorsValue{colorsArray};
+        const QJsonValue colorsValue{colorsArray};
         labelObj.insert(QLatin1String("colors"), colorsValue);
     }
 
@@ -824,7 +824,7 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         // assembled the operator== is too picky for our purposes as even the
         // way the colour was put together (color spec type) can make them NOT
         // seem to be the same when we'd think they were...
-        QJsonArray const colorsArray = labelObj.value(QLatin1String("colors")).toArray();
+        const QJsonArray colorsArray = labelObj.value(QLatin1String("colors")).toArray();
         label.fgColor = TMap::readJsonColor(colorsArray.at(0).toObject());
         label.bgColor = TMap::readJsonColor(colorsArray.at(1).toObject());
     } else {
@@ -832,7 +832,7 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         label.bgColor = defaultLabelBackground;
     }
 
-    QJsonArray const imageArray = labelObj.value(QLatin1String("image")).toArray();
+    const QJsonArray imageArray = labelObj.value(QLatin1String("image")).toArray();
     QList<QByteArray> pixmapData;
     for (int i = 0, total = imageArray.size(); i < total; ++i) {
         pixmapData.append(imageArray.at(i).toString().toLatin1());
@@ -871,7 +871,7 @@ QSizeF TArea::readJsonSize(const QJsonObject& obj, const QString& title) const
         return size;
     }
 
-    QJsonArray const valueArray = obj.value(title).toArray();
+    const QJsonArray valueArray = obj.value(title).toArray();
     if (valueArray.at(0).isDouble()) {
         size.setWidth(valueArray.at(0).toDouble());
     }
@@ -898,7 +898,7 @@ QVector3D TArea::readJson3DCoordinates(const QJsonObject& obj, const QString& ti
         return position;
     }
 
-    QJsonArray const valueArray = obj.value(title).toArray();
+    const QJsonArray valueArray = obj.value(title).toArray();
     if (valueArray.at(0).isDouble()) {
         position.setX(valueArray.at(0).toDouble());
     }
@@ -943,7 +943,7 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 
 QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) const
 {
-    QByteArray const decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
+    const QByteArray decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
     QPixmap pixmap;
     pixmap.loadFromData(decodedImageArray);
 
@@ -979,5 +979,14 @@ void TArea::set2DMapZoom(const qreal zoom)
 {
     if (zoom >= T2DMap::csmMinXYZoom) {
         mLast2DMapZoom = zoom;
+    }
+}
+
+void TArea::clean()
+{
+    if (mIsDirty) {
+        determineAreaExits();
+        calcSpan();
+        mIsDirty = false;
     }
 }

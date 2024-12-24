@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021, 2023 by Stephen Lyons                       *
+ *   Copyright (C) 2017, 2021, 2023-2024 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -80,15 +80,24 @@ TAction* ActionUnit::findAction(const QString& name)
     return nullptr;
 }
 
-std::vector<TAction*> ActionUnit::findActionsByName(const QString& name)
+std::vector<int> ActionUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    std::vector<TAction*> actions;
-    for (auto action : qAsConst(mActionMap)) {
-        if (action->getName() == name) {
-            actions.push_back(action);
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : std::as_const(mActionMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : std::as_const(mActionMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
         }
     }
-    return actions;
+    return ids;
 }
 
 void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)

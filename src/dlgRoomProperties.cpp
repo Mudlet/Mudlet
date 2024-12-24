@@ -313,7 +313,7 @@ void dlgRoomProperties::accept()
     // Find symbol to return back
     const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
-    QColor const newSymbolColor = selectedSymbolColor;
+    const QColor newSymbolColor = selectedSymbolColor;
     bool changeSymbolColor = true;
     if (newSymbol == multipleValuesPlaceholder) {
         // We don't want to change then
@@ -362,8 +362,8 @@ QString dlgRoomProperties::getNewSymbol()
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
     // Parse the initial text before the curly braces containing count
-    QRegularExpression const countStripper(qsl("^(.*) {.*}$"));
-    QRegularExpressionMatch const match = countStripper.match(newSymbolText);
+    const QRegularExpression countStripper(qsl("^(.*) {.*}$"));
+    const QRegularExpressionMatch match = countStripper.match(newSymbolText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1);
     }
@@ -381,8 +381,8 @@ int dlgRoomProperties::getNewWeight()
         return -1; // User did not want to select any weight, so we will do no change
     }
     // Parse an initial number out of what was selected or typed
-    QRegularExpression const countStripper(qsl("^\\s*(\\d+)"));
-    QRegularExpressionMatch const match = countStripper.match(newWeightText);
+    const QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
+    const QRegularExpressionMatch match = countStripper.match(newWeightText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1).toInt();
     }
@@ -419,8 +419,8 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
     auto font = mpHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
     if (!symbolString.isEmpty()) {
-        QFontMetrics const mapSymbolFontMetrics = QFontMetrics(font);
-        QVector<quint32> const codePoints = symbolString.toUcs4();
+        const QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
+        const QVector<quint32> codePoints = symbolString.toUcs4();
         QVector<bool> isUsable;
         for (int i = 0; i < codePoints.size(); ++i) {
             isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));

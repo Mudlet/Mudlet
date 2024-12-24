@@ -292,6 +292,8 @@ public:
     int getMaxBufferSize();
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
+    void appendLog(const QString &text);
+
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
@@ -317,6 +319,8 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
+    inline static const QString csmTimeStampFormat = qsl("hh:mm:ss.zzz ");
+    inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
     void shrinkBuffer();
@@ -413,7 +417,7 @@ private:
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes)
 {
-    QDebugStateSaver const saver(debug);
+    const QDebugStateSaver saver(debug);
     QString result = QLatin1String("TChar::AttributeFlags(");
     QStringList presentAttributes;
     if (attributes & TChar::Bold) {

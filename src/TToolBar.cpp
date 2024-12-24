@@ -62,6 +62,9 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
+    if (mpHost.isNull()) {
+        return;
+    }
     mpHost->setToolbarLayoutUpdated(this);
 }
 
@@ -77,7 +80,7 @@ void TToolBar::setName(const QString& name)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if (!mpTAction) {
+    if (!mpTAction||mpHost.isNull()) {
         return;
     }
 
@@ -114,7 +117,7 @@ void TToolBar::addButton(TFlipButton* pB)
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
     } else {
-        QSize const size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        const QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
@@ -169,7 +172,7 @@ void TToolBar::finalize()
         return;
     }
     auto fillerWidget = new QWidget;
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     fillerWidget->setSizePolicy(sizePolicy);
     int columns = mpTAction->getButtonColumns();
     if (columns <= 0) {
@@ -224,7 +227,7 @@ void TToolBar::clear()
         mpLayout = new QGridLayout(mpWidget);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
         mpLayout = nullptr;
@@ -238,6 +241,9 @@ void TToolBar::clear()
 // Needed to detect mouse clicking on areas not covered by a button or menu:
 void TToolBar::mousePressEvent(QMouseEvent* e)
 {
+    if (mpHost.isNull()) {
+        return;
+    }
     if (e->button() & Qt::AllButtons) {
         // move focus back to the active console / command line
         mpHost->setFocusOnHostActiveCommandLine();

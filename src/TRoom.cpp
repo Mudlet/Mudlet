@@ -278,7 +278,7 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
     }
 }
 
-int TRoom::getDoor(const QString& cmd)
+int TRoom::getDoor(const QString& cmd) const
 {
     return doors.value(cmd, 0);
     // Second argument is the result if cmd is not in the doors QMap
@@ -297,7 +297,7 @@ void TRoom::setId(const int roomId)
 // There IS a theoretical risk that if the last called room "doesn't exist" then
 // the area related recalculations won't get done - so had better provide an
 // alternative means to do them as a fault recovery
-bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
+bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
 {
     static QSet<TArea*> dirtyAreas;
     TArea* pA = mpRoomDB->getArea(areaID);
@@ -316,7 +316,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
     //remove from the old area
     TArea* pA2 = mpRoomDB->getArea(area);
     if (pA2) {
-        pA2->removeRoom(id, isToDeferAreaRelatedRecalculations);
+        pA2->removeRoom(id, deferAreaRecalculations);
         // Ah, all rooms in the OLD area that led to the room now become area
         // exits for that OLD area {so must run determineAreaExits() for the
         // old area after the room has moved to the new area see other
@@ -339,13 +339,11 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
     dirtyAreas.insert(pA);
     pA->mIsDirty = true;
 
-    if (!isToDeferAreaRelatedRecalculations) {
+    if (!deferAreaRecalculations) {
         QSetIterator<TArea*> itpArea = dirtyAreas;
         while (itpArea.hasNext()) {
             TArea* pArea = itpArea.next();
-            pArea->calcSpan();
-            pArea->determineAreaExits();
-            pArea->mIsDirty = false;
+            pArea->clean();
         }
         dirtyAreas.clear();
     }
@@ -646,10 +644,10 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
 
 void TRoom::calcRoomDimensions()
 {
-    min_x = x;
-    max_x = x;
-    min_y = y;
-    max_y = y;
+    min_x = mX;
+    max_x = mX;
+    min_y = mY;
+    max_y = mY;
 
     if (customLines.empty()) {
         return;
@@ -663,8 +661,8 @@ void TRoom::calcRoomDimensions()
             continue;
         }
         for (auto pointInLine : pointsInLine) {
-            qreal const pointX = pointInLine.x();
-            qreal const pointY = pointInLine.y();
+            const qreal pointX = pointInLine.x();
+            const qreal pointY = pointInLine.y();
             if (pointX < min_x) {
                 min_x = pointX;
             }
@@ -687,9 +685,9 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     ifs >> area;
     // Can be useful when analysing suspect map files!
     //     qDebug() << "TRoom::restore(...," << roomID << ",...) has AreaId:" << area;
-    ifs >> x;
-    ifs >> y;
-    ifs >> z;
+    ifs >> mX;
+    ifs >> mY;
+    ifs >> mZ;
     ifs >> north;
     ifs >> northeast;
     ifs >> east;
@@ -1693,14 +1691,14 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
     roomObj.insert(QLatin1String("id"), static_cast<double>(id));
 
     if (!name.isEmpty()) {
-        QJsonValue const nameValue{name};
+        const QJsonValue nameValue{name};
         roomObj.insert(QLatin1String("name"), nameValue);
     }
 
     QJsonArray coordinateArray;
-    coordinateArray.append(static_cast<double>(x));
-    coordinateArray.append(static_cast<double>(y));
-    coordinateArray.append(static_cast<double>(z));
+    coordinateArray.append(static_cast<double>(mX));
+    coordinateArray.append(static_cast<double>(mY));
+    coordinateArray.append(static_cast<double>(mZ));
     const QJsonValue coordinatesValue{coordinateArray};
     roomObj.insert(QLatin1String("coordinates"), coordinatesValue);
 
@@ -1749,9 +1747,9 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
 
     const QJsonArray coordinatesArray = roomObj.value(QLatin1String("coordinates")).toArray();
-    x = coordinatesArray.at(0).toInt();
-    y = coordinatesArray.at(1).toInt();
-    z = coordinatesArray.at(2).toInt();
+    mX = coordinatesArray.at(0).toInt();
+    mY = coordinatesArray.at(1).toInt();
+    mZ = coordinatesArray.at(2).toInt();
 
     if (roomObj.contains(QLatin1String("locked")) && roomObj.value(QLatin1String("locked")).toBool()) {
         isLocked = true;
@@ -2143,16 +2141,16 @@ void TRoom::readJsonCustomExitLine(const QJsonObject& exitObj, const QString& di
         return;
     }
 
-    QJsonArray const customLinePointsArray = customLineObj.value(QLatin1String("coordinates")).toArray();
+    const QJsonArray customLinePointsArray = customLineObj.value(QLatin1String("coordinates")).toArray();
     if (customLinePointsArray.isEmpty()) {
         return;
     }
 
     QList<QPointF> points;
     for (int i = 0, total = customLinePointsArray.count(); i < total; ++i) {
-        QJsonArray const customLinePointCoordinateArray = customLinePointsArray.at(i).toArray();
+        const QJsonArray customLinePointCoordinateArray = customLinePointsArray.at(i).toArray();
         if (customLinePointCoordinateArray.size() == 2 && customLinePointCoordinateArray.at(0).isDouble() && customLinePointCoordinateArray.at(1).isDouble()) {
-            QPointF const point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
+            const QPointF point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
 
             // We might wish to consider if there is a z in the future to
             // accommodate 3D custom lines...!
@@ -2314,7 +2312,7 @@ void TRoom::writeJsonHighlight(QJsonObject& obj) const
     }
 
     highlightObj.insert(QLatin1String("radius"), static_cast<double>(highlightRadius));
-    QJsonValue const highlightValue{highlightObj};
+    const QJsonValue highlightValue{highlightObj};
     obj.insert(QLatin1String("highlight"), highlightValue);
 }
 
@@ -2358,8 +2356,9 @@ void TRoom::readJsonSymbol(const QJsonObject& roomObj)
         mSymbol = symbolObj.value(QLatin1String("text")).toString();
     }
 
-    QColor const color = TMap::readJsonColor(symbolObj);
+    const QColor color = TMap::readJsonColor(symbolObj);
     if (color.isValid()) {
         mSymbolColor = color;
     }
 }
+
