@@ -3957,7 +3957,7 @@ void mudlet::showChangelogIfUpdated()
 }
 #endif // INCLUDE_UPDATER
 
-Host* mudlet::loadProfile(const QString& profile_name, bool playOnline)
+Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, const QString& saveFileName)
 {
     Host* pHost = mHostManager.getHost(profile_name);
     if (pHost) {
@@ -3998,7 +3998,7 @@ Host* mudlet::loadProfile(const QString& profile_name, bool playOnline)
         preInstallPackages = true;
         pHost->mLoadedOk = true;
     } else {
-        QFile file(qsl("%1%2").arg(folder, entries.at(0)));
+        QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
 
@@ -5056,6 +5056,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/echo.xml"),               {qsl("*")}},
         {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
+        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.xml"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
         {qsl(":/mg-loader.xml"),          {qsl("mg.mud.de")}},
         {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},

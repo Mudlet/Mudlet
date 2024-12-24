@@ -350,7 +350,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
-    Host* loadProfile(const QString&, bool);
+    Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }

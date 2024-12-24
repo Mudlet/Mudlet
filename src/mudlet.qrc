@@ -208,6 +208,7 @@
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua/gui-drop/gui-drop.xml</file>
         <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>

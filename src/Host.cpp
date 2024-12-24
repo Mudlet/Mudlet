@@ -262,45 +262,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
-, mBlack(QColorConstants::Black)
-, mLightBlack(QColorConstants::DarkGray)
-, mRed(QColorConstants::DarkRed)
-, mLightRed(QColorConstants::Red)
-, mLightGreen(QColorConstants::Green)
-, mGreen(QColorConstants::DarkGreen)
-, mLightBlue(QColorConstants::Blue)
-, mBlue(QColorConstants::DarkBlue)
-, mLightYellow(QColorConstants::Yellow)
-, mYellow(QColorConstants::DarkYellow)
-, mLightCyan(QColorConstants::Cyan)
-, mCyan(QColorConstants::DarkCyan)
-, mLightMagenta(QColorConstants::Magenta)
-, mMagenta(QColorConstants::DarkMagenta)
-, mLightWhite(QColorConstants::White)
-, mWhite(QColorConstants::LightGray)
-, mFgColor(QColorConstants::LightGray)
-, mBgColor(QColorConstants::Black)
-, mCommandBgColor(QColorConstants::Black)
-, mCommandFgColor(QColor(113, 113, 0))
-, mBlack_2(QColorConstants::Black)
-, mLightBlack_2(QColorConstants::DarkGray)
-, mRed_2(QColorConstants::DarkRed)
-, mLightRed_2(QColorConstants::Red)
-, mLightGreen_2(QColorConstants::Green)
-, mGreen_2(QColorConstants::DarkGreen)
-, mLightBlue_2(QColorConstants::Blue)
-, mBlue_2(QColorConstants::DarkBlue)
-, mLightYellow_2(QColorConstants::Yellow)
-, mYellow_2(QColorConstants::DarkYellow)
-, mLightCyan_2(QColorConstants::Cyan)
-, mCyan_2(QColorConstants::DarkCyan)
-, mLightMagenta_2(QColorConstants::Magenta)
-, mMagenta_2(QColorConstants::DarkMagenta)
-, mLightWhite_2(QColorConstants::White)
-, mWhite_2(QColorConstants::LightGray)
-, mFgColor_2(QColorConstants::LightGray)
-, mBgColor_2(QColorConstants::Black)
-, mRoomBorderColor(QColorConstants::LightGray)
 , mMapStrongHighlight(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
@@ -814,11 +775,6 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 moduleEntry << moduleLocation;
                 moduleEntry << qsl("0");
                 mInstalledModules[moduleName] = moduleEntry;
-                //Write the module to the own profile directory to save it on restart
-                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-                auto writer = new XMLexport(this);
-                writers.insert(fileName, writer);
-                writer->writeModuleXML(moduleName, fileName, true);
             } else {
                 uninstallPackage(moduleName, 2);
                 installPackage(fileName, 2);
@@ -945,7 +901,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
+        // If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
@@ -960,22 +916,25 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
-        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
-                                     << mHostName
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
-
-    emit profileSaveStarted();
-    qApp->processEvents();
 
     auto writer = new XMLexport(this);
     writers.insert(qsl("profile"), writer);
     writer->exportHost(filename_xml);
     mWritingHostAndModules = true;
+
+    // emit signal to notify the UI that the save button should get disabled momentarily
+    // this needs to run after `writers` and `mWritingHostAndModules` have been set
+    // so that the currentlySavingProfile() check can run properly
+    emit profileSaveStarted();
+    qApp->processEvents();
+
     auto watcher = new QFutureWatcher<void>;
     mModuleFuture = QtConcurrent::run([=]() {
-        //wait for the host xml to be ready before starting to sync modules
+        // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });

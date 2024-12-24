@@ -159,7 +159,7 @@ static void pcre_deleter(pcre* pointer)
 }
 
 //FIXME: lock if code *OR* regex doesn't compile
-bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
+bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
@@ -189,95 +189,96 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: patternKinds.size() != patterns.size()";
     }
 
-    if ((patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        setError(qsl("<b><font color='blue'>%1</font></b>")
-                .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
+    if (existingTrigger && (patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
+        setError(tr("error: this trigger has no patterns defined"));
         mOK_init = false;
         return false;
     }
 
     bool state = true;
 
-    for (int i = 0; i < patterns.size(); i++) {
-        if (patterns.at(i).isEmpty() && patternKinds.at(i) != REGEX_PROMPT) {
-            continue;
-        }
-
-        mPatterns.append(patterns.at(i));
-        mPatternKinds.append(patternKinds.at(i));
-
-        if (patternKinds.at(i) == REGEX_PERL) {
-            const char* error;
-            const QByteArray& regexp = patterns.at(i).toUtf8();
-
-            int erroffset;
-
-            // PCRE_UTF8 needed to run compile in UTF-8 mode
-            // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
-            QSharedPointer<pcre> const re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
-
-            if (!re) {
-                if (mudlet::smDebugMode) {
-                    TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
-                    TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
-                }
-                setError(qsl("<b><font color='blue'>%1</font></b>")
-                         .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
-                         .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
-                state = false;
-            } else {
-                if (mudlet::smDebugMode) {
-                    TDebug(Qt::white, Qt::darkGreen) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
-                }
-            }
-            mRegexMap[i] = re;
-            mTriggerContainsPerlRegex = true;
-        }
-
-        if (patternKinds.at(i) == REGEX_LUA_CODE) {
-            std::string funcName;
-            std::stringstream func;
-            func << "trigger" << mID << "condition" << i;
-            funcName = func.str();
-            const QString code = qsl("function %1() %2\nend").arg(funcName.c_str(), patterns[i]);
-            QString error;
-            if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
-                setError(qsl("<b><font color='blue'>%1</font></b>")
-                         .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
-                         .arg(QString::number(i + 1), patterns.at(i), QString(error).toHtmlEscaped())));
-                state = false;
-                if (mudlet::smDebugMode) {
-                    TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
-                    TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in lua condition function: ")" << patterns.at(i) << "\"\n" >> mpHost;
-                }
-            } else {
-                mLuaConditionMap[i] = funcName;
-            }
-        }
-
-        if (patternKinds[i] == REGEX_COLOR_PATTERN) {
-            int textAnsiFg = scmIgnored;
-            int textAnsiBg = scmIgnored;
-            // Decode the pattern string to the colour codes wanted:
-            TTrigger::decodeColorPatternText(patterns.at(i), textAnsiFg, textAnsiBg);
-
-            if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
-                setError(qsl("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
-                                      .arg(QString::number(i+1))));
-                state = false;
+    if (existingTrigger) {
+        for (int i = 0; i < patterns.size(); i++) {
+            if (patterns.at(i).isEmpty() && patternKinds.at(i) != REGEX_PROMPT) {
                 continue;
             }
 
-            // The setupColorTrigger(...) method will push_back the created
-            // TColorTable instance if it is successful:
-            if (!setupColorTrigger(textAnsiFg, textAnsiBg)) {
+            mPatterns.append(patterns.at(i));
+            mPatternKinds.append(patternKinds.at(i));
+
+            if (patternKinds.at(i) == REGEX_PERL) {
+                const char* error;
+                const QByteArray& regexp = patterns.at(i).toUtf8();
+
+                int erroffset;
+
+                // PCRE_UTF8 needed to run compile in UTF-8 mode
+                // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
+                QSharedPointer<pcre> const re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+
+                if (!re) {
+                    if (mudlet::smDebugMode) {
+                        TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
+                        TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
+                    }
+                    setError(qsl("<b><font color='blue'>%1</font></b>")
+                             .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
+                             .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
+                    state = false;
+                } else {
+                    if (mudlet::smDebugMode) {
+                        TDebug(Qt::white, Qt::darkGreen) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
+                    }
+                }
+                mRegexMap[i] = re;
+                mTriggerContainsPerlRegex = true;
+            }
+
+            if (patternKinds.at(i) == REGEX_LUA_CODE) {
+                std::string funcName;
+                std::stringstream func;
+                func << "trigger" << mID << "condition" << i;
+                funcName = func.str();
+                const QString code = qsl("function %1() %2\nend").arg(funcName.c_str(), patterns[i]);
+                QString error;
+                if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
+                    setError(qsl("<b><font color='blue'>%1</font></b>")
+                             .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
+                             .arg(QString::number(i + 1), patterns.at(i), QString(error).toHtmlEscaped())));
+                    state = false;
+                    if (mudlet::smDebugMode) {
+                        TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
+                        TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in lua condition function: ")" << patterns.at(i) << "\"\n" >> mpHost;
+                    }
+                } else {
+                    mLuaConditionMap[i] = funcName;
+                }
+            }
+
+            if (patternKinds[i] == REGEX_COLOR_PATTERN) {
+                int textAnsiFg = scmIgnored;
+                int textAnsiBg = scmIgnored;
+                // Decode the pattern string to the colour codes wanted:
+                TTrigger::decodeColorPatternText(patterns.at(i), textAnsiFg, textAnsiBg);
+
+                if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
+                    setError(qsl("<b><font color='blue'>%1</font></b>")
+                                     .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
+                                          .arg(QString::number(i+1))));
+                    state = false;
+                    continue;
+                }
+
+                // The setupColorTrigger(...) method will push_back the created
+                // TColorTable instance if it is successful:
+                if (!setupColorTrigger(textAnsiFg, textAnsiBg)) {
+                    mColorPatternList.push_back(nullptr);
+                    state = false;
+                    continue;
+                }
+            } else {
                 mColorPatternList.push_back(nullptr);
-                state = false;
-                continue;
             }
-        } else {
-            mColorPatternList.push_back(nullptr);
         }
     }
 
