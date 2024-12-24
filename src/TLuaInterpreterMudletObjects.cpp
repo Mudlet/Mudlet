@@ -1227,9 +1227,17 @@ int TLuaInterpreter::permColorTrigger(lua_State* L)
         lua_pop(L, 1);
 
         const auto patternText{TTrigger::createColorPatternText(foregroundColor.value_or(TTrigger::scmIgnored), backgroundColor.value_or(TTrigger::scmIgnored))};
-        regList << patternText;
+        if (!patternText.isEmpty()) {
+            // This test will fail for a trigger with just a ignore foreground
+            // or ignore both fore and background colors and we do not want those
+            // in the items:
+            regList << patternText;
+        }
     }
 
+    if (regList.isEmpty()) {
+        return warnArgumentValue(L, __func__, "no valid items found in argument #3, trigger not created");
+    }
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
