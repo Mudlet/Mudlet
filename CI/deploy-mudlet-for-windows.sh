@@ -173,6 +173,7 @@ else
     echo "=== Creating a public test build ==="
     # Squirrel uses Start menu name from the binary, renaming it
     mv "$PACKAGE_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet PTB.exe"
+    echo "moved mudlet.exe to $PACKAGE_DIR/Mudlet PTB.exe"
     # ensure sha part always starts with a character due to a known issue
     VersionAndSha="${VERSION}-ptb-${BUILD_COMMIT}"
 
@@ -185,6 +186,26 @@ else
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "$GITHUB_WORKSPACE/installers"
   cd "$GITHUB_WORKSPACE/installers/windows" || exit 1
+
+  echo "=== Setting up Java 21 for signing ==="
+  export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
+  export PATH="$JAVA_HOME/bin:$PATH"
+
+  echo "=== Signing Mudlet and dll files ==="
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+        --keystore eus.codesigning.azure.net \
+        --storepass ${AZURE_ACCESS_TOKEN} \
+        --alias Mudlet/Mudlet \
+        "$PACKAGE_DIR/Mudlet PTB.exe" "$PACKAGE_DIR/**/*.dll"
+
+  else
+    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass ${AZURE_ACCESS_TOKEN} \
+      --alias Mudlet/Mudlet \
+      "$PACKAGE_DIR/Mudlet.exe" "$PACKAGE_DIR/**/*.dll"
+  fi
 
   echo "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
@@ -224,7 +245,7 @@ else
   # Create NuGet package
   nuget pack "$NuSpec" -Version "$VersionAndSha" -BasePath "$SQUIRRELWIN" -OutputDirectory "$SQUIRRELWIN"
 
-  echo "=== Creating installers from Nuget package ==="
+  echo "=== Preparing to create installer ==="
   if [[ "$PublicTestBuild" == "true" ]]; then
     TestBuildString="-PublicTestBuild"
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet_ptb.ico"
@@ -245,18 +266,26 @@ else
   fi
 
   # Execute Squirrel to create the installer
+  echo "=== Creating installers from Nuget package ==="
   ./squirrel.windows/tools/Squirrel --releasify "$nupkg_path" \
     --releaseDir "$GITHUB_WORKSPACE/squirreloutput" \
     --loadingGif "$GITHUB_WORKSPACE/installers/windows/splash-installing-2x.png" \
-    --no-msi --setupIcon "$InstallerIconFile" \
-    -n "/a /f $GITHUB_WORKSPACE/installers/windows/code-signing-certificate.p12 /p $WIN_SIGNING_PASS /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-
+    --no-msi --setupIcon "$InstallerIconFile" 
+    
   echo "=== Removing old directory content of release folder ==="
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
   installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
+
+  # Sign the final installer
+  echo "=== Signing installer ==="
+  java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass ${AZURE_ACCESS_TOKEN} \
+      --alias Mudlet/Mudlet \
+      "$installerExePath"
 
   # Check if the setup executable exists
   if [[ ! -f "$installerExePath" ]]; then
@@ -293,9 +322,11 @@ else
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+    read -r day month year hour minute second <<< "$current_timestamp"
 
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
-    curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+    curl -X POST 'https://www.mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
@@ -303,6 +334,12 @@ else
     -F "file_des=sha256: $SHA256SUM" \
     -F "file_cat=0" \
     -F "file_permission=-1" \
+    -F "file_timestamp_day=$day" \
+    -F "file_timestamp_month=$month" \
+    -F "file_timestamp_year=$year" \
+    -F "file_timestamp_hour=$hour" \
+    -F "file_timestamp_minute=$minute" \
+    -F "file_timestamp_second=$second" \
     -F "output=json" \
     -F "do=Add File"
     

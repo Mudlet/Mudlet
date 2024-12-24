@@ -57,7 +57,7 @@ public:
     void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
-    void removeRoom(int, bool isToDeferAreaRelatedRecalculations = false);
+    void removeRoom(int, bool deferAreaRecalculations = false);
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
@@ -68,6 +68,7 @@ public:
     bool hasPermanentLabels() const;
     qreal get2DMapZoom() const { return mLast2DMapZoom; }
     void set2DMapZoom(const qreal zoom);
+    void clean();
 
 
     QSet<int> rooms; // rooms of this area

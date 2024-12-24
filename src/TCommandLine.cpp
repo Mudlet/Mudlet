@@ -27,7 +27,6 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
-#include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TEvent.h"

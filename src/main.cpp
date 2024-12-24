@@ -110,6 +110,8 @@ void removeOldNoteColorEmojiFonts()
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
     // Release: "Unicode 14.0"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Unicode 15.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -129,9 +131,7 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
-    auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
-                                   (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
+    QSettings* pSettings = mudlet::getQSettings();
     auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
@@ -199,11 +199,13 @@ int main(int argc, char* argv[])
     // is open - see https://bugreports.qt.io/browse/QTBUG-41257
     QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
 #elif defined(Q_OS_FREEBSD)
+#if defined(INCLUDE_3DMAPPER)
     // Cure for diagnostic:
     // "Qt WebEngine seems to be initialized from a plugin. Please set
     // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
     // before constructing QGuiApplication."
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif // INCLUDE_3DMAPPER
 #endif
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
@@ -213,6 +215,14 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX)
     QAccessible::installFactory(Announcer::accessibleFactory);
+#endif
+
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Apple Color Emoji Fallback
+    QFont defaultFont;
+    defaultFont.setFamily(defaultFont.defaultFamily());
+    QFont::insertSubstitution(defaultFont.family(), qsl("Apple Color Emoji"));
+    app->setFont(defaultFont);
 #endif
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
@@ -244,6 +254,10 @@ int main(int argc, char* argv[])
     } else {
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
+
+    mudlet::start();
+    // Detect config path before any files are read
+    mudlet::self()->setupConfig();
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
@@ -426,7 +440,38 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    const QStringList cliProfiles = parser.values(profileToOpen);
+    // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if defined(Q_OS_WIN32)
+    if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        // This variable is not set - and later versions of Qt 6.x need it for
+        // sound to work:
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        } else {
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+        }
+    } else {
+        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+    }
+#endif
+#endif
+
+    QStringList cliProfiles = parser.values(profileToOpen);
+    qDebug() << "Got CLI profiles:" << cliProfiles;
+    
+    if (cliProfiles.isEmpty()) {
+        qDebug() << "No CLI profiles specified, checking environment variable";
+        const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
+        qDebug() << "Environment MUDLET_PROFILES value:" << envProfiles;
+        if (!envProfiles.isEmpty()) {
+            qDebug() << "Found environment profiles, splitting on ':'";
+            // : is not an allowed character in a profile name, so we can use it to split the list
+            cliProfiles = envProfiles.split(':');
+            qDebug() << "Final profile list from environment:" << cliProfiles;
+        }
+    }
+
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
     
     const bool showSplash = parser.isSet(showSplashscreen);
@@ -522,8 +567,8 @@ int main(int argc, char* argv[])
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
-    // Release: "Unicode 15.0"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    // Release: "Unicode 15.1, take 3"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -579,8 +624,8 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
@@ -616,7 +661,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    mudlet::start();
+    mudlet::self()->init();
 
 #if defined(Q_OS_WIN)
     // Associate mudlet with .mpackage files
@@ -660,7 +705,10 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfiles);
+    QTimer::singleShot(0, qApp, [cliProfiles]() {
+        // ensure Mudlet singleton is initialised before calling profile loading
+        mudlet::self()->startAutoLogin(cliProfiles);
+    });
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

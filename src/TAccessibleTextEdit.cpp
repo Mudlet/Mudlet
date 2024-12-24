@@ -1,8 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020, 2023-2024 by Stephen Lyons                   *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -389,22 +388,7 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
     const TChar &charStyle = textEdit()->mpBuffer->buffer.at(line).at(column);
     // IAccessible2's text attributes don't support the overline attribute.
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    // According to
-    // https://wiki.linuxfoundation.org/accessibility/iaccessible2/textattributes
-    // only the names "normal" and "bold" are supported alongside the numeric
-    // values as explained in
-    // https://www.w3.org/TR/CSS21/fonts.html#font-boldness :
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int fontWeight = (attributes & TChar::Bold) ? ((attributes & TChar::Faint) ? TBuffer::csmCssFontWeight_boldAndFaint
-                                                                                     : TBuffer::csmCssFontWeight_bold)
-                                                      : ((attributes & TChar::Faint) ? TBuffer::csmCssFontWeight_faint
-                                                                                     : TBuffer::csmCssFontWeight_normal);
-#else
-    const int fontWeight = (attributes & TChar::Bold) ? ((attributes & TChar::Faint) ? TBuffer::csmFontWeight_boldAndFaint
-                                                                                     : TBuffer::csmFontWeight_bold)
-                                                      : ((attributes & TChar::Faint) ? TBuffer::csmFontWeight_faint
-                                                                                     : TBuffer::csmFontWeight_normal);
-#endif
+    const bool isBold = (attributes & TChar::Bold) || font.weight() > QFont::Normal;
     const bool isItalics = (attributes & TChar::Italic) || style == QFont::StyleItalic;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
@@ -412,10 +396,9 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
     const bool caretIsHere = textEdit()->mpHost->caretEnabled() && textEdit()->mCaretLine == line &&
         textEdit()->mCaretColumn == column;
 
-    if (fontWeight != 400) {
-        // 400 is the "normal" value however we might not have defined ours to
-        // be that:
-        ret += "font-weight:" + QString::number(fontWeight) + ";";
+    // Different weight values are not handled.
+    if (isBold) {
+        ret += "font-weight:bold;";
     }
     if (isItalics || style != QFont::StyleNormal) {
         ret += "font-style:" + QString::fromLatin1(isItalics ? "italic;" : "oblique;");

@@ -467,6 +467,22 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              "strong emphasis on role-playing,  Accursed Lands may be the perfect fit for you. "
              "We would be happy to have you!")},
 
+            {qsl("BlackMUD"),
+             qsl("blackmud.com"),
+             2000,
+             false,
+             qsl("<a href='http://www.blackmud.com'>www.blackmud.com</a>"),
+             qsl(":/icons/blackmud.png"),
+             qsl("The world of Entia is a wonderous and challenging place, set within an "
+             "medieval/fantasy theme and boasting over 90 original areas, made up of tens "
+             "of thousands of rooms (and still growing and improving in quality), all designed"
+             " around an original comprehensive world theme and history. BlackMUD is "
+             "combat-centric but we do encourage and reward roleplaying for those who wish to "
+             "participate. The story of Entia revolves around a continuing war in which the "
+             "forces of chaos seek to Unmake the universe itself. It is a time of fear and "
+             "darkness. It is a time for those with courage, to step forward and defend their "
+             "beliefs, and their very existence.")},
+
             {qsl("Carrion Fields"),
              qsl("carrionfields.net"),
              4449,
@@ -618,6 +634,49 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
                  "Spiel jetzt oder nie!")},
+
+            {qsl("Infinity"),
+             qsl("infinitymud.com"),
+             4242,
+             false,
+             qsl("<a href='https://infinitymud.com/'>infinitymud.com</a>"),
+             qsl(":/icons/infinity_480x120.png"),
+             qsl("Prepare to immerse yourself in Infinity, a city between times and "
+                 "dimensions that allows entry into any number of lands and timelines. "
+                 "Infinity LPMud provides willing adventurers and questseekers with a "
+                 "venue of original ideas, mind boggling quests, and bloodcurdling "
+                 "beasts, spinning into realms of power, magic, and technology, "
+                 "and many players with which to share your adventures.")},
+                 
+            {qsl("Medievia"),
+             qsl("medievia.com"),
+             4000,
+             false,
+             qsl("<a href='http://medievia.com/'>Medievia</a>"),
+             qsl(":/icons/medievia.png"),
+             qsl("If you take the deepest and most advanced game possible, and mix it with the best "
+                 "chat world around, what you have is Medievia.\n\n"
+                 "Imagine...\n"
+                 "    Endless player-created areas to explore for the first time.\n"
+                 "    Ships you can take out to sea. You can go crabbing, kill monsters, "
+                 "attack other ships, explore new islands, etc.\n"
+                 "    Dragons that hunt you, good dragons that fly you places, dragon lairs "
+                 "you can defeat, etc.\n"
+                 "    Trading for gold where you take goods via covered wagon/mules across "
+                 "the wilderness through adventure after adventure from trade post to "
+                 "trade post. Now you can even go right under the ocean to undersea trading posts.\n"
+                 "    Player vs Player action in zones, ships, wilderness, herobattles, arenas, "
+                 "CPK, NPK, LPK, etc.\n"
+                 "    Joining a clan, the clan can join a town, or go ahead and make their own "
+                 "town in the wilderness.\n"
+                 "    Giving birth and creating your own bloodline. If your bloodline gets big enough "
+                 "you can build homes and castles.\n"
+                 "    A game that has the intuition to track your happiness, pride, sadness, and fear "
+                 "while changing itself to fit your needs!\n"
+                 "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
+                 "but it is the most dynamic game ever attempted. The wind affects the ships, where "
+                 "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
+                 "Do you dare enter?")},
             };
     // clang-format on
 };

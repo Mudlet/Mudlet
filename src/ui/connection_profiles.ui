@@ -794,7 +794,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="informationalArea">
+          <widget class="QGroupBox" name="informationArea">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -808,7 +808,7 @@
             </size>
            </property>
            <property name="title">
-            <string>Informational</string>
+            <string>Information</string>
            </property>
            <layout class="QVBoxLayout" name="vBoxLayout_4">
             <property name="leftMargin">

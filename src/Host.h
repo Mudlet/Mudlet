@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -426,8 +426,8 @@ public:
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
-    dlgPackageManager* mpPackageManager;
-    dlgModuleManager* mpModuleManager;
+    QPointer<dlgPackageManager> mpPackageManager;
+    QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
@@ -560,6 +560,7 @@ public:
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+    void editorThemeChanged();
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
@@ -576,46 +577,48 @@ public:
     // the type of item (a trigger, an alias, etc) that's previewed
     QString mThemePreviewType;
 
-    QColor mBlack;
-    QColor mLightBlack;
-    QColor mRed;
-    QColor mLightRed;
-    QColor mLightGreen;
-    QColor mGreen;
-    QColor mLightBlue;
-    QColor mBlue;
-    QColor mLightYellow;
-    QColor mYellow;
-    QColor mLightCyan;
-    QColor mCyan;
-    QColor mLightMagenta;
-    QColor mMagenta;
-    QColor mLightWhite;
-    QColor mWhite;
-    QColor mFgColor;
-    QColor mBgColor;
-    QColor mCommandBgColor;
-    QColor mCommandFgColor;
+    QColor mBlack{QColorConstants::Black};
+    QColor mLightBlack{QColorConstants::DarkGray};
+    QColor mRed{QColorConstants::DarkRed};
+    QColor mLightRed{QColorConstants::Red};
+    QColor mLightGreen{QColorConstants::Green};
+    QColor mGreen{QColorConstants::DarkGreen};
+    QColor mLightBlue{QColorConstants::Blue};
+    QColor mBlue{QColorConstants::DarkBlue};
+    QColor mLightYellow{QColorConstants::Yellow};
+    QColor mYellow{QColorConstants::DarkYellow};
+    QColor mLightCyan{QColorConstants::Cyan};
+    QColor mCyan{QColorConstants::DarkCyan};
+    QColor mLightMagenta{QColorConstants::Magenta};
+    QColor mMagenta{QColorConstants::DarkMagenta};
+    QColor mLightWhite{QColorConstants::White};
+    QColor mWhite{QColorConstants::LightGray};
+    QColor mFgColor{QColorConstants::LightGray};
+    QColor mBgColor{QColorConstants::Black};
+    QColor mCommandBgColor{QColorConstants::Black};
+    QColor mCommandFgColor{QColor(113, 113, 0)};
 
-    QColor mBlack_2;
-    QColor mLightBlack_2;
-    QColor mRed_2;
-    QColor mLightRed_2;
-    QColor mLightGreen_2;
-    QColor mGreen_2;
-    QColor mLightBlue_2;
-    QColor mBlue_2;
-    QColor mLightYellow_2;
-    QColor mYellow_2;
-    QColor mLightCyan_2;
-    QColor mCyan_2;
-    QColor mLightMagenta_2;
-    QColor mMagenta_2;
-    QColor mLightWhite_2;
-    QColor mWhite_2;
-    QColor mFgColor_2;
-    QColor mBgColor_2;
-    QColor mRoomBorderColor;
+    QColor mBlack_2{QColorConstants::Black};
+    QColor mLightBlack_2{QColorConstants::DarkGray};
+    QColor mRed_2{QColorConstants::DarkRed};
+    QColor mLightRed_2{QColorConstants::Red};
+    QColor mLightGreen_2{QColorConstants::Green};
+    QColor mGreen_2{QColorConstants::DarkGreen};
+    QColor mLightBlue_2{QColorConstants::Blue};
+    QColor mBlue_2{QColorConstants::DarkBlue};
+    QColor mLightYellow_2{QColorConstants::Yellow};
+    QColor mYellow_2{QColorConstants::DarkYellow};
+    QColor mLightCyan_2{QColorConstants::Cyan};
+    QColor mCyan_2{QColorConstants::DarkCyan};
+    QColor mLightMagenta_2{QColorConstants::Magenta};
+    QColor mMagenta_2{QColorConstants::DarkMagenta};
+    QColor mLightWhite_2{QColorConstants::White};
+    QColor mWhite_2{QColorConstants::LightGray};
+    QColor mFgColor_2{QColorConstants::LightGray};
+    QColor mBgColor_2{QColorConstants::Black};
+    QColor mRoomBorderColor{QColorConstants::LightGray};
+    QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
@@ -683,7 +686,6 @@ public:
     QMap<QString, QKeySequence*> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown;
-    bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
@@ -706,17 +708,6 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
-    // Support a long-standing hack among all clients for using the <SGR>1m
-    // Bold) code to select a set of brighter 8 colors (the second eight) from
-    // the 256 colors for "16 color" mode of operation - alongside the basic
-    // <SGR>30m (Black) to <SGR>37m (White) set of codes. Using the "AIXTERM"
-    // codes (<SGR>90m to <SGR>97m) codes or the <SGR>38::5:Nm ones are later
-    // (better) ways of accessing that second set of 8 but some Servers only
-    // know the first for 16 color operation. The prior behaviour for Mudlet
-    // would be almost equivalent to this option being true but it limits the
-    // ability to have completely separate bold (and faint) font weightings:
-    bool mBoldIsBright = true;
-
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -725,13 +716,14 @@ signals:
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
-    // problems as they arrive as well as a summery upon destruction:
+    // problems as they arrive as well as a summary upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void signal_editorThemeChanged();
 
 private slots:
     void slot_purgeTemps();
