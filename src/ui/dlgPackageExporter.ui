@@ -172,7 +172,7 @@
               <enum>Qt::FocusPolicy::StrongFocus</enum>
              </property>
              <property name="placeholderText">
-              <string>(required)</string>
+              <string>(recommended)</string>
              </property>
             </widget>
            </item>
@@ -265,7 +265,7 @@
               <number>140</number>
              </property>
              <property name="placeholderText">
-              <string>one-line description (required)</string>
+              <string>one-line description (recommended)</string>
              </property>
             </widget>
            </item>
@@ -286,7 +286,7 @@
               <bool>true</bool>
              </property>
              <property name="text">
-              <string>(required)
+              <string>(recommended)
 
 This package description is shown in the package manager.  The editor supports Commonmark markdown.  Follow the description below for a thorough example of what to include in your package description.
 
@@ -327,7 +327,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
            <item row="4" column="1">
             <widget class="QLineEdit" name="lineEdit_version">
              <property name="placeholderText">
-              <string>(required)</string>
+              <string>(recommended)</string>
              </property>
             </widget>
            </item>

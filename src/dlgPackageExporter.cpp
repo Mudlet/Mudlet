@@ -364,26 +364,27 @@ void dlgPackageExporter::checkToEnableExportButton()
         //: package name will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
         missingFields << tr("package name");
     }
-    if (ui->lineEdit_author->text().isEmpty()) {
-        //: package author will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
-        missingFields << tr("author"); 
-    }
-    if (ui->lineEdit_title->text().isEmpty()) {
-        //: package title will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
-        missingFields << tr("title");
-    }
-    if (ui->lineEdit_version->text().isEmpty()) {
-        //: package version will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
-        missingFields << tr("version");
-    }
-    if (ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
-        //: package description will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
-        missingFields << tr("description");
-    }
+    // intentionally disabled for now until mpkg gains wider adoption
+    // if (ui->lineEdit_author->text().isEmpty()) {
+    //     //: package author will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("author");
+    // }
+    // if (ui->lineEdit_title->text().isEmpty()) {
+    //     //: package title will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("title");
+    // }
+    // if (ui->lineEdit_version->text().isEmpty()) {
+    //     //: package version will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("version");
+    // }
+    // if (ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
+    //     //: package description will be added to other fields in the 'required fields missing: ...' tooltip when it's missing
+    //     missingFields << tr("description");
+    // }
 
     if (!missingFields.isEmpty()) {
         mExportButton->setEnabled(false);
-        mExportButton->setToolTip(tr("Required fields missing: %1").arg(missingFields.join(qsl(", "))));
+        mExportButton->setToolTip(tr("Required field missing: %1").arg(missingFields.join(qsl(", "))));
     } else {
         mExportButton->setEnabled(!mExportingPackage);
         mExportButton->setToolTip(tr("Export package"));
