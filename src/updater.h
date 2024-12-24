@@ -44,6 +44,7 @@ public:
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
+    void showFullChangelog() const;
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();

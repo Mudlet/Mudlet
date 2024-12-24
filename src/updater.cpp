@@ -133,7 +133,16 @@ void Updater::showDialogManually() const
     QObject::disconnect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 }
 
+// only shows the changelog since the last version
 void Updater::showChangelog() const
+{
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setPreviousVersion(getPreviousVersion());
+    changelogDialog->show();
+}
+
+// shows the full changelog
+void Updater::showFullChangelog() const
 {
     if (!feed->isReady()) {
         KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() { showChangelog(); });

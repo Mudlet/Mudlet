@@ -152,7 +152,7 @@ void mudlet::init()
 
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
-    publicTestVersion = true; //mAppBuild.startsWith("-ptb");
+    publicTestVersion = mAppBuild.startsWith("-ptb");
     developmentVersion = !releaseVersion && !publicTestVersion;
 
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
@@ -673,7 +673,7 @@ void mudlet::init()
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
-    connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showChangelog);
+    connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showFullChangelog);
 #if defined(Q_OS_MACOS)
     // ensure that 'Check for updates' and 'Changelog' are under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
@@ -3867,9 +3867,9 @@ void mudlet::slot_manualUpdateCheck()
     pUpdater->manuallyCheckUpdates();
 }
 
-void mudlet::slot_showChangelog()
+void mudlet::slot_showFullChangelog()
 {
-    pUpdater->showChangelog();
+    pUpdater->showFullChangelog();
 }
 
 void mudlet::slot_reportIssue()

@@ -242,7 +242,7 @@ int main(int argc, char* argv[])
     const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     const bool releaseVersion = appBuild.isEmpty();
-    const bool publicTestVersion = true; //appBuild.startsWith("-ptb");
+    const bool publicTestVersion = appBuild.startsWith("-ptb");
 
     if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
@@ -473,7 +473,6 @@ int main(int argc, char* argv[])
     }
 
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
