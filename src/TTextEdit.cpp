@@ -1080,7 +1080,6 @@ void TTextEdit::highlightSelection()
 
 void TTextEdit::unHighlight()
 {
-    // clang-format off
     for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
         if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
             // Abort if we are considering a line not in the buffer:
