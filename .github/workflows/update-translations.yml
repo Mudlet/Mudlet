@@ -72,7 +72,5 @@ jobs:
 
           (note that if it just looks like the same strings were removed & added, then it means their context line #'s have changed and translators will not need to do additional work.)
 
-        branch: update-texts-for-translators-${{ github.sha }}
         path: translations/
-        commit-message: (autocommit) Updated text for translation
         author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
