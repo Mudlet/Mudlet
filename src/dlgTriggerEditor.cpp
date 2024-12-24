@@ -4535,7 +4535,7 @@ void dlgTriggerEditor::slot_itemEdited()
     }
 
     if (!packageName.isEmpty()) {
-        showWarning(tr("For best preservation of your changes, consider copying this item before editing. Package upgrades may overwrite modifications."));
+        showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
     }
 }
 
