@@ -22,7 +22,7 @@
 #include "TMxpTagParser.h"
 
 MxpTagAttribute::MxpTagAttribute(const QString& name, const QString& value)
-: QPair(name, value)
+: QPair<QString, QString>(name, value)
 {}
 
 MxpTagAttribute::MxpTagAttribute(const QString& name)
@@ -30,7 +30,7 @@ MxpTagAttribute::MxpTagAttribute(const QString& name)
 {}
 
 MxpTagAttribute::MxpTagAttribute()
-: QPair()
+: QPair<QString, QString>()
 {}
 
 MxpTagAttribute::~MxpTagAttribute()

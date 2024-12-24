@@ -65,7 +65,11 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
     buttonBox->button(QDialogButtonBox::Reset)->setToolTip(utils::richText(mIsBackground
                                                                                 ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")
                                                                                 : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
-    connect(mSignalMapper, SIGNAL(mapped(int)), this, SLOT(slot_basicColorClicked(int)));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    connect(mSignalMapper, &QSignalMapper::mappedInt, this, &dlgColorTrigger::slot_basicColorClicked);
+#else
+    connect(mSignalMapper, qOverload<const int>(&QSignalMapper::mapped), this, &dlgColorTrigger::slot_basicColorClicked);
+#endif
 
     groupBox_basicColors->setToolTip(utils::richText(mIsBackground
                                                      ? tr("Click a color to make the trigger fire only when the text's background color matches the color number indicated.")
@@ -206,7 +210,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
 void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText)
 {
     // TODO: Eliminate use of QSignalMapper and use a lambda function
-    connect(pButton, SIGNAL(clicked()), mSignalMapper, SLOT(map()));
+    connect(pButton, &QPushButton::clicked, mSignalMapper, qOverload<>(&QSignalMapper::map));
     mSignalMapper->setMapping(pButton, ansiColor);
 
     if ((mIsBackground && (mpTrigger->mColorTriggerBgAnsi == ansiColor))
@@ -215,10 +219,8 @@ void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor
         pButton->setFocus();
     }
 
-    pButton->setText(tr("%1 [%2]",
-                        // Intentional comment to separate arguments
-                        "Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places")
-                     .arg(colorText, QString::number(ansiColor)));
+    //: Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places
+    pButton->setText(tr("%1 [%2]").arg(colorText, QString::number(ansiColor)));
     pButton->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(color));
 }
 
@@ -242,7 +244,7 @@ void dlgColorTrigger::slot_setRBGButtonFocus()
 void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
 {
     mGrayAnsiColorNumber = 232 + sliderValue;
-    int value = (sliderValue - 232) * 10 + 8;
+    const int value = sliderValue * 10 + 8;
 
     mGrayAnsiColor = QColor(value, value, value);
     label_grayValue->setText(qsl("[%1]").arg(QString::number(mGrayAnsiColorNumber)));

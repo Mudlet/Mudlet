@@ -35,8 +35,8 @@
 class TAccessibleTextEdit : public QAccessibleWidget, public QAccessibleTextInterface
 {
 public:
-    explicit TAccessibleTextEdit(QWidget* w)
-    : QAccessibleWidget(w, QAccessible::EditableText)
+    explicit TAccessibleTextEdit(QWidget* widget)
+    : QAccessibleWidget(widget, QAccessible::EditableText)
     {
         Q_ASSERT(isValid());
     }
@@ -55,13 +55,13 @@ public:
         return pInterface;
     }
 
-    void* interface_cast(QAccessible::InterfaceType t) override
+    void* interface_cast(QAccessible::InterfaceType type) override
     {
-        if (t == QAccessible::TextInterface) {
+        if (type == QAccessible::TextInterface) {
             return static_cast<QAccessibleTextInterface*>(this);
         }
 
-        return QAccessibleWidget::interface_cast(t);
+        return QAccessibleWidget::interface_cast(type);
     }
 
     QAccessible::State state() const override;
@@ -72,7 +72,7 @@ public:
     void setSelection(int selectionIndex, int startOffset, int endOffset) override;
     int cursorPosition() const override;
     void setCursorPosition(int position) override;
-    QString text(QAccessible::Text t) const override;
+    QString text(QAccessible::Text text) const override;
     QString text(int startOffset, int endOffset) const override;
     int characterCount() const override;
     QRect characterRect(int offset) const override;
@@ -96,7 +96,7 @@ private:
     int columnForOffset(int offset) const;
     int offsetForPosition(int line, int column) const;
     bool lineIsVisible(int line) const;
-    QString textAroundOffset(TextOp op, int offset, QAccessible::TextBoundaryType boundaryType,
+    QString textAroundOffset(TextOp operation, int offset, QAccessible::TextBoundaryType boundaryType,
                              int* startOffset, int* endOffset) const;
 };
 

@@ -1,10 +1,6 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
-
--- TESTS FOR GEYSER --
+--- Tests for Geyser.
+-- @author guy
+-- @module Geyser.Tests
 
 --- Test labels.  Creates 101 Labels of varying hue and transparency.
 function Geyser.testLabels()
@@ -145,7 +141,6 @@ function Geyser.demo1()
 
   geyserDemoContainer:add(label1) -- you know the drill
 
-  ----------------------------------------
   -- 4. Add another miniconsole below the gauge that extends
   -- to the bottom of the screen and wraps at 40 characters and
   -- another clickable label.
@@ -170,13 +165,11 @@ function Geyser.demo1()
   geyserDemoContainer:add(label2) -- same here
 
 
-  ----------------------------------------
   -- 5. hide all windows just created
 
   geyserDemoContainer:hide()
 
 
-  ----------------------------------------
   -- 6. now show them again
 
   geyserDemoContainer:show()

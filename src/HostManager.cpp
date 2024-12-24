@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018, 2020 by Stephen Lyons                       *
+ *   Copyright (C) 2016, 2018, 2020, 2024 by Stephen Lyons                 *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,16 +25,18 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
-bool HostManager::deleteHost(const QString& hostname)
+void HostManager::deleteHost(const QString& hostname)
 {
-    // make sure this is really a new host
+    // make sure this is really an existing host
     if (!mHostPool.contains(hostname)) {
         qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
-        return false;
-    } else {
-        int ret = mHostPool.remove(hostname);
-        return ret;
+        return;
     }
+
+    // As this pulls the QSharedPointer that hostname identifies out of the pool
+    // the Host goes out of scope when execution leaves this method and thus
+    // gets destroyed:
+    mHostPool.remove(hostname);
 }
 
 bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
@@ -54,8 +56,8 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         return false;
     }
 
-    int id = mHostPool.size() + 1;
-    QSharedPointer<Host> pNewHost(new Host(portnumber, hostname, login, pass, id));
+    const int id = mHostPool.size() + 1;
+    QSharedPointer<Host> const pNewHost(new Host(portnumber, hostname, login, pass, id));
 
     if (Q_UNLIKELY(!pNewHost)) {
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... aborting!";
@@ -118,7 +120,7 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     allValidHosts = afterSendingHost;
     allValidHosts.append(beforeSendingHost);
 
-    for (int validHost : qAsConst(allValidHosts)) {
+    for (const int validHost : std::as_const(allValidHosts)) {
         hostList.at(validHost)->raiseEvent(event);
     }
 }
@@ -181,3 +183,7 @@ QSharedPointer<Host> HostManager::Iter::operator*()
     return *it;
 }
 
+bool HostManager::hostLoaded(const QString& hostname) const
+{
+    return mHostPool.contains(hostname);
+}

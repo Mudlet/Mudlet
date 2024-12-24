@@ -48,6 +48,7 @@ public:
 
     void resizeEvent(QResizeEvent* event) override;
     void resetMainConsole();
+    void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
@@ -55,6 +56,7 @@ public:
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     bool printWindow(const QString& name, const QString& text);
+    bool clear(const QString& name);
     void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
     std::list<int> getFgColor(std::string& buf);
@@ -71,7 +73,7 @@ public:
     std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
-    void setLabelStyleSheet(std::string& buf, std::string& sh);
+    void setLabelStyleSheet(std::string& buf, std::string& stylesheet);
     std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
@@ -137,7 +139,7 @@ signals:
 private:
     // Was public in Host class but made private there and cloned to here
     // (for main TConsole) to prevent it being changed without going through the
-    // process to load in the the changed dictionary:
+    // process to load in the changed dictionary:
     QString mSpellDic;
 
     // Cloned from Host
@@ -161,6 +163,7 @@ private:
     // for the ".aff" file - this member is for the per profile option only as
     // the shared one is held by the mudlet singleton class:
     QSet<QString> mWordSet_profile;
+    bool mEnableClose = false;
 };
 
 #endif // MUDLET_TMAINCONSOLE_H

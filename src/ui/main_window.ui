@@ -99,11 +99,15 @@
     <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
-    <addaction name="dactionLiveHelpChat"/>
+    <addaction name="dactionIRC"/>
     <addaction name="dactionPackageManager"/>
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionToggleTimeStamp"/>
+    <addaction name="dactionToggleReplay"/>
+    <addaction name="dactionToggleLogging"/>
+    <addaction name="dactionToggleEmergencyStop"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -111,6 +115,16 @@
     </property>
     <addaction name="dactionOptions"/>
     <addaction name="dactionMultiView"/>
+    <addaction name="separator"/>
+    <addaction name="menuMute"/>
+   </widget>
+   <widget class="QMenu" name="menuMute">
+    <property name="title">
+     <string>Mute media</string>
+    </property>
+    <addaction name="dactionMuteMedia"/>
+    <addaction name="dactionMuteAPI"/>
+    <addaction name="dactionMuteGame"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -120,7 +134,7 @@
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
     <addaction name="dactionMudletDiscord"/>
-    <addaction name="dactionIRC"/>
+    <addaction name="dactionLiveHelpChat"/>
     <addaction name="dactionForum"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
@@ -233,7 +247,7 @@
     <string>Video tutorials</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens an (on-line) collection of "Educational Mudlet screencasts" in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReplay">
@@ -262,7 +276,7 @@
     <string>Live help chat</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionShowMap">
@@ -304,14 +318,53 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>MultiView</string>
    </property>
    <property name="toolTip">
     <string comment="Same text is used in 2 places.">&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteMedia">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute all media</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes all media played.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteAPI">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute sounds from Mudlet (triggers, scripts, etc.)</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteGame">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute sounds from the game (MCMP, MSP)</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionInputLine">
@@ -361,6 +414,38 @@
   <action name="dactionCloseProfile">
    <property name="text">
     <string>Close profile</string>
+   </property>
+  </action>
+  <action name="dactionToggleTimeStamp">
+   <property name="text">
+    <string>Time Stamps</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleReplay">
+   <property name="text">
+    <string>Replay</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleLogging">
+   <property name="text">
+    <string>Logging</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleEmergencyStop">
+   <property name="text">
+    <string>Emergency Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</string>
    </property>
   </action>
  </widget>

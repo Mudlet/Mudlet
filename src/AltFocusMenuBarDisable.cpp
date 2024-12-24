@@ -34,6 +34,9 @@ int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *o
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
         return 0;
     }
+    if (styleHint == QStyle::SH_ItemView_ActivateItemOnSingleClick) {
+        return 0;
+    }
 
     return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
 }

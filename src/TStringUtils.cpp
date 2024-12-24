@@ -24,14 +24,15 @@ bool TStringUtils::isQuote(QChar ch)
     return isOneOf(ch, qsl("\'\""));
 }
 
-bool TStringUtils::isOneOf(QChar ch, const QString& chars)
+bool TStringUtils::isOneOf(QChar inputCharacter, const QString& characterSet)
 {
-    for (const auto& o : chars) {
-        if (o == ch) {
+    for (const auto& setCharacter : characterSet) {
+        if (setCharacter == inputCharacter) {
             return true;
         }
     }
 
     return false;
 }
+
 

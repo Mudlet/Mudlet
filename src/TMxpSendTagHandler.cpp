@@ -33,10 +33,17 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         mIsHrefInContent = true;
     }
 
+    // Entities in href and hint may contain | separators, so interpolate them first:
+    href = ctx.getEntityResolver().interpolate(href);
+    if (!hint.isEmpty()) {
+        hint = ctx.getEntityResolver().interpolate(hint);
+    }
+
     QStringList hrefs = href.split('|');
     QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');
 
-    while (hints.size() > hrefs.size()) {
+    // remove excess hints, but allow for a custom tooltip
+    while (hints.size() > hrefs.size() + 1) {
         hints.removeFirst();
     }
 

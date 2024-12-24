@@ -6,6 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2018-2019, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -83,12 +84,18 @@ public:
 
     QMap<QString, QString> contextMenuItems;
 
+    // Set to true (by default) to save the commands in the mHistoryList at the
+    // end of the session:
+    bool mSaveCommands = true;
+
+
 public slots:
     void slot_popupMenu();
     void slot_addWord();
     void slot_removeWord();
     void slot_clearSelection(bool yes);
     void slot_adjustAccessibleNames();
+    void slot_saveHistory();
 
 private:
     bool event(QEvent*) override;
@@ -96,6 +103,7 @@ private:
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
     void spellCheck();
+    void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
@@ -103,6 +111,7 @@ private:
     bool keybindingMatched(QKeyEvent*);
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
+    void restoreHistory();
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -127,9 +136,27 @@ private:
     char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
-
+    // The file used to store the command history between sessions:
+    QString mBackingFileName;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
+
+#if !defined(QT_NO_DEBUG)
+inline QDebug& operator<<(QDebug& debug, const TCommandLine::CommandLineType& type)
+{
+    QString text;
+    QDebugStateSaver saver(debug);
+    switch (type) {
+    case TCommandLine::UnknownType:        text = qsl("Unknown"); break;
+    case TCommandLine::SubCommandLine:     text = qsl("SubCommandLine"); break;
+    case TCommandLine::ConsoleCommandLine: text = qsl("ConsoleCommandLine"); break;
+    case TCommandLine::MainCommandLine:    text = qsl("MainCommandLine"); break;
+    default:                               text = qsl("Non-coded Type");
+    }
+    debug.nospace() << text;
+    return debug;
+}
+#endif // !defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCOMMANDLINE_H

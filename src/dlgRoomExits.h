@@ -184,15 +184,23 @@ private:
     TExit* makeExitFromControls(int direction);
     void normalExitEdited(const QString& roomExitIdText,
                           QLineEdit* pExit,
-                          QCheckBox* pNoRoute, QCheckBox* pS,
-                          QSpinBox* pW,
-                          QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
-                          const QString& invalidExitToolTipText, const QString& noExitToolTipText);
+                          QCheckBox* pNoRoute,
+                          QCheckBox* pStub,
+                          QSpinBox* pWeight,
+                          QRadioButton* pDoorType_none,
+                          QRadioButton* pDoorType_open,
+                          QRadioButton* pDoorType_closed,
+                          QRadioButton* pDoorType_locked,
+                          const QString& invalidExitToolTipText,
+                          const QString& noExitToolTipText);
     void normalStubExitChanged(const int state,
                                QLineEdit* pExit,
                                QCheckBox* pNoRoute,
-                               QSpinBox* pW,
-                               QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
+                               QSpinBox* pWeight,
+                               QRadioButton* pDoorType_none,
+                               QRadioButton* pDoorType_open,
+                               QRadioButton* pDoorType_closed,
+                               QRadioButton* pDoorType_locked,
                                const QString& noExitToolTipText) const;
     void setIconAndToolTipsOnSpecialExit(QTreeWidgetItem*, const bool);
 

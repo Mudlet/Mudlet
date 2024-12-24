@@ -1,1 +1,6 @@
-{}
+{
+  "AdjustableContainer.save": {
+    "message": "حفظ",
+    "description": "saves the containers settings"
+  }
+}

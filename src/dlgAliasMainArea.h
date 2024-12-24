@@ -22,6 +22,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TrailingWhitespaceMarker.h"
 
 #include "pre_guard.h"
 #include "ui_aliases_main_area.h"
@@ -42,6 +43,7 @@ public:
 
 private slots:
     void slot_editingNameFinished();
+    void slot_changedPattern();
 };
 
 #endif // MUDLET_DLGALIASESMAINAREA_H

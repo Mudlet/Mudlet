@@ -1,9 +1,6 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
-
+--- Setting window contraints.
+-- @author guy
+-- @module Geyser.SetConstraints
 
 function Geyser.calc_constraints (window, cons, container)
   oldlocale = os.setlocale(nil, "numeric")

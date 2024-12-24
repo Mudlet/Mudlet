@@ -34,30 +34,30 @@ TMxpTagHandlerResult TMxpSupportTagHandler::handleStartTag(TMxpContext& ctx, TMx
 
     return MXP_TAG_HANDLED;
 }
+
 QString TMxpSupportTagHandler::processSupportsRequest(TMxpContext& ctx, MxpStartTag* tag)
 {
     const auto& supportedMxpElements = ctx.getSupportedElements();
     // strip initial SUPPORT and tokenize all of the requested elements
     QStringList result;
-
-    auto reportEntireElement = [](auto element, auto& result, auto& mSupportedMxpElements) {
-        result.append("+" + element);
+    auto reportEntireElement = [](auto element, auto& input, auto& mSupportedMxpElements) {
+        input.append(qsl("+%1").arg(element));
 
         for (const auto& attribute : mSupportedMxpElements.value(element)) {
-            result.append("+" + element + qsl(".") + attribute);
+            input.append(qsl("+%1.%2").arg(element, attribute));
         }
 
-        return result;
+        return input;
     };
 
-    auto reportAllElements = [reportEntireElement](auto& result, auto& mSupportedMxpElements) {
+    auto reportAllElements = [reportEntireElement](auto& input, auto& mSupportedMxpElements) {
         auto elementsIterator = mSupportedMxpElements.constBegin();
         while (elementsIterator != mSupportedMxpElements.constEnd()) {
-            result = reportEntireElement(elementsIterator.key(), result, mSupportedMxpElements);
+            input = reportEntireElement(elementsIterator.key(), input, mSupportedMxpElements);
             ++elementsIterator;
         }
 
-        return result;
+        return input;
     };
 
     // empty <SUPPORT> - report all known elements

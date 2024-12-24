@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -330,7 +330,11 @@ void TTreeWidget::dragEnterEvent(QDragEnterEvent* event)
 
 void TTreeWidget::dropEvent(QDropEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QTreeWidgetItem* pItem = itemAt(event->pos());
+#else
+    QTreeWidgetItem* pItem = itemAt(event->position().toPoint());
+#endif
 
     if (!pItem) {
         event->setDropAction(Qt::IgnoreAction);

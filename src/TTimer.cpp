@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2019, 2021, 2024 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,38 +33,29 @@ const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
 TTimer::TTimer(TTimer* parent, Host* pHost)
 : Tree<TTimer>(parent)
-, mRegisteredAnonymousLuaFunction(false)
-, exportItem(true)
-, mModuleMasterFolder(false)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
 , mpQTimer(new QTimer)
-, mModuleMember(false)
-, mRepeating(false)
 {
     mpQTimer->stop();
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
+    mpQTimer->setTimerType(Qt::PreciseTimer);
 }
 
 TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 : Tree<TTimer>(nullptr)
-, mRegisteredAnonymousLuaFunction(false)
-, exportItem(true)
-, mModuleMasterFolder(false)
 , mName(name)
 , mTime(time)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
 , mpQTimer(new QTimer)
-, mModuleMember(false)
 {
     mpQTimer->stop();
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;
+    mpQTimer->setTimerType(Qt::PreciseTimer);
 }
 
 TTimer::~TTimer()
@@ -106,22 +98,10 @@ void TTimer::setTime(QTime time)
     mpQTimer->setInterval(time.msecsSinceStartOfDay());
 }
 
-// children of folder = regular timers
-// children of timers = offset timers
-//     offset timers: -> their time interval is interpreted as an offset to their parent timer
-bool TTimer::isOffsetTimer()
-{
-    if (mpParent) {
-        return !mpParent->isFolder();
-    } else {
-        return false;
-    }
-}
-
 bool TTimer::setIsActive(bool b)
 {
-    bool condition1 = Tree<TTimer>::setIsActive(b);
-    bool condition2 = canBeUnlocked();
+    const bool condition1 = Tree<TTimer>::setIsActive(b);
+    const bool condition2 = canBeUnlocked();
     if (condition1 && condition2) {
         start();
     } else {
@@ -192,10 +172,10 @@ bool TTimer::setScript(const QString& script)
 
 bool TTimer::compileScript()
 {
-    mFuncName = QString("Timer") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Timer%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, "Timer: " + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Timer: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;

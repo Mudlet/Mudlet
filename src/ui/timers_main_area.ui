@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>476</width>
-    <height>170</height>
+    <width>500</width>
+    <height>200</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,7 +22,7 @@
     <height>170</height>
    </size>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,1" columnstretch="0,1,0,1,0,1,0,1,10">
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,1" columnstretch="0,1,0,1,0,1,0,1,10,0,0">
    <item row="0" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_timer_name">
      <property name="text">
@@ -33,11 +33,63 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1" colspan="8">
+   <item row="0" column="1" colspan="9">
     <widget class="QLineEdit" name="lineEdit_timer_name">
      <property name="toolTip">
       <string>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</string>
      </property>
+    </widget>
+   </item>
+   <item row="0" column="10">
+    <widget class="QFrame" name="frameId">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_frameId">
+      <property name="leftMargin">
+       <number>3</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>3</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item alignment="Qt::AlignVCenter">
+       <widget class="QLabel" name="label_idLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>ID:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::NoTextInteraction</set>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignVCenter">
+       <widget class="QLabel" name="label_idNumber">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+     <zorder>label_idNumber</zorder>
+     <zorder>label_idLabel</zorder>
     </widget>
    </item>
    <item row="1" column="0">
@@ -68,13 +120,13 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1" colspan="8">
+   <item row="1" column="1" colspan="10">
     <widget class="QLineEdit" name="lineEdit_timer_command">
      <property name="toolTip">
-      <string>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+      <string>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It's possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</string>
      </property>
      <property name="placeholderText">
-      <string>Text to send to the game as-is (optional)</string>
+      <string>Text to send to the game (optional)</string>
      </property>
     </widget>
    </item>
@@ -161,7 +213,6 @@
      <property name="font">
       <font>
        <pointsize>9</pointsize>
-       <weight>50</weight>
        <bold>false</bold>
       </font>
      </property>
@@ -187,7 +238,7 @@
       <bool>true</bool>
      </property>
      <property name="frame">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -239,7 +290,6 @@
      <property name="font">
       <font>
        <pointsize>40</pointsize>
-       <weight>75</weight>
        <bold>true</bold>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
@@ -263,7 +313,7 @@
       <bool>true</bool>
      </property>
      <property name="frame">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -305,7 +355,6 @@
      <property name="font">
       <font>
        <pointsize>40</pointsize>
-       <weight>75</weight>
        <bold>true</bold>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
@@ -329,7 +378,7 @@
       <bool>true</bool>
      </property>
      <property name="frame">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -371,7 +420,6 @@
      <property name="font">
       <font>
        <pointsize>40</pointsize>
-       <weight>75</weight>
        <bold>true</bold>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
@@ -395,7 +443,7 @@
       <bool>true</bool>
      </property>
      <property name="frame">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -421,7 +469,7 @@
      </property>
      <property name="sizeHint" stdset="0">
       <size>
-       <width>40</width>
+       <width>0</width>
        <height>20</height>
       </size>
      </property>

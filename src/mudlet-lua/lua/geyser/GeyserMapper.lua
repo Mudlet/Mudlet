@@ -1,13 +1,10 @@
---------------------------------------
--- --
--- The Geyser Layout Manager by guy --
--- createMapper support by Vadi --
--- --
---------------------------------------
+--- Represents a mapper primitive.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.Mapper">Mudlet Manual</a>
+-- @author guy
+-- @author Vadi
+-- @module Geyser.Mapper
 
---- Represents a mapper primitive
--- @class table
--- @name Geyser.Mapper
+--- Represents a mapper primitive.
 -- @field wrapAt Where line wrapping occurs. Default is 300 characters.
 Geyser.Mapper = Geyser.Window:new({
   name = "MapperClass"
@@ -107,7 +104,7 @@ function Geyser.Mapper:new (cons, container)
   if me.embedded == nil and not me.dockPosition then
      me.embedded = true 
   end
-  -----------------------------------------------------------
+
   -- Now create the Mapper using primitives
   if me.dockPosition and me.dockPosition:lower() == "floating" then
     me.dockPosition = "f"

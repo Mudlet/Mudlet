@@ -64,6 +64,35 @@ public:
     // clang-format off
     // games are to be added here in alphabetical order
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Abandoned Realms"),
+            qsl("abandonedrealms.com"),
+            9000,
+            false,
+qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
+                "<a href='https://abandonedrealms.com/forum'>Forum</a>"),
+            qsl(":/icons/abandonedrealms_icon.jpg"),
+            qsl("The Abandoned Realms is a completely free RP-enforced, PK-encouraged, MUD in a fantasy setting "
+                 "(swords/magic/lore/intrigue) that has been up and running constantly since 1997."
+                 "\n\n"
+                 "With 20 races and 16 classes, there are vast possibilities for players to explore and enjoy. "
+                 "The Abandoned Realms has a dedicated staff of highly skilled immortals/coders/builders, "
+                 "and a diverse base players online at any given time. There are extensive opportunities for "
+                 "role-play, including writing character background entries, building your own house "
+                 "(including decor), contributing to the in-game newspaper, engaging in political intrigue, "
+                 "choosing a deity to worship (and opening exceptional Immortal RP opportunities), and "
+                 "more."
+                 "\n\n"
+                 "It is a dangerous realm, filled with exceptional killers but new players are not hunted – they "
+                 "are welcomed and supported. Perma-death exists, but it is common for characters to live "
+                 "for hundreds of  hours, or as long as the player desires. Information and advice are shared "
+                 "freely – see The Codex for item identifications/locations, the logboard for battles, and the "
+                 "forum and discord for gameplay discussion and advice."
+                 "\n\n"
+                 "If you are interested in a completely free, immersive RP/PK experience, in a vibrant land filled "
+                 "with lore/intrigue, where you can forge long-lasting friendships and bitter rivalries, and have an "
+                 "opportunity to leave your lasting mark and be remembered forever, then welcome ye to the "
+                 "Abandoned Realms.")
+            },
             {qsl("Avalon.de"), // Name
              qsl("avalon.mud.de"), // address to connect to
              23, // port to connect on
@@ -415,6 +444,45 @@ public:
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},
 
+            {qsl("Accursed Lands"),
+             qsl("mud.accursed-lands.com"),
+             7979,
+             true,
+             qsl("<a href='https://www.accursed-lands.net'>www.accursed-lands.net</a><br>"
+                    "Discord<br>"
+                    "<a href='https://discord.gg/pUPdVra'>https://discord.gg/pUPdVra</a>"),
+             qsl(":/icons/accursed_lands.png"),
+             qsl("Accursed Lands is a long-standing text-based online role-playing game (MUD) "
+             "with a post-apocalyptic medieval setting.  It offers a \"Role-Play Enforced\" "
+             "environment without alignments, character levels, or classes, allowing players "
+             "to choose their own fate and live their character's life as they see fit. "
+             "Players can expect a community-focused, immersive sandbox experience focusing "
+             "on freedom with fewer restrictions on their actions.  The game also boasts "
+             "strong support for visually impaired players, complex magic and crafting, "
+             "permanent housing, terrain/weather systems, and a vast global map with millions "
+             "of areas to explore.  Whether seeking adventure, knowledge, fortune, or more, "
+             "craft your unique story in a world designed to test your every step."
+             "\n\n"
+             "If you enjoy a slower-paced, skill-based MUD with a richly detailed world and a "
+             "strong emphasis on role-playing,  Accursed Lands may be the perfect fit for you. "
+             "We would be happy to have you!")},
+
+            {qsl("BlackMUD"),
+             qsl("blackmud.com"),
+             2000,
+             false,
+             qsl("<a href='http://www.blackmud.com'>www.blackmud.com</a>"),
+             qsl(":/icons/blackmud.png"),
+             qsl("The world of Entia is a wonderous and challenging place, set within an "
+             "medieval/fantasy theme and boasting over 90 original areas, made up of tens "
+             "of thousands of rooms (and still growing and improving in quality), all designed"
+             " around an original comprehensive world theme and history. BlackMUD is "
+             "combat-centric but we do encourage and reward roleplaying for those who wish to "
+             "participate. The story of Entia revolves around a continuing war in which the "
+             "forces of chaos seek to Unmake the universe itself. It is a time of fear and "
+             "darkness. It is a time for those with courage, to step forward and defend their "
+             "beliefs, and their very existence.")},
+
             {qsl("Carrion Fields"),
              qsl("carrionfields.net"),
              4449,
@@ -535,6 +603,80 @@ public:
                  "Rivendell, Goblin-town, Mirkwood, Dol Guldur, and the Mines of Moria. The game is "
                  "completely at no cost to play and has been continually enhanced since its "
                  "inception in the fall of 1991.")},
+
+            {qsl("MorgenGrauen"),
+             qsl("mg.mud.de"),
+             4711,
+             false,
+             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+                 "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
+                 "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
+             qsl(":/icons/morgengrauen_480x120.png"),
+             /* English translation, provided by game:
+              * "Welcome to Morgengrauen, the largest German-language "
+              * "MUD, which has been continuously developed since 1992."
+              * "\n\n"
+              * "Discover hundrets of unique quests! Raise your skills "
+              * "in special guilds: demonnic warriors of chaos, drunken "
+              * "beer shakers, werewolves, orcs, elves, and many more."
+              * "\n\n"
+              * "Our friendly player base is glad to help you with your first steps."
+              * "\n\n"
+              * "Play now or never!"
+              */
+             qsl("Willkommen im Morgengrauen, dem größten deutschsprachigen "
+                 "MUD, das seit 1992 kontinuierlich weiterentwickelt wird."
+                 "\n\n"
+                 "Entdecke hunderte einzigartige Abenteuer! Steigere Deine "
+                 "Fähigkeiten in besonderen Gilden: Dämonische Krieger des Chaos, "
+                 "betrunkene Bierschüttler, Werwölfe, Orks, Elfen, und viele weitere."
+                 "\n\n"
+                 "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
+                 "\n\n"
+                 "Spiel jetzt oder nie!")},
+
+            {qsl("Infinity"),
+             qsl("infinitymud.com"),
+             4242,
+             false,
+             qsl("<a href='https://infinitymud.com/'>infinitymud.com</a>"),
+             qsl(":/icons/infinity_480x120.png"),
+             qsl("Prepare to immerse yourself in Infinity, a city between times and "
+                 "dimensions that allows entry into any number of lands and timelines. "
+                 "Infinity LPMud provides willing adventurers and questseekers with a "
+                 "venue of original ideas, mind boggling quests, and bloodcurdling "
+                 "beasts, spinning into realms of power, magic, and technology, "
+                 "and many players with which to share your adventures.")},
+                 
+            {qsl("Medievia"),
+             qsl("medievia.com"),
+             4000,
+             false,
+             qsl("<a href='http://medievia.com/'>Medievia</a>"),
+             qsl(":/icons/medievia.png"),
+             qsl("If you take the deepest and most advanced game possible, and mix it with the best "
+                 "chat world around, what you have is Medievia.\n\n"
+                 "Imagine...\n"
+                 "    Endless player-created areas to explore for the first time.\n"
+                 "    Ships you can take out to sea. You can go crabbing, kill monsters, "
+                 "attack other ships, explore new islands, etc.\n"
+                 "    Dragons that hunt you, good dragons that fly you places, dragon lairs "
+                 "you can defeat, etc.\n"
+                 "    Trading for gold where you take goods via covered wagon/mules across "
+                 "the wilderness through adventure after adventure from trade post to "
+                 "trade post. Now you can even go right under the ocean to undersea trading posts.\n"
+                 "    Player vs Player action in zones, ships, wilderness, herobattles, arenas, "
+                 "CPK, NPK, LPK, etc.\n"
+                 "    Joining a clan, the clan can join a town, or go ahead and make their own "
+                 "town in the wilderness.\n"
+                 "    Giving birth and creating your own bloodline. If your bloodline gets big enough "
+                 "you can build homes and castles.\n"
+                 "    A game that has the intuition to track your happiness, pride, sadness, and fear "
+                 "while changing itself to fit your needs!\n"
+                 "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
+                 "but it is the most dynamic game ever attempted. The wind affects the ships, where "
+                 "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
+                 "Do you dare enter?")},
             };
     // clang-format on
 };

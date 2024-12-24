@@ -81,8 +81,21 @@ TMxpTagProcessor::TMxpTagProcessor()
     registerHandler(TMxpFeatureOptions({"music", {"fname", "v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
 
     mSupportedMxpElements["b"] = QVector<QString>();
+    mSupportedMxpElements["bold"] = QVector<QString>();
+    mSupportedMxpElements["strong"] = QVector<QString>();
+    mSupportedMxpElements["h"] = QVector<QString>();
+    mSupportedMxpElements["high"] = QVector<QString>();
+
     mSupportedMxpElements["i"] = QVector<QString>();
+    mSupportedMxpElements["italic"] = QVector<QString>();
+    mSupportedMxpElements["em"] = QVector<QString>();
+
     mSupportedMxpElements["u"] = QVector<QString>();
+    mSupportedMxpElements["underline"] = QVector<QString>();
+
+    mSupportedMxpElements["s"] = QVector<QString>();
+    mSupportedMxpElements["strikeout"] = QVector<QString>();
+
     mRegisteredHandlers.append(QSharedPointer<TMxpTagHandler>(new TMxpFormattingTagsHandler()));
 
     registerHandler(new TMxpEntityTagHandler());

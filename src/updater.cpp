@@ -20,11 +20,6 @@
 #include "updater.h"
 #include "mudlet.h"
 
-#if defined(Q_OS_MACOS)
-#include "../3rdparty/sparkle-glue/CocoaInitializer.h"
-#include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
-#endif
-
 #include "pre_guard.h"
 #include <QPushButton>
 #include <QtConcurrent>
@@ -41,7 +36,7 @@ using namespace std::chrono_literals;
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
+Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObject(parent)
 , updateDialog(nullptr)
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
@@ -49,13 +44,24 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            mudlet::scmIsPublicTestVersion ? qsl("public-test-build") : qsl("release"));
+    QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
+    QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
+
+    // On 32-bit Windows, check if we can upgrade to 64-bit
+#if defined(Q_OS_WIN32)
+    QString arch = is64BitCompatible() ? QStringLiteral("x86_64") : QStringLiteral("x86");
+#else
+    QString arch = QString(); // Let Feed auto-detect for other platforms
+#endif
+
+    feed = new dblsqd::Feed();
+    feed->setUrl(baseUrl, channel, QString(), arch, QString());
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();
     }
 }
+
 Updater::~Updater()
 {
     delete (feed);
@@ -75,7 +81,7 @@ void Updater::checkUpdatesOnStart()
 #endif
 
     mDailyCheck->setInterval(12h);
-    QObject::connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
+    connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
           qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
           if (updates.isEmpty()) {
@@ -116,7 +122,7 @@ void Updater::manuallyCheckUpdates()
     msparkleUpdater->checkForUpdates();
 #else
     feed->load();
-    QObject::connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
+    connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 #endif
 }
 
@@ -149,9 +155,8 @@ void Updater::finishSetup()
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
-    CocoaInitializer initializer;
-    msparkleUpdater = new SparkleAutoUpdater(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
+    msparkleUpdater = new SparkleUpdater();
 }
 #endif // Q_OS_MACOS
 
@@ -159,8 +164,8 @@ void Updater::setupOnMacOS()
 void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        if (mudlet::scmIsDevelopmentVersion) {
+    connect(feed, &dblsqd::Feed::ready, feed, [=]() {
+        if (mudlet::self()->developmentVersion) {
             return;
         }
 
@@ -176,13 +181,15 @@ void Updater::setupOnWindows()
     });
 
     // Setup to run setup.exe to replace the old installation
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
+    connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, feed->getDownloadFile()->fileName());
+        QFuture<void> future = QtConcurrent::run([=]() {
+            prepareSetupOnWindows(feed->getDownloadFile()->fileName());
+        });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
@@ -222,10 +229,10 @@ void Updater::setupOnLinux()
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
-    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
+    connect(feed, &dblsqd::Feed::ready, this, [=]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::scmIsDevelopmentVersion) {
+        if (mudlet::self()->developmentVersion) {
             return;
         }
 
@@ -242,13 +249,13 @@ void Updater::setupOnLinux()
     });
 
     // Setup to unzip and replace old binary when the download is done
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
+    connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, feed->getDownloadFile()->fileName());
+        QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(feed->getDownloadFile()->fileName()); });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
@@ -343,9 +350,9 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
-    QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
+    QFuture<void> future = QtConcurrent::run([&, filePath]() { untarOnLinux(filePath); });
 #elif defined(Q_OS_WIN32)
-    QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, filePath);
+    QFuture<void> future = QtConcurrent::run([&, filePath]() { prepareSetupOnWindows(filePath); });
 #endif
 
     // replace current binary with the unzipped one
@@ -370,7 +377,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // updated, then you do want to see the changelog.
 void Updater::recordUpdateTime() const
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -382,14 +389,16 @@ void Updater::recordUpdateTime() const
         ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "Updater::recordUpdateTime: error recording update time: " << file.errorString();
+    }
 }
 
 // records the previous version of Mudlet that we updated from, so we can show
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -401,7 +410,9 @@ void Updater::recordUpdatedVersion() const
         ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs << APP_VERSION;
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "Updater::recordUpdatedVersion: error saving old mudlet version: " << file.errorString();
+    }
 }
 
 // returns true if Mudlet was updated automatically and a changelog should be shown
@@ -414,7 +425,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
+    if (mudlet::self()->developmentVersion || !updateAutomatically()) {
         return false;
     }
 
@@ -463,3 +474,20 @@ QString Updater::getPreviousVersion() const
 
     return previousVersion;
 }
+
+#if defined(Q_OS_WIN32)
+bool Updater::is64BitCompatible() const 
+{
+    BOOL isWow64 = FALSE;
+    typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)
+        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+
+    if (fnIsWow64Process) {
+        if (fnIsWow64Process(GetCurrentProcess(), &isWow64)) {
+            return isWow64 ? true : false;
+        }
+    }
+    return false;
+}
+#endif

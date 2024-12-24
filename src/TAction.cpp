@@ -120,10 +120,10 @@ bool TAction::setScript(const QString& script)
 
 bool TAction::compileScript()
 {
-    mFuncName = QString("Action") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Action%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Button: ") + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Button: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
@@ -178,8 +178,8 @@ void TAction::expandToolbar(TToolBar* pT)
             // buttons show in a "greyed-out" state... - Slysven
             continue;
         }
-        QIcon icon(action->mIcon);
-        QString name = action->getName();
+        const QIcon icon(action->mIcon);
+        const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);
@@ -196,17 +196,6 @@ void TAction::expandToolbar(TToolBar* pT)
         button->setFlat(mButtonFlat);
         // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
         button->setStyleSheet(css);
-
-        /*
-         * CHECK: The other expandToolbar(...) has the following in this position:
-         *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-         *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
-         *       {
-         *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
-         *          action->execute();
-         *       }
-         * Why does it have this and we do not? - Slysven
-         */
 
         if (action->isFolder()) {
             auto newMenu = new QMenu(pT);
@@ -270,8 +259,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         if (!action->isActive()) {
             continue;
         }
-        QIcon icon(action->mIcon);
-        QString name = action->getName();
+        const QIcon icon(action->mIcon);
+        const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);
@@ -336,7 +325,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             continue;
         }
         mpEasyButtonBar = pT;
-        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, mID);
+        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, action->mID);
         newAction->setStatusTip(action->mName);
         newAction->setCheckable(action->mIsPushDownButton);
         if (action->mIsPushDownButton) {

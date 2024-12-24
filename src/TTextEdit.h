@@ -93,7 +93,11 @@ public:
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
+
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     void reportCodepointErrors();
+#endif
+
     void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
@@ -122,7 +126,12 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
-    QMap<QString, std::pair<QString, int>> mPopupCommands;
+    // The content to use for the current popup (link)
+    // Key: is an index stored when the popup is created - this has been
+    // changed from the previous "text to show for each popup" to avoid
+    // problems with duplicate texts:
+    // Value: is the lua code as a string (first) or the lua function reference number (second)
+    QMap<int, std::pair<QString, int>> mPopupCommands;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
@@ -139,7 +148,9 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
     void slot_changeDebugShowAllProblemCodepoints(const bool);
+#endif
     void slot_mouseAction(const QString&);
 
 protected:
@@ -170,6 +181,8 @@ private:
     int mFontWidth;
     bool mForceUpdate;
     const QColor mCaretColor = QColorConstants::Gray;
+    const QColor mSearchHighlightFgColor = QColorConstants::Black;
+    const QColor mSearchHighlightBgColor = QColorConstants::Yellow;
 
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
@@ -215,10 +228,14 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
-    bool mShowAllCodepointIssues;
+
+#if defined(DEBUG_CODEPOINT_PROBLEMS)
+    bool mShowAllCodepointIssues = false;
     // Marked mutable so that it is permissible to change this in class methods
     // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
+#endif
+
     // We scroll on the basis that one vertical mouse wheel click is one line
     // (vertically, not really concerned about horizontal stuff at present).
     // According to Qt: "Most mouse types work in steps of 15 degrees, in which
