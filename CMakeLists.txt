@@ -39,7 +39,7 @@ if(APPLE)
   # needed for fetching Sparkle
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Qt6 for our Qt5/Qt6 build compatibility
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
 endif()
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake)
@@ -103,7 +103,7 @@ else()
 endif()
 
 # Set APP_VERSION (update in mudlet.pro as well)
-set(APP_VERSION 4.18.3)
+set(APP_VERSION 4.18.5)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
@@ -145,10 +145,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
-                        OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
-                        READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
-                        SUPPORTED_SYSTEMS "Windows")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
                         OPTION_VARIABLE USE_QT6
                         READABLE_NAME "build with Qt6 (if installed)")
@@ -207,21 +203,17 @@ endif()
 
 if(APPLE)
   if(USE_UPDATER)
-    git_submodule_init(
-      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
-      "3rdparty/sparkle-glue" READABLE_NAME "Sparkle glue for updater")
-
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(
         STATUS "Sparkle is missing, fetching it..."
       )
-      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0/Sparkle-1.25.0.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.6.4.tar.xz"
         TIMEOUT 60  # seconds
         TLS_VERIFY ON
       )
-      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.6.4.tar.xz"
         DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.6.4.tar.xz")
     endif()
   endif()
 endif()
@@ -240,11 +232,6 @@ add_subdirectory(test)
 
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)
-
-  if(APPLE)
-    add_subdirectory(3rdparty/sparkle-glue)
-  endif()
-
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)

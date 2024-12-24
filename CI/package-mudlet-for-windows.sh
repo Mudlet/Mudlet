@@ -66,14 +66,10 @@ fi
 BUILD_CONFIG="release"
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
-PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
-export PATH
 GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
 echo "MSYSTEM is: ${MSYSTEM}"
-echo "PATH is now:"
-echo "${PATH}"
 echo ""
 
 cd $GITHUB_WORKSPACE_UNIX_PATH || exit 1
@@ -172,6 +168,20 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
+# For some reason as of September 2024 ntldd no longer identifies these
+# libraries for the 32-Bit case and our Qt5 (in this case) application
+# refuses to start without them. At a guess they are being loaded
+# dynamically so cannot be identified by static analysis like (nt)ldd
+# seems to do. Yet the same thing works for the now Qt6 based 64-Bit
+# application. Unfortunately this might bite us again for other libraries
+# I guess - I only deduced these omissions by comparing the file list
+# against an older working build. Slysven - 2024/11
+if [ "${MSYSTEM}" = "MINGW32" ]; then
+    cp -v -p -t . \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlicommon.dll" \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlidec.dll" \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/libfreetype-6.dll"
+fi
 echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness:

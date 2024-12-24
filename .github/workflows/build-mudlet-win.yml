@@ -56,13 +56,13 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
-    - name: restore ccache
-      uses: actions/cache@v4
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
-        save-always: true
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -73,9 +73,30 @@ jobs:
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
+    - name: Save ccache
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+
+    - name: (Windows) Login to Azure
+      uses: azure/login@v2
+      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get Azure access token for code signing
+      shell: pwsh
+      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      run: |
+        $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
+        "::add-mask::$token"
+        "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
 
     - name: (Windows) Deploy
       shell: msys2 {0}
@@ -85,7 +106,7 @@ jobs:
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         DEPLOY_SSH_KEY: ${{secrets.DEPLOY_SSH_KEY}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
+        AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
@@ -100,14 +121,25 @@ jobs:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
 
-    #- name: Setup tmate session
-    #  uses: mxschmitt/action-tmate@v3
-
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
       run: |
         $uri = "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=$($env:UPLOAD_FILENAME)&unzip=$($env:PARAM_UNZIP)"
-        Invoke-WebRequest -Uri $uri -Method Post
+        try {
+          $response = Invoke-WebRequest -Uri $uri -Method Post -ErrorAction Stop
+          Write-Output "Submission successful"
+        }
+        catch {
+          $errorMessage = $_.Exception.Message
+          if ($errorMessage -like "*Artifact is not unique*") {
+            Write-Output "Info: Artifact was already submitted and is not unique. Continuing..."
+            exit 0
+          }
+          else {
+            Write-Error "An error occurred: $errorMessage"
+            exit 1
+          }
+        }
       shell: pwsh
 
     - name: Register Release

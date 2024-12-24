@@ -115,6 +115,7 @@ public:
     void copy();
     void cut();
     void paste();
+    void clear();
     void appendBuffer();
     void appendBuffer(const TBuffer&);
     int getButtonState();
@@ -286,6 +287,7 @@ public:
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
+    QToolButton* replayButton = nullptr;
     QLineEdit* mpBufferSearchBox = nullptr;
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;

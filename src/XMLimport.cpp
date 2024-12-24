@@ -564,9 +564,9 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                 continue;
             }
 
-            pT->x = attributes().value(qsl("x")).toString().toInt();
-            pT->y = attributes().value(qsl("y")).toString().toInt();
-            pT->z = attributes().value(qsl("z")).toString().toInt();
+            pT->setCoordinates(attributes().value(qsl("x")).toString().toInt(),
+                               attributes().value(qsl("y")).toString().toInt(),
+                               attributes().value(qsl("z")).toString().toInt());
             continue;
         } else if (name() == qsl("features")) {
             readRoomFeatures(pT);
@@ -786,6 +786,10 @@ void XMLimport::readHost(Host* pHost)
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    if (pHost->mEditorTheme.isEmpty() || pHost->mEditorThemeFile.isEmpty()) {
+        pHost->mEditorTheme = qsl("Mudlet");
+        pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
+    }
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -1160,6 +1164,10 @@ void XMLimport::readHost(Host* pHost)
                 // this font doesn't support it:
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
 #endif
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                // Add Apple Color Emoji fallback.
+                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
+#endif
                 pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {
                 pHost->mCommandLineFont.fromString(readElementText());
@@ -1176,6 +1184,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == qsl("mRoomCollisionBorderColor")) {
+                pHost->mRoomCollisionBorderColor.setNamedColor(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg.setNamedColor(readElementText());
@@ -1218,6 +1228,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mBgColor_2 = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mRoomCollisionBorderColor")) {
+                pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg = QColor::fromString(readElementText());

@@ -73,9 +73,22 @@ public:
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
-    bool setArea(int, bool isToDeferAreaRelatedRecalculations = false);
+    bool setArea(int, bool deferAreaRecalculations = false);
     int getExitWeight(const QString& cmd);
 
+    inline int x() const { return mX; }
+    inline int y() const { return mY; }
+    inline int z() const { return mZ; }
+    inline void setCoordinates(const int x, const int y, const int z) {
+        mX = x;
+        mY = y;
+        mZ = z;
+    }
+    inline void offset(const int deltaX, const int deltaY, const int deltaZ) {
+        mX += deltaX;
+        mY += deltaY;
+        mZ += deltaZ;
+    }
     int getWeight() const { return weight; }
     int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
@@ -127,10 +140,6 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
-
-    int x = 0;
-    int y = 0;
-    int z = 0;
     int environment = -1;
 
     bool isLocked = false;
@@ -185,6 +194,10 @@ private:
     int id = 0;
     int area = -1;
     int weight = 1;
+    // Made private so we can catch all cases where they are to be modified:
+    int mX = 0;
+    int mY = 0;
+    int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
     int north = -1;
@@ -194,7 +207,7 @@ private:
     int south = -1;
     int southwest = -1;
     int west = -1;
-    int northwest =-1;
+    int northwest = -1;
     int up = -1;
     int down = -1;
     int in = -1;
@@ -220,8 +233,8 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     debug.nospace() << "TRoom(" << room->getId() << ")";
     debug.nospace() << ", name=" << room->name;
     debug.nospace() << ", area=" << room->getArea();
-    debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
-    
+    debug.nospace() << ", pos=" << room->x() << "," << room->y() << "," << room->z();
+
     debug.nospace() << ", exits:";
     if (room->getNorth() != -1) {
         debug.nospace() << ", north=" << room->getNorth();
@@ -270,25 +283,29 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     }
 
     QMap<QString, QList<QPointF>> customLines = room->customLines;
+    QMap<QString, QColor> customLinesColor = room->customLinesColor;
+    QMap<QString, bool> customLinesArrow = room->customLinesArrow;
+    QMap<QString, Qt::PenStyle> customLinesStyle = room->customLinesStyle;
     if (!customLines.isEmpty()) {
-        debug.nospace() << ", customLines=(";
-        for (QMap<QString, QList<QPointF>>::const_iterator it = customLines.begin(); it != customLines.end(); ++it) {
-            debug.nospace() << it.key() << ": " << it.value() << ", ";
+        debug.nospace() << ", customlines=(";
+        for (auto it = customLines.constBegin(); it != customLines.constEnd(); ++it) {
+            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
+                            << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no") << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
         }
         debug.nospace() << ")";
     }
-    
-    
+
+
     int weight = room->getWeight();
     if (weight != -1) {
-        debug.nospace() << ", weight=" << weight; 
+        debug.nospace() << ", weight=" << weight;
     }
-    
+
     QString symbol = room->mSymbol;
     if (!symbol.isEmpty()) {
         debug.nospace() << ", symbol=" << symbol;
     }
-    
+
     auto exitWeights = room->getExitWeights();
     if (!exitWeights.isEmpty()) {
         debug.nospace() << ", exitWeights=(";

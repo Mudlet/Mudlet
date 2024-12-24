@@ -135,13 +135,14 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
   export WITH_OWN_QTKEYCHAIN="NO"
 fi
 
-if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$GITHUB_SCHEDULED_BUILD" == "false" ]]; then
+if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
     # The updater is not helpful in this environment (PR testing build)
     export WITH_UPDATER="NO"
 else
     # Tagged build, this is a release or a PTB build, include the updater
     export WITH_UPDATER="YES"
 fi
+
 # This one is VITAL as some things in the code have to be tweaked to be
 # different compared to the CI/CB build environment (or the
 # setup-windows-sdk.ps) one!

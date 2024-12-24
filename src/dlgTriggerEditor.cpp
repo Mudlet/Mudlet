@@ -94,7 +94,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                           "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>"
                           "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
                           "<p><code>lua registerAnonymousEventHandler(&quot;nameOfTheMudletEvent&quot;, &quot;nameOfYourFunctionToBeCalled&quot;)</code></p>"
-                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>more information</a>.</p>");
 
     msgInfoAddTimer = tr("<p>Timers react after a timespan once or regularly. To add a new timer:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -105,7 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p><strong>Note:</strong> Timers can also be defined from the command line in the main profile window like this:</p>"
                          "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
                          "<p>This will greet you exactly 3 seconds after it was made.</p>"
-                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>more information</a>.</p>");
 
     msgInfoAddButton = tr("<p>Buttons react on mouse clicks. To add a new button:"
                           "<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
@@ -115,7 +115,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                           "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
                           "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
                           "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
-                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>more information</a>.</p>");
 
     msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
                        "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -125,7 +125,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p><strong>Note:</strong> Keys can also be defined from the command line in the main profile window like this:</p>"
                        "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
                        "<p>Pressing F8 will make you jump.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>more information</a>.</p>");
 
     msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
                        "<ol><li>Click on the 'Add Item' icon above. To add a table instead click 'Add Group'.</li>"
@@ -137,7 +137,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p><strong>Note:</strong> Variables and tables can also be defined from the command line in the main profile window like this:</p>"
                        "<p><code>lua foo = &quot;bar&quot;</code></p>"
                        "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>more information</a>.</p>");
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
     //: Item is currently on, short enough to be spoken
@@ -789,11 +789,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     slot_showSearchAreaResults(false);
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
-    HpatternList = new QWidget;
-    auto lay1 = new QVBoxLayout(HpatternList);
+    mpWidget_triggerItems = new QWidget;
+    auto lay1 = new QVBoxLayout(mpWidget_triggerItems);
     lay1->setContentsMargins(0, 0, 0, 0);
     lay1->setSpacing(0);
-    mpScrollArea->setWidget(HpatternList);
+    mpScrollArea->setWidget(mpWidget_triggerItems);
 
     QPixmap pixMap_subString(256, 256);
     pixMap_subString.fill(Qt::black);
@@ -838,7 +838,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                 << tr("prompt");
 
     for (int i = 0; i < 50; i++) {
-        auto pItem = new dlgTriggerPatternEdit(HpatternList);
+        auto pItem = new dlgTriggerPatternEdit(mpWidget_triggerItems);
         QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(patternList);
         pBox->setItemData(0, QVariant(i));
@@ -854,12 +854,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
         connect(pItem->lineEdit_pattern, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
-        HpatternList->layout()->addWidget(pItem);
+        mpWidget_triggerItems->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
+        pItem->label_prompt->hide();
         pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
@@ -964,14 +964,7 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 
 void dlgTriggerEditor::readSettings()
 {
-    /* In case sensitive environments, two different config directories
-       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-       Furthermore, we skip the version from the application name to follow the convention.
-       For compatibility with older settings, if no config is loaded
-       from the config directory "mudlet", application "Mudlet", we try to load from the config
-       directory "Mudlet", application "Mudlet 1.0". */
-    const QSettings settings_new("mudlet", "Mudlet");
-    const QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+    QSettings& settings = *mudlet::getQSettings();
 
     const QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
@@ -991,11 +984,7 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    /* In case sensitive environments, two different config directories
-       were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
-       (the organization name) to "mudlet".
-       Furthermore, we skip the version from the application name to follow the convention.*/
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::getQSettings();
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
     settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
@@ -2854,15 +2843,9 @@ void dlgTriggerEditor::activeToggle_trigger()
         }
     }
 
-    if (pT->state()) {
-        if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        } else {
-            showInfo(tr(R"(Trying to deactivate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        }
-    } else {
+    if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<b>Unable to activate a filter or trigger or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+        showError(tr(R"(<p>Unable to activate "<tt>%1</tt>": %2</p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
@@ -3049,15 +3032,9 @@ void dlgTriggerEditor::activeToggle_timer()
         }
     }
 
-    if (pT->state()) {
-        if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a timer group, offset timer, timer or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        } else {
-            showInfo(tr(R"(Trying to deactivate a timer group, offset timer, timer or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        }
-    } else {
+    if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate an offset timer or timer or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>": %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
@@ -3192,15 +3169,9 @@ void dlgTriggerEditor::activeToggle_alias()
         }
     }
 
-    if (pT->state()) {
-        if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        } else {
-            showInfo(tr(R"(Trying to deactivate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        }
-    } else {
+    if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate an alias or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
@@ -3317,15 +3288,9 @@ void dlgTriggerEditor::activeToggle_script()
         }
     }
 
-    if (pT->state()) {
-        if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        } else {
-            showInfo(tr(R"(Trying to deactivate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        }
-    } else {
+    if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate a script group or script or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
@@ -3476,15 +3441,9 @@ void dlgTriggerEditor::activeToggle_action()
         }
     }
 
-    if (pT->state()) {
-        if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        } else {
-            showInfo(tr(R"(Trying to deactivate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
-        }
-    } else {
+    if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
@@ -3643,8 +3602,15 @@ void dlgTriggerEditor::activeToggle_key()
         pItem->setIcon(0, iconError);
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-    showInfo(
-            QString("Trying to %2 key <em>%1</em> %3.").arg(pT->getName().toHtmlEscaped(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: %1").arg(pT->getError())));
+
+    if (!pT->state()) {
+        pT->setIsActive(false);
+        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        itemDescription = descError;
+    }
+
     if (pItem->childCount() > 0) {
         children_icon_key(pItem);
     }
@@ -3762,7 +3728,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
     //insert a new root item
     ROOT_TRIGGER:
-        pT = new TTrigger(name, patterns, patternKinds, false, mpHost);
+        pT = new TTrigger(name, patterns, patternKinds, mpHost);
         pNewItem = new QTreeWidgetItem(mpTriggerBaseItem, nameL);
         treeWidget_triggers->insertTopLevelItem(0, pNewItem);
     }
@@ -3773,7 +3739,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
 
     pT->setName(name);
-    pT->setRegexCodeList(patterns, patternKinds);
+    pT->setRegexCodeList(patterns, patternKinds, false);
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -3799,15 +3765,14 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     }
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->label_idNumber->clear();
-    mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
+    mpTriggersMainArea->checkBox_perlSlashGOption->setChecked(false);
 
     clearDocument(mpSourceEditorEdbee); // New Trigger
 
     mpTriggersMainArea->lineEdit_trigger_command->clear();
-    mpTriggersMainArea->groupBox_filterTrigger->setChecked(false);
+    mpTriggersMainArea->checkBox_filterTrigger->setChecked(false);
     mpTriggersMainArea->spinBox_stayOpen->setValue(0);
-    mpTriggersMainArea->spinBox_lineMargin->setValue(0);
-    mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(false);
+    mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
 
     mpTriggersMainArea->pushButtonFgColor->setChecked(false);
     mpTriggersMainArea->pushButtonBgColor->setChecked(false);
@@ -4451,7 +4416,7 @@ void dlgTriggerEditor::saveTrigger()
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
-    const bool isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
+    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1);
     QStringList patterns;
     QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
@@ -4507,9 +4472,11 @@ void dlgTriggerEditor::saveTrigger()
 
         pT->setScript(script);
         pT->setIsMultiline(isMultiline);
-        pT->mPerlSlashGOption = mpTriggersMainArea->groupBox_perlSlashGOption->isChecked();
-        pT->mFilterTrigger = mpTriggersMainArea->groupBox_filterTrigger->isChecked();
-        pT->setConditionLineDelta(mpTriggersMainArea->spinBox_lineMargin->value());
+        pT->mPerlSlashGOption = mpTriggersMainArea->checkBox_perlSlashGOption->isChecked();
+        pT->mFilterTrigger = mpTriggersMainArea->checkBox_filterTrigger->isChecked();
+        if (mpTriggersMainArea->spinBox_lineMargin->value() >= 0) {
+            pT->setConditionLineDelta(mpTriggersMainArea->spinBox_lineMargin->value());
+        }
         pT->mStayOpen = mpTriggersMainArea->spinBox_stayOpen->value();
         pT->mSoundTrigger = mpTriggersMainArea->groupBox_soundTrigger->isChecked();
         pT->setSound(mpTriggersMainArea->lineEdit_soundFile->text());
@@ -4596,15 +4563,14 @@ void dlgTriggerEditor::saveTrigger()
             clearEditorNotification();
 
             if (old_name == tr("New trigger") || old_name == tr("New trigger group")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActiveFolder;
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActive;
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -4725,8 +4691,10 @@ void dlgTriggerEditor::saveTimer()
         if (pT->state()) {
             clearEditorNotification();
 
+            // don't activate new timers by default - might be annoying
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
+
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
@@ -4839,25 +4807,24 @@ void dlgTriggerEditor::saveAlias()
             clearEditorNotification();
 
             if (old_name == tr("New alias")) {
-                QIcon _icon;
                 if (pT->isFolder()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 }
-                pItem->setIcon(0, _icon);
+                pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
             } else {
@@ -5143,26 +5110,25 @@ void dlgTriggerEditor::saveScript()
         }
 
         if (old_name == tr("New script") || old_name == tr("New script group")) {
-            QIcon _icon;
             if (pT->isFolder()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descActive;
-                _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 if (pT->ancestorsActive()) {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             }
-            pItem->setIcon(0, _icon);
+            pItem->setIcon(0, icon);
             pItem->setText(0, name);
             pT->setIsActive(true);
         } else {
@@ -5441,6 +5407,7 @@ void dlgTriggerEditor::saveKey()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
+        const QString old_name = pT->getName();
         pItem->setText(0, name);
         pT->setName(name);
         pT->setCommand(command);
@@ -5498,8 +5465,21 @@ void dlgTriggerEditor::saveKey()
 
         if (pT->state()) {
             clearEditorNotification();
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
+            if (old_name == tr("New key")) {
+                if (pT->isFolder()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descActiveFolder;
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descActive;
+                }
+                pItem->setIcon(0, icon);
+                pItem->setText(0, name);
+                pT->setIsActive(true);
+            } else {
+                pItem->setIcon(0, icon);
+                pItem->setText(0, name);
+            }
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
@@ -5533,14 +5513,14 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
+        pItem->label_prompt->hide();
         pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_LINE_SPACER:
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
+        pItem->label_prompt->hide();
         pItem->spinBox_lineSpacer->show();
         break;
     case REGEX_COLOR_PATTERN:
@@ -5548,7 +5528,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
-        pItem->pushButton_prompt->hide();
+        pItem->label_prompt->hide();
         pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_PROMPT:
@@ -5556,16 +5536,20 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         if (mpHost->mTelnet.mGA_Driver) {
-            pItem->pushButton_prompt->setText(tr("match on the prompt line"));
-            pItem->pushButton_prompt->setToolTip(QString());
+            pItem->label_prompt->setText(tr("match on the prompt line"));
+            pItem->label_prompt->setToolTip(QString());
+            pItem->label_prompt->setEnabled(true);
         } else {
-            pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
-            pItem->pushButton_prompt->setToolTip(utils::richText(tr("A Go-Ahead (GA) signal from the game is required to make this feature work")));
+            pItem->label_prompt->setText(tr("match on the prompt line (disabled)"));
+            pItem->label_prompt->setToolTip(utils::richText(tr("A Go-Ahead (GA) signal from the game is required to make this feature work")));
+            pItem->label_prompt->setEnabled(false);
         }
-        pItem->pushButton_prompt->show();
+        pItem->label_prompt->show();
         pItem->spinBox_lineSpacer->hide();
         break;
     }
+
+    checkForMoreThanOneTriggerItem();
 }
 
 void dlgTriggerEditor::slot_changedPattern()
@@ -5574,6 +5558,8 @@ void dlgTriggerEditor::slot_changedPattern()
     if (lineEditShouldMarkSpaces[lineEdit]) {
         markQLineEdit(lineEdit);
     }
+
+    checkForMoreThanOneTriggerItem();
 }
 
 // This can get called after the lineEdit contents has changed and it is now a
@@ -5680,15 +5666,14 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->label_idNumber->clear();
     clearDocument(mpSourceEditorEdbee); // Trigger Select
-    mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(false);
-    mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
-    mpTriggersMainArea->groupBox_filterTrigger->setChecked(false);
+    mpTriggersMainArea->checkBox_perlSlashGOption->setChecked(false);
+    mpTriggersMainArea->checkBox_filterTrigger->setChecked(false);
     mpTriggersMainArea->groupBox_triggerColorizer->setChecked(false);
     mpTriggersMainArea->pushButtonFgColor->setStyleSheet(QString());
     mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, QVariant());
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, QVariant());
-    mpTriggersMainArea->spinBox_lineMargin->setValue(1);
+    mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
 
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
@@ -5783,7 +5768,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             }
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
-            mTriggerPatternEdit[i]->pushButton_prompt->hide();
+            mTriggerPatternEdit[i]->label_prompt->hide();
             mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
             // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
@@ -5795,10 +5780,13 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
         mpTriggersMainArea->label_idNumber->setText(QString::number(ID));
         mpTriggersMainArea->lineEdit_trigger_command->setText(command);
-        mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(pT->isMultiline());
-        mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(pT->mPerlSlashGOption);
-        mpTriggersMainArea->groupBox_filterTrigger->setChecked(pT->mFilterTrigger);
-        mpTriggersMainArea->spinBox_lineMargin->setValue(pT->getConditionLineDelta());
+        mpTriggersMainArea->checkBox_perlSlashGOption->setChecked(pT->mPerlSlashGOption);
+        mpTriggersMainArea->checkBox_filterTrigger->setChecked(pT->mFilterTrigger);
+        if (pT->isMultiline()) {
+            mpTriggersMainArea->spinBox_lineMargin->setValue(pT->getConditionLineDelta());
+        } else {
+            mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
+        }
         mpTriggersMainArea->spinBox_stayOpen->setValue(pT->mStayOpen);
         mpTriggersMainArea->groupBox_soundTrigger->setChecked(pT->mSoundTrigger);
         if (!pT->mSoundFile.isEmpty()) {
@@ -5821,6 +5809,8 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, transparentBg ? qsl("transparent") : bgColor.name());
         //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
         mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep") : QString());
+
+        checkForMoreThanOneTriggerItem();
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -7910,7 +7900,9 @@ void dlgTriggerEditor::showError(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::showInfo(const QString& error)
@@ -7920,7 +7912,9 @@ void dlgTriggerEditor::showInfo(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::showWarning(const QString& error)
@@ -7930,7 +7924,9 @@ void dlgTriggerEditor::showWarning(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(error);
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
 }
 
 void dlgTriggerEditor::slot_showActions()
@@ -7981,7 +7977,7 @@ void dlgTriggerEditor::slot_saveEdits()
         saveVar();
         break;
     default:
-        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view, not sure what to save";
     }
 
     // There was a mpHost->serialize() call here, but that code was
@@ -8873,10 +8869,16 @@ void dlgTriggerEditor::slot_export()
         return;
     }
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Item"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Item"), lastDir, tr("Mudlet packages (*.xml)"));
     if (fileName.isEmpty()) {
         return;
     }
+
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     // Must be case insensitive to work on MacOS platforms, possibly a cause of
     // https://bugs.launchpad.net/mudlet/+bug/1417234
@@ -9154,10 +9156,14 @@ void dlgTriggerEditor::slot_import()
         qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), lastDir);
     if (fileName.isEmpty()) {
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
 
     mpHost->installPackage(fileName, 0);
 
@@ -9255,11 +9261,17 @@ void dlgTriggerEditor::slot_profileSaveAction()
 void dlgTriggerEditor::slot_profileSaveAsAction()
 {
     mSavingAs = true;
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"), QDir::homePath(), tr("trigger files (*.trigger *.xml)"));
+
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"), lastDir, tr("trigger files (*.trigger *.xml)"));
 
     if (fileName.isEmpty()) {
         return;
     }
+    lastDir = QFileInfo(fileName).absolutePath();
+    settings.setValue("lastFileDialogLocation", lastDir);
+
     // Must be case insensitive to work on MacOS platforms, possibly a cause of
     // https://bugs.launchpad.net/mudlet/+bug/1417234
     if (!fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive) && !fileName.endsWith(qsl(".trigger"), Qt::CaseInsensitive)) {
@@ -9315,7 +9327,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                 break;
 
             default:
-                key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
+                keyGrabCallback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
                 setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
@@ -9366,7 +9378,7 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
     }
 }
 
-void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
+void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
     if (!pKeyUnit) {
@@ -9385,13 +9397,6 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
         }
     }
 }
-
-// Not used:
-//void dlgTriggerEditor::slot_choseActionIcon()
-//{
-//    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
-//    mpActionsMainArea->lineEdit_action_icon->setText(fileName);
-//}
 
 void dlgTriggerEditor::slot_toggleIsPushDownButton(const int state)
 {
@@ -9452,12 +9457,14 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 
 void dlgTriggerEditor::slot_soundTrigger()
 {
-    // Use the existing path/filename if it is not empty, otherwise start in
-    // profile home directory:
+    // Use the existing path/filename if it is not empty, otherwise start in last global user dir
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+
     const QString fileName = QFileDialog::getOpenFileName(this,
                                                     tr("Choose sound file"),
                                                     mpTriggersMainArea->lineEdit_soundFile->text().isEmpty()
-                                                    ? mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())
+                                                    ? lastDir
                                                     : mpTriggersMainArea->lineEdit_soundFile->text(),
                                                     //: This the list of file extensions that are considered for sounds from triggers, the terms inside of the '('...')' and the ";;" are used programmatically and should not be changed.
                                                     tr("Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;"
@@ -9475,6 +9482,8 @@ void dlgTriggerEditor::slot_soundTrigger()
         mpTriggersMainArea->lineEdit_soundFile->setText(fileName);
         mpTriggersMainArea->lineEdit_soundFile->setCursorPosition(mpTriggersMainArea->lineEdit_soundFile->text().length());
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());
+        lastDir = QFileInfo(fileName).absolutePath();
+        settings.setValue("lastFileDialogLocation", lastDir);
     }
 }
 
@@ -9967,10 +9976,6 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
         mpTriggersMainArea->toolButton_toggleExtraControls->setChecked(isShown);
     }
 
-    if (mpTriggersMainArea->widget_bottom->isVisible() != isShown) {
-        mpTriggersMainArea->widget_bottom->setVisible(isShown);
-    }
-
     if (mpTriggersMainArea->widget_right->isVisible() != isShown) {
         mpTriggersMainArea->widget_right->setVisible(isShown);
     }
@@ -9987,34 +9992,35 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
      *w_||                    ||         |   ||                              ||
      *il||    scroll area     || widget  |   ||         scroll area          ||
      *de||                    || _right  |   ||                              ||
-     *gf|+--------------------+|         |   |+------------------------------+|
-     *et|+--------------------+|         | --+--------------------------------+
-     *t ||   widget_bottom    ||         |
+     *gf||                    ||         |   |+------------------------------+|
+     *et||                    ||         | --+--------------------------------+
+     *t ||                    ||         |
      *=>|+--------------------+|         |
      *--+----------------------+---------+
      */
     const int hysteresis = 10;
-    static int bottomWidgetHeight = 0;
     if (mpTriggersMainArea->isVisible()) {
         mTriggerEditorSplitterState = splitter_right->saveState();
         // The triggersMainArea is visible
         if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
             // The extra controls are visible in the triggersMainArea
-            bottomWidgetHeight = mpTriggersMainArea->widget_bottom->height();
-            if ((mpTriggersMainArea->widget_left->height()) <= (mpTriggersMainArea->widget_right->minimumSizeHint().height() + hysteresis)
-                || mpTriggersMainArea->widget_verticalSpacer_right->height() == 0) {
+            if (mpTriggersMainArea->widget_verticalSpacer_right->height() <= hysteresis) {
                 // And it is not tall enough to show the right hand side - so
-                // hide them:
+                // hide them - we are using the spacer to detect if there is any
+                // space:
                 slot_showAllTriggerControls(false);
+                // And the first time note down the required height:
+                if (mTriggerMainAreaMinimumHeightToShowAll < 1) {
+                    mTriggerMainAreaMinimumHeightToShowAll = mpTriggersMainArea->widget_left->height();
+                }
             }
 
         } else {
             // And the extra controls are NOT visible
-            if ((mpTriggersMainArea->widget_left->height() - bottomWidgetHeight) > mpTriggersMainArea->widget_right->minimumSizeHint().height() - hysteresis) {
-                // And it is tall enough to show the right hand side completely
-                // so show them:
+            if (mTriggerMainAreaMinimumHeightToShowAll > 0 && mpTriggersMainArea->widget_left->height() > mTriggerMainAreaMinimumHeightToShowAll) {
                 slot_showAllTriggerControls(true);
             }
+
         }
     } else if (mpActionsMainArea->isVisible()) {
         mActionEditorSplitterState = splitter_right->saveState();
@@ -10225,4 +10231,31 @@ void dlgTriggerEditor::showIDLabels(const bool visible)
     mpScriptsMainArea->frameId->setVisible(visible);
     mpTimersMainArea->frameId->setVisible(visible);
     mpTriggersMainArea->frameId->setVisible(visible);
+}
+
+void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
+{
+    int activeItems = 0;
+    if (!mpWidget_triggerItems || !mpWidget_triggerItems->layout()) {
+        return;
+    }
+    auto pLayout = mpWidget_triggerItems->layout();
+    for (qsizetype i = 0, total = pLayout->count(); i < total; ++i) {
+        auto pLayoutItem = pLayout->itemAt(i)->widget();
+        if (pLayoutItem) {
+            auto* pLineEdit_pattern = pLayoutItem->findChild<QLineEdit*>(qsl("lineEdit_pattern"));
+            auto* pComboBox_type = pLayoutItem->findChild<QComboBox*>(qsl("comboBox_patternType"));
+            if (pComboBox_type && (pComboBox_type->currentIndex() == REGEX_PROMPT || pComboBox_type->currentIndex() == REGEX_LINE_SPACER)) {
+                // These automatically counts as an active item - though if there
+                // isn't any GA signals the first won't work...
+                ++activeItems;
+            } else {
+                if (pLineEdit_pattern && !pLineEdit_pattern->text().isEmpty()) {
+                    ++activeItems;
+                }
+            }
+        }
+    }
+
+    mpTriggersMainArea->groupBox_multiLineTrigger->setEnabled(activeItems > 1);
 }

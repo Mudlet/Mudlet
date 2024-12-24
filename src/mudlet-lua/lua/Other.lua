@@ -100,8 +100,9 @@ SavedVariables = {}
 
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having
---- to use multiple send() commands one after another.
+--- to use multiple send() commands one after another.  Optionally you can delay the sends using a number.
 ---
+--- @param seconds [optional] number of seconds to delay the sending of commands
 --- @param ... list of commands
 --- @param echoTheValue optional boolean flag (default value is true) which determine if value should
 ---   be echoed back on client.
@@ -116,6 +117,10 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
+---   with a time delay of 2 seconds between each command:
+---   <pre>
+---   sendAll(2, "stand", "wield shield", "say ha!")
+---   </pre>
 --- @usage Use sendAll and do not echo sent command on the main window.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!", false)
@@ -123,15 +128,24 @@ SavedVariables = {}
 ---
 --- @see send
 function sendAll(...)
+  local time = 0
   local args = { ... }
   local echo = true
+
   if type(args[#args]) == 'boolean' then
     echo = table.remove(args, #args)
   end
-  for i, v in ipairs(args) do
-    if type(v) == 'string' then
-      send(v, echo)
+  if type(args[1]) == 'number' then
+    time = table.remove(args, 1)
+    for i, v in ipairs(args) do
+      if type(v) == 'string' then
+        tempTimer(time*i, function() send(v, echo) end, false)
+      end
     end
+    return
+  end
+  for i, v in ipairs(args) do
+    send(v, echo)
   end
 end
 
@@ -1056,6 +1070,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
   folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../../translations/lua") and luaGlobalPath.."/../../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
   assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
@@ -1250,18 +1265,18 @@ function getConfig(...)
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
       "logInHTML",
-      "mapExitSize", 
+      "mapExitSize",
       "mapperPanelVisible",
       "mapRoomSize",
-      "mapRoundRooms", 
+      "mapRoundRooms",
       "mapShowRoomBorders",
       "show3dMapView",
       "showRoomIdsOnMap",
       "showSentText",
-      "specialForceCompressionOff", 
+      "specialForceCompressionOff",
       "specialForceCharsetNegotiationOff",
-      "specialForceGAOff", 
-      "specialForceMxpNegotiationOff", 
+      "specialForceGAOff",
+      "specialForceMxpNegotiationOff",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

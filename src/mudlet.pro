@@ -74,7 +74,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
@@ -120,7 +120,7 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 
 
 # Set Mudlet version (update in CMakeLists.txt as well)
-VERSION = 4.18.3
+VERSION = 4.18.5
 
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
@@ -243,16 +243,6 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
   DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
-################ Alternative Windows build environment support #################
-# Developers using a full MSYS2/Mingw-w64 system, as documented at:
-# https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows_7.2B_.28MSYS2_Alternative.29
-# will need some tweaks to names/paths for some libraries/header files, do this
-# by setting an environment variable WITH_MAIN_BUILD_SYSTEM variable to "NO".
-MAIN_BUILD_SYSTEM_TEST = $$upper($$(WITH_MAIN_BUILD_SYSTEM))
-isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
-  DEFINES += INCLUDE_MAIN_BUILD_SYSTEM
-}
-
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -290,6 +280,37 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # commands for suboptions - change the value to 2 to get a bit more detail
 # about the size or nature of the command:
 DEFINES+=DEBUG_TELNET=1
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_UTF8_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+# it is not the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_GB_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+# single bytes of pure ASCII text:
+# DEFINES+=DEBUG_BIG5_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_EUC_KR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+# DEFINES+=DEBUG_SGR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# DEFINES+=DEBUG_OSC_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+# there is not much against this item at present {only an announcement of the
+# type (?) of an `\x1b[?z` received}:
+# DEFINES+=DEBUG_MXP_PROCESSING
+#
+# * Enable the features associated with reporting problems in processing Unicode
+# codepoints that cannot be displayed on screen in a `TConsole`:
+# DEFINES+=DEBUG_CODEPOINT_PROBLEMS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -352,67 +373,50 @@ unix:!macx {
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
-
-    contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
-        # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-        isEmpty( MINGW_BASE_DIR_TEST ) {
-            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
-        }
+    isEmpty( MINGW_BASE_DIR_TEST ) {
+        error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
+        "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
+        "application build) typically this is one of:\\n"\
+        "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
+        "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
+        "'C:\msys64\mingw64' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+    }
+    GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
+    isEmpty( GITHUB_WORKSPACE_TEST ) {
+        # For users/developers building with MSYS2 on Windows:
         LIBS +=  \
-            -L"$${MINGW_BASE_DIR_TEST}\\bin" \
-            -llua51 \
-            -lhunspell-1.6
+            -L$${MINGW_BASE_DIR_TEST}/bin \
+            -llua5.1 \
+            -llibhunspell-1.7
 
         INCLUDEPATH += \
-             "C:\\Libraries\\boost_1_83_0" \
-             "$${MINGW_BASE_DIR_TEST}\\include" \
-             "$${MINGW_BASE_DIR_TEST}\\lib\\include"
-
+            $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+            $${MINGW_BASE_DIR_TEST}/include/pugixml
     } else {
-        isEmpty( MINGW_BASE_DIR_TEST ) {
-            error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
-            "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
-            "application build) typically this is one of:\\n"\
-            "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
-            "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
-            "'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
-        }
-        GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
-        isEmpty( GITHUB_WORKSPACE_TEST ) {
-            # For users/developers building with MSYS2 on Windows:
+        # For CI building with MSYS2 for Windows in a GH Workflow:
+        contains(QMAKE_HOST.arch, x86_64) {
+
             LIBS +=  \
-                -L$${MINGW_BASE_DIR_TEST}/bin \
+                -LD:\\a\\_temp\\msys64\\mingw64/lib \
+                -LD:\\a\\_temp\\msys64\\mingw64/bin \
                 -llua5.1 \
                 -llibhunspell-1.7
 
             INCLUDEPATH += \
-                 $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
-                 $${MINGW_BASE_DIR_TEST}/include/pugixml
+                D:\\a\\_temp\\msys64\\mingw64/include \
+                D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                $${MINGW_BASE_DIR_TEST}/include/pugixml
         } else {
-            # For users/developers building with MSYS2 for Windows in a GH Workflow:
-            contains(QMAKE_HOST.arch, x86_64) {
-                LIBS +=  \
-                    -LD:\\a\\_temp\\msys64\\mingw64/lib \
-                    -LD:\\a\\_temp\\msys64\\mingw64/bin \
-                    -llua5.1 \
-                    -llibhunspell-1.7
+            LIBS +=  \
+                -LD:\\a\\_temp\\msys64\\mingw32/lib \
+                -LD:\\a\\_temp\\msys64\\mingw32/bin \
+                -llua5.1 \
+                -llibhunspell-1.7
 
-                INCLUDEPATH += \
-                     D:\\a\\_temp\\msys64\\mingw64/include \
-                     D:/a/_temp/msys64/mingw64/include/lua5.1 \
-                     $${MINGW_BASE_DIR_TEST}/include/pugixml
-            } else {
-                LIBS +=  \
-                    -LD:\\a\\_temp\\msys64\\mingw32/lib \
-                    -LD:\\a\\_temp\\msys64\\mingw32/bin \
-                    -llua5.1 \
-                    -llibhunspell-1.7
-
-                INCLUDEPATH += \
-                     D:\\a\\_temp\\msys64\\mingw32/include \
-                     D:/a/_temp/msys64/mingw32/include/lua5.1 \
-                     $${MINGW_BASE_DIR_TEST}/include/pugixml
-            }
+            INCLUDEPATH += \
+                D:\\a\\_temp\\msys64\\mingw32/include \
+                D:/a/_temp/msys64/mingw32/include/lua5.1 \
+                $${MINGW_BASE_DIR_TEST}/include/pugixml
         }
     }
 
@@ -462,17 +466,15 @@ macx {
 
 # use ccache if available
 BASE_CXX = $$QMAKE_CXX
-BASE_C = $$QMAKE_C
+BASE_C = $$QMAKE_CC
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
-    message("Found ccache, updating QMAKE_CXX and QMAKE_C")
-    QMAKE_CXX = ccache $$BASE_CXX
-    QMAKE_C = ccache $$BASE_C
-} else {
-    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
-}
 
-message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_C: '"$${QMAKE_C}"'")
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(C:\msys64\mingw64\bin\ccache.exe)|exists(C:\msys64\mingw32\bin\ccache.exe) {
+    QMAKE_CXX = ccache $$BASE_CXX
+    QMAKE_CC = ccache $$BASE_C
+} else {
+    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, C:\msys64\mingw64\bin\ccache.exe, or C:\msys64\mingw64\bin\ccache.exe")
+}
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
@@ -560,14 +562,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/dblsqd")
         }
-
-        # Sparkle glue code - only needed for MacOs
-        macx {
-            !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-                message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
-                system("cd $${PWD}/.. ; git submodule update --init 3rdparty/sparkle-glue")
-            }
-        }
     }
 }
 
@@ -597,14 +591,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
         include("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
     } else {
         error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
-    }
-
-    macx {
-        # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle compilation below
-        !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-            error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
-        }
     }
 }
 
@@ -1601,15 +1587,8 @@ macx {
         QMAKE_LFLAGS += -F $$SPARKLE_PATH
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
-        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-        OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-            ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-        HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
-            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-            ../3rdparty/sparkle-glue/CocoaInitializer.h
-
+        OBJECTIVE_SOURCES += sparkleupdater.mm
+        HEADERS += sparkleupdater.h        
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework

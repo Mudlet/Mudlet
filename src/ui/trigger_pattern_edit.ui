@@ -150,7 +150,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="pushButton_prompt">
+    <widget class="QLabel" name="label_prompt">
      <property name="enabled">
       <bool>false</bool>
      </property>

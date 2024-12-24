@@ -231,7 +231,7 @@ int TLuaInterpreter::getCustomLines1(lua_State* L)
             lua_pushnumber(L, pointL.at(k).y());
             lua_settable(L, -3);
             lua_pushinteger(L, 3);
-            lua_pushnumber(L, pR->z);
+            lua_pushnumber(L, pR->z());
             lua_settable(L, -3);
             lua_settable(L, -3); //customLines[direction]["points"][3 x coordinates]
         }
@@ -339,9 +339,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                         (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
         }
 
-        x.append(static_cast<qreal>(pR_to->x));
-        y.append(static_cast<qreal>(pR_to->y));
-        z.append(pR->z);
+        x.append(static_cast<qreal>(pR_to->x()));
+        y.append(static_cast<qreal>(pR_to->y()));
+        z.append(pR->z());
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
         int i = 0; // Indexes groups of coordinates in the table
@@ -577,13 +577,30 @@ int TLuaInterpreter::addRoom(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const Host& host = getHostFromLua(L);
     const bool added = host.mpMap->addRoom(id);
-    lua_pushboolean(L, added);
+    bool issueBadAreaWarning = false;
     if (added) {
-        host.mpMap->setRoomArea(id, -1, false);
-        host.mpMap->setUnsaved(__func__);
+        int areaID = -1;
+        if (lua_gettop(L) > 1) {
+            areaID = getVerifiedInt(L, __func__, 2, "areaID");
+        }
+        // defer area calculations as all new rooms are initialised at 0,0,0 anyway
+        if (!host.mpMap->setRoomArea(id, areaID, true)) {
+            // The above will fail if the areaID does not exist (given that
+            // "added" is true then the room now exists - so that isn't the
+            // failure reason) so stuff the room in the "Default Area" instead
+            host.mpMap->setRoomArea(id, -1, true);
+            issueBadAreaWarning = true;
+        }
         host.mpMap->update();
-        host.mpMap->mMapGraphNeedsUpdate = true;
+
+        if (issueBadAreaWarning) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "addRoom: created roomID %d but failed to place it in areaID %d, does that area actually exist? (Room has been placed in areaID -1 instead.)", id, areaID);
+            return 2;
+        }
     }
+
+    lua_pushboolean(L, added);
     return 1;
 }
 
@@ -1361,6 +1378,26 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaRooms1
+int TLuaInterpreter::getAreaRooms1(lua_State* L)
+{
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_newtable(L);
+    int i = 0;
+    for (int room : qAsConst(pA->getAreaRooms())) {
+        lua_pushnumber(L, ++i);
+        lua_pushnumber(L, room);
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaTable
 int TLuaInterpreter::getAreaTable(lua_State* L)
 {
@@ -1503,7 +1540,6 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
@@ -1528,7 +1564,6 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
@@ -1538,6 +1573,35 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
         lua_pushnumber(L, stubs.at(i));
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubsNames
+int TLuaInterpreter::getExitStubsNames(lua_State* L)
+{
+    const QStringList stubmap = { "north", "northeast", "northwest", "east", "west",
+                                  "south", "southeast", "southwest", "up", "down", "in",
+                                  "out", "other"
+    };
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
+
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
+    }
+    QList<int> const stubs = pR->exitStubs;
+    lua_newtable(L);
+    for (int i = 0, total = stubs.size(); i < total; ++i) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, stubmap[stubs.at(i) - 1].toUtf8().constData());
         lua_settable(L, -3);
     }
     return 1;
@@ -1924,9 +1988,9 @@ int TLuaInterpreter::getRoomCoordinates(lua_State* L)
         lua_pushnil(L);
         return 3;
     } else {
-        lua_pushnumber(L, pR->x);
-        lua_pushnumber(L, pR->y);
-        lua_pushnumber(L, pR->z);
+        lua_pushnumber(L, pR->x());
+        lua_pushnumber(L, pR->y());
+        lua_pushnumber(L, pR->z());
         return 3;
     }
 }
@@ -3476,12 +3540,32 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    QVector<int> roomIds;
+    if (lua_isnumber(L, 1)) {
+        const int id = getVerifiedInt(L, __func__, 1, "roomID");
+        if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+            return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+        }
+        roomIds.append(id);
+    } else if (lua_istable(L, 1)) {
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            const int id = getVerifiedInt(L, __func__, -1, "roomID");
+            if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+                return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+            }
+            roomIds.append(id);
+            lua_pop(L, 1);
+        }
+    } else {
+        lua_pushfstring(L,
+                        "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs\n"
+                        "expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
 
-    int areaId;
+    int areaId = -1;
     QString areaName;
     if (lua_isnumber(L, 2)) {
         areaId = lua_tonumber(L, 2);
@@ -3511,9 +3595,11 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return lua_error(L);
     }
 
-    // Can set the room to an area which does not have a TArea instance but does
-    // appear in the TRoomDB::areaNamesMap...
-    const bool result = host.mpMap->setRoomArea(id, areaId, false);
+    const bool result = std::all_of(roomIds.begin(), roomIds.end(), [&](int id) {
+        // defer area recalculation on all rooms until the last room (.back())
+        return host.mpMap->setRoomArea(id, areaId, id != roomIds.back());
+    });
+
     if (result) {
         host.mpMap->update();
     }
