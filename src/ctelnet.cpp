@@ -184,6 +184,7 @@ cTelnet::~cTelnet()
     if (mpComposer) {
         mpComposer->deleteLater();
     }
+    socket.disconnect();
     socket.deleteLater();
 }
 
@@ -2376,10 +2377,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     // Check if the version is different and handle the upgrade
                     postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
-                    
+
                     // Uninstall the old version
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
-                    
+
                     // Download and install the new version
                     mpHost->mServerGUI_Package_version = version;
                     downloadAndInstallGUIPackage(packageName, fileName, url);
@@ -2663,7 +2664,7 @@ QString cTelnet::parseGUIVersionFromJSON(const QJsonObject& json) {
     } else if (versionJSON != QJsonValue::Undefined && versionJSON.isDouble()) {
         version = qsl("%1").arg(versionJSON.toInt());
     }
-    
+
     return version;
 }
 
@@ -2675,7 +2676,7 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
     if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
         url = urlJSON.toString();
     }
-    
+
     return url;
 }
 
@@ -2734,10 +2735,10 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
         // Check if the version is different and handle the upgrade
         postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
                     .arg(version, mpHost->mServerGUI_Package_version, url));
-        
+
         // Uninstall the old version
         mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
-        
+
         // Download and install the new version
         mpHost->mServerGUI_Package_version = version;
         downloadAndInstallGUIPackage(packageName, fileName, url);
