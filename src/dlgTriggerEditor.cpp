@@ -4554,7 +4554,7 @@ void dlgTriggerEditor::slot_itemEdited()
         break;
     }
     case EditorViewType::cmUnknownView:
-        [[fallthrough]]
+        [[fallthrough]];
     case EditorViewType::cmVarsView:
         break;
     }
