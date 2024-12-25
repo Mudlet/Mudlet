@@ -236,7 +236,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
-    mpSourceEditorEdbeeDocument->setText(qsl("%1\n").arg(tr("-- Enter your lua code here")));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
@@ -695,6 +694,31 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
     connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_itemSelectedInSearchResults);
 
+    // triggers
+    connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpTriggersMainArea->lineEdit_trigger_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    // aliases
+    connect(mpAliasMainArea->lineEdit_alias_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpAliasMainArea->lineEdit_alias_pattern, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpAliasMainArea->lineEdit_alias_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    // scripts
+    connect(mpScriptsMainArea->lineEdit_script_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    // timers
+    connect(mpTimersMainArea->lineEdit_timer_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpTimersMainArea->lineEdit_timer_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    // keys
+    connect(mpKeysMainArea->lineEdit_key_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpKeysMainArea->lineEdit_key_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_itemEdited);
+    // buttons
+    connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+
+
+
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search
     // term - this is to prevent an overlarge button on MacOS platforms where it
@@ -857,7 +881,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
         connect(pItem->singleLineTextEdit_pattern, &QTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
+        connect(pItem->singleLineTextEdit_pattern, &QTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+
         mpWidget_triggerItems->layout()->addWidget(pItem);
+
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
         pItem->pushButton_fgColor->hide();
@@ -4426,6 +4453,117 @@ void dlgTriggerEditor::selectKeyByID(int id)
     }
 }
 
+TTrigger* dlgTriggerEditor::getTriggerFromTreeItem(QTreeWidgetItem* item)
+{
+    if (!item || !item->parent()) {
+        return nullptr;
+    }
+
+    const int triggerID = item->data(0, Qt::UserRole).toInt();
+    return mpHost->getTriggerUnit()->getTrigger(triggerID);
+}
+
+TAlias* dlgTriggerEditor::getAliasFromTreeItem(QTreeWidgetItem* item)
+{
+    if (!item || !item->parent()) {
+        return nullptr;
+    }
+
+    const int aliasID = item->data(0, Qt::UserRole).toInt();
+    return mpHost->getAliasUnit()->getAlias(aliasID);
+}
+
+TScript* dlgTriggerEditor::getScriptFromTreeItem(QTreeWidgetItem* item)
+{
+    if (!item || !item->parent()) {
+        return nullptr;
+    }
+
+    const int scriptID = item->data(0, Qt::UserRole).toInt();
+    return mpHost->getScriptUnit()->getScript(scriptID);
+}
+
+TTimer* dlgTriggerEditor::getTimerFromTreeItem(QTreeWidgetItem* item)
+{
+    if (!item || !item->parent()) {
+        return nullptr;
+    }
+
+    const int timerID = item->data(0, Qt::UserRole).toInt();
+    return mpHost->getTimerUnit()->getTimer(timerID);
+}
+
+TKey* dlgTriggerEditor::getKeyFromTreeItem(QTreeWidgetItem* item)
+{
+    if (!item || !item->parent()) {
+        return nullptr;
+    }
+
+    const int keyID = item->data(0, Qt::UserRole).toInt();
+    return mpHost->getKeyUnit()->getKey(keyID);
+}
+
+TAction* dlgTriggerEditor::getActionFromTreeItem(QTreeWidgetItem* item)
+{
+    if (!item || !item->parent()) {
+        return nullptr;
+    }
+
+    const int actionID = item->data(0, Qt::UserRole).toInt();
+    return mpHost->getActionUnit()->getAction(actionID);
+}
+
+void dlgTriggerEditor::slot_itemEdited()
+{
+    QString packageName;
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView: {
+        if (auto trigger = getTriggerFromTreeItem(mpCurrentTriggerItem)) {
+            packageName = trigger->packageName(trigger);
+        }
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        if (auto alias = getAliasFromTreeItem(mpCurrentAliasItem)) {
+            packageName = alias->packageName(alias);
+        }
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        if (auto timer = getTimerFromTreeItem(mpCurrentTimerItem)) {
+            packageName = timer->packageName(timer);
+        }
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        if (auto script = getScriptFromTreeItem(mpCurrentScriptItem)) {
+            packageName = script->packageName(script);
+        }
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        if (auto action = getActionFromTreeItem(mpCurrentActionItem)) {
+            packageName = action->packageName(action);
+        }
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        if (auto key = getKeyFromTreeItem(mpCurrentKeyItem)) {
+            packageName = key->packageName(key);
+        }
+        break;
+    }
+    case EditorViewType::cmUnknownView:
+        [[fallthrough]];
+    case EditorViewType::cmVarsView:
+        break;
+    }
+
+    if (!packageName.isEmpty()) {
+        showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+    }
+}
+
 void dlgTriggerEditor::saveTrigger()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
@@ -5037,7 +5175,10 @@ void dlgTriggerEditor::writeScript(int id)
     }
 
     const QString scriptCode = pT->getScript();
+
+    disconnect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setText(scriptCode);
+    connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
 }
 
 void dlgTriggerEditor::saveScript()
@@ -9694,6 +9835,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
 {
     mpSourceEditorFindArea->hide();
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
+    connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
     mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
@@ -9720,7 +9862,9 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     // If undo is not disabled when setting the initial text, the
     // setting of the text will be undoable.
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
+    disconnect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setText(initialText);
+    connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
 
@@ -9841,7 +9985,9 @@ void dlgTriggerEditor::slot_editorContextMenu()
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
         // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
         controller->beginUndoGroup();
+        disconnect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
         mpSourceEditorEdbeeDocument->setText(formattedText);
+        connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
         // don't coalesce the format text action - not that it matters for us since we we only change
         // the text once during the undo group
         controller->endUndoGroup(edbee::CoalesceId::CoalesceId_None, false);

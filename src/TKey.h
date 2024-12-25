@@ -65,6 +65,9 @@ public:
     bool setScript(const QString& script);
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() const { return mCommand; }
+    QString packageName(TKey* pKey);
+    QString moduleName(TKey* pKey);
+
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
