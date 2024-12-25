@@ -103,6 +103,7 @@ set(mudlet_SRCS
     MxpTag.cpp
     ScriptUnit.cpp
     ShortcutsManager.cpp
+    SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -162,6 +163,7 @@ set(mudlet_SRCS
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
+    TriggerHighlighter.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -284,6 +286,7 @@ set(mudlet_HDRS
     pre_guard.h
     ScriptUnit.h
     ShortcutsManager.h
+    SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -340,6 +343,7 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TrailingWhitespaceMarker.h
     Tree.h
+    TriggerHighlighter.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
@@ -398,7 +402,20 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
+# Enable sanitizers support
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
+set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
+set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
+
+set(USE_SANITIZER
+      "address"
+      CACHE STRING
+      "Compile with sanitizers. Available sanitizers are: Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
+
+add_sanitizer_support(${USE_SANITIZER})
+message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
+
 
 if(WITH_QT6)
 find_package(
