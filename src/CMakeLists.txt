@@ -517,6 +517,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 
+# Enable symbol exports from the main executable so that dynamically loaded Lua modules
+# can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
+# will fail to load with "undefined symbol" errors.
+set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
+
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in
