@@ -393,7 +393,7 @@ void TAction::setName(const QString& name)
     }
 }
 
-QString TAction::packageName(TAction* pAction)
+QString TAction::packageName(TAction* pAction) const
 {
     if (!pAction) {
         return QString();
@@ -410,7 +410,7 @@ QString TAction::packageName(TAction* pAction)
     return QString();
 }
 
-QString TAction::moduleName(TAction* pAction)
+QString TAction::moduleName(TAction* pAction) const
 {
     if (!pAction) {
         return QString();
