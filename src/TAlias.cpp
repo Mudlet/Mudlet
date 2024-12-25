@@ -364,3 +364,37 @@ void TAlias::execute()
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
 }
+
+QString TAlias::packageName(TAlias* pAlias)
+{
+    if (!pAlias) {
+        return QString();
+    }
+
+    if (!pAlias->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+    }
+
+    if (pAlias->getParent()) {
+        return packageName(pAlias->getParent());
+    }
+
+    return QString();
+}
+
+QString TAlias::moduleName(TAlias* pAlias)
+{
+    if (!pAlias) {
+        return QString();
+    }
+
+    if (!pAlias->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+    }
+
+    if (pAlias->getParent()) {
+        return moduleName(pAlias->getParent());
+    }
+
+    return QString();
+}
