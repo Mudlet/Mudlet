@@ -422,7 +422,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
 {
     // Some constants used to prevent small, unreadable symbols:
     static const float symbolLowerSizeLimit = 8.0;
-    static unsigned const int minimumUsableFontSize = 8;
+    static const unsigned int minimumUsableFontSize = 4;
 
     // Draw onto a rectangle that will fit the room symbol rectangle,
     // Must tweak the size so it fits within circle when round room symbols are
