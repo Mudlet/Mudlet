@@ -932,20 +932,20 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     emit profileSaveStarted();
     qApp->processEvents();
 
-    auto watcher = new QFutureWatcher<void>;
+    QFutureWatcher<void> watcher;
     mModuleFuture = QtConcurrent::run([=]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(&watcher, &QFutureWatcher<void>::finished, this, [=]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
         }
         mWritingHostAndModules = false;
     });
-    watcher->setFuture(mModuleFuture);
+    watcher.setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
 }
 
