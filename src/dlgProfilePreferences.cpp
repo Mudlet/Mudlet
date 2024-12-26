@@ -1049,7 +1049,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
-    for (auto encoding : pHost->mTelnet.getEncodingsList()) {
+    for (const auto &encoding : pHost->mTelnet.getEncodingsList()) {
         auto encodingTitle = mudlet::self()->getEncodingNamesMap().value(encoding, tr("%1 (*Error, report to Mudlet Makers*)",
                                                                                       // Intentional comment to separate arguments
                                                                                       "The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!")
@@ -3304,7 +3304,7 @@ void dlgProfilePreferences::populateScriptsList()
     combobox->setUpdatesEnabled(false);
     combobox->clear();
 
-    for (auto [name, type, id] : items) {
+    for (const auto &[name, type, id] : items) {
         combobox->addItem(qsl("%1 (%2)").arg(name, type),
                           // store the item type and ID in data so we can pull up the script for it later
                           QVariant::fromValue(QPair<QString, int>(type, id)));
@@ -3540,7 +3540,7 @@ void dlgProfilePreferences::populateThemesList()
 
     auto currentSelection = code_editor_theme_selection_combobox->currentText();
     code_editor_theme_selection_combobox->clear();
-    for (auto key : std::as_const(sortedThemes)) {
+    for (const auto &key : std::as_const(sortedThemes)) {
         // store the actual theme file as data because edbee needs that,
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(key.first, key.second);

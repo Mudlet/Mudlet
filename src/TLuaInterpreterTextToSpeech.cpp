@@ -517,7 +517,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     const QString nextVoice = getVerifiedString(L, __func__, 1, "voice");
 
     QVector<QVoice> const speechVoices = speechUnit->availableVoices();
-    for (auto voice : speechVoices) {
+    for (const auto& voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
             lua_pushboolean(L, true);

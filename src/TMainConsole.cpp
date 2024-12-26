@@ -1091,7 +1091,7 @@ void TMainConsole::setProfileName(const QString& newName)
 {
     TConsole::setProfileName(newName);
 
-    for (auto pC : mSubConsoleMap) {
+    for (auto pC : qAsConst(mSubConsoleMap)) {
         pC->setProfileName(newName);
     }
 }
