@@ -2511,7 +2511,8 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
     QPainter lp(&pixmap);
-    lp.setRenderHint(QPainter::Antialiasing);
+    lp.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
+
     lp.fillRect(drawRectangle, label.bgColor);
 
     if (mpDlgMapLabel->isTextLabel()) {
@@ -2521,6 +2522,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 
         if (label.fgColor != label.outlineColor) {
             QPen outlinePen(label.outlineColor);
+            outlinePen.setCosmetic(mMapperUseAntiAlias);
             outlinePen.setWidth(1);
             lp.setPen(outlinePen);
 
