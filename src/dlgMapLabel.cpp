@@ -48,8 +48,8 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     connect(toolButton_fontPick, &QToolButton::released, this, &dlgMapLabel::slot_pickFont);
     connect(pushButton_save, &QPushButton::released, this, &dlgMapLabel::slot_save);
     connect(pushButton_cancel, &QPushButton::released, this, &dlgMapLabel::close);
-    connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=]() { emit updated(); });
-    connect(checkBox_scaling, &QCheckBox::stateChanged, this, [=]() { emit updated(); });
+    connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() { emit updated(); });
+    connect(checkBox_scaling, &QCheckBox::stateChanged, this, [this]() { emit updated(); });
     connect(this, &dlgMapLabel::updated, this, &dlgMapLabel::slot_updateControls);
 
     font = QApplication::font();
@@ -81,7 +81,7 @@ void dlgMapLabel::slot_pickFgColor()
         emit updated();
     });
     auto originalColor = QColor(fgColor);
-    connect(fgColorDialog, &QColorDialog::rejected, this, [=]() {
+    connect(fgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
         fgColor = originalColor;
         emit updated();
     });
@@ -101,7 +101,7 @@ void dlgMapLabel::slot_pickBgColor()
         bgColor = color;
         emit updated();
     });
-    connect(bgColorDialog, &QColorDialog::rejected, this, [=]() {
+    connect(bgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
         bgColor = originalColor;
         emit updated();
     });
@@ -121,7 +121,7 @@ void dlgMapLabel::slot_pickOutlineColor()
         emit updated();
     });
     auto originalColor = QColor(outlineColor);
-    connect(outlineColorDialog, &QColorDialog::rejected, this, [=]() {
+    connect(outlineColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
         outlineColor = originalColor;
         emit updated();
     });
@@ -140,7 +140,7 @@ void dlgMapLabel::slot_pickFont()
         font = pFont;
         emit updated();
     });
-    connect(fontDialog, &QFontDialog::rejected, this, [=]() {
+    connect(fontDialog, &QFontDialog::rejected, this, [this, originalFont]() {
         font = originalFont;
         emit updated();
     });

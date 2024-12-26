@@ -2517,18 +2517,19 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     if (mpDlgMapLabel->isTextLabel()) {
 
         lp.setFont(font);
-
-        // Draw outline first
-        QPen outlinePen(label.outlineColor);
-        outlinePen.setWidth(1);
-        lp.setPen(outlinePen);
-
         QRectF br;
-        // Draw the outline by offsetting the text slightly in all directions
-        lp.drawText(QRect(9, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(11, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(10, 9, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(10, 11, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+        if (label.fgColor != label.outlineColor) {
+            QPen outlinePen(label.outlineColor);
+            outlinePen.setWidth(1);
+            lp.setPen(outlinePen);
+
+            // Draw the outline by offsetting the text slightly in all directions
+            lp.drawText(QRect(9, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+            lp.drawText(QRect(11, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+            lp.drawText(QRect(10, 9, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+            lp.drawText(QRect(10, 11, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        }
 
         // Draw the main text on top
         lp.setPen(label.fgColor);

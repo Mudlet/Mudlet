@@ -40,7 +40,6 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
-#include <QPainterPath>
 #include <QBuffer>
 #include "post_guard.h"
 
@@ -2171,6 +2170,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.text = text;
     label.bgColor = bg;
     label.fgColor = fg;
+    label.outlineColor = outline;
     label.size = QSizeF(100, 100);
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
@@ -2188,17 +2188,18 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setFont(font);
 
-    QPen outlinePen(outline);
+    QPen outlinePen(label.outlineColor);
     outlinePen.setWidth(1);
     lp.setPen(outlinePen);
 
     QRectF br;
-    // Draw the outline first by offsetting the text slightly in all directions
-    lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-    lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-    lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-    lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-    // Draw the main text on top
+
+    if (label.fgColor != label.outlineColor) {
+        lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    }
     lp.setPen(label.fgColor);
     lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
 
