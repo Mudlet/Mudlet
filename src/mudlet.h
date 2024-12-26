@@ -515,6 +515,7 @@ public slots:
     void slot_irc();
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
+    void slot_showFullChangelog();
 #endif
     void slot_mapper();
     void slot_moduleManager();
