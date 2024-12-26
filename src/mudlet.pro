@@ -63,11 +63,12 @@ include(../3rdparty/communi/communi.pri)
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++17 for builds.
+# enable C++20 for builds.
 lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
-    QMAKE_CXXFLAGS += -std=c++17
+    QMAKE_CXXFLAGS += -std=c++20
 } else {
-    CONFIG += c++17
+    # c++2a for Qt 5 and c++20 for Qt 6
+    CONFIG += c++2a
 }
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.

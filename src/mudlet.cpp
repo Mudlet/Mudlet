@@ -566,6 +566,8 @@ void mudlet::init()
     // Show the update option if the code is present AND if this is a
     // release OR a public test version, or if you're specifically trying to test Sparkle.
     dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionChangelog->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
+
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
@@ -582,6 +584,7 @@ void mudlet::init()
     // Unconditionally hide the update and report bug menu items if the updater
     // code is not included:
     dactionUpdate->setVisible(false);
+    dactionChangelog->setVisible(false);
     dactionReportIssue->setVisible(false);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_packageManager);
@@ -670,9 +673,11 @@ void mudlet::init()
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
+    connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showFullChangelog);
 #if defined(Q_OS_MACOS)
-    // ensure that 'Check for updates' is under the Applications menu per convention
+    // ensure that 'Check for updates' and 'Changelog' are under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
+    dactionChangelog->setMenuRole(QAction::ApplicationSpecificRole);
 #else
     connect(pUpdater, &Updater::signal_updateInstalled, this, &mudlet::slot_updateInstalled);
 #endif // !Q_OS_MACOS
@@ -3860,6 +3865,11 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_manualUpdateCheck()
 {
     pUpdater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_showFullChangelog()
+{
+    pUpdater->showFullChangelog();
 }
 
 void mudlet::slot_reportIssue()

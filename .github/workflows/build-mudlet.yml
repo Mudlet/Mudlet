@@ -27,7 +27,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 8
+            gcc_compiler_version: 10
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
@@ -35,8 +35,7 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            # We still need a gcc for some sub-stages - and it ain't always the same one:
-            gcc_compiler_version: 9
+            gcc_compiler_version: 10
             qt: '5.14.2'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
@@ -229,7 +228,7 @@ jobs:
         sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
+        # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
@@ -391,6 +390,7 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
