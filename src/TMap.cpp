@@ -2181,34 +2181,6 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
 
-    /* attempt 1
-    QPainter lp(&pix);
-    lp.fillRect(lr, label.bgColor);
-    //QPen lpen;
-    //lpen.setColor(label.fgColor);
-    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
-    font.setHintingPreference(QFont::PreferNoHinting);
-    lp.setRenderHint(QPainter::Antialiasing, true);
-
-    QPainterPath path;
-    path.addText(20, fontSize + 20, font, label.text);
-    // Fill the inner part
-    lp.setPen(Qt::NoPen);
-    lp.setBrush(fg);
-    lp.drawPath(path);
-
-    // Draw the outline
-    QPen pen(outline);
-    pen.setWidth(1);
-    lp.setPen(pen);
-    lp.setBrush(Qt::NoBrush);
-    lp.drawPath(path);
-
-    QRectF br = path.boundingRect();
-    br.adjust(-5, -5, 5, 5);
-    */
-
-    // attempt 2
     QPainter lp(&pix);
     lp.fillRect(lr, label.bgColor);
     lp.setRenderHint(QPainter::Antialiasing);
@@ -2216,29 +2188,19 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setFont(font);
 
-    // Draw outline first
     QPen outlinePen(outline);
     outlinePen.setWidth(1);
     lp.setPen(outlinePen);
 
     QRectF br;
-    // Draw the outline by offsetting the text slightly in all directions
+    // Draw the outline first by offsetting the text slightly in all directions
     lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
     lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
     lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
     lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-
     // Draw the main text on top
     lp.setPen(label.fgColor);
     lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-
-
-    //lp.setPen(lpen);
-    //lp.setFont(font);
-    //QRectF br = path.boundingRect();
-    //lp.drawText(lr, Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-
-
 
     label.size = br.normalized().size();
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
