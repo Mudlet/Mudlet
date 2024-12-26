@@ -104,7 +104,8 @@ jobs:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-        DEPLOY_SSH_KEY: ${{secrets.DEPLOY_SSH_KEY}}
+        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
+        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
         GITHUB_REPO_NAME: ${{ github.repository }}
