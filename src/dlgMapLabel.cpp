@@ -55,6 +55,11 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
     text = lineEdit_text->placeholderText();
+
+    QSettings& settings = *mudlet::getQSettings();
+    fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
+    bgColor = settings.value("bgColorDialogMapLabel", bgColor).value<QColor>();
+    outlineColor = settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>();
     slot_updateControls();
     slot_updateControlsVisibility();
 }
@@ -71,13 +76,16 @@ QString dlgMapLabel::getImagePath()
 
 void dlgMapLabel::slot_pickFgColor()
 {
+    QSettings& settings = *mudlet::getQSettings();
     fgColorDialog = new QColorDialog(this);
+    fgColorDialog->setCurrentColor(settings.value("fgColorDialogMapLabel", fgColor).value<QColor>());
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     fgColorDialog->setWindowTitle(tr("Foreground color"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         fgColor = color;
+        settings.setValue("fgColorDialogMapLabel", fgColor);
         emit updated();
     });
     auto originalColor = QColor(fgColor);
@@ -91,16 +99,19 @@ void dlgMapLabel::slot_pickFgColor()
 
 void dlgMapLabel::slot_pickBgColor()
 {
-    auto originalColor = QColor(bgColor);
+    QSettings& settings = *mudlet::getQSettings();
     bgColorDialog = new QColorDialog(this);
+    bgColorDialog->setCurrentColor(settings.value("bgColorDialogMapLabel", bgColor).value<QColor>());
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     bgColorDialog->setWindowTitle(tr("Background color"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         bgColor = color;
+        settings.setValue("bgColorDialogMapLabel", bgColor);
         emit updated();
     });
+    auto originalColor = QColor(bgColor);
     connect(bgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
         bgColor = originalColor;
         emit updated();
@@ -111,13 +122,16 @@ void dlgMapLabel::slot_pickBgColor()
 
 void dlgMapLabel::slot_pickOutlineColor()
 {
+    QSettings& settings = *mudlet::getQSettings();
     outlineColorDialog = new QColorDialog(this);
+    outlineColorDialog->setCurrentColor(settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>());
     outlineColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     outlineColorDialog->setWindowTitle(tr("Text outline color"));
     outlineColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(outlineColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         outlineColor = color;
+        settings.setValue("outlineColorDialogMapLabel", outlineColor);
         emit updated();
     });
     auto originalColor = QColor(outlineColor);
