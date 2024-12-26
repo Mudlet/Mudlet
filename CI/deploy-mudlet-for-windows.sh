@@ -276,7 +276,11 @@ else
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
-  installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  else # release
+    installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION-windows-$BUILD_BITNESS-installer.exe"
+  fi
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Sign the final installer
@@ -309,7 +313,7 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
 
-    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS-installer.exe"
 
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
@@ -318,21 +322,55 @@ else
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    echo "$DEPLOY_SSH_KEY" > temp_key_file
+
+    # chown doesn't work in msys2 and scp requires the not be globally readable
+    # use a powershell workaround to set the permissions correctly
+    echo "Fixing permissions of private key file"
+    powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
+
+    powershell.exe <<EOF
+\$installerExePath = "$installerExePath"
+\$DEPLOY_PATH = "$DEPLOY_PATH"
+scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
+EOF
+
+    shred -u temp_key_file
+
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
+    if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+      echo "Error: release not found as expected at $DEPLOY_URL"
+      exit 1
+    fi
+
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "$current_timestamp"
 
-    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
+    # blank echo to remove the stray 'PS D:\a\Mudlet\Mudlet\installers\windows> ' that shows up otherwise
+
+    echo ""
+    echo "=== Updating WP-Download-Manager ==="
+    echo "sha256 of installer: $SHA256SUM"
+
+    if [ "${BUILD_BITNESS}" = "32" ]; then
+      FILE_CATEGORY="1"
+    else
+      FILE_CATEGORY="2"
+    fi
+
+    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+    read -r day month year hour minute second <<< "$current_timestamp"
+
     curl -X POST 'https://www.mudlet.org/download-add.php' \
-    -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
+    -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
-    -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
+    -F "file_name=Mudlet ${VERSION} (windows-$BUILD_BITNESS)" \
     -F "file_des=sha256: $SHA256SUM" \
-    -F "file_cat=0" \
+    -F "file_cat=${FILE_CATEGORY}" \
     -F "file_permission=-1" \
     -F "file_timestamp_day=$day" \
     -F "file_timestamp_month=$month" \
@@ -348,7 +386,7 @@ else
   fi
 
   echo "=== Installing NodeJS ==="
-  choco install nodejs --version="22.1.0" -y -r -n
+  choco install --no-progress nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
   export PATH
 
@@ -368,7 +406,7 @@ else
   echo "$Changelog"
 
   echo "=== Creating release in Dblsqd ==="
-  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  VersionString="${VERSION}"
   export VersionString
 
   # This may fail as a build from another architecture may have already registered a release with dblsqd,
