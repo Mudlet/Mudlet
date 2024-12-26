@@ -40,6 +40,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
+#include <QPainterPath>
 #include <QBuffer>
 #include "post_guard.h"
 
@@ -2155,7 +2156,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 }
 
 //NOLINT(readability-make-member-function-const)
-int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName, QColor outline)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2176,19 +2177,68 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    const QRectF lr = QRectF(0, 0, 1000, 1000);
+    const QRectF lr = QRectF(0, 0, 2000, 2000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
+
+    /* attempt 1
     QPainter lp(&pix);
     lp.fillRect(lr, label.bgColor);
-    QPen lpen;
-    lpen.setColor(label.fgColor);
-    const QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
-    lp.setRenderHint(QPainter::TextAntialiasing, true);
-    lp.setPen(lpen);
+    //QPen lpen;
+    //lpen.setColor(label.fgColor);
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
+    font.setHintingPreference(QFont::PreferNoHinting);
+    lp.setRenderHint(QPainter::Antialiasing, true);
+
+    QPainterPath path;
+    path.addText(20, fontSize + 20, font, label.text);
+    // Fill the inner part
+    lp.setPen(Qt::NoPen);
+    lp.setBrush(fg);
+    lp.drawPath(path);
+
+    // Draw the outline
+    QPen pen(outline);
+    pen.setWidth(1);
+    lp.setPen(pen);
+    lp.setBrush(Qt::NoBrush);
+    lp.drawPath(path);
+
+    QRectF br = path.boundingRect();
+    br.adjust(-5, -5, 5, 5);
+    */
+
+    // attempt 2
+    QPainter lp(&pix);
+    lp.fillRect(lr, label.bgColor);
+    lp.setRenderHint(QPainter::Antialiasing);
+
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setFont(font);
+
+    // Draw outline first
+    QPen outlinePen(outline);
+    outlinePen.setWidth(1);
+    lp.setPen(outlinePen);
+
     QRectF br;
-    lp.drawText(lr, Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    // Draw the outline by offsetting the text slightly in all directions
+    lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+    // Draw the main text on top
+    lp.setPen(label.fgColor);
+    lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+
+    //lp.setPen(lpen);
+    //lp.setFont(font);
+    //QRectF br = path.boundingRect();
+    //lp.drawText(lr, Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+
 
     label.size = br.normalized().size();
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());

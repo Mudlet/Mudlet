@@ -2502,6 +2502,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
         imagePath = mpDlgMapLabel->getImagePath();
     }
     label.bgColor = mpDlgMapLabel->getBgColor();
+    label.outlineColor = mpDlgMapLabel->getOutlineColor();
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
 
@@ -2509,19 +2510,33 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     pixmap.fill(Qt::transparent);
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
-    QPainter labelPainter(&pixmap);
-    QPen labelPen;
-    labelPainter.setFont(font);
-    labelPen.setColor(label.fgColor);
-    labelPainter.setPen(labelPen);
-    labelPainter.fillRect(drawRectangle, label.bgColor);
+    QPainter lp(&pixmap);
+    lp.setRenderHint(QPainter::Antialiasing);
+    lp.fillRect(drawRectangle, label.bgColor);
 
     if (mpDlgMapLabel->isTextLabel()) {
-        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
+
+        lp.setFont(font);
+
+        // Draw outline first
+        QPen outlinePen(label.outlineColor);
+        outlinePen.setWidth(1);
+        lp.setPen(outlinePen);
+
+        QRectF br;
+        // Draw the outline by offsetting the text slightly in all directions
+        lp.drawText(QRect(9, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(11, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(10, 9, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(10, 11, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+        // Draw the main text on top
+        lp.setPen(label.fgColor);
+        lp.drawText(QRect(10, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
     } else {
         const QPixmap imagePixmap = QPixmap(imagePath).scaled(drawRectangle.size(), mpDlgMapLabel->stretchImage() ? Qt::IgnoreAspectRatio : Qt::KeepAspectRatio);
         auto point = mpDlgMapLabel->stretchImage() ? QPoint(0, 0) : pixmap.rect().center() - imagePixmap.rect().center();
-        labelPainter.drawPixmap(point, imagePixmap);
+        lp.drawPixmap(point, imagePixmap);
     }
 
     label.pix = pixmap.copy(drawRectangle);

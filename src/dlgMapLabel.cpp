@@ -44,6 +44,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     });
     connect(pushButton_bgColor, &QPushButton::released, this, &dlgMapLabel::slot_pickBgColor);
     connect(pushButton_fgColor, &QPushButton::released, this, &dlgMapLabel::slot_pickFgColor);
+    connect(pushButton_outlineColor, &QPushButton::released, this, &dlgMapLabel::slot_pickOutlineColor);
     connect(toolButton_fontPick, &QToolButton::released, this, &dlgMapLabel::slot_pickFont);
     connect(pushButton_save, &QPushButton::released, this, &dlgMapLabel::slot_save);
     connect(pushButton_cancel, &QPushButton::released, this, &dlgMapLabel::close);
@@ -108,6 +109,26 @@ void dlgMapLabel::slot_pickBgColor()
     bgColorDialog->raise();
 }
 
+void dlgMapLabel::slot_pickOutlineColor()
+{
+    outlineColorDialog = new QColorDialog(this);
+    outlineColorDialog->setAttribute(Qt::WA_DeleteOnClose);
+    //: 2D mapper create label color dialog title
+    outlineColorDialog->setWindowTitle(tr("Text outline color"));
+    outlineColorDialog->setOption(QColorDialog::ShowAlphaChannel);
+    connect(outlineColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+        outlineColor = color;
+        emit updated();
+    });
+    auto originalColor = QColor(outlineColor);
+    connect(outlineColorDialog, &QColorDialog::rejected, this, [=]() {
+        outlineColor = originalColor;
+        emit updated();
+    });
+    outlineColorDialog->show();
+    outlineColorDialog->raise();
+}
+
 void dlgMapLabel::slot_pickFont()
 {
     auto originalFont = QFont(font);
@@ -167,6 +188,11 @@ QColor& dlgMapLabel::getFgColor()
     return fgColor;
 }
 
+QColor& dlgMapLabel::getOutlineColor()
+{
+    return outlineColor;
+}
+
 QFont& dlgMapLabel::getFont()
 {
     return font;
@@ -192,6 +218,7 @@ void dlgMapLabel::slot_updateControls()
     lineEdit_font->setText(QString("%1, %2pt %3").arg(font.family(), QString::number(font.pointSize()), font.styleName()));
     pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
     pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));
+    pushButton_outlineColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(outlineColor.red()), QString::number(outlineColor.green()), QString::number(outlineColor.blue()), QString::number(outlineColor.alpha())));
     lineEdit_image->setText(imagePath);
 }
 
@@ -209,4 +236,6 @@ void dlgMapLabel::slot_updateControlsVisibility()
     toolButton_fontPick->setVisible(isText);
     pushButton_fgColor->setVisible(isText);
     label_fg->setVisible(isText);
+    pushButton_outlineColor->setVisible(isText);
+    label_outline->setVisible(isText);
 }
