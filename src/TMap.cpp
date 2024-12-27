@@ -549,7 +549,7 @@ void TMap::audit()
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt);
+                        const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt, l.fgColor);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 const QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -2155,7 +2155,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 }
 
 //NOLINT(readability-make-member-function-const)
-int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName, QColor outline)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2170,25 +2170,38 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.text = text;
     label.bgColor = bg;
     label.fgColor = fg;
+    label.outlineColor = outline;
     label.size = QSizeF(100, 100);
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    const QRectF lr = QRectF(0, 0, 1000, 1000);
+    const QRectF lr = QRectF(0, 0, 2000, 2000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
+
     QPainter lp(&pix);
     lp.fillRect(lr, label.bgColor);
-    QPen lpen;
-    lpen.setColor(label.fgColor);
-    const QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
-    lp.setRenderHint(QPainter::TextAntialiasing, true);
-    lp.setPen(lpen);
+    lp.setRenderHint(QPainter::Antialiasing);
+
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setFont(font);
+
+    QPen outlinePen(label.outlineColor);
+    outlinePen.setWidth(1);
+    lp.setPen(outlinePen);
+
     QRectF br;
-    lp.drawText(lr, Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+    if (label.fgColor != label.outlineColor) {
+        lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    }
+    lp.setPen(label.fgColor);
+    lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
 
     label.size = br.normalized().size();
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
