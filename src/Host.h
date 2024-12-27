@@ -812,6 +812,7 @@ private:
     QHash<QString, XMLexport*> writers;
 
     QFuture<void> mModuleFuture;
+    void handleFinished(bool syncModules, QFutureWatcher<void> *watcher);
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;

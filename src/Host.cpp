@@ -932,21 +932,24 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     emit profileSaveStarted();
     qApp->processEvents();
 
-    QFutureWatcher<void> watcher;
+    QFutureWatcher<void> *watcher = new QFutureWatcher<void>;
     mModuleFuture = QtConcurrent::run([=]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(&watcher, &QFutureWatcher<void>::finished, this, [=]() {
-        // reload, or queue module reload for when xml is ready
-        if (syncModules) {
-            reloadModules();
-        }
-        mWritingHostAndModules = false;
-    });
-    watcher.setFuture(mModuleFuture);
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() -> void { Host::handleFinished(syncModules, watcher); });
+    watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
+}
+
+void Host::handleFinished(bool syncModules, QFutureWatcher<void> *watcher){
+    // reload, or queue module reload for when xml is ready
+    if (syncModules) {
+        reloadModules();
+    }
+    mWritingHostAndModules = false;
+    watcher->deleteLater();
 }
 
 // exports without the host settings for some reason
