@@ -1701,6 +1701,23 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_SE;
                 // This will be unaffected by Mud Server encoding:
                 socketOutRaw(output);
+
+                // send client configurable variables e.g.
+                // IAC SB MSDP MSDP_VAR "CLIENT" MSDP_VAL "Mudlet" MSDP_VAR "VERSION" MSDP_VAL "4.19" IAC SE
+                output = TN_IAC;
+                output += TN_SB;
+                output += OPT_MSDP;
+                output += MSDP_VAR;
+                output += "CLIENT";
+                output += MSDP_VAL;
+                output += "Mudlet";
+                output += MSDP_VAR;
+                output += "VERSION";
+                output += MSDP_VAL;
+                output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
 #ifdef DEBUG_TELNET
                 qDebug() << "WE send telnet IAC DO MSDP";
 #endif
@@ -2376,10 +2393,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     // Check if the version is different and handle the upgrade
                     postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
-                    
+
                     // Uninstall the old version
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
-                    
+
                     // Download and install the new version
                     mpHost->mServerGUI_Package_version = version;
                     downloadAndInstallGUIPackage(packageName, fileName, url);
@@ -2663,7 +2680,7 @@ QString cTelnet::parseGUIVersionFromJSON(const QJsonObject& json) {
     } else if (versionJSON != QJsonValue::Undefined && versionJSON.isDouble()) {
         version = qsl("%1").arg(versionJSON.toInt());
     }
-    
+
     return version;
 }
 
@@ -2675,7 +2692,7 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
     if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
         url = urlJSON.toString();
     }
-    
+
     return url;
 }
 
@@ -2734,10 +2751,10 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
         // Check if the version is different and handle the upgrade
         postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
                     .arg(version, mpHost->mServerGUI_Package_version, url));
-        
+
         // Uninstall the old version
         mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
-        
+
         // Download and install the new version
         mpHost->mServerGUI_Package_version = version;
         downloadAndInstallGUIPackage(packageName, fileName, url);
