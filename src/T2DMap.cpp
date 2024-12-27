@@ -2512,8 +2512,9 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     drawRectangle.moveTo(0, 0);
     QPainter lp(&pixmap);
     lp.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
-
     lp.fillRect(drawRectangle, label.bgColor);
+    int labelWidth = drawRectangle.width();
+    int labelHeight = drawRectangle.height();
 
     if (mpDlgMapLabel->isTextLabel()) {
 
@@ -2527,15 +2528,15 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
             lp.setPen(outlinePen);
 
             // Draw the outline by offsetting the text slightly in all directions
-            lp.drawText(QRect(9, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-            lp.drawText(QRect(11, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-            lp.drawText(QRect(10, 9, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-            lp.drawText(QRect(10, 11, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+            lp.drawText(QRect(-1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(0, -1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(0, 1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
         }
 
         // Draw the main text on top
         lp.setPen(label.fgColor);
-        lp.drawText(QRect(10, 10, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(0, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
     } else {
         const QPixmap imagePixmap = QPixmap(imagePath).scaled(drawRectangle.size(), mpDlgMapLabel->stretchImage() ? Qt::IgnoreAspectRatio : Qt::KeepAspectRatio);
         auto point = mpDlgMapLabel->stretchImage() ? QPoint(0, 0) : pixmap.rect().center() - imagePixmap.rect().center();
