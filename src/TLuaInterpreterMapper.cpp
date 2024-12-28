@@ -884,7 +884,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
                 // a room with the given number and/or an exit stub:
                 const bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
                 auto pR = host.mpMap->mpRoomDB->getRoom(fromRoom);
-                const bool hasExitStubWithNumberAsDirection = (pR && pR->exitStubs.contains(value));
+                const bool hasExitStubWithNumberAsDirection = (pR && pR->getExit(value) == 0);
                 if (hasRoomWithNumberAsId) {
                     if (hasExitStubWithNumberAsDirection) {
                         return warnArgumentValue(
@@ -1553,7 +1553,11 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
-    QList<int> const stubs = pR->exitStubs;
+    const auto stubSet = pR->normalStubExits();
+    QList<int> stubs = QList<int>{stubSet.cbegin(), stubSet.cend()};
+    if (stubs.count() > 1) {
+        std::sort(stubs.begin(), stubs.end());
+    }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i);
@@ -1577,7 +1581,8 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
-    QList<int> const stubs = pR->exitStubs;
+    const auto stubSet = pR->normalStubExits();
+    QList<int> stubs = QList<int>{stubSet.cbegin(), stubSet.cend()};
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
@@ -1606,13 +1611,24 @@ int TLuaInterpreter::getExitStubsNames(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
-    QList<int> const stubs = pR->exitStubs;
-    lua_newtable(L);
-    for (int i = 0, total = stubs.size(); i < total; ++i) {
+    const auto normalStubSet = pR->normalStubExits();
+    QSetIterator<int> itNormalStubExit(normalStubSet);
+    QSet<QString> stubNamesSet;
+    while (itNormalStubExit.hasNext()) {
+        stubNamesSet.insert(TRoom::dirCodeToString(itNormalStubExit.next()));
+    }
+    const auto specialStubSet = pR->specialStubExits();
+    stubNamesSet.unite(specialStubSet);
+    QList<QString> stubNameList{stubNamesSet.cbegin(),stubNamesSet.cend()};
+    if (stubNameList.count() > 1) {
+        std::sort(stubNameList.begin(), stubNameList.end());
+    }
+    for (int i = 0, total = stubNameList.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
-        lua_pushstring(L, stubmap[stubs.at(i) - 1].toUtf8().constData());
+        lua_pushstring(L, stubNameList.at(i).toUtf8().constData());
         lua_settable(L, -3);
     }
+
     return 1;
 }
 
@@ -3360,18 +3376,18 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // else IS a valid special exit - so fall out of if and continue
     } else {
         // Is a normal exit so see if it is valid
-        if (!(((!exitCmd.compare(qsl("n"))) && (pR->getExit(DIR_NORTH) > 0 || pR->exitStubs.contains(DIR_NORTH)))
-                || ((!exitCmd.compare(qsl("e"))) && (pR->getExit(DIR_EAST) > 0 || pR->exitStubs.contains(DIR_EAST)))
-                || ((!exitCmd.compare(qsl("s"))) && (pR->getExit(DIR_SOUTH) > 0 || pR->exitStubs.contains(DIR_SOUTH)))
-                || ((!exitCmd.compare(qsl("w"))) && (pR->getExit(DIR_WEST) > 0 || pR->exitStubs.contains(DIR_WEST)))
-                || ((!exitCmd.compare(qsl("ne"))) && (pR->getExit(DIR_NORTHEAST) > 0 || pR->exitStubs.contains(DIR_NORTHEAST)))
-                || ((!exitCmd.compare(qsl("se"))) && (pR->getExit(DIR_SOUTHEAST) > 0 || pR->exitStubs.contains(DIR_SOUTHEAST)))
-                || ((!exitCmd.compare(qsl("sw"))) && (pR->getExit(DIR_SOUTHWEST) > 0 || pR->exitStubs.contains(DIR_SOUTHWEST)))
-                || ((!exitCmd.compare(qsl("nw"))) && (pR->getExit(DIR_NORTHWEST) > 0 || pR->exitStubs.contains(DIR_NORTHWEST)))
-                || ((!exitCmd.compare(qsl("up"))) && (pR->getExit(DIR_UP) > 0 || pR->exitStubs.contains(DIR_UP)))
-                || ((!exitCmd.compare(qsl("down"))) && (pR->getExit(DIR_DOWN) > 0 || pR->exitStubs.contains(DIR_DOWN)))
-                || ((!exitCmd.compare(qsl("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
-                || ((!exitCmd.compare(qsl("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
+        if (!( (!exitCmd.compare(qsl("n")) && (pR->getExit(DIR_NORTH) >= 0))
+             ||(!exitCmd.compare(qsl("e")) && (pR->getExit(DIR_EAST) >= 0))
+             ||(!exitCmd.compare(qsl("s")) && (pR->getExit(DIR_SOUTH) >= 0))
+             ||(!exitCmd.compare(qsl("w")) && (pR->getExit(DIR_WEST) >= 0))
+             ||(!exitCmd.compare(qsl("ne")) && (pR->getExit(DIR_NORTHEAST) >= 0))
+             ||(!exitCmd.compare(qsl("se")) && (pR->getExit(DIR_SOUTHEAST) >= 0))
+             ||(!exitCmd.compare(qsl("sw")) && (pR->getExit(DIR_SOUTHWEST) >= 0))
+             ||(!exitCmd.compare(qsl("nw")) && (pR->getExit(DIR_NORTHWEST) >= 0))
+             ||(!exitCmd.compare(qsl("up")) && (pR->getExit(DIR_UP) >= 0))
+             ||(!exitCmd.compare(qsl("down")) && (pR->getExit(DIR_DOWN) >= 0))
+             ||(!exitCmd.compare(qsl("in")) && (pR->getExit(DIR_IN) >= 0))
+             ||(!exitCmd.compare(qsl("out")) && (pR->getExit(DIR_OUT) >= 0)))) {
             // No there IS NOT a stub or real exit in the exitCmd direction
             return warnArgumentValue(L, __func__, qsl(
                 "roomID %1 does not have a normal exit or a stub exit in direction '%2'")

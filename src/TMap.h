@@ -283,8 +283,21 @@ public:
      *   directly into the TArea class serialization - for lower map versions it
      *   is placed into a "system.fallback_map2DZoom" value in the Area userdata.
      *   SlySven - 2023/03
+     * Stubs have been merged into exits so that special exits can be stubified
+     *   the destination room ID is zero. Also, all stub exits (normal AND
+     *   special) can now have custom exit lines (to say point at a map label!)
+     *   To allow the reproduction/retention of custom exit lines and doors data
+     *   for special stub exits this information is converted into a Lua table
+     *   and stored as room user data in older map formats so that Mudlet
+     *   editions after this change was made can retrieve it but it does mean
+     *   that older versions will just fail to see such special stub exits.
+     *
+     *   Non-existant normal exits remain as -1, with 0 being a stub - a planned
+     *   future development is intended to replace a fixed number of "normal"
+     *   exits with a container (QHash/QMap) only populated with actual exits
+     *   or stubs.
      */
-    const int mMaxVersion = 20;
+    const int mMaxVersion = 21;
 
     // Ideally would be the same as mDefaultVersion but we have it lower,
     // particularly for release builds and is the minimum version allowed for
@@ -349,6 +362,7 @@ private:
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
+    QString serializeSpecialExitStub(TRoom* pRoom, const QString& name) const;
 
     QStringList mStoredMessages;
 

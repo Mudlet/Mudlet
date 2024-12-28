@@ -72,20 +72,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_nw">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="nw">
            <property name="placeholderText">
             <string>NW exit...</string>
@@ -206,20 +193,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_n">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="n">
            <property name="placeholderText">
             <string>N exit...</string>
@@ -340,20 +314,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_ne">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="ne">
            <property name="placeholderText">
             <string>NE exit...</string>
@@ -474,20 +435,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_up">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="up">
            <property name="placeholderText">
             <string>Up exit...</string>
@@ -608,20 +556,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_w">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="w">
            <property name="text">
             <string/>
@@ -861,20 +796,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_e">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="e">
            <property name="placeholderText">
             <string>E exit...</string>
@@ -992,20 +914,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_down">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="down">
            <property name="placeholderText">
             <string>Down exit...</string>
@@ -1132,26 +1041,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_sw">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="sw">
            <property name="placeholderText">
             <string>SW exit...</string>
@@ -1278,20 +1168,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_s">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="s">
            <property name="placeholderText">
             <string>S exit...</string>
@@ -1412,20 +1289,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_se">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="se">
            <property name="placeholderText">
             <string>SE exit...</string>
@@ -1546,20 +1410,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_in">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="in">
            <property name="placeholderText">
             <string>In exit...</string>
@@ -1685,19 +1536,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Stub Exit</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="key">
            <property name="font">
             <font>
@@ -1705,7 +1544,7 @@
             </font>
            </property>
            <property name="placeholderText">
-            <string>Exit RoomID number</string>
+            <string>Exit RoomID number - set to zero (0) to make a stub (for both normal and special exits).</string>
            </property>
           </widget>
          </item>
@@ -1809,20 +1648,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QCheckBox" name="stub_out">
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" colspan="4">
+         <item row="0" column="1" colspan="5">
           <widget class="QLineEdit" name="out">
            <property name="placeholderText">
             <string>Out exit...</string>
@@ -1927,7 +1753,7 @@
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="toolTip">
-         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</string>
+         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than zero; or clear the name/command entry.&lt;/p&gt;</string>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
@@ -1965,7 +1791,7 @@
 Room ID</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</string>
+          <string>&lt;p&gt;Set the number of the room that this exit leads to, use zero (&lt;tt&gt;0&lt;/tt&gt;) to make a special stub exit; if cleared or set to less than zero the exit will be removed on saving the exits.&lt;/p&gt;</string>
          </property>
         </column>
         <column>

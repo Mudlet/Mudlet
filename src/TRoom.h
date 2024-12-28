@@ -70,7 +70,7 @@ public:
     bool hasExitWeight(const QString& cmd);
     bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
     int getDoor(const QString& cmd) const;
-    bool hasExitStub(int direction);
+    bool hasExitStub(int direction) const;
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
     bool setArea(int, bool deferAreaRecalculations = false);
@@ -125,7 +125,6 @@ public:
                    QString,
                    QMap<QString, int>&,
                    QSet<int>&,
-                   QSet<int>&,
                    QMap<QString, int>&,
                    QMap<QString, QList<QPointF>>&,
                    QMap<QString, QColor>&,
@@ -139,6 +138,10 @@ public:
     bool hasExitOrSpecialExit(const QString&) const;
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
+    QSet<int> normalStubExits() const;
+    QSet<QString> specialStubExits() const;
+    bool hasAStubExit(const bool alsoConsiderSpecialExits = false) const;
+    bool hasANormalExitCustomLine(const int direction) const;
 
     int environment = -1;
 
@@ -151,7 +154,6 @@ public:
     QColor mSymbolColor;
     QString name;
 
-    QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
     // Uses "shortstrings" for normal exit directions:
@@ -200,6 +202,8 @@ private:
     int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
+    // -1 means NO exit, 0 means a STUB, a positive number is (or should be) the
+    // target room...
     int north = -1;
     int northeast = -1;
     int east = -1;

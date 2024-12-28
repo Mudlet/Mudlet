@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -211,7 +211,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     int minDistanceRoom = 0;
     int meanSquareDistance = 0;
 
-    if (!pFromR->exitStubs.contains(dirType)) {
+    if (pFromR->getExit(dirType) != 0) {
         return qsl("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
                 .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
@@ -244,7 +244,8 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         // New test - does this room have a stub exit in the wanted reverse
         // direction:
-        if (!pToR->exitStubs.contains(reverseDir)) {
+        if (pToR->getExit(reverseDir) != 0) {
+            // No it doesn't
             continue;
         }
 
@@ -342,19 +343,20 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
         return qsl("toID (%1) room does not exist").arg(toRoomId);
     }
 
-    if (pFromR->exitStubs.isEmpty()) {
-        return qsl("fromID (%1) does not have any stub exits").arg(fromRoomId);
+    // These two checks do NOT consider special exits
+    if (!pFromR->hasAStubExit()) {
+        return qsl("fromID (%1) does not have any normal stub exits").arg(fromRoomId);
     }
 
-    if (pToR->exitStubs.isEmpty()) {
-        return qsl("toID (%1) does not have any stub exits").arg(toRoomId);
+    if (!pToR->hasAStubExit()) {
+        return qsl("toID (%1) does not have any normal stub exits").arg(toRoomId);
     }
 
-    QSet<int> const fromRoomStubs{pFromR->exitStubs.cbegin(), pFromR->exitStubs.cend()};
-    QListIterator<int> itToRoomStubs{pToR->exitStubs};
+    const auto fromRoomStubs = pFromR->normalStubExits();
+    QSetIterator<int> itToRoomStub{pToR->normalStubExits()};
     QSet<int> toReverseStubDirections;
-    while (itToRoomStubs.hasNext()) {
-        auto direction = itToRoomStubs.next();
+    while (itToRoomStub.hasNext()) {
+        auto direction = itToRoomStub.next();
         Q_ASSERT_X(scmReverseDirections.contains(direction), "TMap::connectExitStubByToId(...)", "there is no scmReverseDirections.value() for a particular direction encountered");
         toReverseStubDirections.insert(scmReverseDirections.value(direction));
     }
@@ -406,7 +408,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
         return qsl("fromID and toID are the same (%1)").arg(fromRoomId);
     }
 
-    if (!pFromR->exitStubs.contains(dirType)) {
+    if (!pFromR->normalStubExits().contains(dirType)) {
         return qsl("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
                 .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
@@ -416,7 +418,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
         return qsl("toID (%1) room does not exist").arg(toRoomId);
     }
 
-    if (!pToR->exitStubs.contains(scmReverseDirections.value(dirType))) {
+    if (!pToR->normalStubExits().contains(scmReverseDirections.value(dirType))) {
         return qsl("toID (%1) does not have an exit stub in the reverse direction '%2' (%3) of that given '%4' (%5)")
                 .arg(QString::number(toRoomId),
                      TRoom::dirCodeToString(scmReverseDirections.value(dirType)),
@@ -1105,6 +1107,60 @@ bool TMap::findPath(int from, int to)
     return false;
 }
 
+// We need to convert all the details of a special exit stub to a string that
+// can be stored as room user data in current (20) map formats as it is not
+// possible to store more than one as an exit to a room with id 0 as that
+// destination id is used as the "key" for special exits in the format.
+// We format the data as a Lua table so that it can be parsed by older Mudlet
+// versions that do not understand or hide the data from the end-user:
+QString TMap::serializeSpecialExitStub(TRoom* pRoom, const QString& name) const
+{
+    QStringList result;
+    // door:
+    if (pRoom && pRoom->doors.value(name)) {
+        result << qsl("[\"door\"]=%1").arg(QString::number(pRoom->doors.value(name)));
+    }
+    // custom line:
+    if (pRoom && pRoom->customLines.value(name).size()) {
+        QStringList customLineDetails;
+        QString customLinePointsString;
+
+        // We have a custom line with at least one point
+        // custom exit line points
+        QListIterator<QPointF> itPoint(pRoom->customLines.value(name));
+        while (itPoint.hasNext()) {
+            const auto point = itPoint.next();
+            // Add a sub-table with this points x and y coordinates:
+            customLineDetails << qsl("{%1,%2}")
+                                 .arg(QString::number(point.x()),
+                                      QString::number(point.y()));
+        }
+        // Join the above into a single table
+        customLinePointsString = customLineDetails.join(QLatin1Char(','))
+                .append(QLatin1Char('}'))
+                .prepend(QLatin1String("[\"points\"]={"));
+        // Then restart accumulating details in the QStringList:
+        customLineDetails.clear();
+        customLineDetails << customLinePointsString;
+        // custom exit line color
+        customLineDetails << qsl("[\"color\"]={%1,%2,%3}")
+                             .arg(QString::number(pRoom->customLinesColor.value(name).red()),
+                                  QString::number(pRoom->customLinesColor.value(name).green()),
+                                  QString::number(pRoom->customLinesColor.value(name).blue()));
+        // custom exit line arrow
+        customLineDetails << qsl("[\"arrow\"]=%1").arg(pRoom->customLinesArrow.value(name)
+                                                     ? qsl("true")
+                                                     : qsl("false"));
+        result << customLineDetails.join(QLatin1Char(','))
+                  .prepend(QLatin1String("[\"customLine\"]={"))
+                  .append(QLatin1Char('}'));
+    }
+    // Now combine all the data into a single table:
+    return result.join(QLatin1Char(','))
+            .prepend(qsl("[\"%1\"]={").arg(name))
+            .append(QLatin1Char('}'));
+}
+
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
     // clamp version values
@@ -1288,6 +1344,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     QHashIterator<int, TRoom*> it(mpRoomDB->getRoomMap());
     while (it.hasNext()) {
         it.next();
+        QStringList specialStubExitNames;
         TRoom* pR = it.value();
         if (!pR) {
             qDebug() << "TMap::serialize(...) skipping a room with a NULL TRoom pointer:" << it.key();
@@ -1321,17 +1378,36 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->name;
         ofs << pR->isLocked;
         if (mSaveVersion >= 21) {
+            // Includes stubs (with target room ID of 0)
             ofs << pR->getSpecialExits();
         } else {
+            // Prior to version 21 the destination room id was used as the key
+            // for the special exits with the name/command as the value - this
+            // prevents there being more than one exit to the same room - and
+            // stops us storing multiple "special stubs" all with 0 as the
+            // target room id:
             QMultiMap<int, QString> oldSpecialExits;
             QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
             while (itSpecialExit.hasNext()) {
                 itSpecialExit.next();
-                oldSpecialExits.insert(itSpecialExit.value(),
-                                       (pR->hasSpecialExitLock(itSpecialExit.key())
-                                                ? QLatin1Char('1')
-                                                : QLatin1Char('0'))
-                                               % itSpecialExit.key());
+                if (itSpecialExit.value() > 0) {
+                    oldSpecialExits.insert(itSpecialExit.value(),
+                                           (pR->hasSpecialExitLock(itSpecialExit.key())
+                                                    ? QLatin1Char('1')
+                                                    : QLatin1Char('0'))
+                                                   % itSpecialExit.key());
+                } else {
+                    specialStubExitNames << itSpecialExit.key();
+                }
+            }
+            if (!specialStubExitNames.isEmpty()) {
+                QStringList specialStubExitDetails;
+                QStringListIterator itSpecialStubExit(specialStubExitNames);
+                while (itSpecialStubExit.hasNext()) {
+                    specialStubExitDetails << serializeSpecialExitStub(pR, itSpecialStubExit.next());
+                }
+                pR->userData.insert(QLatin1String("system.fallback_specialExitStubs"),
+                                    qsl("{%1}").arg(specialStubExitDetails.join(QLatin1String(", "))));
             }
             ofs << oldSpecialExits;
         }
@@ -1475,7 +1551,16 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->getSpecialExitLocks();
         }
         ofs << pR->exitLocks;
-        ofs << pR->exitStubs;
+        if (mSaveVersion < 21) {
+            // From version 21 the stubs have been merged into the exits - as
+            // target room of zero:
+            const auto exitStubsSet = pR->normalStubExits();
+            QList<int> exitStubsList{exitStubsSet.cbegin(), exitStubsSet.cend()};
+            if (exitStubsList.count() > 1) {
+                std::sort(exitStubsList.begin(), exitStubsList.end());
+            }
+            ofs << exitStubsList;
+        }
         ofs << pR->getExitWeights();
         ofs << pR->doors;
     }

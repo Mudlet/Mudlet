@@ -920,7 +920,9 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 
     QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
-    if (pRoom->getUp() > 0 || pRoom->exitStubs.contains(DIR_UP)) {
+    if (pRoom->getUp() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_UP)).count()) {
+        // We now only draw this triangular symbol if there is NOT a custom exit
+        // line for this exit (or stub):
         QPolygonF poly_up;
         poly_up.append(QPointF(rx, ry + (mRoomHeight * rSize * allInsideTipOffsetFactor)));
         poly_up.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
@@ -966,7 +968,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getDown() > 0 || pRoom->exitStubs.contains(DIR_DOWN)) {
+    if (pRoom->getDown() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_DOWN)).count()) {
         QPolygonF poly_down;
         poly_down.append(QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)));
         poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
@@ -1009,7 +1011,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getIn() > 0 || pRoom->exitStubs.contains(DIR_IN)) {
+    if (pRoom->getIn() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_IN)).count()) {
         QPolygonF poly_in_left;
         QPolygonF poly_in_right;
         poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
@@ -1058,7 +1060,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getOut() > 0 || pRoom->exitStubs.contains(DIR_OUT)) {
+    if (pRoom->getOut() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_OUT)).count()) {
         QPolygonF poly_out_left;
         QPolygonF poly_out_right;
         poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry));
@@ -2077,11 +2079,10 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             painter.restore();
         }
 
-        // draw exit stubs
-        for (const int direction : std::as_const(room->exitStubs)) {
-            if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
-                // Stubs on non-XY plane exits are handled differently and we
-                // do not support special exit stubs (yet?)
+        // draw normal exit stubs - that do not have custom exit lines:
+        auto drawExitStubs = [&] (int direction) {
+            if (room->getExit(direction) == 0 && ! room->hasANormalExitCustomLine(direction)) {
+                // Stubs on non-XY plane exits are handled differently:
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
                 const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
@@ -2105,6 +2106,60 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 painter.drawPath(stubMarkingCirclePath);
                 painter.restore();
             }
+        };
+
+        drawExitStubs(DIR_NORTH);
+        drawExitStubs(DIR_NORTHEAST);
+        drawExitStubs(DIR_EAST);
+        drawExitStubs(DIR_SOUTHEAST);
+        drawExitStubs(DIR_SOUTH);
+        drawExitStubs(DIR_SOUTHWEST);
+        drawExitStubs(DIR_WEST);
+        drawExitStubs(DIR_NORTHWEST);
+
+        // Draw a marker for any special exits that do not have exit lines or
+        // are stubs. In the past we only drew special exits which did have
+        // custom lines, but we now support having special exit stubs so this
+        // can now indicate BOTH - but not at the same time - a real exit has
+        // priority:
+        bool hasSpecialExitStubWithoutCustomLine = false;
+        bool hasSpecialExitWithoutCustomLine = false;
+        QMapIterator<QString, int> itSpecialExit(room->getSpecialExits());
+        while (itSpecialExit.hasNext()) {
+            itSpecialExit.next();
+            if (!room->customLines.value(itSpecialExit.key()).size()) {
+                // This special exit does NOT have a custom line
+                if (itSpecialExit.value()) {
+                    // And it is a real exit
+                    hasSpecialExitWithoutCustomLine = true;
+                    // No need to check the rest as we have already established
+                    // what we need to indicate
+                    break;
+                } else {
+                    hasSpecialExitStubWithoutCustomLine = true;
+                    // We don't break for this case because we might have a real
+                    // exit that will override what we would otherwise draw for
+                    // this special stub
+                }
+            }
+        }
+        if (hasSpecialExitWithoutCustomLine || hasSpecialExitStubWithoutCustomLine) {
+            painter.save();
+            const float roomRadius = mRoomWidth * 0.75;
+            const QPointF roomCenter = QPointF(rx, ry);
+
+            QPen hiddenExitPen(mpHost->mFgColor_2); // Exit colour
+            hiddenExitPen.setWidth(mRoomWidth * 0.1);
+            if (!hasSpecialExitWithoutCustomLine) {
+                // Use a dotted line for special stub exits
+                hiddenExitPen.setStyle(Qt::DotLine);
+            }
+            QPainterPath myPath;
+            painter.setPen(hiddenExitPen);
+            painter.setBrush(Qt::NoBrush);
+            myPath.addEllipse(roomCenter, roomRadius, roomRadius);
+            painter.drawPath(myPath);
+            painter.restore();
         }
 
         for (const int& k : exitList) {
@@ -2322,6 +2377,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         // multiple selected rooms but that must be done after all the rooms
         // have been drawn otherwise later drawn rooms will overwrite the
         // mark, especially on areas in gridmode.
+        // The first test will (usefully) skip trying this on stub custom
         if (customLineDestinationTarget > 0 && customLineDestinationTarget == _id) {
             const QPen savePen = painter.pen();
             const QBrush saveBrush = painter.brush();
@@ -2616,7 +2672,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                 //: 2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
                 auto customLineProperties = new QAction(tr("Properties"), this);
                 //: 2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
-                customLineProperties->setText(tr("properties..."));
+                customLineProperties->setText(tr("Properties..."));
                 //: 2D Mapper context menu (drawing custom exit line) item tooltip
                 customLineProperties->setToolTip(utils::richText(tr("Change the properties of this line")));
                 connect(customLineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
@@ -2893,7 +2949,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     // Changed separately, because the constructor silently copies the text elsewhere
                     // (tooltip and/or object name IIRC) whereas the ellipsis is meant only for display
                     //: 2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise
-                    lineProperties->setText(tr("properties..."));
+                    lineProperties->setText(tr("Properties..."));
                     lineProperties->setToolTip(utils::richText(tr("Change the properties of this custom line")));
                     connect(lineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
@@ -3363,11 +3419,13 @@ void T2DMap::slot_customLineProperties()
             auto* le_toId = dialog->findChild<QLineEdit*>(qsl("toId"));
             auto* le_fromId = dialog->findChild<QLineEdit*>(qsl("fromId"));
             auto* le_cmd = dialog->findChild<QLineEdit*>(qsl("cmd"));
+            auto* label_toId = dialog->findChild<QLabel*>(qsl("label_toId"));
+            auto* groupBox_details = dialog->findChild<QGroupBox*>(qsl("groupBox_details"));
 
             mpCurrentLineStyle = dialog->findChild<QComboBox*>(qsl("lineStyle"));
             mpCurrentLineColor = dialog->findChild<QPushButton*>(qsl("lineColor"));
             mpCurrentLineArrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
-            if (!le_toId || !le_cmd || !le_fromId || !mpCurrentLineStyle || !mpCurrentLineColor || !mpCurrentLineArrow) {
+            if (!le_toId || !le_cmd || !le_fromId || !mpCurrentLineStyle || !mpCurrentLineColor || !mpCurrentLineArrow || !label_toId || !groupBox_details) {
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to find an element in the dialog!");
                 return;
             }
@@ -3401,6 +3459,17 @@ void T2DMap::slot_customLineProperties()
                 le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
             } else {
                 qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
+            }
+
+            if (!le_toId->text().toInt()) {
+                // Hide the to room QLineEdit if the exit is a stub:
+                label_toId->setVisible(false);
+                le_toId->setVisible(false);
+                /*:
+                 * This text replaces "Exit details" in the custom exit line
+                 * "properties" dialog when the exit is actually a stub.
+                 */
+                groupBox_details->setTitle(tr("Stub Details:"));
             }
 
             mpCurrentLineStyle->setIconSize(QSize(48, 24));
@@ -4778,7 +4847,7 @@ void T2DMap::slot_setCustomLine()
     if (!button || !specialExits || !mpCurrentLineColor || !mpCurrentLineStyle || !mpCurrentLineArrow) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "nw" exit line button or another element of the dialog!)");
         return;
-    } else if (room->getNorthwest() <= 0) {
+    } else if (room->getNorthwest() < 0) {
         button->setCheckable(false);
         button->setDisabled(true);
     } else {
@@ -4791,7 +4860,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "n" exit line button!)");
         return;
-    } else if (room->getNorth() <= 0) {
+    } else if (room->getNorth() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4804,7 +4873,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "ne" exit line button!)");
         return;
-    } else if (room->getNortheast() <= 0) {
+    } else if (room->getNortheast() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4817,7 +4886,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "up" exit line button!)");
         return;
-    } else if (room->getUp() <= 0) {
+    } else if (room->getUp() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4830,7 +4899,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "w" exit line button!)");
         return;
-    } else if (room->getWest() <= 0) {
+    } else if (room->getWest() < 0) {
         button->setCheckable(false);
         button->setDisabled(true);
     } else {
@@ -4843,7 +4912,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "e" exit line button!)");
         return;
-    } else if (room->getEast() <= 0) {
+    } else if (room->getEast() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4856,7 +4925,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "down" exit line button!)");
         return;
-    } else if (room->getDown() <= 0) {
+    } else if (room->getDown() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4869,7 +4938,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "sw" exit line button!)");
         return;
-    } else if (room->getSouthwest() <= 0) {
+    } else if (room->getSouthwest() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4882,7 +4951,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "s" exit line button!)");
         return;
-    } else if (room->getSouth() <= 0) {
+    } else if (room->getSouth() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4895,7 +4964,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "se" exit line button!)");
         return;
-    } else if (room->getSoutheast() <= 0) {
+    } else if (room->getSoutheast() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4908,7 +4977,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "in" exit line button!)");
         return;
-    } else if (room->getIn() <= 0) {
+    } else if (room->getIn() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4921,7 +4990,7 @@ void T2DMap::slot_setCustomLine()
     if (!button) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "out" exit line button!)");
         return;
-    } else if (room->getOut() <= 0) {
+    } else if (room->getOut() < 0) {
         button->setDisabled(true);
         button->setCheckable(false);
     } else {
@@ -4942,7 +5011,17 @@ void T2DMap::slot_setCustomLine()
             pI->setCheckState(0, Qt::Unchecked);
         }
         pI->setTextAlignment(0, Qt::AlignHCenter);
-        pI->setText(1, QString::number(id_to));
+        if (id_to > 0) {
+            pI->setText(1, QString::number(id_to));
+        } else {
+            // Is a stub
+            /*:
+             * Text to show instead of a room number for stub exits for special
+             * exits in the dialog that selects which exit/stub to draw a
+             * custom line for.
+             */
+            pI->setText(1, tr("Stub"));
+        }
         pI->setTextAlignment(1, Qt::AlignRight);
         pI->setText(2, dir);
         pI->setTextAlignment(2, Qt::AlignLeft);

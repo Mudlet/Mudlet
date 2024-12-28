@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021, 2024 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -88,8 +88,7 @@ class TExit
 {
 public:
     bool hasNoRoute = false;
-    bool hasStub = false;
-    int destination = 0;
+    int destination = 0; // -1 for no exit, 0 for stub, +ve for real room id
     int door = 0;
     int weight = 0;
 
@@ -98,7 +97,6 @@ public:
         return a.destination == b.destination
                  && a.door == b.door
                  && a.hasNoRoute == b.hasNoRoute
-                 && a.hasStub == b.hasStub
                  && a.weight == b.weight ;
     }
 
@@ -107,7 +105,6 @@ public:
         return a.destination != b.destination
                  || a.door != b.door
                  || a.hasNoRoute != b.hasNoRoute
-                 || a.hasStub != b.hasStub
                  || a.weight != b.weight ;
     }
 };
@@ -126,7 +123,11 @@ public:
     QAction* getActionOnExit(QLineEdit*) const;
     QPointer<Host> getHost() const { return mpHost; }
     int getAreaID() const { return mAreaID; }
+    int convertNormelExitTextToNumber(const QString&) const;
 
+    static bool textMatchesExitIdOrStub(const QString&);
+    static bool textMatchesExitId(const QString&);
+    static bool textMatchesStub(const QString&);
 
     QString mSpecialExitRoomIdPlaceholder;
     QString mSpecialExitCommandPlaceholder;
@@ -135,11 +136,13 @@ public:
     QIcon mIcon_inAreaExit;
     QIcon mIcon_otherAreaExit;
     QIcon mIcon_exitRoomLocked;
+    QIcon mIcon_stub;
     QAction* mpAction_noExit = nullptr;
     QAction* mpAction_invalidExit = nullptr;
     QAction* mpAction_inAreaExit = nullptr;
     QAction* mpAction_otherAreaExit = nullptr;
     QAction* mpAction_exitRoomLocked = nullptr;
+    QAction* mpAction_stub = nullptr;
 
 public slots:
     void save();
@@ -158,34 +161,21 @@ public slots:
     void slot_se_textEdited(const QString&);
     void slot_in_textEdited(const QString&);
     void slot_out_textEdited(const QString&);
-    void slot_stub_ne_stateChanged(int);
-    void slot_stub_n_stateChanged(int);
-    void slot_stub_nw_stateChanged(int);
-    void slot_stub_up_stateChanged(int);
-    void slot_stub_w_stateChanged(int);
-    void slot_stub_e_stateChanged(int);
-    void slot_stub_down_stateChanged(int);
-    void slot_stub_sw_stateChanged(int);
-    void slot_stub_s_stateChanged(int);
-    void slot_stub_se_stateChanged(int);
-    void slot_stub_in_stateChanged(int);
-    void slot_stub_out_stateChanged(int);
 
 private slots:
     void slot_checkModified();
 
 private:
-    static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const int exitRoomWeight);
+    static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const bool isStub, const int exitRoomWeight);
     void init();
     void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
-                  QCheckBox* noRoute, QCheckBox* stub,
+                  QCheckBox* noRoute,
                   QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
-                  QSpinBox* weight, const QString &validExitToolTip);
+                  QSpinBox* weight, const QString &emptyExitToolTip);
     TExit* makeExitFromControls(int direction);
     void normalExitEdited(const QString& roomExitIdText,
                           QLineEdit* pExit,
                           QCheckBox* pNoRoute,
-                          QCheckBox* pStub,
                           QSpinBox* pWeight,
                           QRadioButton* pDoorType_none,
                           QRadioButton* pDoorType_open,
@@ -193,15 +183,6 @@ private:
                           QRadioButton* pDoorType_locked,
                           const QString& invalidExitToolTipText,
                           const QString& noExitToolTipText);
-    void normalStubExitChanged(const int state,
-                               QLineEdit* pExit,
-                               QCheckBox* pNoRoute,
-                               QSpinBox* pWeight,
-                               QRadioButton* pDoorType_none,
-                               QRadioButton* pDoorType_open,
-                               QRadioButton* pDoorType_closed,
-                               QRadioButton* pDoorType_locked,
-                               const QString& noExitToolTipText) const;
     void setIconAndToolTipsOnSpecialExit(QTreeWidgetItem*, const bool);
 
 
