@@ -1419,7 +1419,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     }
 
     // copy relevant profile files
-    for (const QString file : {"url", "port", "password", "login", "description"}) {
+    for (const QString& file : {"url", "port", "password", "login", "description"}) {
         auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
         auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
