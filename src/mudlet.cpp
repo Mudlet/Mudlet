@@ -3207,8 +3207,7 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
                 const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
 
                 if (sequence && !sequence->toString().isEmpty()) {
-                    const QString seq = sequence->toString(QKeySequence::NativeText).split("", Qt::SkipEmptyParts).join(">+<");
-
+                    const QString seq = sequence->toString(QKeySequence::NativeText).split(QLatin1Char('+'), Qt::SkipEmptyParts).join(qsl(">+<"));
                     message = isMediaMuted
                         ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use <%1> to unmute.").arg(seq)
                         : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use <%1> to mute.").arg(seq);
