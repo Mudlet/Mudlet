@@ -32,7 +32,6 @@
 #include "MMCPServer.h"
 #include "Host.h"
 #include "TAlias.h"
-#include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -42,9 +41,7 @@
 #include "TGameDetails.h"
 #include "TLabel.h"
 #include "TMapLabel.h"
-#include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
@@ -52,7 +49,6 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
-#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
@@ -3891,7 +3887,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
         }
-        for (auto [name, capture] : mCapturedNameGroups) {
+        for (const auto &[name, capture] : mCapturedNameGroups) {
             lua_pushstring(L, name.toUtf8().constData());
             lua_pushstring(L, capture.toUtf8().constData());
             lua_settable(L, -3);
@@ -4204,7 +4200,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
                 lua_pushstring(L, (*it).c_str());
                 lua_settable(L, -3); //match in matches
             }
-            for (auto [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+            for (const auto &[name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
                 lua_pushstring(L, name.toUtf8().constData());
                 lua_pushstring(L, capture.toUtf8().constData());
                 lua_settable(L, -3);

@@ -24,6 +24,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
+#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -83,7 +84,7 @@ void Updater::checkUpdatesOnStart()
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-          qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
+          qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
           if (updates.isEmpty()) {
               return;
           } else if (!updateAutomatically()) {
@@ -132,10 +133,28 @@ void Updater::showDialogManually() const
     QObject::disconnect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 }
 
+// only shows the changelog since the last version
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
     changelogDialog->setPreviousVersion(getPreviousVersion());
+    changelogDialog->show();
+}
+
+// shows the full changelog
+void Updater::showFullChangelog() const
+{
+    if (!feed->isReady()) {
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() { showChangelog(); });
+        feed->load();
+        return;
+    }
+
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    auto releases = feed->getReleases();
+    const auto firstVersion = releases.constLast().getVersion();
+    changelogDialog->setMinVersion(firstVersion);
+    changelogDialog->setMaxVersion(QApplication::applicationVersion());
     changelogDialog->show();
 }
 

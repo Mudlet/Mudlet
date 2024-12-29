@@ -422,7 +422,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
 {
     // Some constants used to prevent small, unreadable symbols:
     static const float symbolLowerSizeLimit = 8.0;
-    static unsigned const int minimumUsableFontSize = 8;
+    static const unsigned int minimumUsableFontSize = 4;
 
     // Draw onto a rectangle that will fit the room symbol rectangle,
     // Must tweak the size so it fits within circle when round room symbols are
@@ -2502,6 +2502,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
         imagePath = mpDlgMapLabel->getImagePath();
     }
     label.bgColor = mpDlgMapLabel->getBgColor();
+    label.outlineColor = mpDlgMapLabel->getOutlineColor();
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
 
@@ -2509,19 +2510,37 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     pixmap.fill(Qt::transparent);
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
-    QPainter labelPainter(&pixmap);
-    QPen labelPen;
-    labelPainter.setFont(font);
-    labelPen.setColor(label.fgColor);
-    labelPainter.setPen(labelPen);
-    labelPainter.fillRect(drawRectangle, label.bgColor);
+    QPainter lp(&pixmap);
+    lp.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
+    lp.fillRect(drawRectangle, label.bgColor);
+    int labelWidth = drawRectangle.width();
+    int labelHeight = drawRectangle.height();
 
     if (mpDlgMapLabel->isTextLabel()) {
-        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
+
+        lp.setFont(font);
+        QRectF br;
+
+        if (label.fgColor != label.outlineColor) {
+            QPen outlinePen(label.outlineColor);
+            outlinePen.setCosmetic(mMapperUseAntiAlias);
+            outlinePen.setWidth(1);
+            lp.setPen(outlinePen);
+
+            // Draw the outline by offsetting the text slightly in all directions
+            lp.drawText(QRect(-1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(0, -1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(0, 1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+        }
+
+        // Draw the main text on top
+        lp.setPen(label.fgColor);
+        lp.drawText(QRect(0, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
     } else {
         const QPixmap imagePixmap = QPixmap(imagePath).scaled(drawRectangle.size(), mpDlgMapLabel->stretchImage() ? Qt::IgnoreAspectRatio : Qt::KeepAspectRatio);
         auto point = mpDlgMapLabel->stretchImage() ? QPoint(0, 0) : pixmap.rect().center() - imagePixmap.rect().center();
-        labelPainter.drawPixmap(point, imagePixmap);
+        lp.drawPixmap(point, imagePixmap);
     }
 
     label.pix = pixmap.copy(drawRectangle);

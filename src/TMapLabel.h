@@ -42,8 +42,9 @@ public:
     QSizeF size;
     QSizeF clickSize;
     QString text;
-    QColor fgColor  = QColorConstants::Black;
-    QColor bgColor  = QColorConstants::Black;
+    QColor fgColor = QColorConstants::Black;
+    QColor bgColor = QColorConstants::Black;
+    QColor outlineColor = QColorConstants::Black;
     QPixmap pix;
     bool highlight = false;
     bool showOnTop = false;
