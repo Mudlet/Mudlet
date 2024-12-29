@@ -2729,7 +2729,7 @@ int TLuaInterpreter::addTag(lua_State* L)
 
     if (!tagString.isEmpty()) {
         tagList = tagString.split(",", Qt::SkipEmptyParts, Qt::CaseInsensitive);
-        tagSet = QSet<QString>::fromList(tagList);
+        QSet<QString> tagSet(tagList.begin(), tagList.end());
     }
 
     tagSet.insert(newTag);
@@ -2778,8 +2778,8 @@ int TLuaInterpreter::removeTag(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     QString tagString = host.readProfileData(qsl("tags"));
-    QSet<QString> tagSet;
     QStringList tagList;
+    QSet<QString> tagSet;
     const QString remTag = getVerifiedString(L, __func__, 1, "removed tag");
     
     if (!lua_isstring(L, 1)) {
@@ -2788,7 +2788,7 @@ int TLuaInterpreter::removeTag(lua_State* L)
 
     if (!tagString.isEmpty()) {
         tagList = tagString.split(",", Qt::SkipEmptyParts, Qt::CaseInsensitive);
-        tagSet = QSet<QString>::fromList(tagList);
+        QSet<QString> tagSet(tagList.begin(), tagList.end());
     }
 
     tagSet.remove(remTag);
