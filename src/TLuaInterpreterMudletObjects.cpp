@@ -2613,6 +2613,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 
         QString url = mudlet::self()->readProfileData(profile, qsl("url"));
         QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+        QString tags = mudlet::self()->readProfileData(profile, qsl("tags"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -2640,6 +2641,17 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_pushstring(L, port.toUtf8().constData());
             lua_settable(L, -3);
         }
+
+        lua_newtable(L);
+        if (!tags.isEmpty()) {            
+
+            int tagIndex = 1;
+            for (const QString &tag : tags.split(",")) {
+                lua_pushstring(L, tag.toUtf8().constData());
+                lua_rawseti(L, -2, tagIndex++);
+            }
+        }
+        lua_setfield(L, -2, "tags");        
 
         auto host = hostManager.getHost(profile);
         const auto loaded = static_cast<bool>(host);
@@ -2672,7 +2684,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    Host& host = getHostFromLua(L);
+    // Host& host = getHostFromLua(L);
 
     if (profileName.isEmpty()) {
         lua_pushnil(L);
@@ -2705,3 +2717,86 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
+
+int TLuaInterpreter::addTag(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString tagString = host.readProfileData(qsl("tags"));
+    QStringList tagList;
+    QSet<QString> tagSet;
+    const QString newTag = getVerifiedString(L, __func__, 1, "new tag");
+    if (!lua_isstring(L, 1)) {
+        return lua_error(L);    
+    }
+
+    if (!tagString.isEmpty()) {
+        tagList = tagString.split(",", Qt::SkipEmptyParts, Qt::CaseInsensitive);
+        tagSet = QSet<QString>::fromList(tagList);
+    }
+
+    tagSet.insert(newTag);
+    tagString = tagSet.values().join(",");
+    QPair<bool, QString> result = host.writeProfileData(qsl("tags"), tagString);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, qsl("unable to add tag, reason: %1").arg(result.second));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::clearTags(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QPair<bool, QString> result = host.writeProfileData(qsl("tags"), "");
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, qsl("unable to clear tags, reason: %1").arg(result.second));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;  
+}
+
+int TLuaInterpreter::getTags(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString tagString = host.readProfileData(qsl("tags"));
+
+    lua_newtable(L);
+    lua_newtable(L);
+    int tagIndex = 1;
+    for (const QString &tag : tagString.split(",")) {
+        lua_pushstring(L, tag.toUtf8().constData());
+        lua_rawseti(L, -2, tagIndex++);
+    }
+
+    lua_setfield(L, -2, "tags");
+    return 1;  
+}
+
+int TLuaInterpreter::removeTag(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString tagString = host.readProfileData(qsl("tags"));
+    QSet<QString> tagSet;
+    QStringList tagList;
+    const QString remTag = getVerifiedString(L, __func__, 1, "removed tag");
+    
+    if (!lua_isstring(L, 1)) {
+        return lua_error(L);    
+    }
+
+    if (!tagString.isEmpty()) {
+        tagList = tagString.split(",", Qt::SkipEmptyParts, Qt::CaseInsensitive);
+        tagSet = QSet<QString>::fromList(tagList);
+    }
+    lua_newtable(L);
+
+    tagSet.remove(remTag);
+    tagString = tagSet.values().join(",");
+    QPair<bool, QString> result = host.writeProfileData(qsl("tags"), tagString);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, qsl("unable to remove tag, reason: %1").arg(result.second));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}  

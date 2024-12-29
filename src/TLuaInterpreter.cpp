@@ -5465,6 +5465,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "holdingModifiers", TLuaInterpreter::holdingModifiers);
     lua_register(pGlobalLua, "getProfiles", TLuaInterpreter::getProfiles);
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
+    lua_register(pGlobalLua, "addTag", TLuaInterpreter::addTag);
+    lua_register(pGlobalLua, "clearTags", TLuaInterpreter::addTag);
+    lua_register(pGlobalLua, "getTags", TLuaInterpreter::getTags);
+    lua_register(pGlobalLua, "removeTag", TLuaInterpreter::removeTag);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
