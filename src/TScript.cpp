@@ -186,3 +186,37 @@ void TScript::clearLoadingError()
 {
     mLoadingError.reset();
 }
+
+QString TScript::packageName(TScript* pScript)
+{
+    if (!pScript) {
+        return QString();
+    }
+
+    if (!pScript->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+    }
+
+    if (pScript->getParent()) {
+        return packageName(pScript->getParent());
+    }
+
+    return QString();
+}
+
+QString TScript::moduleName(TScript* pScript)
+{
+    if (!pScript) {
+        return QString();
+    }
+
+    if (!pScript->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+    }
+
+    if (pScript->getParent()) {
+        return moduleName(pScript->getParent());
+    }
+
+    return QString();
+}
