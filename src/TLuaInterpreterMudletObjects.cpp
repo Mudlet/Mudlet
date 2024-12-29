@@ -2738,7 +2738,13 @@ int TLuaInterpreter::addTag(lua_State* L)
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to add tag, reason: %1").arg(result.second));
     }
-    lua_pushboolean(L, true);
+
+    lua_newtable(L);
+    int tagIndex = 1;
+    for (const QString &tag : tagString.split(",")) {
+        lua_pushstring(L, tag.toUtf8().constData());
+        lua_rawseti(L, -2, tagIndex++);
+    }
     return 1;
 }
 
@@ -2760,14 +2766,11 @@ int TLuaInterpreter::getTags(lua_State* L)
     QString tagString = host.readProfileData(qsl("tags"));
 
     lua_newtable(L);
-    lua_newtable(L);
     int tagIndex = 1;
     for (const QString &tag : tagString.split(",")) {
         lua_pushstring(L, tag.toUtf8().constData());
         lua_rawseti(L, -2, tagIndex++);
     }
-
-    lua_setfield(L, -2, "tags");
     return 1;  
 }
 
@@ -2794,6 +2797,13 @@ int TLuaInterpreter::removeTag(lua_State* L)
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to remove tag, reason: %1").arg(result.second));
     }
-    lua_pushboolean(L, true);
+
+    lua_newtable(L);
+    int tagIndex = 1;
+    for (const QString &tag : tagString.split(",")) {
+        lua_pushstring(L, tag.toUtf8().constData());
+        lua_rawseti(L, -2, tagIndex++);
+    }
+
     return 1;
 }  
