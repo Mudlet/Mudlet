@@ -2684,8 +2684,6 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    // Host& host = getHostFromLua(L);
-
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "loadProfile: profile name cannot be empty");
@@ -2789,7 +2787,6 @@ int TLuaInterpreter::removeTag(lua_State* L)
         tagList = tagString.split(",", Qt::SkipEmptyParts, Qt::CaseInsensitive);
         tagSet = QSet<QString>::fromList(tagList);
     }
-    lua_newtable(L);
 
     tagSet.remove(remTag);
     tagString = tagSet.values().join(",");
