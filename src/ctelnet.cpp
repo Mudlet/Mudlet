@@ -1702,6 +1702,23 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_SE;
                 // This will be unaffected by Mud Server encoding:
                 socketOutRaw(output);
+
+                // send client configurable variables e.g.
+                // IAC SB MSDP MSDP_VAR "CLIENT" MSDP_VAL "Mudlet" MSDP_VAR "VERSION" MSDP_VAL "4.19" IAC SE
+                output = TN_IAC;
+                output += TN_SB;
+                output += OPT_MSDP;
+                output += MSDP_VAR;
+                output += "CLIENT";
+                output += MSDP_VAL;
+                output += "Mudlet";
+                output += MSDP_VAR;
+                output += "VERSION";
+                output += MSDP_VAL;
+                output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
 #ifdef DEBUG_TELNET
                 qDebug() << "WE send telnet IAC DO MSDP";
 #endif
