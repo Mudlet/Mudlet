@@ -3130,7 +3130,7 @@ void mudlet::slot_multiView(const bool state)
     }
     mMultiView = state;
     bool foundActiveHost = false;
-    for (auto pHost : mHostManager) {
+    for (const auto &pHost : mHostManager) {
         auto console = pHost->mpConsole;
         if (!console) {
             continue;
@@ -3160,7 +3160,7 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
         menuAction->setChecked(state);
     }
 
-    for (auto pHost : mHostManager) {
+    for (const auto &pHost : mHostManager) {
         if (state) {
             if (isAPINotGame) {
                 pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);

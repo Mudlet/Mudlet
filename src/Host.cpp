@@ -681,7 +681,7 @@ void Host::reloadModules()
         while (it.hasNext()) {
             it.next();
             const QStringList moduleList = it.value();
-            for (auto moduleName : moduleList) {
+            for (const auto& moduleName : moduleList) {
                 if (mModulesToSync.contains(moduleName)) {
                     otherHost->reloadModule(moduleName, mHostName);
                 }
@@ -4149,7 +4149,7 @@ bool Host::commitLayoutUpdates(bool flush)
     if (mpConsole && !flush) {
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
-        for (auto dockedConsoleName : std::as_const(mDockLayoutChanges)) {
+        for (const auto& dockedConsoleName : std::as_const(mDockLayoutChanges)) {
             auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
             if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
                 pD->setProperty("layoutChanged", QVariant(false));
@@ -4162,7 +4162,7 @@ bool Host::commitLayoutUpdates(bool flush)
     // commit changes (or rather clear the layout changed flags) for
     // dockable/floating toolbars across all profiles:
     if (!flush) {
-        for (auto pToolBar : std::as_const(mToolbarLayoutChanges)) {
+        for (const auto& pToolBar : std::as_const(mToolbarLayoutChanges)) {
             if (!pToolBar || pToolBar.isNull()) {
                 // This can happen when a TToolBar is deleted
                 continue;
