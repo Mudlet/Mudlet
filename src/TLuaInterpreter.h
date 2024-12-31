@@ -775,7 +775,7 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     void loadUtf8Filenames();
 #endif
 

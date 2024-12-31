@@ -88,7 +88,7 @@
 #include <memory>
 #include <zip.h>
 #include <QStyle>
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <QSettings>
 #endif
 
@@ -2899,7 +2899,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
 // credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
 int64_t mudlet::getPhysicalMemoryTotal()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
@@ -4646,7 +4646,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
 #endif
@@ -4695,7 +4695,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
 
     mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
 #endif
@@ -4807,7 +4807,7 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
     return {true, QString()};
 }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 // credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
 static QString getShortPathName(const QString& name)
 {
@@ -5099,7 +5099,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 // Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
 bool mudlet::desktopInDarkMode()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
     return settings.value("AppsUseLightTheme", 1).toInt() == 0;
 #elif defined(Q_OS_MACOS)
