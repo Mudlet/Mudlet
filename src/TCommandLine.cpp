@@ -382,13 +382,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                bool shouldClearInput = historyMove(MOVE_DOWN);
-
-                // If the user has pressed DOWN while in the middle of typing a command
-                // the command line should be cleared
-                if (shouldClearInput) {
-                    clear();
-                }
+                historyMove(MOVE_DOWN);
                 ke->accept();
                 return true;
             }
@@ -1123,16 +1117,11 @@ void TCommandLine::handleAutoCompletion()
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
-// If the user is currently typing in the command line, a DOWN key will indicate
-// that the input line should be cleared
 
-bool TCommandLine::historyMove(MoveDirection direction)
+void TCommandLine::historyMove(MoveDirection direction)
 {
-    bool shouldClearInput = false;
-    
     if (mHistoryList.empty()) {
-        // If the history is empty, we may still want to clear the input line...
-        return true;
+        return;
     }
     const int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
@@ -1151,16 +1140,10 @@ bool TCommandLine::historyMove(MoveDirection direction)
             moveCursor(QTextCursor::End);
         }
     } else {
-        if (direction == MOVE_DOWN && !toPlainText().isEmpty()) {
-            shouldClearInput = true;
-        } else {
-            mAutoCompletionCount += shift;
-            handleAutoCompletion();
-        }
+        mAutoCompletionCount += shift;
+        handleAutoCompletion();
     }
     adjustHeight();
-
-    return shouldClearInput;
 }
 
 void TCommandLine::slot_clearSelection(bool yes)

@@ -1080,23 +1080,19 @@ void TTextEdit::highlightSelection()
 
 void TTextEdit::unHighlight()
 {
-    // clang-format off
-    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
-         y < endY;
-         ++y) {
+    for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
+        if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
+            // Abort if we are considering a line not in the buffer:
+            break;
+        }
 
-        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
-                 endX = (y == (mPB.y()))
-                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
-                     : static_cast<int>(mpBuffer->buffer.at(y).size());
-             x < endX;
-             ++x) {
-
-            mpBuffer->buffer.at(y).at(x).deselect();
+        auto& bufferLine = mpBuffer->buffer.at(yIndex);
+        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
+            if (bufferLine.at(xIndex).isSelected()) {
+                bufferLine[xIndex].deselect();
+            }
         }
     }
-    // clang-format on
-
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
         QAccessible::updateAccessibility(&event);
@@ -1249,11 +1245,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPA.setX(0);
         mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
     }
-    // FIXME: There is an issue now that deselecting a selection upwards in the
-    // left column will leave the first column highlighted - it turns out that
-    // those first columns are being deselected but the highlight() below is not
-    // including the portion of the display with the now deselected portion on
-    // the left margin within the area that gets repainted...
+
     highlightSelection();
     mDragSelectionEnd = cursorLocation;
     forceUpdate();
@@ -1697,6 +1689,9 @@ bool TTextEdit::establishSelectedText()
     }
 
     normaliseSelection();
+    if (mMouseTrackLevel == 2) {
+        expandSelectionToWords();
+    }
     return true;
 }
 

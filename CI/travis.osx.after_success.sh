@@ -8,7 +8,12 @@ sign_and_notarize () {
   codesign --deep -o runtime -s "$IDENTITY" "${appBundle}"
   echo "Signed final .dmg"
 
-  xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+  for i in {1..3}; do
+    echo "Trying to notarize (attempt ${i})"
+    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
+      break
+    fi
+  done
 }
 
 BUILD_DIR="${BUILD_FOLDER}"
@@ -122,9 +127,19 @@ if [ "${DEPLOY}" = "deploy" ]; then
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
 
+      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+        echo "Error: release not found as expected at $DEPLOY_URL"
+        exit 1
+      fi
+
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
 
-      # file_cat=1 asuming macOS is the 1st item in WP-Download-Manager category
+      if [ "${ARCH}" = "arm64" ]; then
+        FILE_CATEGORY="4"
+      else
+        FILE_CATEGORY="3"
+      fi
+
       # Get current timestamp
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
@@ -133,9 +148,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
-      -F "file_name=Mudlet-${VERSION}-${ARCH} (macOS)" \
+      -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
       -F "file_des=sha256: $SHA256SUM" \
-      -F "file_cat=1" \
+      -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \
       -F "file_timestamp_day=$day" \
       -F "file_timestamp_month=$month" \

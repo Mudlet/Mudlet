@@ -978,6 +978,10 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     const int bgr = getVerifiedInt(L, __func__, 9, "bgRed");
     const int bgg = getVerifiedInt(L, __func__, 10, "bgGreen");
     const int bgb = getVerifiedInt(L, __func__, 11, "bgBlue");
+    int olr = fgr;
+    int olg = fgg;
+    int olb = fgb;
+
     if (args > 11) {
         zoom = getVerifiedFloat(L, __func__, 12, "zoom", true);
         fontSize = getVerifiedInt(L, __func__, 13, "fontSize", true);
@@ -1000,9 +1004,14 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     if (args > 18) {
         temporary = getVerifiedBool(L, __func__, 19, "temporary", true);
     }
+    if (args > 19) {
+        olr = getVerifiedInt(L, __func__, 20, "outlineRed");
+        olg = getVerifiedInt(L, __func__, 21, "outlineGreen");
+        olb = getVerifiedInt(L, __func__, 22, "outlineBlue");
+    }
 
     const Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName, QColor(olr, olg, olb, foregroundTransparency)));
     host.mpMap->update();
     return 1;
 }

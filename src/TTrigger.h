@@ -138,6 +138,8 @@ public:
     TColorTable* createColorPattern(int, int);
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
+    QString packageName(TTrigger* pTrigger);
+    QString moduleName(TTrigger* pTrigger);
 
 
     bool mTriggerContainsPerlRegex;

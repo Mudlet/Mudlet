@@ -27,6 +27,9 @@ jobs:
         fetch-depth: 0
         submodules: true
 
+    - name: Use CMake 3.30.3
+      uses: lukka/get-cmake@v3.30.3
+
       # run-vcpkg action does not run on arm64 (https://github.com/lukka/run-vcpkg/issues/152)
       # so install dependencies manually
     - name: Install dependencies
@@ -51,7 +54,7 @@ jobs:
 
     - name: Build Mudlet
       run : |
-        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -DCMAKE_BUILD_TYPE=Release -S${{github.workspace}} -B${{github.workspace}}/build -G Ninja
+        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -DCMAKE_BUILD_TYPE=Release -DUSE_SANITIZER="" -S${{github.workspace}} -B${{github.workspace}}/build -G Ninja
         cd ${{github.workspace}}/build
         ninja -j $(expr `nproc` - 1)
         tree

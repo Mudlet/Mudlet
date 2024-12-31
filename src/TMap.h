@@ -108,7 +108,8 @@ public:
                        bool temporary = false,
                        qreal zoom = 30.0,
                        int fontSize = 50,
-                       std::optional<QString> fontName = std::nullopt);
+                       std::optional<QString> fontName = std::nullopt,
+                       QColor outline = Qt::black);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
     bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);

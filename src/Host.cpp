@@ -681,7 +681,7 @@ void Host::reloadModules()
         while (it.hasNext()) {
             it.next();
             const QStringList moduleList = it.value();
-            for (auto moduleName : moduleList) {
+            for (const auto& moduleName : moduleList) {
                 if (mModulesToSync.contains(moduleName)) {
                     otherHost->reloadModule(moduleName, mHostName);
                 }
@@ -775,11 +775,6 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 moduleEntry << moduleLocation;
                 moduleEntry << qsl("0");
                 mInstalledModules[moduleName] = moduleEntry;
-                //Write the module to the own profile directory to save it on restart
-                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-                auto writer = new XMLexport(this);
-                writers.insert(fileName, writer);
-                writer->writeModuleXML(moduleName, fileName, true);
             } else {
                 uninstallPackage(moduleName, 2);
                 installPackage(fileName, 2);
@@ -906,7 +901,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
+        // If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
@@ -921,22 +916,25 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
-        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
-                                     << mHostName
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
-
-    emit profileSaveStarted();
-    qApp->processEvents();
 
     auto writer = new XMLexport(this);
     writers.insert(qsl("profile"), writer);
     writer->exportHost(filename_xml);
     mWritingHostAndModules = true;
+
+    // emit signal to notify the UI that the save button should get disabled momentarily
+    // this needs to run after `writers` and `mWritingHostAndModules` have been set
+    // so that the currentlySavingProfile() check can run properly
+    emit profileSaveStarted();
+    qApp->processEvents();
+
     auto watcher = new QFutureWatcher<void>;
     mModuleFuture = QtConcurrent::run([=]() {
-        //wait for the host xml to be ready before starting to sync modules
+        // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
@@ -4151,7 +4149,7 @@ bool Host::commitLayoutUpdates(bool flush)
     if (mpConsole && !flush) {
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
-        for (auto dockedConsoleName : std::as_const(mDockLayoutChanges)) {
+        for (const auto& dockedConsoleName : std::as_const(mDockLayoutChanges)) {
             auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
             if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
                 pD->setProperty("layoutChanged", QVariant(false));
@@ -4164,7 +4162,7 @@ bool Host::commitLayoutUpdates(bool flush)
     // commit changes (or rather clear the layout changed flags) for
     // dockable/floating toolbars across all profiles:
     if (!flush) {
-        for (auto pToolBar : std::as_const(mToolbarLayoutChanges)) {
+        for (const auto& pToolBar : std::as_const(mToolbarLayoutChanges)) {
             if (!pToolBar || pToolBar.isNull()) {
                 // This can happen when a TToolBar is deleted
                 continue;

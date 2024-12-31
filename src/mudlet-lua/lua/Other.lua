@@ -131,16 +131,21 @@ function sendAll(...)
   local time = 0
   local args = { ... }
   local echo = true
-  if type(args[1]) == 'number' then
-    time = table.remove(args, 1)
-  end
+
   if type(args[#args]) == 'boolean' then
     echo = table.remove(args, #args)
   end
-  for i, v in ipairs(args) do
-    if type(v) == 'string' then
-      tempTimer(time*i, function() send(v, echo) end, false)
+  if type(args[1]) == 'number' then
+    time = table.remove(args, 1)
+    for i, v in ipairs(args) do
+      if type(v) == 'string' then
+        tempTimer(time*i, function() send(v, echo) end, false)
+      end
     end
+    return
+  end
+  for i, v in ipairs(args) do
+    send(v, echo)
   end
 end
 
