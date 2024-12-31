@@ -734,13 +734,14 @@ int main(int argc, char* argv[])
 }
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
-// small detour for Windows - check if there's an updated Mudlet
+// Small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
-// will update Mudlet and then launch it once it's done
-// return true if we should abort the current launch since the updater got started
+// will update Mudlet and then launch it once it's done.
+// 
+// Return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QCoreApplication::applicationDirPath()));
+    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {

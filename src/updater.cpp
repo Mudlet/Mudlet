@@ -228,7 +228,7 @@ void Updater::setupOnWindows()
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
     QDir dir;
-    auto newPath = QString(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup.exe"));
+    auto newPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
     QFileInfo newPathFileInfo(newPath);
     if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
         qDebug() << "Couldn't delete the old installer";
