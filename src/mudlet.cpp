@@ -5129,8 +5129,7 @@ void mudlet::announce(const QString& text, const QString& processing, bool isPla
     if (isPlain){
         mpAnnouncer->announce(text, processing);
     } else {
-        QTextEdit convertor(text);
-        mpAnnouncer->announce(convertor.toPlainText(), processing);
+        mpAnnouncer->announce(QTextDocument(text).toPlainText(), processing);
     }
 }
 
