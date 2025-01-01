@@ -802,33 +802,42 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QFrame *searchContainer = new QFrame();
     QVBoxLayout *searchLayout = new QVBoxLayout(searchContainer);
-    searchLayout->addWidget(comboBox_searchTerms, 0, Qt::AlignTop);
+    searchLayout->addWidget(checkBox_displayAllVariables);
+    searchLayout->addWidget(comboBox_searchTerms);
     searchLayout->addWidget(treeWidget_searchResults);
 
     searchSplitter = new QSplitter(Qt::Vertical);
 
     connect(searchSplitter, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_searchSplitterMoved);
-    searchSplitter->addWidget(treeWidget_triggers);
-    searchSplitter->addWidget(treeWidget_aliases);
-    searchSplitter->addWidget(treeWidget_actions);
-    searchSplitter->addWidget(treeWidget_timers);
-    searchSplitter->addWidget(treeWidget_scripts);
-    searchSplitter->addWidget(treeWidget_keys);
-    searchSplitter->addWidget(searchContainer);
 
+    QFrame *itemContainer = new QFrame();
+    QVBoxLayout *itemLayout = new QVBoxLayout(itemContainer);
+
+    itemLayout->addWidget(treeWidget_triggers);
+    itemLayout->addWidget(treeWidget_aliases);
+    itemLayout->addWidget(treeWidget_actions);
+    itemLayout->addWidget(treeWidget_timers);
+    itemLayout->addWidget(treeWidget_scripts);
+    itemLayout->addWidget(treeWidget_keys);
+    itemLayout->addWidget(treeWidget_variables);
+
+    searchSplitter->addWidget(itemContainer);
     searchSplitter->setStretchFactor(0, 1);
-    searchSplitter->setCollapsible(0, false);
+    searchSplitter->setCollapsible(1, true);
+    searchSplitter->addWidget(searchContainer);
     searchSplitter->setStretchFactor(1, 1);
     searchSplitter->setCollapsible(1, true);
+
     verticalLayout_frame_left->addWidget(searchSplitter);
 
     bool state = searchSplitter->restoreState(mSearchSplitterState);
+    /*
     if (!state) {
         QList<int> sizes;
         // set widget sizes to preferred hints, but bump up search area size
-        sizes << 1 << 1 << 1 << 1 << 1 << 1 << 300;
+        sizes << 1000 << 1000 << 1000 << 1000 << 1000 << 1000 << 300;
         searchSplitter->setSizes(sizes);
-    }
+    }*/
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     mpWidget_triggerItems = new QWidget;
