@@ -1033,7 +1033,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
-    QStringList mightier_than_swords = {"Joshua C. Burt", "Maiyannah Bishop", "Qwindor Rousseau", "Stick In the MUD 🎙"};
+    QStringList mightier_than_swords = {/* active */"Joshua C. Burt", "Stick In the MUD 🎙", "Medievia", /* inactive */ "Qwindor Rousseau", "Maiyannah Bishop"};
     QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
     int image_counter{1};
 
