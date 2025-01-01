@@ -838,7 +838,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     searchSplitter->setCollapsible(0, false);
     searchSplitter->setStretchFactor(1, 1);
     searchSplitter->setCollapsible(1, true);
-    // Add the splitter to the main layout
     verticalLayout_frame_left->addWidget(searchSplitter);
 
     slot_showSearchAreaResults(false);
