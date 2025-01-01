@@ -813,6 +813,34 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
               << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
+
+    comboBox_searchTerms->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    QFrame *searchTerms = new QFrame();
+    QHBoxLayout *searchTermsLayout = new QHBoxLayout(searchTerms);
+    searchTermsLayout->addWidget(comboBox_searchTerms);
+    searchTermsLayout->addWidget(button_toggleSearchAreaResults);
+
+    QFrame *searchContainer = new QFrame();
+    QVBoxLayout *searchLayout = new QVBoxLayout(searchContainer);
+    searchLayout->addWidget(searchTerms, 0, Qt::AlignTop);
+    searchLayout->addWidget(treeWidget_searchResults);
+
+    QSplitter *searchSplitter = new QSplitter(Qt::Vertical);
+    searchSplitter->addWidget(treeWidget_triggers);
+    searchSplitter->addWidget(treeWidget_aliases);
+    searchSplitter->addWidget(treeWidget_actions);
+    searchSplitter->addWidget(treeWidget_timers);
+    searchSplitter->addWidget(treeWidget_scripts);
+    searchSplitter->addWidget(treeWidget_keys);
+    searchSplitter->addWidget(searchContainer);
+
+    searchSplitter->setStretchFactor(0, 1);
+    searchSplitter->setCollapsible(0, false);
+    searchSplitter->setStretchFactor(1, 1);
+    searchSplitter->setCollapsible(1, true);
+    // Add the splitter to the main layout
+    verticalLayout_frame_left->addWidget(searchSplitter);
+
     slot_showSearchAreaResults(false);
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
