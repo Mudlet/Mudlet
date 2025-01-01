@@ -2474,11 +2474,11 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() {
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=, this]() {
         updateMapLabel(labelRectangle, labelId, pArea);
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=]() mutable {
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=, this]() mutable {
         pArea->mMapLabels.remove(labelId);
         update();
     });
@@ -3881,7 +3881,7 @@ void T2DMap::slot_showPropertiesDialog()
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
-    connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+    connect(mpDlgRoomProperties, &QDialog::finished, this, [=, this]() {
         mpDlgRoomProperties = nullptr;
     });
 }
@@ -4229,7 +4229,7 @@ void T2DMap::slot_setArea()
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](const QString newText) {
+    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=, this](const QString newText) {
         auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
         buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.trimmed().isEmpty());
         if (!newText.trimmed().isEmpty() && arealist_combobox->findText(newText.trimmed(), Qt::MatchExactly) == -1
@@ -4240,7 +4240,7 @@ void T2DMap::slot_setArea()
         }
     });
 
-    connect(set_room_area_dialog, &QDialog::accepted, [=]() {
+    connect(set_room_area_dialog, &QDialog::accepted, [=, this]() {
         int newAreaId;
         if (arealist_combobox->findText(arealist_combobox->currentText(), Qt::MatchExactly) != -1) {
             newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();

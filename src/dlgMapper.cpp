@@ -379,7 +379,7 @@ void dlgMapper::slot_updateInfoContributors()
     //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
     auto* clearAction = new QAction(tr("None"), pushButton_info);
     pushButton_info->menu()->addAction(clearAction);
-    connect(clearAction, &QAction::triggered, this, [=]() {
+    connect(clearAction, &QAction::triggered, this, [=, this]() {
         for (auto action : pushButton_info->menu()->actions()) {
             action->setChecked(false);
         }
@@ -389,7 +389,7 @@ void dlgMapper::slot_updateInfoContributors()
         auto* action = new QAction(name, pushButton_info);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));
-        connect(action, &QAction::toggled, this, [=](bool isToggled) {
+        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
             if (isToggled) {
                 mpHost->mMapInfoContributors.insert(name);
             } else {

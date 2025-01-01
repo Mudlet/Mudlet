@@ -9368,7 +9368,7 @@ void dlgTriggerEditor::doCleanReset()
 
     mCleanResetQueued = true;
 
-    QTimer::singleShot(0, this, [=]() {
+    QTimer::singleShot(0, this, [=, this]() {
         mCleanResetQueued = false;
 
         runScheduledCleanReset();
@@ -9981,7 +9981,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
         formatAction->setIcon(QIcon::fromTheme(qsl("run-build-clean"), QIcon::fromTheme(qsl("run-build-clean"))));
     }
 
-    connect(formatAction, &QAction::triggered, this, [=]() {
+    connect(formatAction, &QAction::triggered, this, [=, this]() {
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
         // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
         controller->beginUndoGroup();

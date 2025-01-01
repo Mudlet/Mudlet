@@ -1206,7 +1206,7 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 
     job->setKey(profile);
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
         if (task->error()) {
             const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
@@ -1381,7 +1381,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
         // Clear the Discord optin on the copied profile - just because the source

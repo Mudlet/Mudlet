@@ -2015,7 +2015,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
         if (mpConsole->getType() == TConsole::ErrorConsole) {
             QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
-            connect(clearErrorConsole, &QAction::triggered, this, [=]() {
+            connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
                 mpConsole->buffer.clear();
                 mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
             });

@@ -766,9 +766,9 @@ void TMedia::downloadFile(TMediaData& mediaData)
         QNetworkReply* getReply = mpNetworkAccessManager->get(request);
         mMediaDownloads.insert(getReply, mediaData);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-        connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+        connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
 #else
-        connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+        connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=, this](QNetworkReply::NetworkError) {
 #endif
             qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();
             getReply->deleteLater();
@@ -832,7 +832,7 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
 void TMedia::connectMediaPlayer(TMediaPlayer& player)
 {
     disconnect(player.getMediaPlayer(), &QMediaPlayer::mediaStatusChanged, nullptr, nullptr);
-    connect(player.getMediaPlayer(), &QMediaPlayer::mediaStatusChanged, this, [=](QMediaPlayer::MediaStatus mediaStatus) {
+    connect(player.getMediaPlayer(), &QMediaPlayer::mediaStatusChanged, this, [=, this](QMediaPlayer::MediaStatus mediaStatus) {
         if (mediaStatus == QMediaPlayer::EndOfMedia) {
             if (player.playlist() && !player.playlist()->isEmpty()) {
                 QUrl nextMedia = player.playlist()->next();
@@ -861,14 +861,14 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     disconnect(player.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
     connect(player.getMediaPlayer(), &QMediaPlayer::stateChanged, this,
-            [=](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, player); });
+            [=, this](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, player); });
 #else
     disconnect(player.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, nullptr, nullptr);
     connect(player.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, this,
-            [=](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, player); });
+            [=, this](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, player); });
 #endif
     disconnect(player.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
-    connect(player.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [=](qint64 progress) {
+    connect(player.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [=, this](qint64 progress) {
         const int volume = player.getMediaData().getMediaVolume();
         const int duration = player.getMediaPlayer()->duration();
         const int fadeInDuration = player.getMediaData().getMediaFadeIn();
