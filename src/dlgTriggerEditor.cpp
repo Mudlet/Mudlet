@@ -830,14 +830,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     verticalLayout_frame_left->addWidget(searchSplitter);
 
-    bool state = searchSplitter->restoreState(mSearchSplitterState);
-    /*
-    if (!state) {
-        QList<int> sizes;
-        // set widget sizes to preferred hints, but bump up search area size
-        sizes << 1000 << 1000 << 1000 << 1000 << 1000 << 1000 << 300;
-        searchSplitter->setSizes(sizes);
-    }*/
+    searchSplitter->restoreState(mSearchSplitterState);
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     mpWidget_triggerItems = new QWidget;
