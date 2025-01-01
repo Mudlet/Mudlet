@@ -823,7 +823,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     searchSplitter->addWidget(itemContainer);
     searchSplitter->setStretchFactor(0, 1);
-    searchSplitter->setCollapsible(1, true);
+    searchSplitter->setCollapsible(0, false);
     searchSplitter->addWidget(searchContainer);
     searchSplitter->setStretchFactor(1, 1);
     searchSplitter->setCollapsible(1, true);
