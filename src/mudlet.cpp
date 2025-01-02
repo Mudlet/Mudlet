@@ -3047,7 +3047,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host *pHost = loadProfile(profile_name, true);
+    loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
