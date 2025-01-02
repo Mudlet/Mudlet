@@ -565,13 +565,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         mProfileSaveAsAction->setToolTip(disabledSaving);
     }
 
-    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab), this);
+    // a.k.a. QKeySequence::NextChild
+    //: Shortcut for next profile (tab) in main Mudlet application window
+    auto *nextSectionShortcut = new QShortcut(QKeySequence(tr("Ctrl+Tab")), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
 
-    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
+    // a.k.a. QKeySequence::PreviousChild
+    //: Shortcut for previous profile (tab) in main Mudlet application window
+    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(tr("Ctrl+Shift+Tab")), this);
     connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
-    QShortcut *activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
+    /*: Shortcut for OSes other than MacOS to active editor from the main Mudlet
+     * application window
+     */
+    QShortcut *activateMainWindowAction = new QShortcut(QKeySequence(tr("Alt+E")), this);
     connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
 
     toolBar = new QToolBar();

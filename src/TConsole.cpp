@@ -80,7 +80,19 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mType(type)
 {
     auto quitShortcut = new QShortcut(this);
-    quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
+#if defined(Q_OS_MAC)
+    /*: Shortcut for OSes other than MacOS to close the current console from
+     * within that window - note that this is NOT the same as the one to close
+     * the profile that this console belongs to!
+     */
+    quitShortcut->setKey(QKeySequence(tr("Alt+W")));
+#else
+    /*: Shortcut for OSes other than MacOS to close the current console from
+     * within that window - note that this is NOT the same as the one to close
+     * the profile that this console belongs to!
+     */
+    quitShortcut->setKey(QKeySequence(tr("Ctrl+W")));
+#endif
     quitShortcut->setContext(Qt::WidgetShortcut);
 
     if (mType == CentralDebugConsole) {

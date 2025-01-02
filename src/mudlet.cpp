@@ -625,23 +625,73 @@ void mudlet::init()
     mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
     mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
 #else
-    mKeySequenceTriggers = QKeySequence(Qt::ALT | Qt::Key_E);
-    mKeySequenceShowMap = QKeySequence(Qt::ALT | Qt::Key_M);
-    mKeySequenceInputLine = QKeySequence(Qt::ALT | Qt::Key_L);
-    mKeySequenceOptions = QKeySequence(Qt::ALT | Qt::Key_P);
-    mKeySequenceNotepad = QKeySequence(Qt::ALT | Qt::Key_N);
-    mKeySequencePackages = QKeySequence(Qt::ALT | Qt::Key_O);
-    mKeySequenceModules = QKeySequence(Qt::ALT | Qt::Key_I);
-    mKeySequenceMultiView = QKeySequence(Qt::ALT | Qt::Key_V);
-    mKeySequenceMute = QKeySequence(Qt::ALT | Qt::Key_K);
-    mKeySequenceConnect = QKeySequence(Qt::ALT | Qt::Key_C);
-    mKeySequenceDisconnect = QKeySequence(Qt::ALT | Qt::Key_D);
-    mKeySequenceReconnect = QKeySequence(Qt::ALT | Qt::Key_R);
-    mKeySequenceCloseProfile = QKeySequence(Qt::ALT | Qt::Key_W);
-    mKeySequenceToggleTimeStamp = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
-    mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
-    mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
-    mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
+    /*: Shortcut for OSes other than MacOS to active editor from the main Mudlet
+     * application window
+     */
+    mKeySequenceTriggers = QKeySequence(tr("Alt+E"));
+    /*: Shortcut for OSes other than MacOS to toggle showing of the map from the
+     * main Mudlet application window
+     */
+    mKeySequenceShowMap = QKeySequence(tr("Alt+M"));
+    /*: Shortcut for OSes other than MacOS to toggle showing of the compact
+     * input line from the main Mudlet application window
+     */
+    mKeySequenceInputLine = QKeySequence(tr("Alt+L"));
+    /*: Shortcut for OSes other than MacOS to active preferences from the main
+     * Mudlet application window
+     */
+    mKeySequenceOptions = QKeySequence(tr("Alt+P"));
+    /*: Shortcut for OSes other than MacOS to active notepad from the main
+     * Mudlet application window
+     */
+    mKeySequenceNotepad = QKeySequence(tr("Alt+N"));
+    /*: Shortcut for OSes other than MacOS to active package manager from the
+     * main Mudlet application window
+     */
+    mKeySequencePackages = QKeySequence(tr("Alt+O"));
+    /*: Shortcut for OSes other than MacOS to active module manager from the
+     * main Mudlet application window
+     */
+    mKeySequenceModules = QKeySequence(tr("Alt+I"));
+    /*: Shortcut for OSes other than MacOS to toggle multi-view mode from the
+     * main Mudlet application window
+     */
+    mKeySequenceMultiView = QKeySequence(tr("Alt+V"));
+    /*: Shortcut for OSes other than MacOS to toggle audio muting from the main
+     * Mudlet application window
+     */
+    mKeySequenceMute = QKeySequence(tr("Alt+K"));
+    /*: Shortcut for OSes other than MacOS to active connections window from the
+     * main Mudlet application window
+     */
+    mKeySequenceConnect = QKeySequence(tr("Alt+C"));
+    /*: Shortcut for OSes other than MacOS to disconnect current profile from
+     * the main Mudlet application window
+     */
+    mKeySequenceDisconnect = QKeySequence(tr("Alt+D"));
+    /*: Shortcut for OSes other than MacOS to (re)connect current profile from
+     * the main Mudlet application window
+     */
+    mKeySequenceReconnect = QKeySequence(tr("Alt+R"));
+    // a.k.a. QKeySequence::Close
+    /*: Shortcut for OSes other than MacOS to close the current profile from the
+     * main Mudlet application window
+     */
+    mKeySequenceCloseProfile = QKeySequence(tr("Alt+W"));
+    /*: Shortcut for OSes other than MacOS to toggle visible timestamps in the
+     * main window of the current profile from the main Mudlet application window
+     */
+    mKeySequenceToggleTimeStamp = QKeySequence(tr("Ctrl+Alt+T"));
+    /*: Shortcut for OSes other than MacOS to toggle recording a replay for the
+     * current profile from the main Mudlet application window
+     */
+    mKeySequenceToggleReplay = QKeySequence(tr("Ctrl+Alt+R"));
+    /*: Shortcut for OSes other than MacOS to toggle logging the main window of
+     * the currently active profile from the main Mudlet application window
+     */
+    mKeySequenceToggleLogging = QKeySequence(tr("Ctrl+Alt+L"));
+    //: Shortcut for OSes other than MacOS to active editor from main Mudlet application window
+    mKeySequenceToggleEmergencyStop = QKeySequence(tr("Ctrl+Alt+S"));
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
