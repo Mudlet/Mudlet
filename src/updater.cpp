@@ -497,6 +497,16 @@ QString Updater::getPreviousVersion() const
 #if defined(Q_OS_WIN32)
 bool Updater::is64BitCompatible() const 
 {
+#if defined(Q_OS_WIN64)
+    const bool is64BitBuild = true;
+#else
+    const bool is64BitBuild = false;
+#endif
+
+    if (is64BitBuild) {
+        return true;
+    }
+
     BOOL isWow64 = FALSE;
     typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
     LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)
