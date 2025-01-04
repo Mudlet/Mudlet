@@ -176,15 +176,14 @@ else
     echo "moved mudlet.exe to $PACKAGE_DIR/Mudlet PTB.exe"
     # ensure sha part always starts with a character due to a known issue
     VersionAndSha="${VERSION}-ptb-${BUILD_COMMIT}"
-    echo "VersionAndSha: $VersionAndSha"
 
   else
     echo "=== Creating a release build ==="
     mv "$PACKAGE_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet.exe"
     VersionAndSha="$VERSION"
-    echo "VersionAndSha: $VersionAndSha"
   fi
 
+  echo "VersionAndSha: $VersionAndSha"
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "$GITHUB_WORKSPACE/installers"
   cd "$GITHUB_WORKSPACE/installers/windows" || exit 1
