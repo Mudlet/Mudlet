@@ -769,7 +769,7 @@ int TLuaInterpreter::resetProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowsCodepage
 int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 {
-#if defined (Q_OS_WIN32)
+#if defined (Q_OS_WINDOWS)
     QSettings registry(qsl(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)"),
                        QSettings::NativeFormat);
     auto value = registry.value(qsl("ACP"));
@@ -3074,13 +3074,13 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 int TLuaInterpreter::getOS(lua_State* L)
 {
 #if defined(Q_OS_CYGWIN)
-    // Try for this one before Q_OS_WIN32 as both are likely to be defined on
+    // Try for this one before Q_OS_WINDOWS as both are likely to be defined on
     // a Cygwin platform
     // CHECK: hopefully will NOT be triggered on mingw/msys
     lua_pushstring(L, "cygwin");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     return 2;
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     lua_pushstring(L, "windows");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     return 2;
@@ -5473,7 +5473,7 @@ void TLuaInterpreter::initLuaGlobals()
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
     additionalLuaPaths << qsl("%1/?/init.lua").arg(profilePath);
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     additionalCPaths << qsl("%1/?.dll").arg(profilePath);
 #else
     additionalCPaths << qsl("%1/?.so").arg(profilePath);
@@ -5707,7 +5707,7 @@ void TLuaInterpreter::initIndenterGlobals()
     }
     // 2 AppImage (directory of executable) - not needed for Wndows:
     //     "<applicationDirectory>/?.lua"
-#if ! defined (Q_OS_WIN32)
+#if ! defined (Q_OS_WINDOWS)
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
 #endif
     // 3 QMake shadow builds without CONFIG containing "debug_and_release" but
@@ -5756,7 +5756,7 @@ void TLuaInterpreter::initIndenterGlobals()
 // the LFS "Lua File System" one first}:
 void TLuaInterpreter::loadGlobal()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     loadUtf8Filenames();
 #endif
 
@@ -5811,7 +5811,7 @@ void TLuaInterpreter::loadGlobal()
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
     // luaL_dostring(pGlobalLua, qsl("debugLoading = true").toUtf8().constData());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     // Needed to enable permissions checks on NTFS file systems - normally
     // turned off for performance reasons:
@@ -5831,7 +5831,7 @@ void TLuaInterpreter::loadGlobal()
             continue;
         }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
         // Turn on permission checking on NTFS file systems
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         qt_ntfs_permission_lookup++;
@@ -5843,7 +5843,7 @@ void TLuaInterpreter::loadGlobal()
             failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)").arg(pathFileName);
             continue;
         }
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
         // Turn off permission checking on NTFS file systems
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         qt_ntfs_permission_lookup--;
@@ -5908,7 +5908,7 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     return text;
 }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 // No documentation available in wiki - internal function
 // loads utf8_filenames from the resource system directly so it is not affected by
 // non-ASCII characters that might be present in the users filesystem

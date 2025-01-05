@@ -49,7 +49,7 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObje
     QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
 
     // On 32-bit Windows, check if we can upgrade to 64-bit
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     QString arch = is64BitCompatible() ? QStringLiteral("x86_64") : QStringLiteral("x86");
 #else
     QString arch = QString(); // Let Feed auto-detect for other platforms
@@ -77,7 +77,7 @@ void Updater::checkUpdatesOnStart()
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
     setupOnLinux();
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     setupOnWindows();
 #endif
 
@@ -162,7 +162,7 @@ void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
@@ -179,7 +179,7 @@ void Updater::setupOnMacOS()
 }
 #endif // Q_OS_MACOS
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
@@ -370,7 +370,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run([&, filePath]() { untarOnLinux(filePath); });
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     QFuture<void> future = QtConcurrent::run([&, filePath]() { prepareSetupOnWindows(filePath); });
 #endif
 
@@ -379,7 +379,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
 #if defined(Q_OS_LINUX)
         slot_updateLinuxBinary();
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
         mpInstallOrRestart->setText(tr("Restart to apply update"));
@@ -494,9 +494,14 @@ QString Updater::getPreviousVersion() const
     return previousVersion;
 }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
+// we are trying to detect machines running a 32-Bit build of Mudlet on a 64-Bit Intel/AMD processor
 bool Updater::is64BitCompatible() const 
 {
+#if defined(Q_OS_WIN64)
+    return true;
+#endif
+
     BOOL isWow64 = FALSE;
     typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
     LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)

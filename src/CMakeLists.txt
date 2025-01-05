@@ -606,7 +606,7 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
-# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
 # for an #ifdef because we need a symbol that is defined BEFORE we include
 # any Qt header file!
 if(WIN32)

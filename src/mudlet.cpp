@@ -88,7 +88,7 @@
 #include <memory>
 #include <zip.h>
 #include <QStyle>
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <QSettings>
 #endif
 
@@ -2869,37 +2869,48 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 
 void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
+    QElapsedTimer timer;
+    timer.start();
+
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
-    bool openedProfile = false;
-
+    int loadedProfiles = 0;
+    
     for (auto& hostName : cliProfiles){
         if (hostList.contains(hostName)) {
+            QElapsedTimer timer;
+            timer.start();
             doAutoLogin(hostName);
-            openedProfile = true;
             hostList.removeOne(hostName);
+            loadedProfiles++;
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
         }
     }
 
     for (auto& hostName : hostList) {
         const QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
+            QElapsedTimer timer;
+            timer.start();
             doAutoLogin(hostName);
-            openedProfile = true;
+            loadedProfiles++;
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
         }
     }
 
-    if (!openedProfile) {
+    if (loadedProfiles == 0) {
         slot_showConnectionDialog();
+    } else {
+        qDebug() << "All" << loadedProfiles << "profiles in" << timer.elapsed()/1000.0 << "seconds";
     }
 }
 
 // credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
 int64_t mudlet::getPhysicalMemoryTotal()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
@@ -4646,7 +4657,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
 #endif
@@ -4695,7 +4706,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
 
     mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
 #endif
@@ -4807,7 +4818,7 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
     return {true, QString()};
 }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 // credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
 static QString getShortPathName(const QString& name)
 {
@@ -5099,7 +5110,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 // Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
 bool mudlet::desktopInDarkMode()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
     return settings.value("AppsUseLightTheme", 1).toInt() == 0;
 #elif defined(Q_OS_MACOS)
