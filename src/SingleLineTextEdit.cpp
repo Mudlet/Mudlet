@@ -20,6 +20,7 @@
 
 #include "pre_guard.h"
 #include <QKeyEvent>
+#include <QRegExp>
 #include "post_guard.h"
 
 SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
