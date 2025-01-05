@@ -5835,7 +5835,7 @@ Count</translation>
       <location filename="../src/dlgMapLabel.cpp" line="130"/>
       <source>Text outline color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Text outline colour</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="152"/>
@@ -9607,7 +9607,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="168"/>
       <source>Text outline:</source>
-      <translation type="unfinished"/>
+      <translation>Text outline:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="196"/>
