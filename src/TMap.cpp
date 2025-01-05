@@ -72,7 +72,7 @@ TMap::~TMap()
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
                    << "------------";
-        for (auto message : mStoredMessages) {
+        for (const auto& message : mStoredMessages) {
             qWarning() << message << "\n------------";
         }
     }

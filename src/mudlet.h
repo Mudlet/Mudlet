@@ -71,7 +71,7 @@
 #include <hunspell/hunspell.h>
 
 // for system physical memory info
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <Windows.h>
 #include <Psapi.h>
 #elif defined(Q_OS_MACOS)
@@ -378,7 +378,7 @@ public:
     void replayOver();
     bool replayStart();
     std::pair<bool, QString> resetProfileIcon(const QString&);
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
     // This will save and replace the .dic file with just the words in the

@@ -954,7 +954,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         return {false, errMsg};
     }
     // Opened/created archive file successfully
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     /*
      * From Qt Docs:
@@ -975,7 +975,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
      */
     qEnableNtfsPermissionChecks();
 #endif
-#endif // defined(Q_OS_WIN32)
+#endif // defined(Q_OS_WINDOWS)
     QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
     // relative names to use in archive:
     QStringList directoryEntries;
@@ -1012,7 +1012,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         }
     }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // Turn off permission checking on NTFS file systems
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     qt_ntfs_permission_lookup--;
