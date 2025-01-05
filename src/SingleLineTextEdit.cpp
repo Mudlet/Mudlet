@@ -20,7 +20,6 @@
 
 #include "pre_guard.h"
 #include <QKeyEvent>
-#include <QRegExp>
 #include "post_guard.h"
 
 SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
@@ -55,7 +54,7 @@ void SingleLineTextEdit::insertFromMimeData(const QMimeData *source)
 {
     if (source->hasText()) {
         QString text = source->text();
-        QString firstLine = text.split(QRegExp("[\r\n]"), Qt::SkipEmptyParts).first();
+        QString firstLine = text.split(QRegularExpression("[\r\n]"), Qt::SkipEmptyParts).first();
         QTextEdit::insertPlainText(firstLine);
     }
 }
