@@ -183,6 +183,7 @@ else
     VersionAndSha="$VERSION"
   fi
 
+  echo "VersionAndSha: $VersionAndSha"
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "$GITHUB_WORKSPACE/installers"
   cd "$GITHUB_WORKSPACE/installers/windows" || exit 1
@@ -281,6 +282,7 @@ else
   else # release
     installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION-windows-$BUILD_BITNESS-installer.exe"
   fi
+  echo  "installerExePath: $installerExePath"
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Sign the final installer
@@ -314,6 +316,7 @@ else
     echo "=== Uploading public test build to make.mudlet.org ==="
 
     uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS-installer.exe"
+    echo "uploadFilename: $uploadFilename"
 
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
@@ -407,6 +410,7 @@ EOF
 
   echo "=== Creating release in Dblsqd ==="
   VersionString="${VERSION}"
+  echo "VersionString: $VersionString"
   export VersionString
 
   # This may fail as a build from another architecture may have already registered a release with dblsqd,

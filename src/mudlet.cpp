@@ -2869,30 +2869,41 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 
 void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
+    QElapsedTimer timer;
+    timer.start();
+
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
-    bool openedProfile = false;
-
+    int loadedProfiles = 0;
+    
     for (auto& hostName : cliProfiles){
         if (hostList.contains(hostName)) {
+            QElapsedTimer timer;
+            timer.start();
             doAutoLogin(hostName);
-            openedProfile = true;
             hostList.removeOne(hostName);
+            loadedProfiles++;
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
         }
     }
 
     for (auto& hostName : hostList) {
         const QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
+            QElapsedTimer timer;
+            timer.start();
             doAutoLogin(hostName);
-            openedProfile = true;
+            loadedProfiles++;
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
         }
     }
 
-    if (!openedProfile) {
+    if (loadedProfiles == 0) {
         slot_showConnectionDialog();
+    } else {
+        qDebug() << "All" << loadedProfiles << "profiles in" << timer.elapsed()/1000.0 << "seconds";
     }
 }
 
