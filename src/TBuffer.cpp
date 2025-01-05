@@ -2739,7 +2739,7 @@ inline int TBuffer::wrap(int startLine)
         }
     }
 
-    log(startLine, startLine + tempList.size());
+    log(startLine - (lineBuffer.size() - tempList.size()), startLine + tempList.size());
     return insertedLines > 0 ? insertedLines : 0;
 }
 
