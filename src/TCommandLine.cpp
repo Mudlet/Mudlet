@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -54,6 +54,8 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setFont(mpHost->getDisplayFont());
     document()->setDocumentMargin(2);
+
+    setFrameShape(QFrame::Box);
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
