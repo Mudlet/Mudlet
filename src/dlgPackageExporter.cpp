@@ -296,7 +296,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    const QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+    const QString packagePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
@@ -438,7 +438,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            const QString profilePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+            const QString profilePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 const QString packageName = ui->packageList->currentText();

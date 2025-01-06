@@ -2700,7 +2700,7 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url) {
     postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     auto request = QNetworkRequest(QUrl(url));

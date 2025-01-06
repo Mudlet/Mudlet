@@ -1585,7 +1585,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = mudlet::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -5468,7 +5468,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{mudlet::getMudletPath(mudlet::profileHomePath, hostName)};
+    const auto profilePath{mudlet::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);

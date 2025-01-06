@@ -831,7 +831,7 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        const QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
+        const QString directoryLogFile = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
         const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
