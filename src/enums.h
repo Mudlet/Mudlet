@@ -22,8 +22,8 @@
 
 #include <QObject>
 
-// helper Qt class to declare enums and flags throughout Mudlet. This class should not include any other files
-// keep compile times down
+// helper Qt class to declare enums and flags throughout Mudlet that don't have a more specific place elsewhere. 
+// This class should not include any other files keep compile times down
 class enums : public QObject {
     Q_OBJECT
 public:
