@@ -367,7 +367,7 @@ EOF
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "$current_timestamp"
 
-    curl -X POST 'https://www.mudlet.org/download-add.php' \
+    curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
