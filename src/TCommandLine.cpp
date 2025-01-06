@@ -55,7 +55,14 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setFont(mpHost->getDisplayFont());
     document()->setDocumentMargin(2);
 
-    setFrameShape(QFrame::Box);
+    if (mType & (MainCommandLine|ConsoleCommandLine)) {
+        // put an outline around the command line when it is integrated into
+        // bottom of a TConsole - so that it can be visually separated from
+        // the text output area - particulary when "dark" mode is in effect
+        // as that modified "Fusion" style suffers from the division being
+        // invisible without this:
+        setFrameShape(QFrame::Box);
+    }
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
