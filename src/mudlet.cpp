@@ -2069,8 +2069,8 @@ void mudlet::readLateSettings(const QSettings& settings)
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
     // it is suggested Mudlet 4.x:
-    setMenuBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(visibleAlways)).toInt()));
-    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    setMenuBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
+    setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
@@ -2154,7 +2154,7 @@ void mudlet::setEditorTreeWidgetIconSize(const int s)
 }
 
 // This is used to set the menu bar visibility and adjusts that accordingly
-void mudlet::setMenuBarVisibility(const controlsVisibility state)
+void mudlet::setMenuBarVisibility(const enums::controlsVisibility state)
 {
     mMenuBarVisibility = state;
 
@@ -2166,14 +2166,14 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 void mudlet::adjustMenuBarVisibility()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mMenuBarVisibility & visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & visibleMaskNormally))) {
+    if ((hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally))) {
         menuBar()->show();
     } else {
         menuBar()->hide();
     }
 }
 
-void mudlet::setToolBarVisibility(const controlsVisibility state)
+void mudlet::setToolBarVisibility(const enums::controlsVisibility state)
 
 {
     mToolbarVisibility = state;
@@ -2187,10 +2187,10 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
 // profile loaded so no TConsoles with a "rescue" context menu):
 void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
-    if (!isVisible && mMenuBarVisibility == visibleNever) {
+    if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
         const int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
+        if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -2199,7 +2199,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 void mudlet::adjustToolBarVisibility()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
+    if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -2225,8 +2225,8 @@ void mudlet::writeSettings()
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
-    settings.setValue("showMenuBar", mMenuBarVisibility != visibleNever);
-    settings.setValue("showToolbar", mToolbarVisibility != visibleNever);
+    settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
+    settings.setValue("showToolbar", mToolbarVisibility != enums::visibleNever);
 
     settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
     settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
@@ -2441,8 +2441,8 @@ void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
 void mudlet::slot_updateShortcuts()
 {
     if (Q_LIKELY(mMenuVisibleState.has_value())) {
-        if ((mMenuBarVisibility == visibleNever
-            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
+        if ((mMenuBarVisibility == enums::visibleNever
+            || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
            && (!mMenuVisibleState.value()) ) {
 
             /*
@@ -2457,8 +2457,8 @@ void mudlet::slot_updateShortcuts()
             return;
         }
 
-        if ((mMenuBarVisibility == visibleAlways
-            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
+        if ((mMenuBarVisibility == enums::visibleAlways
+            || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
            && (mMenuVisibleState.value()) ) {
 
             /*
@@ -2478,7 +2478,7 @@ void mudlet::slot_updateShortcuts()
 
 void mudlet::assignKeySequences()
 {
-    mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
+    mMenuVisibleState = !(mMenuBarVisibility == enums::visibleNever || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
 

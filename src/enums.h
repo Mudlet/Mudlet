@@ -33,6 +33,15 @@ public:
         dark = 2
     };
 
+    enum controlsVisibilityFlag {
+        visibleNever = 0,
+        visibleOnlyWithoutLoadedProfile = 0x1,
+        visibleMaskNormally = 0x2,
+        visibleAlways = 0x3
+    };
+    Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
+    // Q_DECLARE_OPERATORS_FOR_FLAGS(controlsVisibility)
+
     enum class PackageModuleType {
         Package = 0,         // Regular package installation
         ModuleFromUI = 1,    // First-time module installation via UI

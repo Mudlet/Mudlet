@@ -137,14 +137,6 @@ public:
     mudlet();
     ~mudlet() override;
 
-    enum controlsVisibilityFlag {
-        visibleNever = 0,
-        visibleOnlyWithoutLoadedProfile = 0x1,
-        visibleMaskNormally = 0x2,
-        visibleAlways = 0x3
-    };
-    Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
         mainPath = 0,
@@ -346,7 +338,7 @@ public:
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
-    controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     void onlyShowProfiles(const QStringList&);
@@ -388,13 +380,13 @@ public:
     void setEnableFullScreenMode(const bool);
     void setGlobalStyleSheet(const QString&);
     void setInterfaceLanguage(const QString&);
-    void setMenuBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(enums::controlsVisibility);
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setupPreInstallPackages(const QString&);
     void setToolBarIconSize(int);
-    void setToolBarVisibility(controlsVisibility);
+    void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
@@ -403,7 +395,7 @@ public:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
-    controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
+    enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
@@ -529,8 +521,8 @@ public slots:
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
-    void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
+    void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
@@ -558,7 +550,7 @@ signals:
     void signal_guiLanguageChanged(const QString&);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
-    void signal_menuBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_menuBarVisibilityChanged(const enums::controlsVisibility);
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
@@ -570,7 +562,7 @@ signals:
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_tabChanged(const QString&);
-    void signal_toolBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
 
 
@@ -660,7 +652,7 @@ private:
     QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
-    controlsVisibility mMenuBarVisibility = visibleAlways;
+    enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
     // time the main if () logic changes state - will be true if the menu is
     // supposed to be visible, false if not and not have a value initially:
@@ -747,7 +739,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    controlsVisibility mToolbarVisibility = visibleAlways;
+    enums::controlsVisibility mToolbarVisibility = enums::visibleAlways;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
     // hold all the details:
@@ -764,7 +756,7 @@ private:
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
+
 
 class TConsoleMonitor : public QObject
 {

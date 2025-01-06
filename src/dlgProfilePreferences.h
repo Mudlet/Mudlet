@@ -154,8 +154,8 @@ private slots:
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
     void slot_setTreeWidgetIconSize(const int);
-    void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
-    void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeMenuBarVisibility(const enums::controlsVisibility);
+    void slot_changeToolBarVisibility(const enums::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);

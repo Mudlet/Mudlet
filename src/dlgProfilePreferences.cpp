@@ -117,10 +117,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
 
     switch (pMudlet->menuBarVisibility()) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         comboBox_menuBarVisibility->setCurrentIndex(0);
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         comboBox_menuBarVisibility->setCurrentIndex(1);
         break;
     default:
@@ -128,10 +128,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     }
 
     switch (pMudlet->toolBarVisibility()) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         comboBox_toolBarVisibility->setCurrentIndex(0);
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         comboBox_toolBarVisibility->setCurrentIndex(1);
         break;
     default:
@@ -3153,23 +3153,23 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
     switch (comboBox_menuBarVisibility->currentIndex()) {
     case 0:
-        pMudlet->setMenuBarVisibility(mudlet::visibleNever);
+        pMudlet->setMenuBarVisibility(enums::visibleNever);
         break;
     case 1:
-        pMudlet->setMenuBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        pMudlet->setMenuBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         break;
     default:
-        pMudlet->setMenuBarVisibility(mudlet::visibleAlways);
+        pMudlet->setMenuBarVisibility(enums::visibleAlways);
     }
     switch (comboBox_toolBarVisibility->currentIndex()) {
     case 0:
-        pMudlet->setToolBarVisibility(mudlet::visibleNever);
+        pMudlet->setToolBarVisibility(enums::visibleNever);
         break;
     case 1:
-        pMudlet->setToolBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        pMudlet->setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         break;
     default:
-        pMudlet->setToolBarVisibility(mudlet::visibleAlways);
+        pMudlet->setToolBarVisibility(enums::visibleAlways);
     }
 
     pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
@@ -4181,15 +4181,15 @@ void dlgProfilePreferences::slot_changeAutomaticUpdates(const bool state)
     }
 }
 
-void dlgProfilePreferences::slot_changeMenuBarVisibility(const mudlet::controlsVisibility state)
+void dlgProfilePreferences::slot_changeMenuBarVisibility(const enums::controlsVisibility state)
 {
     switch (state) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         if (comboBox_menuBarVisibility->currentIndex() != 0) {
             comboBox_menuBarVisibility->setCurrentIndex(0);
         }
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         if (comboBox_menuBarVisibility->currentIndex() != 1) {
             comboBox_menuBarVisibility->setCurrentIndex(1);
         }
@@ -4201,15 +4201,15 @@ void dlgProfilePreferences::slot_changeMenuBarVisibility(const mudlet::controlsV
     }
 }
 
-void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsVisibility state)
+void dlgProfilePreferences::slot_changeToolBarVisibility(const enums::controlsVisibility state)
 {
     switch (state) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         if (comboBox_toolBarVisibility->currentIndex() != 0) {
             comboBox_toolBarVisibility->setCurrentIndex(0);
         }
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         if (comboBox_toolBarVisibility->currentIndex() != 1) {
             comboBox_toolBarVisibility->setCurrentIndex(1);
         }
