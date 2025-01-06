@@ -768,16 +768,16 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
         QString fileName = moduleLocation;
         if (moduleName == syncModuleName) {
             if (!syncingFromHost.isEmpty() && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
-                uninstallPackage(moduleName, 2);
+                uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
                 fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncingFromHost, moduleName);
-                installPackage(fileName, 2);
+                installPackage(fileName, enums::PackageModuleType::ModuleSync);
                 QStringList moduleEntry;
                 moduleEntry << moduleLocation;
                 moduleEntry << qsl("0");
                 mInstalledModules[moduleName] = moduleEntry;
             } else {
-                uninstallPackage(moduleName, 2);
-                installPackage(fileName, 2);
+                uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
+                installPackage(fileName, enums::PackageModuleType::ModuleSync);
             }
         }
     }
@@ -1764,7 +1764,7 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
-std::pair<bool, QString> Host::installPackage(const QString& fileName, int module)
+std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing)
 {
     // As the pointer to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -1788,10 +1788,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
     }
 
     QString packageName = sanitizePackageName(fileName);
-    if (module) {
-        if ((module == 2) && (mActiveModules.contains(packageName))) {
-            uninstallPackage(packageName, 2);
-        } else if ((module == 3) && (mActiveModules.contains(packageName))) {
+    if (thing != enums::PackageModuleType::Package) {
+        if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
+            uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
+        } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
             return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
         }
     } else {
@@ -1800,7 +1800,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
-    if (mpEditorDialog && module != 3) {
+    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
@@ -1826,7 +1826,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
 
         auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
         if (pLabel) {
-            if (module) {
+            if (thing != enums::PackageModuleType::Package) {
                 pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
             } else {
                 pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
@@ -1859,11 +1859,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         // - if it does, update the packageName from it
         if (_dir.exists(qsl("config.lua"))) {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, module > 0);
+            readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, thing != enums::PackageModuleType::Package);
             // now that the packageName changed, redo relevant checks to make sure it's still valid
-            if (module) {
+            if (thing != enums::PackageModuleType::Package) {
                 if (mActiveModules.contains(packageName)) {
-                    uninstallPackage(packageName, 2);
+                    uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
                 }
             } else {
                 if (mInstalledPackages.contains(packageName)) {
@@ -1884,7 +1884,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
             XMLimport reader(this);
-            if (module) {
+            if (thing != enums::PackageModuleType::Package) {
                 QStringList moduleEntry;
                 moduleEntry << fileName;
                 moduleEntry << qsl("0");
@@ -1893,15 +1893,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
             } else {
                 mInstalledPackages.append(packageName);
             }
-            reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+            reader.importPackage(&file2, packageName, static_cast<int>(thing));
             file2.close();
         }
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
-        //mInstalledPackages.append( packageName );
         XMLimport reader(this);
-        if (module) {
+        if (thing != enums::PackageModuleType::Package) {
             QStringList moduleEntry;
             moduleEntry << fileName;
             moduleEntry << qsl("0");
@@ -1910,20 +1909,20 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         } else {
             mInstalledPackages.append(packageName);
         }
-        reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+        reader.importPackage(&file2, packageName, static_cast<int>(thing));
         file2.close();
     }
     if (mpEditorDialog) {
         mpEditorDialog->doCleanReset();
     }
-    if (!module) {
+    if (thing == enums::PackageModuleType::Package) {
         saveProfile();
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
     // make any fonts in the package available to Mudlet for use
-    if (module != 2) {
+    if (thing != enums::PackageModuleType::ModuleSync) {
         installPackageFonts(packageName);
     }
 
@@ -1938,21 +1937,19 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
     raiseEvent(genericInstallEvent);
 
     TEvent detailedInstallEvent {};
-    switch (module) {
-    case 0:
+    switch (thing) {
+    case enums::PackageModuleType::Package:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
         break;
-    case 1:
+    case enums::PackageModuleType::ModuleFromUI:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
         break;
-    case 2:
+    case enums::PackageModuleType::ModuleSync:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
         break;
-    case 3:
+    case enums::PackageModuleType::ModuleFromScript:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
         break;
-    default:
-        Q_UNREACHABLE();
     }
     detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     detailedInstallEvent.mArgumentList.append(packageName);
@@ -1965,9 +1962,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         mpPackageManager->resetPackageTable();
     }
 
-
     return {true, QString()};
 }
+
 
 QString Host::sanitizePackageName(const QString packageName) const {
     auto tempName = packageName.section(qsl("/"), -1);
@@ -2014,7 +2011,7 @@ void Host::removePackageInfo(const QString &packageName, const bool isModule) {
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
-bool Host::uninstallPackage(const QString& packageName, int module)
+bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType thing)
 {
     //     As with the installPackage, the module codes are:
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
@@ -2026,7 +2023,8 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         return false;
     }
 
-    if (module) {
+    bool isModule = thing != enums::PackageModuleType::Package;
+    if (isModule) {
         if (!mInstalledModules.contains(packageName)) {
             return false;
         }
@@ -2035,10 +2033,10 @@ bool Host::uninstallPackage(const QString& packageName, int module)
             return false;
         }
     }
-    //module == 2 seems to be only used for reloading/syncing
+    //PackageModuleType::ModuleSync seems to be only used for reloading/syncing
     //No need to remove package info as it can cause the info to be lost
-    if (module != 2) {
-        removePackageInfo(packageName, module > 0);
+    if (thing != enums::PackageModuleType::ModuleSync) {
+        removePackageInfo(packageName, isModule);
     }
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
@@ -2051,21 +2049,19 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     raiseEvent(genericUninstallEvent);
 
     TEvent detailedUninstallEvent {};
-    switch (module) {
-    case 0:
+    switch (thing) {
+    case enums::PackageModuleType::Package:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
         break;
-    case 1:
+    case enums::PackageModuleType::ModuleFromUI:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
         break;
-    case 2:
+    case enums::PackageModuleType::ModuleSync:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
         break;
-    case 3:
+    case enums::PackageModuleType::ModuleFromScript:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
         break;
-    default:
-        Q_UNREACHABLE();
     }
     detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     detailedUninstallEvent.mArgumentList.append(packageName);
@@ -2076,9 +2072,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName)) {
         dualInstallations = 1;
     }
-    //we check for the module=3 because if we reset the editor, we will re-execute the
+    //we check for ModuleFromScript because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
-    if (mpEditorDialog && module != 3) {
+    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
         mpEditorDialog->doCleanReset();
     }
 
@@ -2089,32 +2085,32 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
     mudlet::self()->mFontManager.unloadFonts(packageName);
-    if (module) {
-        //if module == 2, this is a temporary uninstall for reloading so we exit here
+    if (isModule) {
+        //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
         mInstalledModules.remove(packageName);
         mActiveModules.removeAll(packageName);
-        if (module == 2) {
+        if (thing == enums::PackageModuleType::ModuleSync) {
             return true;
         }
-        //if module == 1/3, we actually uninstall it.
+        //if ModuleFromUI/ModuleFromScript, we actually uninstall it.
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations) {
             //we're a dual install, reinstalling package
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
-            installPackage(entry[0], 0);
+            installPackage(entry[0], enums::PackageModuleType::Package);
         }
     } else {
         mInstalledPackages.removeAll(packageName);
         if (dualInstallations) {
             QStringList entry = mInstalledModules[packageName];
-            installPackage(entry[0], 1);
+            installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
             //restore the module edit flag
             mInstalledModules[packageName] = entry;
         }
     }
-    if (mpEditorDialog && module != 3) {
+    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
         mpEditorDialog->doCleanReset();
     }
 
@@ -2137,7 +2133,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     }
 
     //NOW we reset if we're uninstalling a module
-    if (mpEditorDialog && module == 3) {
+    if (mpEditorDialog && thing == enums::PackageModuleType::ModuleFromScript) {
         mpEditorDialog->doCleanReset();
     }
     if (mpPackageManager) {

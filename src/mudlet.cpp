@@ -2034,9 +2034,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
     auto appearance = settings.value(qsl("appearance"), QVariant(0)).toInt();
     if (appearance == 0) {
-        mAppearance = settings.contains(qsl("darkTheme")) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::systemSetting;
+        mAppearance = settings.contains(qsl("darkTheme")) ? (oldDarkTheme ? enums::Appearance::dark : enums::Appearance::light) : enums::Appearance::systemSetting;
     } else {
-        mAppearance = static_cast<Appearance>(appearance);
+        mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
@@ -3078,7 +3078,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     // install default packages
     for (int i = 0; i < mPackagesToInstallList.size(); i++) {
-        pHost->installPackage(mPackagesToInstallList[i], 0);
+        pHost->installPackage(mPackagesToInstallList[i], enums::PackageModuleType::Package);
     }
 
     mPackagesToInstallList.clear();
@@ -3111,7 +3111,7 @@ void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
     for (int i = 0; i < modules.size(); i++) {
         QStringList entry = pHost->mInstalledModules[modules[i]];
-        pHost->installPackage(entry[0], 1);
+        pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
         pHost->mInstalledModules[modules[i]] = entry;
@@ -4305,14 +4305,14 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
     }
 }
 
-void mudlet::setAppearance(const Appearance state, const bool& loading)
+void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 {
     if (state == mAppearance && !loading) {
         return;
     }
 
     mDarkMode = false;
-    if (state == Appearance::dark || (state == Appearance::systemSetting && desktopInDarkMode())) {
+    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && desktopInDarkMode())) {
         mDarkMode = true;
     }
 
@@ -5073,23 +5073,23 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code.xml"),    {qsl("*")}},
-        {qsl(":/echo.xml"),               {qsl("*")}},
-        {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
+        {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
+        {qsl(":/echo.xml"),                          {qsl("*")}},
+        {qsl(":/deleteOldProfiles.xml"),             {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.xml"), {qsl("*")}},
-        {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
-        {qsl(":/mg-loader.xml"),          {qsl("mg.mud.de")}},
-        {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
+        {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
+        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
+        {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
-        {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
+        {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
                                                       qsl("ashyriamud.com"),
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
                                                       qsl("stickmud.com")}},
-        {qsl(":/MedBootstrap.xml"),       {qsl("medievia.com")}}
+        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
         // clang-format on
     };
 

@@ -137,12 +137,6 @@ public:
     mudlet();
     ~mudlet() override;
 
-    enum Appearance {
-        systemSetting = 0,
-        light = 1,
-        dark = 2
-    };
-
     enum controlsVisibilityFlag {
         visibleNever = 0,
         visibleOnlyWithoutLoadedProfile = 0x1,
@@ -233,7 +227,6 @@ public:
         // dictionaries from:
         hunspellDictionaryPath
     };
-
 
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     static QSettings* getQSettings();
@@ -388,7 +381,7 @@ public:
     bool saveWindowLayout();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
-    void setAppearance(Appearance, const bool& loading = false);
+    void setAppearance(enums::Appearance, const bool& loading = false);
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
@@ -426,7 +419,7 @@ public:
     void showedMuteAllMediaTutorial();
     bool experiencedMudletPlayer();
 
-    Appearance mAppearance = Appearance::systemSetting;
+    enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
     QString mBG_ONLY_STYLESHEET;
@@ -559,7 +552,7 @@ protected:
 
 signals:
     void signal_adjustAccessibleNames();
-    void signal_appearanceChanged(mudlet::Appearance);
+    void signal_appearanceChanged(enums::Appearance);
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_enableFulScreenModeChanged(bool);
     void signal_guiLanguageChanged(const QString&);

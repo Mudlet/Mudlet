@@ -113,7 +113,7 @@ void dlgPackageManager::slot_installPackage()
         return;
     }
 
-    mpHost->installPackage(fileName, 0);
+    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
 }
 
 void dlgPackageManager::slot_removePackages()
@@ -127,7 +127,7 @@ void dlgPackageManager::slot_removePackages()
     }
 
     for (int i = 0; i < removePackages.size(); i++) {
-        mpHost->uninstallPackage(removePackages.at(i), 0);
+        mpHost->uninstallPackage(removePackages.at(i), enums::PackageModuleType::Package);
     }
 
     additionalDetails->hide();
