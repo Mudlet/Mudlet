@@ -1770,6 +1770,32 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally re-enter this method in the future.
     QDialog* pUnzipDialog = nullptr;
+    
+    QString actualFileName = fileName;
+    std::unique_ptr<QTemporaryFile> tempFile;
+
+    if ((fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/")))
+        && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
+        tempFile = std::make_unique<QTemporaryFile>();
+        if (!tempFile->open()) {
+            qWarning() << "Host::installPackage() failed to create temporary file for resource:" << fileName;
+            return {false, qsl("Failed to create temporary file for resource package")};
+        }
+
+        QFile resourceFile(fileName);
+        if (!resourceFile.open(QIODevice::ReadOnly)) {
+            qWarning() << "Host::installPackage() failed to open resource file:" << fileName << "Error:" << resourceFile.errorString();
+            return {false, qsl("Failed to open resource package file")};
+        }
+
+        if (tempFile->write(resourceFile.readAll()) == -1) {
+            qWarning() << "Host::installPackage() failed to write resource data to temp file. Error:" << tempFile->errorString();
+            return {false, qsl("Failed to write resource package data to temporary file")};
+        }
+
+        tempFile->close();
+        actualFileName = tempFile->fileName();
+    }
 
     //     Module notes:
     //     For the module install, a module flag of 0 is a package,
@@ -1778,13 +1804,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // a flag of 3 means the module is being installed from a script.
     //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
-    if (fileName.isEmpty()) {
+    if (actualFileName.isEmpty()) {
         return {false, qsl("no package file was actually given")};
     }
 
-    QFile file(fileName);
+    QFile file(actualFileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        return {false, qsl("could not open file '%1").arg(fileName)};
+        return {false, qsl("could not open file '%1").arg(actualFileName)};
     }
 
     QString packageName = sanitizePackageName(fileName);
@@ -1841,7 +1867,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto unzipSuccessful = mudlet::unzip(fileName, _dest, _tmpDir);
+        auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = nullptr;
         if (!unzipSuccessful) {
@@ -1964,7 +1990,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
     return {true, QString()};
 }
-
 
 QString Host::sanitizePackageName(const QString packageName) const {
     auto tempName = packageName.section(qsl("/"), -1);

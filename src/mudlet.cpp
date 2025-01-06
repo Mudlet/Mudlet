@@ -5074,10 +5074,10 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
         {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
-        {qsl(":/echo.xml"),                          {qsl("*")}},
-        {qsl(":/deleteOldProfiles.xml"),             {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.xml"), {qsl("*")}},
+        {qsl(":/echo.mpackage"),                          {qsl("*")}},
+        {qsl(":/deleteOldProfiles.mpackage"),             {qsl("*")}},
+        {qsl(":/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
         {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
@@ -5102,7 +5102,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     }
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
     }
 }
 
