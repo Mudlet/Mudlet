@@ -40,7 +40,6 @@ public:
         visibleAlways = 0x3
     };
     Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-    // Q_DECLARE_OPERATORS_FOR_FLAGS(controlsVisibility)
 
     enum class PackageModuleType {
         Package = 0,         // Regular package installation
@@ -50,5 +49,7 @@ public:
     };
     Q_ENUM(PackageModuleType)
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(enums::controlsVisibility)
 
 #endif //ENUMS_H
