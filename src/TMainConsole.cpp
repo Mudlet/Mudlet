@@ -719,7 +719,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
     // it gives a height and width to mpLeftToolBar, mpRightToolBar, and mpTopToolBar for
     // some reason. Those widgets size back down immediately after on their own (?!), however if
     // getMainWindowSize() is called right after map create, the sizes reported will be wrong
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mpLeftToolBar->setHidden(true);
     mpRightToolBar->setHidden(true);
     mpTopToolBar->setHidden(true);
@@ -1027,7 +1027,7 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
         Hunspell_destroy(mpHunspell_system);
     }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // strip non-ASCII characters from the path because hunspell can't handle them
     // when compiled with MinGW 7.3.0
     mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(newDict));

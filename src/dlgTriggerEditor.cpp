@@ -331,12 +331,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpErrorConsole->hide();
 
-    button_toggleSearchAreaResults->setStyleSheet(qsl("QToolButton::on {border-image: url(:/icons/arrow-down_grey.png);} "
-                                                                 "QToolButton {border-image: url(:/icons/arrow-right_grey.png);} "
-                                                                 "QToolButton::on:hover {border-image: url(:/icons/arrow-down.png);} "
-                                                                 "QToolButton:hover {border-image: url(:/icons/arrow-right.png);}"));
-    connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
-
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
     slot_showAllTriggerControls(true);
 
@@ -717,15 +711,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
 
-
-
-    // Force the size of the triangle icon button that shows/hides the search
-    // results to be 3/4 of the height of the combo-box used to enter the search
-    // term - this is to prevent an overlarge button on MacOS platforms where it
-    // was found to be an issue!
-    button_toggleSearchAreaResults->setMaximumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
-    button_toggleSearchAreaResults->setMinimumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
-
     comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
     auto pLineEdit_searchTerm = comboBox_searchTerms->lineEdit();
 
@@ -813,7 +798,39 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
               << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
-    slot_showSearchAreaResults(false);
+    comboBox_searchTerms->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    QFrame *searchContainer = new QFrame();
+    QVBoxLayout *searchLayout = new QVBoxLayout(searchContainer);
+    searchLayout->addWidget(checkBox_displayAllVariables);
+    searchLayout->addWidget(comboBox_searchTerms);
+    searchLayout->addWidget(treeWidget_searchResults);
+
+    searchSplitter = new QSplitter(Qt::Vertical);
+
+    connect(searchSplitter, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_searchSplitterMoved);
+
+    QFrame *itemContainer = new QFrame();
+    QVBoxLayout *itemLayout = new QVBoxLayout(itemContainer);
+
+    itemLayout->addWidget(treeWidget_triggers);
+    itemLayout->addWidget(treeWidget_aliases);
+    itemLayout->addWidget(treeWidget_actions);
+    itemLayout->addWidget(treeWidget_timers);
+    itemLayout->addWidget(treeWidget_scripts);
+    itemLayout->addWidget(treeWidget_keys);
+    itemLayout->addWidget(treeWidget_variables);
+
+    searchSplitter->addWidget(itemContainer);
+    searchSplitter->setStretchFactor(0, 1);
+    searchSplitter->setCollapsible(0, false);
+    searchSplitter->addWidget(searchContainer);
+    searchSplitter->setStretchFactor(1, 1);
+    searchSplitter->setCollapsible(1, true);
+
+    verticalLayout_frame_left->addWidget(searchSplitter);
+
+    searchSplitter->restoreState(mSearchSplitterState);
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     mpWidget_triggerItems = new QWidget;
@@ -927,6 +944,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
 }
 
+void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
+{
+    mSearchSplitterState = searchSplitter->saveState();
+}
+
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
     for (int i = 0; i < 50; i++) {
@@ -1029,6 +1051,7 @@ void dlgTriggerEditor::readSettings()
     mKeyEditorSplitterState = settings.value("mKeyEditorSplitterState", QByteArray()).toByteArray();
     mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
     mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
+    mSearchSplitterState = settings.value("mSearchSplitterState", QByteArray()).toByteArray();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -1045,6 +1068,7 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("mKeyEditorSplitterState", mKeyEditorSplitterState);
     settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
     settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
+    settings.setValue("mSearchSplitterState", mSearchSplitterState);
 }
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
@@ -1432,7 +1456,6 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
     }
 
     treeWidget_searchResults->clear();
-    slot_showSearchAreaResults(true);
     treeWidget_searchResults->setUpdatesEnabled(false);
 
     searchTriggers(s);
@@ -7607,26 +7630,6 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
             showError(timer->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-    }
-}
-
-void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
-{
-    if (isChecked) {
-        if (!button_toggleSearchAreaResults->isChecked()) {
-            // If this slot is called "manually" the checked state of the button
-            // may not match the setting, so make it do so, note that the
-            // setChecked(bool) method does NOT invoke the clicked(bool) signal
-            // that is connected to here in the constructor, but it does the
-            // toggled(bool) one, which is why we use the former...
-            button_toggleSearchAreaResults->setChecked(true);
-        }
-        treeWidget_searchResults->show();
-    } else {
-        if (button_toggleSearchAreaResults->isChecked()) {
-            button_toggleSearchAreaResults->setChecked(false);
-        }
-        treeWidget_searchResults->hide();
     }
 }
 
