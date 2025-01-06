@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024 by Stephen Lyons       *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024-2025 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -34,7 +34,7 @@
 #include <QDebug>
 #include "post_guard.h"
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <wow64apiset.h>
 #endif
 
@@ -87,7 +87,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2024");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
         QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -1033,7 +1033,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
-    QStringList mightier_than_swords = {"Joshua C. Burt", "Maiyannah Bishop", "Qwindor Rousseau", "Stick In the MUD 🎙"};
+    QStringList mightier_than_swords = {/* active */"Joshua C. Burt", "StickMUD", "Medievia", /* inactive */ "Qwindor Rousseau", "Maiyannah Bishop", "Stick In the MUD 🎙"};
     QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
     int image_counter{1};
 
@@ -1101,7 +1101,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 
 QString dlgAboutDialog::createBuildInfo() const
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // The build environment is for Windows one - which could be run
     // native on a 32-bit or 64-bit CPU or inside the WOW64 sub-system on a
     // 64-bit one:

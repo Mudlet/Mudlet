@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023, 2024 by Stephen Lyons       *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023-2025 by Stephen Lyons        *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -29,9 +29,9 @@
 #include <chrono>
 #include <QCommandLineParser>
 #include <QDir>
-#if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
-#endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#endif // defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
 #include <QCommandLineOption>
 #include <QPainter>
 #include <QPointer>
@@ -57,7 +57,7 @@ using namespace std::chrono_literals;
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 bool runUpdate();
 #endif
 
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 {
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
-#ifdef Q_OS_WIN32
+#ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
     app->setFont(defaultFont);
 #endif
 
-#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -393,7 +393,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2024  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2025  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
@@ -442,7 +442,7 @@ int main(int argc, char* argv[])
 
     // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
         // sound to work:
@@ -517,7 +517,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2024");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
         const QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -629,7 +629,7 @@ int main(int argc, char* argv[])
 #endif // defined(INCLUDE_FONTS)
 
     const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     /*
      * From Qt Documentation for:
      * bool QFile::link(const QString &linkName)
@@ -733,7 +733,7 @@ int main(int argc, char* argv[])
     return app->exec();
 }
 
-#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 // Small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done.
