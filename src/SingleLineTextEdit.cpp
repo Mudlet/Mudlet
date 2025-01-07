@@ -17,6 +17,7 @@
 
 #include "Host.h"
 #include "SingleLineTextEdit.h"
+
 #include "pre_guard.h"
 #include <QKeyEvent>
 #include "post_guard.h"
@@ -46,6 +47,16 @@ void SingleLineTextEdit::keyPressEvent(QKeyEvent *event)
 void SingleLineTextEdit::resizeEvent(QResizeEvent *event)
 {
     QTextEdit::resizeEvent(event);
+}
+
+// ensure we can't paste multiple lines
+void SingleLineTextEdit::insertFromMimeData(const QMimeData *source)
+{
+    if (source->hasText()) {
+        QString text = source->text();
+        QString firstLine = text.split(QRegularExpression("[\r\n]"), Qt::SkipEmptyParts).first();
+        QTextEdit::insertPlainText(firstLine);
+    }
 }
 
 // remove selection when focus is lost
