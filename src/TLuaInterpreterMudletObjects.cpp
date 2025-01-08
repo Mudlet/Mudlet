@@ -851,7 +851,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
     const int n = lua_gettop(L);
     Host& host = getHostFromLua(L);
-    QString location = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
+    QString location = mudlet::getMudletPath(enums::profileHomePath, host.getName());
     const bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     const QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
@@ -2572,7 +2572,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);

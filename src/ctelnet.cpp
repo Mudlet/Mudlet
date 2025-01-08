@@ -838,7 +838,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         }
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
-        mpHost->installPackage(mServerPackage, 0);
+        mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package);
         QString packageName = mServerPackage.section("/", -1);
         packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
         packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
@@ -2396,7 +2396,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
 
                     // Uninstall the old version
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
 
                     // Download and install the new version
                     mpHost->mServerGUI_Package_version = version;
@@ -2701,7 +2701,7 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url) {
     postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     auto request = QNetworkRequest(QUrl(url));
@@ -2754,7 +2754,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
                     .arg(version, mpHost->mServerGUI_Package_version, url));
 
         // Uninstall the old version
-        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
 
         // Download and install the new version
         mpHost->mServerGUI_Package_version = version;

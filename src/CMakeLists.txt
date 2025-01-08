@@ -364,7 +364,8 @@ set(mudlet_HDRS
     VarUnit.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    enums.h)
 
 if(WIN32)
   list(APPEND mudlet_HDRS uiawrapper.h)

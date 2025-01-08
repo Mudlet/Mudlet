@@ -9340,7 +9340,7 @@ void dlgTriggerEditor::slot_import()
     lastDir = QFileInfo(fileName).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    mpHost->installPackage(fileName, 0);
+    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
