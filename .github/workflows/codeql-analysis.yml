@@ -119,7 +119,7 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} -y
+        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
