@@ -1991,6 +1991,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     return {true, QString()};
 }
 
+
 QString Host::sanitizePackageName(const QString packageName) const {
     auto tempName = packageName.section(qsl("/"), -1);
     tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
