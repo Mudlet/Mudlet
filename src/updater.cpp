@@ -396,7 +396,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // updated, then you do want to see the changelog.
 void Updater::recordUpdateTime() const
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -417,7 +417,7 @@ void Updater::recordUpdateTime() const
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -448,7 +448,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
 
-    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::ReadOnly);
     qint64 updateTimestamp;
     if (!opened) {
@@ -476,7 +476,7 @@ bool Updater::shouldShowChangelog()
 // return a null QString on failure
 QString Updater::getPreviousVersion() const
 {
-    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString previousVersion;
     if (!opened) {
