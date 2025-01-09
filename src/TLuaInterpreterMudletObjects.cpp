@@ -2637,8 +2637,8 @@ int TLuaInterpreter::getProfiles(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
-int TLuaInterpreter::closeProfile(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadProfile
+int TLuaInterpreter::loadProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
     const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
@@ -2680,7 +2680,8 @@ int TLuaInterpreter::closeProfile(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::unloadProfile(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
+int TLuaInterpreter::closeProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
     QString profileName;
