@@ -6640,7 +6640,7 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             info = host.readProfileData(qsl("description"));
             break;
         }
-        case 1:
+        default:
         {
             QString profileName = getVerifiedString(L, __func__, 1, "profile name");
             if (profileName.isEmpty()) {
@@ -6656,12 +6656,6 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
                 info = mudlet::self()->readProfileData(profileName, qsl("description"));
             }
             break;
-        }
-        default:
-        {
-            lua_pushfstring(L, "getProfileInformation: Too many arguments");
-            lua_pushboolean(L, false);
-            return 2;
         }
     }
 
@@ -6682,15 +6676,11 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
             text = getVerifiedString(L, __func__, 1, "text");
             break;
         }
-        case 2:
+        default:
         {
             profileName = getVerifiedString(L, __func__, 1, "profile name");
             text = getVerifiedString(L, __func__, 2, "text");
             break;
-        }
-        default:
-        {
-            return warnArgumentValue(L, __func__, "setProfileInformation: wrong number of parameters");
         }
     }
 
@@ -6714,11 +6704,9 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
     switch (params) {
     case 0:
         break;
-    case 1:
+    default:
         profileName = getVerifiedString(L, __func__, 1, "profile name");
         break;
-    default:
-        return warnArgumentValue(L, __func__, "clearProfileInformation: wrong number of parameters");
     }
 
     // if this is a default game, return to the orginal text
