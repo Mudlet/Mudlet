@@ -2612,13 +2612,9 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_settable(L, -3);
         }
 
-        if (lua_isboolean(L, 1)) {
-            if (lua_toboolean(L, 1)) {
-                lua_pushstring(L, "description");
-                lua_pushstring(L, description.toUtf8().constData());
-                lua_settable(L, -3);
-            }
-        }
+        lua_pushstring(L, "description");
+        lua_pushstring(L, description.toUtf8().constData());
+        lua_settable(L, -3);
 
 
         auto host = hostManager.getHost(profile);
@@ -2641,8 +2637,8 @@ int TLuaInterpreter::getProfiles(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadProfile
-int TLuaInterpreter::loadProfile(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
+int TLuaInterpreter::closeProfile(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
     const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
