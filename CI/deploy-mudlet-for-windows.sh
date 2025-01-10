@@ -409,7 +409,12 @@ EOF
   echo "$Changelog"
 
   echo "=== Creating release in Dblsqd ==="
-  VersionString="${VERSION}"
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  else # release
+    VersionString="${VERSION}"
+  fi
+  
   echo "VersionString: $VersionString"
   export VersionString
 
