@@ -1434,8 +1434,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     painter.save();
                     painter.setPen(Qt::NoPen);
                     painter.setBrush(mpHost->mLowerLevelColor);
-                    painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
-                    painter.restore();
+                    if (mBubbleMode) {
+                        const float roomRadius = 0.5 * rSize * mRoomWidth;
+                        const QPointF roomCenter = QPointF(rx - (roomRadius * rSize * 0.5), ry + (roomRadius * rSize * 0.5));
+                        QPainterPath diameterPath;
+                        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                        painter.drawPath(diameterPath);
+                    }
+                    else
+                    {
+                        painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
+                    }
+                painter.restore();
                 }
             }
         }
@@ -1456,7 +1466,17 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     painter.save();
                     painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
                     painter.setBrush(Qt::transparent);
-                    painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
+                    if (mBubbleMode) {
+                        const float roomRadius = 0.5 * rSize * mRoomWidth;
+                        const QPointF roomCenter = QPointF(rx + (roomRadius * rSize * 0.5), ry - (roomRadius * rSize * 0.5));
+                        QPainterPath diameterPath;
+                        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                        painter.drawPath(diameterPath);
+                    }
+                    else
+                    {
+                        painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
+                    }
                     painter.restore();
                 }
             }
