@@ -1439,9 +1439,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         QPainterPath diameterPath;
                         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                         painter.drawPath(diameterPath);
-                    }
-                    else
-                    {
+                    } else {
                         painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
                     }
                 painter.restore();
@@ -1471,9 +1469,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         QPainterPath diameterPath;
                         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                         painter.drawPath(diameterPath);
-                    }
-                    else
-                    {
+                    } else {
                         painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
                     }
                     painter.restore();
