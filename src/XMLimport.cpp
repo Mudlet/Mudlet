@@ -995,12 +995,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
-    if (attributes().hasAttribute(qsl("DrawUpperLowerLevels"))) {
-        pHost->setDrawUpperLowerLevels(attributes().value(qsl("DrawUpperLowerLevels")) == YES);
-    } else {
-        pHost->setDrawUpperLowerLevels(false);
-    }
-
     if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
         mpHost->mMapInfoContributors.clear();
     }

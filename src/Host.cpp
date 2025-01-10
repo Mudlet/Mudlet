@@ -4278,17 +4278,6 @@ void Host::setLargeAreaExitArrows(const bool state)
     }
 }
 
-void Host::setDrawUpperLowerLevels(const bool state)
-{
-    if (mDrawUpperLowerLevels != state) {
-        mDrawUpperLowerLevels = state;
-        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
-            mpMap->mpMapper->mp2dMap->mDrawUpperLowerLevels = state;
-            mpMap->mpMapper->mp2dMap->update();
-        }
-    }
-}
-
 void Host::setEditorShowBidi(const bool state)
 {
     if (mEditorShowBidi != state) {

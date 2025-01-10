@@ -213,9 +213,7 @@ public:
     void            setControlCharacterMode(const ControlCharacterMode mode);
     ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
-    bool            getDrawUpperLowerLevels() const { return mDrawUpperLowerLevels; }
     void            setLargeAreaExitArrows(const bool);
-    void            setDrawUpperLowerLevels(const bool);
 
     void            forceClose();
     bool            isClosingDown() const { return mIsClosingDown; }
@@ -896,7 +894,6 @@ private:
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
-    bool mDrawUpperLowerLevels = false;
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;

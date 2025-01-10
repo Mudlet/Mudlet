@@ -133,7 +133,6 @@ void T2DMap::init()
     }
     flushSymbolPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    mDrawUpperLowerLevels = mpHost->getDrawUpperLowerLevels();
 }
 
 void T2DMap::slot_shiftDown()
@@ -1418,7 +1417,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
 
-    if (mDrawUpperLowerLevels) {
+    if (mudlet::self()->mDrawUpperLowerLevels) {
         // draw room on lower z-levels
         while (itRoom.hasNext()) {
             const int currentAreaRoom = itRoom.next();
