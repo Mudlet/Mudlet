@@ -995,6 +995,12 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
+    if (attributes().hasAttribute(qsl("DrawUpperLowerLevels"))) {
+        pHost->setDrawUpperLowerLevels(attributes().value(qsl("DrawUpperLowerLevels")) == YES);
+    } else {
+        pHost->setDrawUpperLowerLevels(false);
+    }
+
     if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
         mpHost->mMapInfoContributors.clear();
     }
@@ -1182,6 +1188,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
                 pHost->mBgColor_2.setNamedColor(readElementText());
+            } else if (name() == qsl("mLowerLevelColor")) {
+                pHost->mLowerLevelColor.setNamedColor(readElementText());
+            } else if (name() == qsl("mUpperLevelColor")) {
+                pHost->mUpperLevelColor.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {

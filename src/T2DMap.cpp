@@ -133,6 +133,7 @@ void T2DMap::init()
     }
     flushSymbolPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    mDrawUpperLowerLevels = mpHost->getDrawUpperLowerLevels();
 }
 
 void T2DMap::slot_shiftDown()
@@ -1403,10 +1404,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
-    if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
-    }
-
     // Draw label sizing or group selection box
     if (mSizeLabel) {
         painter.fillRect(mMultiRect, QColor(250, 190, 0, 190));
@@ -1420,6 +1417,59 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QSet<QPair<int, int>> usedRoomPositions;
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
+
+    if (mDrawUpperLowerLevels) {
+        // draw room on lower z-levels
+        while (itRoom.hasNext()) {
+            const int currentAreaRoom = itRoom.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+            if (!room) {
+                continue;
+            }
+
+            if (room->z() == zLevel - 1) {
+                const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+                const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+                if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
+                    painter.save();
+                    painter.setPen(Qt::NoPen);
+                    painter.setBrush(mpHost->mLowerLevelColor);
+                    painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
+                    painter.restore();
+                }
+            }
+        }
+        itRoom.toFront();
+
+        // draw rooms on upper z-levels
+        while (itRoom.hasNext()) {
+            const int currentAreaRoom = itRoom.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+            if (!room) {
+                continue;
+            }
+
+            if (room->z() == zLevel + 1) {
+                const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+                const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+                if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
+                    painter.save();
+                    painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
+                    painter.setBrush(Qt::transparent);
+                    painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
+                    painter.restore();
+                }
+            }
+        }
+        itRoom.toFront();
+    }
+
+    // draw room exits
+    if (!pDrawnArea->gridMode) {
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
+    }
+
+    // now draw rooms on selected z-level
     while (itRoom.hasNext()) {
         const int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);

@@ -1770,7 +1770,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally re-enter this method in the future.
     QDialog* pUnzipDialog = nullptr;
-    
+
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
 
@@ -4273,6 +4273,17 @@ void Host::setLargeAreaExitArrows(const bool state)
         mLargeAreaExitArrows = state;
         if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
             mpMap->mpMapper->mp2dMap->mLargeAreaExitArrows = state;
+            mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void Host::setDrawUpperLowerLevels(const bool state)
+{
+    if (mDrawUpperLowerLevels != state) {
+        mDrawUpperLowerLevels = state;
+        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+            mpMap->mpMapper->mp2dMap->mDrawUpperLowerLevels = state;
             mpMap->mpMapper->mp2dMap->update();
         }
     }
