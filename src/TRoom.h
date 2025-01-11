@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015, 2018, 2021 by Stephen Lyons                  *
+ *   Copyright (C) 2014-2015, 2018, 2021, 2025 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -63,7 +63,7 @@ public:
     void removeAllSpecialExitsToRoom(const int);
     void setSpecialExit(const int, const QString&);
     void clearSpecialExits();
-    const QMap<QString, int>& getSpecialExits() const { return mSpecialExits; }
+    QMap<QString, int> getSpecialExits(const bool includeStubs = false) const;
     const QSet<QString>& getSpecialExitLocks() const { return mSpecialExitLocks; }
     const QMap<QString, int>& getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w);
@@ -120,9 +120,7 @@ public:
     void auditExits(QHash<int, int>);
     /*bool*/ void restore(QDataStream& ifs, int roomID, int version);
     void auditExit(int&,
-                   int,
-                   QString,
-                   QString,
+                   const int,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QMap<QString, int>&,
@@ -132,9 +130,6 @@ public:
                    QMap<QString, bool>&,
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
-    static QString dirCodeToShortString(const int);
-    static QString dirCodeToString(const int);
-    inline int stringToDirCode(const QString&) const;
     bool hasExitOrSpecialExit(const QString&) const;
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
@@ -142,6 +137,12 @@ public:
     QSet<QString> specialStubExits() const;
     bool hasAStubExit(const bool alsoConsiderSpecialExits = false) const;
     bool hasANormalExitCustomLine(const int direction) const;
+
+    static QString dirCodeToShortString(const int);
+    static QString dirCodeToString(const int);
+    static int stringToDirCode(const QString&);
+    static int shortStringToDirCode(const QString&);
+
 
     int environment = -1;
 
@@ -277,7 +278,7 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
         debug.nospace() << ", out=" << room->getOut();
     }
 
-    QMap<QString, int> specialExits = room->getSpecialExits();
+    QMap<QString, int> specialExits = room->getSpecialExits(true);
     if (!specialExits.isEmpty()) {
         debug.nospace() << ", specialExits=(";
         for (QMap<QString, int>::const_iterator it = specialExits.begin(); it != specialExits.end(); ++it) {

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2021, 2024 by Stephen Lyons                  *
+ *   Copyright (C) 2013-2016, 2021, 2024-2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -491,7 +491,7 @@ void dlgRoomExits::save()
         return;
     }
 
-    QList<QString> originalExitCmdsList{pR->getSpecialExits().keys()};
+    QList<QString> originalExitCmdsList{pR->getSpecialExits(true).keys()};
     QSet<QString> originalExitCmds{originalExitCmdsList.begin(), originalExitCmdsList.end()};
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
@@ -1113,7 +1113,7 @@ void dlgRoomExits::init()
 
     initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, utils::richText(tr("Set the number of the room out from this one.")));
 
-    QMapIterator<QString, int> it(pR->getSpecialExits());
+    QMapIterator<QString, int> it(pR->getSpecialExits(true));
     while (it.hasNext()) {
         it.next();
         const int id_to = it.value();

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -362,7 +362,6 @@ private:
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
-    QString serializeSpecialExitStub(TRoom* pRoom, const QString& name) const;
 
     QStringList mStoredMessages;
 

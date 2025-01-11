@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
@@ -2124,7 +2124,8 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         // priority:
         bool hasSpecialExitStubWithoutCustomLine = false;
         bool hasSpecialExitWithoutCustomLine = false;
-        QMapIterator<QString, int> itSpecialExit(room->getSpecialExits());
+        // Use true in TRoom::getSpecialExits(...) to include stub exits:
+        QMapIterator<QString, int> itSpecialExit(room->getSpecialExits(true));
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
             if (!room->customLines.value(itSpecialExit.key()).size()) {
@@ -3456,7 +3457,9 @@ void T2DMap::slot_customLineProperties()
             } else if (exit == key_out) {
                 le_toId->setText(QString::number(room->getOut()));
             } else if (room->getSpecialExits().contains(exit)) {
-                le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
+                // Include stubs which return 0 from TRoom::getSpecialExits(true).value(exit)
+                // when exit is a stub
+                le_toId->setText(QString::number(room->getSpecialExits(true).value(exit)));
             } else {
                 qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
             }
@@ -4999,7 +5002,7 @@ void T2DMap::slot_setCustomLine()
         connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
-    QMapIterator<QString, int> it(room->getSpecialExits());
+    QMapIterator<QString, int> it(room->getSpecialExits(true));
     while (it.hasNext()) {
         it.next();
         const int id_to = it.value();

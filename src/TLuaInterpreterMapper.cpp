@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -2438,6 +2439,7 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidExitRoomID.arg(fromRoomID));
     }
     if (!pR->getSpecialExits().contains(dir)) {
+        // We do not include stubs in the above
         return warnArgumentValue(L, __func__, qsl("the special exit name/command '%1' does not exist in roomID %2")
             .arg(dir, QString::number(fromRoomID)));
     }
@@ -2840,9 +2842,11 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
         return warnArgumentValue(L, __func__, "the exit command cannot be empty");
     }
 
-    if (!pR->getSpecialExits().contains(dir)) {
+    // We also nuke stubs exits with this Lua API function so we have to include
+    // them in the check here:
+    if (!pR->getSpecialExits(true).contains(dir)) {
         return warnArgumentValue(L, __func__, qsl(
-            "the special exit name/command '%1' does not exist in exit roomID %2").arg(dir, QString::number(fromRoomID)));
+            "the special exit or stub name/command '%1' does not exist in exit roomID %2").arg(dir, QString::number(fromRoomID)));
     }
     pR->setSpecialExit(-1, dir);
     host.mpMap->update();
@@ -3366,8 +3370,8 @@ int TLuaInterpreter::setDoor(lua_State* L)
         && exitCmd.compare(qsl("out"))) {
         // One of the above WILL BE ZERO if the exitCmd is ONE of the above qsls
         // So the above will be TRUE if NONE of above strings match - which
-        // means we must treat the exitCmd as a SPECIAL exit
-        if (!(pR->getSpecialExits().contains(exitCmd))) {
+        // means we must treat the exitCmd as a SPECIAL exit (or stub):
+        if (!(pR->getSpecialExits(true).contains(exitCmd))) {
             // And NOT a special one either
             return warnArgumentValue(L, __func__, qsl(
                 "roomID %1 does not have a special exit in direction '%2'")

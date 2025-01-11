@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020, 2023 by Stephen Lyons                  #
+#    Copyright (C) 2015-2018, 2020, 2023, 2025 by Stephen Lyons            #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -576,6 +576,14 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Enable the features associated with reporting problems in processing Unicode
 #   codepoints that cannot be displayed on screen in a `TConsole`:
 # target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
+#
+# * Produce qDebug() messages about the points in the file when saving/loading
+#   a binary map file - by checked the numbers are the same when loading a file
+#   compared to those when saving it, errors in the process - maybe by mismatches
+#   in saving/loading elements - can be spotted and help to debug problems when
+#   extending/revising the binary format to accomodate new features/details. Use
+#   2 or 3 to checkpoint each room or particular point in each room (very spammy):
+# target_compile_definitions(mudlet PRIVATE DEBUG_MAP_FILE_PROCESSING=1)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

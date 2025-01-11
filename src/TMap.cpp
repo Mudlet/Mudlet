@@ -1113,54 +1113,6 @@ bool TMap::findPath(int from, int to)
 // destination id is used as the "key" for special exits in the format.
 // We format the data as a Lua table so that it can be parsed by older Mudlet
 // versions that do not understand or hide the data from the end-user:
-QString TMap::serializeSpecialExitStub(TRoom* pRoom, const QString& name) const
-{
-    QStringList result;
-    // door:
-    if (pRoom && pRoom->doors.value(name)) {
-        result << qsl("[\"door\"]=%1").arg(QString::number(pRoom->doors.value(name)));
-    }
-    // custom line:
-    if (pRoom && pRoom->customLines.value(name).size()) {
-        QStringList customLineDetails;
-        QString customLinePointsString;
-
-        // We have a custom line with at least one point
-        // custom exit line points
-        QListIterator<QPointF> itPoint(pRoom->customLines.value(name));
-        while (itPoint.hasNext()) {
-            const auto point = itPoint.next();
-            // Add a sub-table with this points x and y coordinates:
-            customLineDetails << qsl("{%1,%2}")
-                                 .arg(QString::number(point.x()),
-                                      QString::number(point.y()));
-        }
-        // Join the above into a single table
-        customLinePointsString = customLineDetails.join(QLatin1Char(','))
-                .append(QLatin1Char('}'))
-                .prepend(QLatin1String("[\"points\"]={"));
-        // Then restart accumulating details in the QStringList:
-        customLineDetails.clear();
-        customLineDetails << customLinePointsString;
-        // custom exit line color
-        customLineDetails << qsl("[\"color\"]={%1,%2,%3}")
-                             .arg(QString::number(pRoom->customLinesColor.value(name).red()),
-                                  QString::number(pRoom->customLinesColor.value(name).green()),
-                                  QString::number(pRoom->customLinesColor.value(name).blue()));
-        // custom exit line arrow
-        customLineDetails << qsl("[\"arrow\"]=%1").arg(pRoom->customLinesArrow.value(name)
-                                                     ? qsl("true")
-                                                     : qsl("false"));
-        result << customLineDetails.join(QLatin1Char(','))
-                  .prepend(QLatin1String("[\"customLine\"]={"))
-                  .append(QLatin1Char('}'));
-    }
-    // Now combine all the data into a single table:
-    return result.join(QLatin1Char(','))
-            .prepend(qsl("[\"%1\"]={").arg(name))
-            .append(QLatin1Char('}'));
-}
-
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
     // clamp version values
@@ -1169,14 +1121,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
-                             "for this version of Mudlet. Supported are only formats up to version %2.")
-                                 .arg(QString::number(saveVersion), QString::number(mMaxVersion));
+                                              "for this version of Mudlet. Supported are only formats up to version %2.")
+                                       .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
         return false;
     }
 
     auto oldSaveVersion = mSaveVersion;
+    QStringList mapFallBackKeys;
 
     // if 0 we default to current version selected
     if (saveVersion != 0) {
@@ -1185,10 +1138,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
     if (mSaveVersion != mVersion) {
         const QString message = tr("[ ALERT ] - Saving map in format version \"%1\" that is different than \"%2\" which\n"
-                             "it was loaded as. This may be an issue if you want to share the resulting\n"
-                             "map with others relying on the original format.")
-                                  .arg(mSaveVersion)
-                                  .arg(mVersion);
+                                               "it was loaded as. This may be an issue if you want to share the resulting\n"
+                                               "map with others relying on the original format.")
+                                        .arg(QString::number(mSaveVersion), QString::number(mVersion));
         appendErrorMsgWithNoLf(message, false);
         mpHost->mTelnet.postMessage(message);
     }
@@ -1196,24 +1148,46 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     if (mSaveVersion != mDefaultVersion) {
         const QString message = tr("[ WARN ]  - Saving map in format version \"%1\" different from the\n"
                              "recommended map version %2 for this version of Mudlet.")
-                                  .arg(mSaveVersion)
-                                  .arg(mDefaultVersion);
+                                  .arg(QString::number(mSaveVersion), QString::number(mDefaultVersion));
         appendErrorMsgWithNoLf(message, false);
         postMessage(message);
     }
 
     ofs << mSaveVersion;
+    if (mSaveVersion >= 21) {
+        // Put some "magic" in the file
+        ofs.writeRawData("MudletMapFile", 13);
+    }
     ofs << mEnvColors;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << mCustomEnvColors;
     ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion < 19) {
         // Save the data in the map user data for older versions
-        mUserData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
-        mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
-        mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
+        QString key = qsl("system.fallback_mapSymbolFont");
+        mUserData.insert(key, mMapSymbolFont.toString());
+        mapFallBackKeys << key;
+
+        key = qsl("system.fallback_mapSymbolFontFudgeFactor");
+        mUserData.insert(key, QString::number(mMapSymbolFontFudgeFactor));
+        mapFallBackKeys << key;
+
+        key = qsl("system.fallback_onlyUseMapSymbolFont");
+        mUserData.insert(key, mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
+        mapFallBackKeys << key;
     }
+    // This is not inside a version check as we no longer support writing map
+    // file version less than 17 - i.e. without map user data:
+#if defined(DEBUG_MAP_FILE_PROCESSING)
+    qDebug().noquote().nospace() << "TMap::serialize(...) INFO - about to write map user data at: " << ofs.device()->pos();
+#endif
     ofs << mUserData;
+    if (!mapFallBackKeys.isEmpty()) {
+        QStringListIterator itMapFallBackKey(mapFallBackKeys);
+        while (itMapFallBackKey.hasNext()) {
+            mUserData.remove(itMapFallBackKey.next());
+        }
+    }
     if (mSaveVersion >= 19) {
         // Save the data directly in supported format versions (19 and above)
         ofs << mMapSymbolFont;
@@ -1231,8 +1205,12 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     while (itAreaList.hasNext()) {
         itAreaList.next();
         const int areaID = itAreaList.key();
+        QStringList areaFallBackKeys;
         TArea* pA = itAreaList.value();
         ofs << areaID;
+#if defined(DEBUG_MAP_FILE_PROCESSING)
+        qDebug().noquote().nospace() << "TMap::serialize(...) INFO - about to write area (ID: " << areaID << ") data at: " << ofs.device()->pos();
+#endif
         if (mSaveVersion >= 18) {
             ofs << pA->rooms;
         } else {
@@ -1261,9 +1239,17 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             // Revised in version 21 to store the value directly:
             ofs << pA->mLast2DMapZoom;
         } else {
-            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+            QString key = QLatin1String("system.fallback_map2DZoom");
+            pA->mUserData.insert(key, QString::number(pA->get2DMapZoom()));
+            areaFallBackKeys << key;
         }
         ofs << pA->mUserData;
+        if (!areaFallBackKeys.isEmpty()) {
+            QStringListIterator itAreaFallBackKey(areaFallBackKeys);
+            while (itAreaFallBackKey.hasNext()) {
+                pA->mUserData.remove(itAreaFallBackKey.next());
+            }
+        }
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
@@ -1341,53 +1327,106 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
     }
 
+#if defined(DEBUG_MAP_FILE_PROCESSING)
+    qDebug().noquote().nospace() << "TMap::serialize(...) INFO - about to write first room data at: " << ofs.device()->pos();
+#endif
     QHashIterator<int, TRoom*> it(mpRoomDB->getRoomMap());
     while (it.hasNext()) {
         it.next();
-        QStringList specialStubExitNames;
         TRoom* pR = it.value();
         if (!pR) {
             qDebug() << "TMap::serialize(...) skipping a room with a NULL TRoom pointer:" << it.key();
             continue;
         }
 
+        // Record any fallbacks we add to the room user data so we can remove
+        // them before returning - so they do not "pollute" the end-user's
+        // view of the data stored for the room after the room has been
+        // written to the file:
+        QStringList roomFallBackKeys;
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 1)
+        const int roomID = pR->getId();
+        ofs << roomID;
+        qDebug().noquote().nospace() << "TMap::serialize(...) INFO - about to write room (ID: " << roomID << ") data at: " << ofs.device()->pos();
+#else
         ofs << pR->getId();
+#endif
         if (mSaveVersion <= 19) {
             if (!pR->mSymbol.isEmpty()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+                const QString key = QLatin1String("system.fallback_symbol");
+                pR->userData.insert(key, pR->mSymbol);
+                roomFallBackKeys << key;
             }
         }
         ofs << pR->getArea();
         ofs << pR->x();
         ofs << pR->y();
         ofs << pR->z();
-        ofs << pR->getNorth();
-        ofs << pR->getNortheast();
-        ofs << pR->getEast();
-        ofs << pR->getSoutheast();
-        ofs << pR->getSouth();
-        ofs << pR->getSouthwest();
-        ofs << pR->getWest();
-        ofs << pR->getNorthwest();
-        ofs << pR->getUp();
-        ofs << pR->getDown();
-        ofs << pR->getIn();
-        ofs << pR->getOut();
+
+        if (mSaveVersion >= 21) {
+            ofs << pR->getNorth();
+            ofs << pR->getNortheast();
+            ofs << pR->getEast();
+            ofs << pR->getSoutheast();
+            ofs << pR->getSouth();
+            ofs << pR->getSouthwest();
+            ofs << pR->getWest();
+            ofs << pR->getNorthwest();
+            ofs << pR->getUp();
+            ofs << pR->getDown();
+            ofs << pR->getIn();
+            ofs << pR->getOut();
+        } else {
+            // Versions prior to 21 don't handle the 0 for stub exits so we
+            // need to replace them with the -1 for no exit
+            auto writeExitId = [=] (int exitId) {
+                if (!exitId) {
+                    return -1;
+                } else {
+                    return exitId;
+                }
+            };
+            ofs << writeExitId(pR->getNorth());
+            ofs << writeExitId(pR->getNortheast());
+            ofs << writeExitId(pR->getEast());
+            ofs << writeExitId(pR->getSoutheast());
+            ofs << writeExitId(pR->getSouth());
+            ofs << writeExitId(pR->getSouthwest());
+            ofs << writeExitId(pR->getWest());
+            ofs << writeExitId(pR->getNorthwest());
+            ofs << writeExitId(pR->getUp());
+            ofs << writeExitId(pR->getDown());
+            ofs << writeExitId(pR->getIn());
+            ofs << writeExitId(pR->getOut());
+        }
+
         ofs << pR->environment;
         ofs << pR->getWeight();
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+        const QString name = pR->name;
+        ofs << name;
+        qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote room name (\"" << name << "\") data at: " << ofs.device()->pos();
+#else
         ofs << pR->name;
+#endif
         ofs << pR->isLocked;
+        // This used to temporarily associate an index number with a special
+        // exit stub so that all the fallback details can be indexed against
+        // that number instead of the name/command for map versions less than 21:
+        QMap<int, QString> specialStubExits;
+        int specialStubExitsIndex = -1;
         if (mSaveVersion >= 21) {
             // Includes stubs (with target room ID of 0)
-            ofs << pR->getSpecialExits();
+            ofs << pR->getSpecialExits(true);
         } else {
             // Prior to version 21 the destination room id was used as the key
             // for the special exits with the name/command as the value - this
             // prevents there being more than one exit to the same room - and
             // stops us storing multiple "special stubs" all with 0 as the
-            // target room id:
+            // target room id - so we will record their names in
+            // specialStubExits:
             QMultiMap<int, QString> oldSpecialExits;
-            QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+            QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits(true));
             while (itSpecialExit.hasNext()) {
                 itSpecialExit.next();
                 if (itSpecialExit.value() > 0) {
@@ -1397,17 +1436,35 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                                                     : QLatin1Char('0'))
                                                    % itSpecialExit.key());
                 } else {
-                    specialStubExitNames << itSpecialExit.key();
+                    specialStubExits.insert(++specialStubExitsIndex, itSpecialExit.key());
                 }
             }
-            if (!specialStubExitNames.isEmpty()) {
-                QStringList specialStubExitDetails;
-                QStringListIterator itSpecialStubExit(specialStubExitNames);
+            if (!specialStubExits.isEmpty()) {
+                QMapIterator<int, QString> itSpecialStubExit(specialStubExits);
                 while (itSpecialStubExit.hasNext()) {
-                    specialStubExitDetails << serializeSpecialExitStub(pR, itSpecialStubExit.next());
+                    // We do not use the name to associate the different bits
+                    // of a stub because parsing them when restoring would be
+                    // hard, especially if the name is a complex "script" -
+                    // instead use a simple integer:
+                    itSpecialStubExit.next();
+                    const auto specialStubExitsIndex = itSpecialStubExit.key();
+                    const auto name = itSpecialStubExit.value();
+                    QString key = qsl("system.fallback_specialStubExit.%1.name")
+                                          .arg(QString::number(specialStubExitsIndex));
+                    pR->userData.insert(key, name);
+                    roomFallBackKeys << key;
+
+                    if (const auto door = pR->doors.value(name); door) {
+                        key = qsl("system.fallback_specialStubExit.%1.door")
+                                      .arg(QString::number(specialStubExitsIndex));
+                        pR->userData.insert(key, QString::number(door));
+                        roomFallBackKeys << key;
+                    }
+
+                    // We don't create the custom line fallback details here
+                    // - we do that separately further on for all stubs with
+                    // custom exit lines
                 }
-                pR->userData.insert(QLatin1String("system.fallback_specialExitStubs"),
-                                    qsl("{%1}").arg(specialStubExitDetails.join(QLatin1String(", "))));
             }
             ofs << oldSpecialExits;
         }
@@ -1435,122 +1492,287 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbolColor;
         } else {
             if (pR->mSymbolColor.isValid()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+                const QString key = QLatin1String("system.fallback_symbol_color");
+                pR->userData.insert(key, pR->mSymbolColor.name());
+                roomFallBackKeys << key;
             }
         }
 
-        ofs << pR->userData;
-        if (mSaveVersion >= 20) {
-            // Before version 20 stored the style as an Latin1 string, the color
-            // as a QList<int> for the RGB components and used UPPER case for
-            // the NORMAL exit direction keys...
+        if (mSaveVersion >= 21) {
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+            const auto& userData = pR->userData;
+            ofs << userData;
+            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data at: " << ofs.device()->pos();
+#else
+            ofs << pR->userData;
+#endif
             ofs << pR->customLines;
             ofs << pR->customLinesArrow;
             ofs << pR->customLinesColor;
             ofs << pR->customLinesStyle;
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote customLine data at: " << ofs.device()->pos();
+#endif
         } else {
-            QMap<QString, QList<QPointF>> oldLinesData;
-            QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
-            while (itCustomLine.hasNext()) {
-                itCustomLine.next();
-                const QString direction(itCustomLine.key());
-                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
-                    || direction == QLatin1String("down")
-                    || direction == QLatin1String("ne")
-                    || direction == QLatin1String("se")
-                    || direction == QLatin1String("sw")
-                    || direction == QLatin1String("nw")
-                    || direction == QLatin1String("in")
-                    || direction == QLatin1String("out")) {
-                    oldLinesData.insert(itCustomLine.key().toUpper(), itCustomLine.value());
-                } else {
-                    oldLinesData.insert(itCustomLine.key(), itCustomLine.value());
-                }
-            }
-            ofs << oldLinesData;
 
-            QMap<QString, bool> oldLinesArrowData;
-            QMapIterator<QString, bool> itCustomLineArrow(pR->customLinesArrow);
-            while (itCustomLineArrow.hasNext()) {
-                itCustomLineArrow.next();
-                const QString direction(itCustomLineArrow.key());
-                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
-                    || direction == QLatin1String("down")
-                    || direction == QLatin1String("ne")
-                    || direction == QLatin1String("se")
-                    || direction == QLatin1String("sw")
-                    || direction == QLatin1String("nw")
-                    || direction == QLatin1String("in")
-                    || direction == QLatin1String("out")) {
-                    oldLinesArrowData.insert(itCustomLineArrow.key().toUpper(), itCustomLineArrow.value());
-                } else {
-                    oldLinesArrowData.insert(itCustomLineArrow.key(), itCustomLineArrow.value());
-                }
-            }
-            ofs << oldLinesArrowData;
+            // This uses dirCode to destinguish between normal and special exits
+            // and deduces an index into specialStubsMap from direction for the
+            // latter:
+            auto appendStubCustomExitLineData = [=] (TRoom* pRoom,
+                                                    const int dirCode,
+                                                    const QString& direction,
+                                                    const QMap<int, QString>& specialStubsMap,
+                                                    QStringList& fbKeys) {
 
-            QMap<QString, QList<int>> oldLinesColorData;
-            QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
-            while (itCustomLineColor.hasNext()) {
-                itCustomLineColor.next();
-                const QString direction(itCustomLineColor.key());
-                QList<int> colorComponents;
-                colorComponents << itCustomLineColor.value().red() << itCustomLineColor.value().green() << itCustomLineColor.value().blue();
-                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
-                    || direction == QLatin1String("down")
-                    || direction == QLatin1String("ne")
-                    || direction == QLatin1String("se")
-                    || direction == QLatin1String("sw")
-                    || direction == QLatin1String("nw")
-                    || direction == QLatin1String("in")
-                    || direction == QLatin1String("out")) {
-                    oldLinesColorData.insert(itCustomLineColor.key().toUpper(), colorComponents);
-                } else {
-                    oldLinesColorData.insert(itCustomLineColor.key(), colorComponents);
-                }
-            }
-            ofs << oldLinesColorData;
+                // First we need to find the existing index number to use for
+                // the Special Stub case QMap<K,V>::key(V) is not usually
+                // recommended as it is slow - but it is unlikely we will have a
+                // large number of special stub entries to check and we will
+                // only do it for that type of stub custom line:
+                const auto specialIndex = (dirCode == DIR_OTHER)
+                                                          ? specialStubsMap.key(direction, -1)
+                                                          : -1;
+                if (const auto points = pRoom->customLines.value(direction);
+                    points.count()) {
 
-            QMap<QString, QString> oldLineStyleData;
-            QMapIterator<QString, Qt::PenStyle> itCustomLineStyle(pR->customLinesStyle);
-            while (itCustomLineStyle.hasNext()) {
-                itCustomLineStyle.next();
-                QString direction(itCustomLineStyle.key());
-                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
-                    || direction == QLatin1String("down")
-                    || direction == QLatin1String("ne")
-                    || direction == QLatin1String("se")
-                    || direction == QLatin1String("sw")
-                    || direction == QLatin1String("nw")
-                    || direction == QLatin1String("in")
-                    || direction == QLatin1String("out")) {
-                    direction = direction.toUpper();
+                    QStringList pointsList;
+                    for (int pointsIndex = 0, total = points.count(); pointsIndex < total; ++pointsIndex) {
+                        // Use commas here
+                        pointsList << qsl("%1,%2")
+                                              .arg(QString::number(points.at(pointsIndex).x()),
+                                                   QString::number(points.at(pointsIndex).y()));
+                    }
+                    // And semicolons here - so we can use the different
+                    // punctuation to split the string back up when we
+                    // restore the details:
+                    if (dirCode >= DIR_NORTH && dirCode <= DIR_OUT) {
+                        const QString key = qsl("system.fallback_normalStubExit.%1.customLine.points")
+                                                    .arg(QString::number(dirCode));
+                        pRoom->userData.insert(key, pointsList.join(QLatin1Char(';')));
+                        fbKeys << key;
+                    } else {
+                        Q_ASSERT_X(specialIndex >= 0,
+                                   "appendStubCustomExitLineData(...) lamba function in TMap::serialise(...)",
+                                   "special exit stub not found when creating fall-back data for a custom line for it");
+                        const QString key = qsl("system.fallback_specialStubExit.%1.customLine.points")
+                                                    .arg(QString::number(specialIndex));
+                        pRoom->userData.insert(key, pointsList.join(QLatin1Char(';')));
+                        fbKeys << key;
+                    }
+
+                    QString style;
+                    switch (pRoom->customLinesStyle.value(direction)) {
+                    case Qt::DotLine:           style = QLatin1String("dot line");  break;
+                    case Qt::DashLine:          style = QLatin1String("dash line"); break;
+                    case Qt::DashDotLine:       style = QLatin1String("dash dot line"); break;
+                    case Qt::DashDotDotLine:    style = QLatin1String("dash dot dot line"); break;
+                    case Qt::SolidLine:
+                        [[fallthrough]];
+                    default:                    style = QLatin1String("solid line");
+                    }
+                    if (dirCode >= DIR_NORTH && dirCode <= DIR_OUT) {
+                        const QString key = qsl("system.fallback_normalStubExit.%1.customLine.style")
+                                                    .arg(QString::number(dirCode));
+                        pRoom->userData.insert(key, style);
+                        fbKeys << key;
+                    } else {
+                        const QString key = qsl("system.fallback_specialStubExit.%1.customLine.style")
+                                                    .arg(QString::number(specialIndex));
+                        pRoom->userData.insert(key, style);
+                        fbKeys << key;
+                    }
+
+                    const auto color = pRoom->customLinesColor.value(direction);
+                    if (dirCode >= DIR_NORTH && dirCode <= DIR_OUT) {
+                        const QString key = qsl("system.fallback_normalStubExit.%1.customLine.color")
+                                                    .arg(QString::number(dirCode));
+                        pRoom->userData.insert(key, qsl("%1,%2,%3")
+                                                            .arg(QString::number(color.red()),
+                                                                 QString::number(color.green()),
+                                                                 QString::number(color.blue())));
+                        fbKeys << key;
+                    } else {
+                        const QString key = qsl("system.fallback_specialStubExit.%1.customLine.color")
+                                                    .arg(QString::number(specialIndex));
+                        pRoom->userData.insert(key, qsl("%1,%2,%3")
+                                                            .arg(QString::number(color.red()),
+                                                                 QString::number(color.green()),
+                                                                 QString::number(color.blue())));
+                        fbKeys << key;
+                    }
+
+                    if (dirCode >= DIR_NORTH && dirCode <= DIR_OUT) {
+                        const QString key = qsl("system.fallback_normalStubExit.%1.customLine.arrow")
+                                                    .arg(QString::number(dirCode));
+                        pRoom->userData.insert(key, pRoom->customLinesArrow.value(direction, false)
+                                                            ? QLatin1String("true")
+                                                            : QLatin1String("false"));
+                        fbKeys << key;
+                    } else {
+                        const QString key = qsl("system.fallback_specialStubExit.%1.customLine.arrow")
+                                                    .arg(QString::number(specialIndex));
+                        pRoom->userData.insert(key, pRoom->customLinesArrow.value(direction, false)
+                                                            ? QLatin1String("true")
+                                                            : QLatin1String("false"));
+                        fbKeys << key;
+                    }
                 }
-                switch (itCustomLineStyle.value()) {
-                case Qt::DotLine:
-                    oldLineStyleData.insert(direction, QLatin1String("dot line"));
-                    break;
-                case Qt::DashLine:
-                    oldLineStyleData.insert(direction, QLatin1String("dash line"));
-                    break;
-                case Qt::DashDotLine:
-                    oldLineStyleData.insert(direction, QLatin1String("dash dot line"));
-                    break;
-                case Qt::DashDotDotLine:
-                    oldLineStyleData.insert(direction, QLatin1String("dash dot dot line"));
-                    break;
-                case Qt::SolidLine:
-                    [[fallthrough]];
-                default:
-                    oldLineStyleData.insert(direction, QLatin1String("solid line"));
+            };
+
+            if (mSaveVersion == 20) {
+                // Before version 21 custom lines were only on real, "normal" exits
+                // not stubs or "special" exit (nor "special" stub exits!)
+                const auto specialExits = pR->getSpecialExits(true);
+                QMap<QString, QList<QPointF>> oldLinesData;
+                QMap<QString, Qt::PenStyle> oldLinesStyleData;
+                QMap<QString, QColor> oldLinesColorData;
+                QMap<QString, bool> oldLinesArrowData;
+
+                QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+                while (itCustomLine.hasNext()) {
+                    itCustomLine.next();
+                    const auto direction(itCustomLine.key());
+
+                    auto color = pR->customLinesColor.value(direction);
+                    if (!color.isValid()) {
+                        color = QColorConstants::Red;
+                    }
+
+                    if (int dirCode = TRoom::shortStringToDirCode(direction); dirCode >= DIR_NORTH && dirCode <= DIR_OUT) {
+                        // This custom line is for a normal exit/stub
+                        if (pR->getExit(dirCode) > 0) {
+                            // It is a real exit
+                            oldLinesData.insert(direction.toUpper(), itCustomLine.value());
+                            oldLinesArrowData.insert(direction.toUpper(), pR->customLinesArrow.value(direction, false));
+                            oldLinesColorData.insert(direction.toUpper(), color);
+                            oldLinesStyleData.insert(direction.toUpper(), pR->customLinesStyle.value(direction, Qt::SolidLine));
+                        } else {
+                            // It is a stub - so create the (normal) fallback data:
+                            appendStubCustomExitLineData(pR, dirCode, direction, QMap<int, QString>(), roomFallBackKeys);
+                        }
+                    } else {
+                        // This custom line is for a special exit/stub
+                        if (specialExits.value(direction) > 0) {
+                            // It is a real exit
+                            oldLinesData.insert(direction, itCustomLine.value());
+                            oldLinesArrowData.insert(direction, pR->customLinesArrow.value(direction, false));
+                            oldLinesColorData.insert(direction, color);
+                            oldLinesStyleData.insert(direction, pR->customLinesStyle.value(direction, Qt::SolidLine));
+                        } else {
+                            // It is a stub - so create the (special) fallback
+                            // data:
+                            appendStubCustomExitLineData(pR, DIR_OTHER, direction, specialStubExits, roomFallBackKeys);
+                        }
+                    }
                 }
+
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+                const auto& userData = pR->userData;
+                ofs << userData;
+                qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data at: " << ofs.device()->pos();
+#else
+                ofs << pR->userData;
+#endif
+                ofs << oldLinesData;
+                ofs << oldLinesArrowData;
+                ofs << oldLinesColorData;
+                ofs << oldLinesStyleData;
+            } else {
+                // Before version 20 custom lines on real, "normal" exits stored
+                // the style as a Latin1 string, the color as a QList<int> for the
+                // RGB components and used UPPER case for the NORMAL exit direction
+                // keys...
+                const auto specialExits = pR->getSpecialExits(true);
+                QMap<QString, QList<QPointF>> oldLinesData;
+                QMap<QString, QString> oldLinesStyleData;
+                QMap<QString, QList<int>> oldLinesColorData;
+                QMap<QString, bool> oldLinesArrowData;
+
+                QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+                while (itCustomLine.hasNext()) {
+                    itCustomLine.next();
+                    const auto direction(itCustomLine.key());
+
+                    auto color = pR->customLinesColor.value(direction);
+                    if (!color.isValid()) {
+                        color = QColorConstants::Red;
+                    }
+                    QList<int> colorComponents;
+                    colorComponents << color.red() << color.green() << color.blue();
+
+                    QString style;
+                    switch (pR->customLinesStyle.value(direction)) {
+                    case Qt::DotLine:           style = QLatin1String("dot line");          break;
+                    case Qt::DashLine:          style = QLatin1String("dash line");         break;
+                    case Qt::DashDotLine:       style = QLatin1String("dash dot line");     break;
+                    case Qt::DashDotDotLine:    style = QLatin1String("dash dot dot line"); break;
+                    case Qt::SolidLine:
+                        [[fallthrough]];
+                    default:                    style = QLatin1String("solid line");
+                    }
+
+                    if (int dirCode = TRoom::shortStringToDirCode(direction); dirCode >= DIR_NORTH && dirCode <= DIR_OUT) {
+                        // This custom line is for a normal exit/stub
+                        if (pR->getExit(dirCode) > 0) {
+                            // It is a real exit
+                            oldLinesData.insert(direction.toUpper(), itCustomLine.value());
+                            oldLinesArrowData.insert(direction.toUpper(), pR->customLinesArrow.value(direction, false));
+                            oldLinesColorData.insert(direction.toUpper(), colorComponents);
+                            oldLinesStyleData.insert(direction.toUpper(), style);
+                        } else {
+                            // It is a stub - so create the (normal) fallback data:
+                            appendStubCustomExitLineData(pR, dirCode, direction, QMap<int, QString>(), roomFallBackKeys);
+                        }
+                    } else {
+                        // This custom line is for a special exit/stub
+                        if (specialExits.value(direction) > 0) {
+                            // It is a real exit
+                            oldLinesData.insert(direction, itCustomLine.value());
+                            oldLinesArrowData.insert(direction, pR->customLinesArrow.value(direction, false));
+                            oldLinesColorData.insert(direction, colorComponents);
+                            oldLinesStyleData.insert(direction, style);
+                        } else {
+                            // It is a stub - so create the (special) fallback
+                            // data:
+                            appendStubCustomExitLineData(pR, DIR_OTHER, direction, specialStubExits, roomFallBackKeys);
+                        }
+                    }
+                }
+
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+                const auto& userData = pR->userData;
+                ofs << userData;
+                qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data at: " << ofs.device()->pos();
+#else
+                ofs << pR->userData;
+#endif
+                ofs << oldLinesData;
+                ofs << oldLinesArrowData;
+                ofs << oldLinesColorData;
+                ofs << oldLinesStyleData;
             }
-            ofs << oldLineStyleData;
         }
+
+        // Purge the fallback data:
+        QStringListIterator itRoomFallBackKey(roomFallBackKeys);
+        while (itRoomFallBackKey.hasNext()) {
+            pR->userData.remove(itRoomFallBackKey.next());
+        }
+
         if (mSaveVersion >= 21) {
+            // Prior to 21 this detail was stored as a 0 or 1 prefix on the
+            // special exit name/command:
             ofs << pR->getSpecialExitLocks();
         }
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+        const auto& exitLocks = pR->exitLocks;
+        ofs << exitLocks;
+        if (!exitLocks.isEmpty()) {
+            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote customLine data at: " << ofs.device()->pos();
+        }
+#else
         ofs << pR->exitLocks;
+#endif
         if (mSaveVersion < 21) {
             // From version 21 the stubs have been merged into the exits - as
             // target room of zero:
@@ -1573,12 +1795,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 // file is expected to be linked to a file name but not be opened; ifs is not
 // expected to be linked to any IODevice. On success file will be opened and
 // ifs will be part way through it (has read the first 4 bytes which encode the
-// map file version). On failure both will be in the same states as initial one:
+// map file version - and if that is 21 or more it will also have read and
+// checked the magic). On failure both will be in the same states as initial
+// one:
 bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
 {
     int version = 0;
     if (!file.open(QFile::ReadOnly)) {
-        const QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
+        const QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)")
+                                       .arg(file.fileName());
         appendErrorMsg(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1601,10 +1826,10 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     ifs >> version;
     if ((version < 1) || (version > 127)) {
         const QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
-                            "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
-                            "\"%2\".")
-                                 .arg(version)
-                                 .arg(file.fileName());
+                                              "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
+                                              "\"%2\".")
+                                       .arg(QString::number(version),
+                                            file.fileName());
         appendErrorMsgWithNoLf(errMsg);
         postMessage(errMsg);
         const QString infoMsg = tr("[ INFO ]  - Ignoring this unlikely map file.");
@@ -1616,10 +1841,11 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
     if (version > mMaxVersion) {
         const QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
-                            "Mudlet can handle (%2)! The file is:\n\"%3\".")
-                                 .arg(version)
-                                 .arg(mMaxVersion)
-                                 .arg(file.fileName());
+                                              "Mudlet can handle (%2)! The file is:\n"
+                                              "\"%3\".")
+                                       .arg(QString::number(version),
+                                            QString::number(mMaxVersion),
+                                            file.fileName());
         appendErrorMsgWithNoLf(errMsg);
         postMessage(errMsg);
         const QString infoMsg = tr("[ INFO ]  - You will need to update your Mudlet to read the map file.");
@@ -1629,26 +1855,41 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         file.close();
         return false;
     }
+    if (version >= 21) {
+        // We now have some magic to work with:
+        if (ifs.device()->read(13).compare("MudletMapFile")) {
+            const QString errMsg = tr("[ ERROR ] - File is not a Mudlet binary map file (the magic is wrong!)");
+            appendErrorMsg(errMsg, false);
+            postMessage(errMsg);
+            ifs.setDevice(nullptr);
+            file.close();
+            return false;
+        }
+    }
 
     if (version < 4) {
         const QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
-                              "this version of Mudlet may not gain enough information from\n"
-                              "it but it will try! The file is: \"%2\".")
-                                   .arg(version)
-                                   .arg(file.fileName());
+                                                "this version of Mudlet may not gain enough information from\n"
+                                                "it but it will try! The file is: \"%2\".")
+                                         .arg(QString::number(version),
+                                              file.fileName());
         appendErrorMsgWithNoLf(alertMsg, false);
         postMessage(alertMsg);
         const QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
-                             "There is so much data that it DOES NOT have that you could be\n"
-                             "better off starting again...");
+                                               "There is so much data that it DOES NOT have that you could be\n"
+                                               "better off starting again...");
         appendErrorMsgWithNoLf(infoMsg, false);
         postMessage(infoMsg);
     } else {
         // Less than (but not less than 4) or equal to default version
         const QString infoMsg = tr("[ INFO ]  - Reading map. Format version: %1. File:\n"
-                             "\"%2\",\n"
-                             "please wait...").arg(version).arg(file.fileName());
-        appendErrorMsg(tr(R"([ INFO ]  - Reading map. Format version: %1. File: "%2".)").arg(version).arg(file.fileName()), false);
+                                               "\"%2\",\n"
+                                               "please wait...")
+                                        .arg(QString::number(version),
+                                             file.fileName());
+        appendErrorMsg(tr("[ INFO ]  - Reading map. Format version: %1. File: \"%2\".")
+                               .arg(QString::number(version),
+                                    file.fileName()), false);
         postMessage(infoMsg);
     }
     mVersion = version;
@@ -1750,6 +1991,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
 
         if (mVersion >= 17) {
+#if defined(DEBUG_MAP_FILE_PROCESSING)
+            qDebug().noquote().nospace() << "TMap::restore(...) INFO - about to read map user data at: " << ifs.device()->pos();
+#endif
             ifs >> mUserData;
             if (mVersion >= 19) {
                 // Read the data from the file directly in version 19 or later
@@ -1806,6 +2050,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 auto pA = new TArea(this, mpRoomDB);
                 int areaID = 0;
                 ifs >> areaID;
+#if defined(DEBUG_MAP_FILE_PROCESSING)
+                qDebug().noquote().nospace() << "TMap::restore(...) INFO - about to read area (ID: " << areaID << ") data at: " << ifs.device()->pos();
+#endif
                 if (mVersion >= 18) {
                     // In version 18 changed from QList<int> to QSet<int> as the later is
                     // faster in many of the cases where we use it.
@@ -1860,6 +2107,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
+                        ifs >> label.pos;
                         ifs >> label.size;
                         ifs >> label.text;
                         ifs >> label.fgColor;
@@ -1946,6 +2194,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             }
         }
 
+#if defined(DEBUG_MAP_FILE_PROCESSING)
+        qDebug().noquote().nospace() << "TMap::restore(...) INFO - about to read first room data at: " << ifs.device()->pos();
+#endif
         while (!ifs.atEnd()) {
             int i = 0;
             ifs >> i;
@@ -2045,53 +2296,80 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             }
             file.close();
             return true;
-        } else {
-            // Is a development version so check against mMaxVersion
-            if (otherProfileVersion > mMaxVersion) {
-                // Oh dear, can't handle THIS
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-                file.close();
-                return true;
-            } else {
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-            }
         }
+
+        // Is a development version so check against mMaxVersion
+        if (otherProfileVersion > mMaxVersion) {
+            // Oh dear, can't handle THIS
+            if (fileVersion) {
+                *fileVersion = otherProfileVersion;
+            }
+            file.close();
+            return true;
+        }
+
+        if (fileVersion) {
+            *fileVersion = otherProfileVersion;
+        }
+
     } else {
         if (fileVersion) {
             *fileVersion = otherProfileVersion;
         }
     }
 
+    if (otherProfileVersion >= 21) {
+        if (ifs.device()->read(13).compare("MudletMapFile")) {
+            const QString errMsg = tr("[ ERROR ] - Trying to acces a file that is not a Mudlet binary map file (the\n"
+                                      "magic is wrong) in:\n"
+                                      "\"%1\".").arg(file.fileName());
+            appendErrorMsg(errMsg, false);
+            postMessage(errMsg);
+            file.close();
+            return false;
+        }
+    }
+
     if (otherProfileVersion >= 4) {
         // envColorMap
-        QMap<int, int> _dummyQMapIntInt;
-        ifs >> _dummyQMapIntInt;
+        QMap<int, int> dummyQMapIntInt;
+        ifs >> dummyQMapIntInt;
 
         // AreaNamesMap
-        QMap<int, QString> _dummyQMapIntQString;
-        ifs >> _dummyQMapIntQString;
+        QMap<int, QString> dummyQMapIntQString;
+        ifs >> dummyQMapIntQString;
     }
 
     if (otherProfileVersion >= 5) {
         // mCustomEnvColors
-        QMap<int, QColor> _dummyQMapIntQColor;
-        ifs >> _dummyQMapIntQColor;
+        QMap<int, QColor> dummyQMapIntQColor;
+        ifs >> dummyQMapIntQColor;
     }
 
     if (otherProfileVersion >= 7) {
         // hashToRoomID
-        QMap<QString, int> _dummyQMapQStringInt;
-        ifs >> _dummyQMapQStringInt;
+        QMap<QString, int> dummyQMapQStringInt;
+        ifs >> dummyQMapQStringInt;
     }
 
     if (otherProfileVersion >= 17) {
         // userMapData
-        QMap<QString, QString> _dummyQMapQStringQString;
-        ifs >> _dummyQMapQStringQString;
+        QMap<QString, QString> dummyQMapQStringQString;
+        ifs >> dummyQMapQStringQString;
+
+        if (otherProfileVersion >= 19) {
+            // mMapSymbolFont:
+            QFont dummyFont;
+            ifs >> dummyFont;
+
+            // mMapSymbolFontFudgeFactor:
+            qreal dummyqreal;
+            ifs >> dummyqreal;
+
+            // mIsOnlyMapSymbolFontToBeUsed:
+            bool dummyBool;
+            ifs >> dummyBool;
+        }
     }
 
     if (otherProfileVersion >= 14) {
@@ -2164,10 +2442,10 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         // In version 18 we changed to store the "userRoom" for each profile
         // so that when copied/shared between profiles they do not interfere
         // with each other's saved value
-        QHash<QString, int> _dummyQHashQStringInt;
-        ifs >> _dummyQHashQStringInt;
+        QHash<QString, int> dummyQHashQStringInt;
+        ifs >> dummyQHashQStringInt;
         if (roomId) {
-            *roomId = _dummyQHashQStringInt.value(profile);
+            *roomId = dummyQHashQStringInt.value(profile);
         }
     } else if (otherProfileVersion >= 12) {
         int oldRoomId;
@@ -2219,21 +2497,21 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         }
     }
 
-    TRoom _pT(nullptr);
-    QSet<int> _dummyRoomIdSet;
+    TRoom pT(nullptr);
+    QSet<int> dummyRoomIdSet;
     while (!ifs.atEnd()) {
         int i;
         ifs >> i;
-        _pT.restore(ifs, i, otherProfileVersion);
+        pT.restore(ifs, i, otherProfileVersion);
         // Can't do mpRoomDB->restoreSingleRoom( ifs, i, pT ) as it would mess up
         // this TMap::mpRoomDB
         // So emulate using _dummyRoomIdSet
-        if (i > 0 && !_dummyRoomIdSet.contains(i)) {
-            _dummyRoomIdSet.insert(i);
+        if (i > 0 && !dummyRoomIdSet.contains(i)) {
+            dummyRoomIdSet.insert(i);
         }
     }
     if (roomCount) {
-        *roomCount = _dummyRoomIdSet.count();
+        *roomCount = dummyRoomIdSet.count();
     }
 
     return true;
