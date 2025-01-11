@@ -2383,7 +2383,7 @@ void TRoom::writeJsonExitStubs(QJsonObject& obj) const
 {
     QJsonArray exitStubsArray;
     // Includes any special exit stubs:
-    if (hasAStubExit(true)) {
+    if (!hasAStubExit(true)) {
         // Don't add an empty stub array
         return;
     }
