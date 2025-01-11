@@ -1620,7 +1620,7 @@ int TLuaInterpreter::getExitStubsNames(lua_State* L)
     }
     const auto specialStubSet = pR->specialStubExits();
     stubNamesSet.unite(specialStubSet);
-    QList<QString> stubNameList{stubNamesSet.cbegin(),stubNamesSet.cend()};
+    QList<QString> stubNameList{stubNamesSet.cbegin(), stubNamesSet.cend()};
     if (stubNameList.count() > 1) {
         std::sort(stubNameList.begin(), stubNameList.end());
     }

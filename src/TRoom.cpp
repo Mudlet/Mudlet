@@ -854,7 +854,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         ifs >> userData;
 #if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
         if (!userData.isEmpty()) {
-            qDebug().noquote().nospace() << "TRoom::restore(...) INFO - read some room user data at: " << ifs.device()->pos();
+            qDebug().noquote().nospace() << "TRoom::restore(...) INFO - read some room user data ending at: " << ifs.device()->pos();
         }
 #endif
         if (version < 19) {
@@ -1786,7 +1786,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                                        QString::number(exitRoomId),
                                        auditKey);
             }
-            QString logMsg = tr(R"([ INFO ]  - Room exit "%1" that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:"%4") and the exit will be turned into a stub.)")
+            QString logMsg = tr(R"([ INFO ]  - Room exit "%1" that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key: "%4") and the exit will be turned into a stub.)")
                                      .arg(displayName,
                                           QString::number(exitRoomId),
                                           auditKey);

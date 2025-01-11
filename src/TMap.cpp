@@ -1111,8 +1111,6 @@ bool TMap::findPath(int from, int to)
 // can be stored as room user data in current (20) map formats as it is not
 // possible to store more than one as an exit to a room with id 0 as that
 // destination id is used as the "key" for special exits in the format.
-// We format the data as a Lua table so that it can be parsed by older Mudlet
-// versions that do not understand or hide the data from the end-user:
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
     // clamp version values
@@ -1120,7 +1118,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+        const QString errMsg = tr("[ ERROR ] - The format version %1 you are trying to save the map with is too new\n"
                                               "for this version of Mudlet. Supported are only formats up to version %2.")
                                        .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
@@ -1137,7 +1135,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mVersion) {
-        const QString message = tr("[ ALERT ] - Saving map in format version \"%1\" that is different than \"%2\" which\n"
+        const QString message = tr("[ ALERT ] - Saving map in format version %1 that is different than %2 which\n"
                                                "it was loaded as. This may be an issue if you want to share the resulting\n"
                                                "map with others relying on the original format.")
                                         .arg(QString::number(mSaveVersion), QString::number(mVersion));
@@ -1146,9 +1144,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        const QString message = tr("[ WARN ]  - Saving map in format version \"%1\" different from the\n"
-                             "recommended map version %2 for this version of Mudlet.")
-                                  .arg(QString::number(mSaveVersion), QString::number(mDefaultVersion));
+        const QString message = tr("[ WARN ]  - Saving map in format version %1 different from the\n"
+                                               "recommended map version %2 for this version of Mudlet.")
+                                        .arg(QString::number(mSaveVersion), QString::number(mDefaultVersion));
         appendErrorMsgWithNoLf(message, false);
         postMessage(message);
     }
@@ -1499,20 +1497,14 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
 
         if (mSaveVersion >= 21) {
-#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
-            const auto& userData = pR->userData;
-            ofs << userData;
-            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data at: " << ofs.device()->pos();
-#else
             ofs << pR->userData;
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data ending at: " << ofs.device()->pos();
 #endif
             ofs << pR->customLines;
             ofs << pR->customLinesArrow;
             ofs << pR->customLinesColor;
             ofs << pR->customLinesStyle;
-#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
-            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote customLine data at: " << ofs.device()->pos();
-#endif
         } else {
 
             // This uses dirCode to destinguish between normal and special exits
@@ -1666,13 +1658,11 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                     }
                 }
 
-#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
-                const auto& userData = pR->userData;
-                ofs << userData;
-                qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data at: " << ofs.device()->pos();
-#else
                 ofs << pR->userData;
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+                qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data ending at: " << ofs.device()->pos();
 #endif
+
                 ofs << oldLinesData;
                 ofs << oldLinesArrowData;
                 ofs << oldLinesColorData;
@@ -1739,12 +1729,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                     }
                 }
 
-#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
-                const auto& userData = pR->userData;
-                ofs << userData;
-                qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data at: " << ofs.device()->pos();
-#else
                 ofs << pR->userData;
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+                qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote some user data ending at: " << ofs.device()->pos();
 #endif
                 ofs << oldLinesData;
                 ofs << oldLinesArrowData;
@@ -1752,6 +1739,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 ofs << oldLinesStyleData;
             }
         }
+#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
+        qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote customLine data ending at: " << ofs.device()->pos();
+#endif
 
         // Purge the fallback data:
         QStringListIterator itRoomFallBackKey(roomFallBackKeys);
@@ -1764,15 +1754,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             // special exit name/command:
             ofs << pR->getSpecialExitLocks();
         }
-#if defined(DEBUG_MAP_FILE_PROCESSING) && (DEBUG_MAP_FILE_PROCESSING > 2)
-        const auto& exitLocks = pR->exitLocks;
-        ofs << exitLocks;
-        if (!exitLocks.isEmpty()) {
-            qDebug().noquote().nospace() << "TMap::serialize(...) INFO - wrote customLine data at: " << ofs.device()->pos();
-        }
-#else
+
         ofs << pR->exitLocks;
-#endif
+
         if (mSaveVersion < 21) {
             // From version 21 the stubs have been merged into the exits - as
             // target room of zero:
@@ -1826,7 +1810,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     ifs >> version;
     if ((version < 1) || (version > 127)) {
         const QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
-                                              "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
+                                              "its format version seems to be %1 and that doesn't make sense. The file is:\n"
                                               "\"%2\".")
                                        .arg(QString::number(version),
                                             file.fileName());
@@ -1840,7 +1824,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         return false;
     }
     if (version > mMaxVersion) {
-        const QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
+        const QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version %1 is higher than this version of\n"
                                               "Mudlet can handle (%2)! The file is:\n"
                                               "\"%3\".")
                                        .arg(QString::number(version),
@@ -1868,7 +1852,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     if (version < 4) {
-        const QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
+        const QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version %1 is so ancient that\n"
                                                 "this version of Mudlet may not gain enough information from\n"
                                                 "it but it will try! The file is: \"%2\".")
                                          .arg(QString::number(version),
@@ -2282,7 +2266,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     ifs >> otherProfileVersion;
 
-    const QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
+    const QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version %2.)")
+                                    .arg(file.fileName(),
+                                         QString::number(otherProfileVersion));
     appendErrorMsg(infoMsg, false);
     if (mudlet::self()->showMapAuditErrors()) {
         postMessage(infoMsg);
@@ -3477,8 +3463,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             // but the numbered was changed for release into the wild):
             qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information \"" << formatVersion << "\" was found, and it is not okay.";
             return {false, (translatableTexts
-                        ? tr("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
-                        : qsl("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
+                        ? tr("invalid format version %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
+                        : qsl("invalid format version %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
         }
     } else {
         qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found. This is not likely to be a Mudlet JSON map file.";

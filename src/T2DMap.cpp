@@ -2081,7 +2081,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 
         // draw normal exit stubs - that do not have custom exit lines:
         auto drawExitStubs = [&] (int direction) {
-            if (room->getExit(direction) == 0 && ! room->hasANormalExitCustomLine(direction)) {
+            if (room->getExit(direction) == 0 && !room->hasANormalExitCustomLine(direction)) {
                 // Stubs on non-XY plane exits are handled differently:
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
                 const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
