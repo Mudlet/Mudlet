@@ -34,7 +34,7 @@
 #include <QDebug>
 #include "post_guard.h"
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <wow64apiset.h>
 #endif
 
@@ -1101,7 +1101,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 
 QString dlgAboutDialog::createBuildInfo() const
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // The build environment is for Windows one - which could be run
     // native on a 32-bit or 64-bit CPU or inside the WOW64 sub-system on a
     // 64-bit one:

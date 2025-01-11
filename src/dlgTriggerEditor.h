@@ -278,7 +278,6 @@ public slots:
     void slot_copyXml();
     void slot_pasteXml();
 // Not used:    void slot_choseActionIcon();
-    void slot_showSearchAreaResults(bool);
     void slot_showAllTriggerControls(const bool);
     void slot_rightSplitterMoved(const int pos, const int handle);
     void slot_scriptMainAreaDeleteHandler();
@@ -313,6 +312,7 @@ private slots:
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
     void slot_itemEdited();
+    void slot_searchSplitterMoved(const int pos, const int index);
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -542,6 +542,7 @@ private:
     QAction* mSaveItem = nullptr;
 
     SearchOptions mSearchOptions = SearchOptionNone;
+    QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:
     QAction* mpAction_searchOptions = nullptr;
@@ -587,6 +588,7 @@ private:
     QByteArray mKeyEditorSplitterState;
     QByteArray mTimerEditorSplitterState;
     QByteArray mVarEditorSplitterState;
+    QByteArray mSearchSplitterState;
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;

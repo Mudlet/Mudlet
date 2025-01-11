@@ -84,7 +84,7 @@ void dlgPackageManager::resetPackageTable()
         auto packageInfo{mpHost->mPackageInfo.value(packageName->text())};
         auto iconName = packageInfo.value(qsl("icon"));
         auto iconDir = iconName.isEmpty() ? qsl(":/icons/mudlet.png")
-                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
+                                          : mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
         packageName->setIcon(QIcon(iconDir));
         auto title = packageInfo.value(qsl("title"));
         shortDescription->setText(title);
@@ -113,7 +113,7 @@ void dlgPackageManager::slot_installPackage()
         return;
     }
 
-    mpHost->installPackage(fileName, 0);
+    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
 }
 
 void dlgPackageManager::slot_removePackages()
@@ -127,7 +127,7 @@ void dlgPackageManager::slot_removePackages()
     }
 
     for (int i = 0; i < removePackages.size(); i++) {
-        mpHost->uninstallPackage(removePackages.at(i), 0);
+        mpHost->uninstallPackage(removePackages.at(i), enums::PackageModuleType::Package);
     }
 
     additionalDetails->hide();
@@ -163,7 +163,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         packageDescription->hide();
     } else {
         packageDescription->show();
-        const QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
+        const QString packageDir = mudlet::self()->getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
         description.replace(QLatin1String("$packagePath"), packageDir);
         packageDescription->setMarkdown(description);
     }

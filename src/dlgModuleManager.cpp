@@ -146,7 +146,7 @@ void dlgModuleManager::slot_installModule()
         return;
     }
 
-    mpHost->installPackage(fileName, 1);
+    mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
@@ -163,7 +163,7 @@ void dlgModuleManager::slot_uninstallModule()
     const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
-        mpHost->uninstallPackage(pI->text(), 1);
+        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::Package);
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
