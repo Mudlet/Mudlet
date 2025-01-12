@@ -2035,6 +2035,7 @@ int TLuaInterpreter::getRoomEnv(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomExits
+// This does NOT return stubs (where exit room ID is zero).
 int TLuaInterpreter::getRoomExits(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
@@ -2043,64 +2044,64 @@ int TLuaInterpreter::getRoomExits(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         lua_newtable(L);
-        if (pR->getNorth() != -1) {
+        if (int value = pR->getNorth(); value > 0) {
             lua_pushstring(L, "north");
-            lua_pushnumber(L, pR->getNorth());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getNorthwest() != -1) {
+        if (int value = pR->getNorthwest(); value > 0) {
             lua_pushstring(L, "northwest");
-            lua_pushnumber(L, pR->getNorthwest());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getNortheast() != -1) {
+        if (int value = pR->getNortheast(); value > 0) {
             lua_pushstring(L, "northeast");
-            lua_pushnumber(L, pR->getNortheast());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getSouth() != -1) {
+        if (int value = pR->getSouth(); value > 0) {
             lua_pushstring(L, "south");
-            lua_pushnumber(L, pR->getSouth());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getSouthwest() != -1) {
+        if (int value = pR->getSouthwest(); value > 0) {
             lua_pushstring(L, "southwest");
-            lua_pushnumber(L, pR->getSouthwest());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getSoutheast() != -1) {
+        if (int value = pR->getSoutheast(); value > 0) {
             lua_pushstring(L, "southeast");
-            lua_pushnumber(L, pR->getSoutheast());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getWest() != -1) {
+        if (int value = pR->getWest(); value > 0) {
             lua_pushstring(L, "west");
-            lua_pushnumber(L, pR->getWest());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getEast() != -1) {
+        if (int value = pR->getEast(); value > 0) {
             lua_pushstring(L, "east");
-            lua_pushnumber(L, pR->getEast());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getUp() != -1) {
+        if (int value = pR->getUp(); value > 0) {
             lua_pushstring(L, "up");
-            lua_pushnumber(L, pR->getUp());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getDown() != -1) {
+        if (int value = pR->getDown(); value > 0) {
             lua_pushstring(L, "down");
-            lua_pushnumber(L, pR->getDown());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getIn() != -1) {
+        if (int value = pR->getIn(); value > 0) {
             lua_pushstring(L, "in");
-            lua_pushnumber(L, pR->getIn());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
-        if (pR->getOut() != -1) {
+        if (int value = pR->getOut(); value > 0) {
             lua_pushstring(L, "out");
-            lua_pushnumber(L, pR->getOut());
+            lua_pushnumber(L, value);
             lua_settable(L, -3);
         }
         return 1;
