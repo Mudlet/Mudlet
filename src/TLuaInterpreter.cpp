@@ -7195,6 +7195,13 @@ int TLuaInterpreter::setConfig(lua_State * L)
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
         }
+        if (key == qsl("showUpperLowerLevels")) {
+            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");;
+            if (host.mpMap->mpMapper->mp2dMap) {
+                host.mpMap->mpMapper->mp2dMap->update();
+            }
+            return success();
+        }
     }
 
     if (key == qsl("enableGMCP")) {
