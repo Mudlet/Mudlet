@@ -28,7 +28,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
@@ -36,7 +36,7 @@ jobs:
             triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
-            qt: '5.14.2'
+            qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
@@ -70,7 +70,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: ${{ startsWith(matrix.qt, '6') && 'qt5compat qtmultimedia' || '' }}
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
       id: restore-boost
