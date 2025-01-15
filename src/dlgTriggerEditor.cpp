@@ -4373,6 +4373,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     }
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->label_idNumber->clear();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;

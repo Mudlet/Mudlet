@@ -2089,7 +2089,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
-
+    mDrawUpperLowerLevels = settings.value("drawUpperLowerLevels", QVariant(true)).toBool();
     // Make a local version of the value so that we can update the real one
     // by calling the slot method that does that and ALSO carry out the
     // other things needed for it:
@@ -2246,6 +2246,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
+    settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2877,7 +2878,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
     int loadedProfiles = 0;
-    
+
     for (auto& hostName : cliProfiles){
         if (hostList.contains(hostName)) {
             QElapsedTimer timer;

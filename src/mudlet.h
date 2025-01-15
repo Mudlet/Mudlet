@@ -402,6 +402,8 @@ public:
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
+    bool mDrawUpperLowerLevels = true;
+
 
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;

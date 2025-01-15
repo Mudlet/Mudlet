@@ -1770,7 +1770,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally re-enter this method in the future.
     QDialog* pUnzipDialog = nullptr;
-    
+
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
 

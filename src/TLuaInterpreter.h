@@ -671,6 +671,7 @@ public:
     static int holdingModifiers(lua_State*);
     static int getProfiles(lua_State*);
     static int loadProfile(lua_State*);
+    static int closeProfile(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
