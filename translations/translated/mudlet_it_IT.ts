@@ -9420,7 +9420,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="337"/>
       <source>Mute all media</source>
-      <translation>Silenzia tutti i media</translation>
+      <translation>Silenzia tutto</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="340"/>
@@ -10228,7 +10228,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="3205"/>
       <location filename="../src/mudlet.cpp" line="3208"/>
       <source>Mute all media</source>
-      <translation>Silenzia tutti i media</translation>
+      <translation>Silenzia tutto</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="339"/>
