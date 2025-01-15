@@ -8472,8 +8472,8 @@ void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
         // check for duplicate handlers
         QString newHandlerText = mpScriptsMainArea->lineEdit_script_event_handler_entry->text();
         QListWidget* list = mpScriptsMainArea->listWidget_script_registered_event_handlers;
-        for(int i = 0; i < list->count(); i++) {
-            if(list->item(i)->text() == newHandlerText) {
+        for (int i = 0; i < list->count(); i++) {
+            if (list->item(i)->text() == newHandlerText) {
                 return;
             }
         }
