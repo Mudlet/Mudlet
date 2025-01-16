@@ -218,7 +218,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
-    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemActivated, this, &dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection);
+
 
     // source editor area
     mpSourceEditorArea = new dlgSourceEditorArea(this);
@@ -8426,22 +8428,14 @@ void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
     }
 }
 
+
 // Should the functionality change in this method be sure to review the code
 // for "case SearchResultIsEventHandler" for "Scripts" in:
 // slot_itemSelectedInSearchResults(...)
-void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
+void dlgTriggerEditor::slot_scriptMainAreaEditHandler()
 {
     QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
     if (!pItem) {
-        return;
-    }
-
-    // deselect if already selected and turn off edit mode
-    if (mpScriptsMainAreaEditHandlerItem == pItem) {
-        mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
-        mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
-        mIsScriptsMainAreaEditHandler = false;
-        mpScriptsMainAreaEditHandlerItem = nullptr;
         return;
     }
 
@@ -8455,11 +8449,18 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
+void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem *)
+{
+    mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
+    mIsScriptsMainAreaEditHandler = false;
+    mpScriptsMainAreaEditHandlerItem = nullptr;
+}
+
 void dlgTriggerEditor::slot_scriptMainAreaDeleteHandler()
 {
     mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
-    mIsScriptsMainAreaEditHandler = false;
-    mpScriptsMainAreaEditHandlerItem = nullptr;
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
 void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
@@ -8499,10 +8500,8 @@ void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
     } else {
         addEventHandler();
     }
-    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
-    mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
-    mIsScriptsMainAreaEditHandler = false;
-    mpScriptsMainAreaEditHandlerItem = nullptr;
+
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
 void dlgTriggerEditor::slot_toggleCentralDebugConsole()
