@@ -8449,7 +8449,7 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler()
     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
-void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem *)
+void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem*)
 {
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
     mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
