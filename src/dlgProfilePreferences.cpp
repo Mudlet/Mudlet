@@ -117,10 +117,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
 
     switch (pMudlet->menuBarVisibility()) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         comboBox_menuBarVisibility->setCurrentIndex(0);
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         comboBox_menuBarVisibility->setCurrentIndex(1);
         break;
     default:
@@ -128,10 +128,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     }
 
     switch (pMudlet->toolBarVisibility()) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         comboBox_toolBarVisibility->setCurrentIndex(0);
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         comboBox_toolBarVisibility->setCurrentIndex(1);
         break;
     default:
@@ -278,7 +278,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
-    connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(mudlet::Appearance(index)); });
+    connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(enums::Appearance(index)); });
     connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=]() {
         emit signal_resetMainWindowShortcutsToDefaults();
     });
@@ -679,7 +679,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
-    const QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
+    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
 
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
@@ -895,7 +895,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
     lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
     // set the cursor position to the end of the lineEdit's text property.
     lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
@@ -921,7 +921,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
-    const QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+    const QStringList profileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
@@ -1231,6 +1231,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapExitsColor);
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapBgColor);
+    connect(pushButton_lowerLevelColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLowerLevelColor);
+    connect(pushButton_upperLevelColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setUpperLevelColor);
     connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomBorderColor);
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor);
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
@@ -1350,6 +1352,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lowerLevelColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_upperLevelColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1651,6 +1655,8 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mFgColor_2.name()));
         pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
+        pushButton_lowerLevelColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLowerLevelColor.name()));
+        pushButton_upperLevelColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mUpperLevelColor.name()));
         pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
         pushButton_mapInfoBg->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMapInfoBg.name()));
         pushButton_roomCollisionBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomCollisionBorderColor.name()));
@@ -1674,6 +1680,8 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
+        pushButton_lowerLevelColor->setStyleSheet(QString());
+        pushButton_upperLevelColor->setStyleSheet(QString());
         pushButton_roomBorderColor->setStyleSheet(QString());
         pushButton_mapInfoBg->setStyleSheet(QString());
         pushButton_roomCollisionBorderColor->setStyleSheet(QString());
@@ -1751,6 +1759,8 @@ void dlgProfilePreferences::slot_resetMapColors()
 
     pHost->mFgColor_2 = Qt::lightGray;
     pHost->mBgColor_2 = Qt::black;
+    pHost->mLowerLevelColor = Qt::darkGray;
+    pHost->mUpperLevelColor = Qt::white;
     pHost->mRoomBorderColor = Qt::lightGray;
     pHost->mRoomCollisionBorderColor = Qt::yellow;
     pHost->mBlack_2 = Qt::black;
@@ -2097,6 +2107,22 @@ void dlgProfilePreferences::slot_setMapBgColor()
     }
 }
 
+void dlgProfilePreferences::slot_setLowerLevelColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
+    }
+}
+
+void dlgProfilePreferences::slot_setUpperLevelColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+    }
+}
+
 void dlgProfilePreferences::slot_setMapRoomBorderColor()
 {
     Host* pHost = mpHost;
@@ -2290,7 +2316,7 @@ void dlgProfilePreferences::fillOutMapHistory()
         }
     }
     const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
-    QDir mapSaveDir(mudlet::getMudletPath(mudlet::profileMapsPath, profile_name).append(QLatin1Char('/')));
+    QDir mapSaveDir(mudlet::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
     mapSaveDir.setSorting(QDir::Time);
     const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
@@ -2429,7 +2455,7 @@ void dlgProfilePreferences::slot_loadMap()
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Load Mudlet map"));
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(loadExtensions.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [=](int result) {
@@ -2460,7 +2486,7 @@ void dlgProfilePreferences::slot_saveMap()
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Save Mudlet map"));
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
     dialog->setAcceptMode(QFileDialog::AcceptSave);
@@ -2516,9 +2542,9 @@ void dlgProfilePreferences::slot_saveMap()
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
 {
-    const QString mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
+    const QString mapsPath = mudlet::getMudletPath(enums::profileMapsPath, pHost->getName());
     const QDir mapsDir = QDir(mapsPath);
-    return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
+    return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(enums::profileHomePath, pHost->getName());
 }
 
 void dlgProfilePreferences::slot_hideActionLabel()
@@ -2572,7 +2598,7 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
+            const QString toProfileDirPathString = mudlet::getMudletPath(enums::profileHomePath, pHost->getName());
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -2688,7 +2714,7 @@ void dlgProfilePreferences::slot_copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    const QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
+    const QString sourceMapFolder(mudlet::getMudletPath(enums::profileMapsPath, pHost->getName()));
     const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -2718,7 +2744,7 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
+        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
@@ -2751,7 +2777,7 @@ void dlgProfilePreferences::slot_setLogDir()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
     /*
      * To show the files even though we are looking for a directory so that the
@@ -2781,7 +2807,7 @@ void dlgProfilePreferences::slot_setLogDir()
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -3153,30 +3179,30 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
     switch (comboBox_menuBarVisibility->currentIndex()) {
     case 0:
-        pMudlet->setMenuBarVisibility(mudlet::visibleNever);
+        pMudlet->setMenuBarVisibility(enums::visibleNever);
         break;
     case 1:
-        pMudlet->setMenuBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        pMudlet->setMenuBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         break;
     default:
-        pMudlet->setMenuBarVisibility(mudlet::visibleAlways);
+        pMudlet->setMenuBarVisibility(enums::visibleAlways);
     }
     switch (comboBox_toolBarVisibility->currentIndex()) {
     case 0:
-        pMudlet->setToolBarVisibility(mudlet::visibleNever);
+        pMudlet->setToolBarVisibility(enums::visibleNever);
         break;
     case 1:
-        pMudlet->setToolBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        pMudlet->setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         break;
     default:
-        pMudlet->setToolBarVisibility(mudlet::visibleAlways);
+        pMudlet->setToolBarVisibility(enums::visibleAlways);
     }
 
     pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
-    pMudlet->setAppearance(static_cast<mudlet::Appearance>(comboBox_appearance->currentIndex()));
+    pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3429,7 +3455,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
 
-    auto themesAge = QFileInfo(mudlet::getMudletPath(mudlet::editorWidgetThemeJsonFile)).lastModified().toUTC();
+    auto themesAge = QFileInfo(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
 
     // if the cache file exists and is younger than the specified age (24h by default), don't refresh it
     if (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1) {
@@ -3493,7 +3519,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
@@ -3515,7 +3541,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 // selection combobox with them
 void dlgProfilePreferences::populateThemesList()
 {
-    QFile themesFile(mudlet::getMudletPath(mudlet::editorWidgetThemeJsonFile));
+    QFile themesFile(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile));
     QList<std::pair<QString, QString>> sortedThemes;
     QJsonArray unsortedThemes;
 
@@ -4181,15 +4207,15 @@ void dlgProfilePreferences::slot_changeAutomaticUpdates(const bool state)
     }
 }
 
-void dlgProfilePreferences::slot_changeMenuBarVisibility(const mudlet::controlsVisibility state)
+void dlgProfilePreferences::slot_changeMenuBarVisibility(const enums::controlsVisibility state)
 {
     switch (state) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         if (comboBox_menuBarVisibility->currentIndex() != 0) {
             comboBox_menuBarVisibility->setCurrentIndex(0);
         }
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         if (comboBox_menuBarVisibility->currentIndex() != 1) {
             comboBox_menuBarVisibility->setCurrentIndex(1);
         }
@@ -4201,15 +4227,15 @@ void dlgProfilePreferences::slot_changeMenuBarVisibility(const mudlet::controlsV
     }
 }
 
-void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsVisibility state)
+void dlgProfilePreferences::slot_changeToolBarVisibility(const enums::controlsVisibility state)
 {
     switch (state) {
-    case mudlet::visibleNever:
+    case enums::visibleNever:
         if (comboBox_toolBarVisibility->currentIndex() != 0) {
             comboBox_toolBarVisibility->setCurrentIndex(0);
         }
         break;
-    case mudlet::visibleOnlyWithoutLoadedProfile:
+    case enums::visibleOnlyWithoutLoadedProfile:
         if (comboBox_toolBarVisibility->currentIndex() != 1) {
             comboBox_toolBarVisibility->setCurrentIndex(1);
         }
@@ -4247,7 +4273,7 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
-void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
+void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
 {
     if (comboBox_appearance->currentIndex() != state) {
         comboBox_appearance->setCurrentIndex(state);

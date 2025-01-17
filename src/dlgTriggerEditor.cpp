@@ -218,7 +218,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
-    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemActivated, this, &dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection);
+
 
     // source editor area
     mpSourceEditorArea = new dlgSourceEditorArea(this);
@@ -330,12 +332,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     splitter_right->setCollapsible(2, false);
 
     mpErrorConsole->hide();
-
-    button_toggleSearchAreaResults->setStyleSheet(qsl("QToolButton::on {border-image: url(:/icons/arrow-down_grey.png);} "
-                                                                 "QToolButton {border-image: url(:/icons/arrow-right_grey.png);} "
-                                                                 "QToolButton::on:hover {border-image: url(:/icons/arrow-down.png);} "
-                                                                 "QToolButton:hover {border-image: url(:/icons/arrow-right.png);}"));
-    connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
 
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
     slot_showAllTriggerControls(true);
@@ -717,15 +713,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
 
-
-
-    // Force the size of the triangle icon button that shows/hides the search
-    // results to be 3/4 of the height of the combo-box used to enter the search
-    // term - this is to prevent an overlarge button on MacOS platforms where it
-    // was found to be an issue!
-    button_toggleSearchAreaResults->setMaximumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
-    button_toggleSearchAreaResults->setMinimumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
-
     comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
     auto pLineEdit_searchTerm = comboBox_searchTerms->lineEdit();
 
@@ -813,7 +800,39 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
               << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
-    slot_showSearchAreaResults(false);
+    comboBox_searchTerms->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    QFrame *searchContainer = new QFrame();
+    QVBoxLayout *searchLayout = new QVBoxLayout(searchContainer);
+    searchLayout->addWidget(checkBox_displayAllVariables);
+    searchLayout->addWidget(comboBox_searchTerms);
+    searchLayout->addWidget(treeWidget_searchResults);
+
+    searchSplitter = new QSplitter(Qt::Vertical);
+
+    connect(searchSplitter, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_searchSplitterMoved);
+
+    QFrame *itemContainer = new QFrame();
+    QVBoxLayout *itemLayout = new QVBoxLayout(itemContainer);
+
+    itemLayout->addWidget(treeWidget_triggers);
+    itemLayout->addWidget(treeWidget_aliases);
+    itemLayout->addWidget(treeWidget_actions);
+    itemLayout->addWidget(treeWidget_timers);
+    itemLayout->addWidget(treeWidget_scripts);
+    itemLayout->addWidget(treeWidget_keys);
+    itemLayout->addWidget(treeWidget_variables);
+
+    searchSplitter->addWidget(itemContainer);
+    searchSplitter->setStretchFactor(0, 1);
+    searchSplitter->setCollapsible(0, false);
+    searchSplitter->addWidget(searchContainer);
+    searchSplitter->setStretchFactor(1, 1);
+    searchSplitter->setCollapsible(1, true);
+
+    verticalLayout_frame_left->addWidget(searchSplitter);
+
+    searchSplitter->restoreState(mSearchSplitterState);
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     mpWidget_triggerItems = new QWidget;
@@ -927,6 +946,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
 }
 
+void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
+{
+    mSearchSplitterState = searchSplitter->saveState();
+}
+
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
     for (int i = 0; i < 50; i++) {
@@ -1029,6 +1053,7 @@ void dlgTriggerEditor::readSettings()
     mKeyEditorSplitterState = settings.value("mKeyEditorSplitterState", QByteArray()).toByteArray();
     mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
     mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
+    mSearchSplitterState = settings.value("mSearchSplitterState", QByteArray()).toByteArray();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -1045,6 +1070,7 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("mKeyEditorSplitterState", mKeyEditorSplitterState);
     settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
     settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
+    settings.setValue("mSearchSplitterState", mSearchSplitterState);
 }
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
@@ -1432,7 +1458,6 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
     }
 
     treeWidget_searchResults->clear();
-    slot_showSearchAreaResults(true);
     treeWidget_searchResults->setUpdatesEnabled(false);
 
     searchTriggers(s);
@@ -3778,7 +3803,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
     //insert a new root item
     ROOT_TRIGGER:
-        pT = new TTrigger(name, patterns, patternKinds, mpHost);
+        pT = new TTrigger(name, patterns, patternKinds, false, mpHost);
         pNewItem = new QTreeWidgetItem(mpTriggerBaseItem, nameL);
         treeWidget_triggers->insertTopLevelItem(0, pNewItem);
     }
@@ -4350,6 +4375,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     }
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->label_idNumber->clear();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;
@@ -7610,26 +7636,6 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
     }
 }
 
-void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
-{
-    if (isChecked) {
-        if (!button_toggleSearchAreaResults->isChecked()) {
-            // If this slot is called "manually" the checked state of the button
-            // may not match the setting, so make it do so, note that the
-            // setChecked(bool) method does NOT invoke the clicked(bool) signal
-            // that is connected to here in the constructor, but it does the
-            // toggled(bool) one, which is why we use the former...
-            button_toggleSearchAreaResults->setChecked(true);
-        }
-        treeWidget_searchResults->show();
-    } else {
-        if (button_toggleSearchAreaResults->isChecked()) {
-            button_toggleSearchAreaResults->setChecked(false);
-        }
-        treeWidget_searchResults->hide();
-    }
-}
-
 void dlgTriggerEditor::saveOpenChanges()
 {
     switch (mCurrentView) {
@@ -8422,15 +8428,17 @@ void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
     }
 }
 
+
 // Should the functionality change in this method be sure to review the code
 // for "case SearchResultIsEventHandler" for "Scripts" in:
 // slot_itemSelectedInSearchResults(...)
-void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
+void dlgTriggerEditor::slot_scriptMainAreaEditHandler()
 {
     QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
     if (!pItem) {
         return;
     }
+
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
     const QString regex = pItem->text();
@@ -8441,16 +8449,38 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
+void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem*)
+{
+    mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
+    mIsScriptsMainAreaEditHandler = false;
+    mpScriptsMainAreaEditHandlerItem = nullptr;
+}
+
 void dlgTriggerEditor::slot_scriptMainAreaDeleteHandler()
 {
     mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
 void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
 {
     auto addEventHandler = [&] () {
+        if (mpScriptsMainArea->lineEdit_script_event_handler_entry->text().isEmpty()) {
+            return;
+        }
+
+        // check for duplicate handlers
+        QString newHandlerText = mpScriptsMainArea->lineEdit_script_event_handler_entry->text();
+        QListWidget* list = mpScriptsMainArea->listWidget_script_registered_event_handlers;
+        for (int i = 0; i < list->count(); i++) {
+            if (list->item(i)->text() == newHandlerText) {
+                return;
+            }
+        }
+
         auto pItem = new QListWidgetItem;
-        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
+        pItem->setText(newHandlerText);
         mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
     };
 
@@ -8460,17 +8490,18 @@ void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
             mIsScriptsMainAreaEditHandler = false;
             addEventHandler();
         } else {
-            QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
-            if (!pItem) {
-                addEventHandler();
+            if (mpScriptsMainAreaEditHandlerItem->text() == mpScriptsMainArea->lineEdit_script_event_handler_entry->text()
+            || mpScriptsMainArea->lineEdit_script_event_handler_entry->text().isEmpty()) {
+                return;
             }
+            mpScriptsMainAreaEditHandlerItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
+            mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
         }
-        mIsScriptsMainAreaEditHandler = false;
-        mpScriptsMainAreaEditHandlerItem = nullptr;
     } else {
         addEventHandler();
     }
-    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
+
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
 void dlgTriggerEditor::slot_toggleCentralDebugConsole()
@@ -9337,7 +9368,7 @@ void dlgTriggerEditor::slot_import()
     lastDir = QFileInfo(fileName).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    mpHost->installPackage(fileName, 0);
+    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();

@@ -107,6 +107,8 @@ public slots:
     void slot_setMapRoomBorderColor();
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
+    void slot_setLowerLevelColor();
+    void slot_setUpperLevelColor();
     void slot_resetMapColors();
 
     // Map.
@@ -149,13 +151,13 @@ private slots:
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_changeEnableFullScreenMode(const bool);
-    void slot_setAppearance(const mudlet::Appearance);
+    void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
     void slot_setTreeWidgetIconSize(const int);
-    void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
-    void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeMenuBarVisibility(const enums::controlsVisibility);
+    void slot_changeToolBarVisibility(const enums::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);

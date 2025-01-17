@@ -32,7 +32,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include "uiawrapper.h"
 #endif
 #include "widechar_width.h"
@@ -181,7 +181,7 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
         if (mpConsole->getType() == TConsole::MainConsole) {
-            const auto filePath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+            const auto filePath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
             QSaveFile file(filePath);
             if (state) {
                 file.open(QIODevice::WriteOnly | QIODevice::Text);

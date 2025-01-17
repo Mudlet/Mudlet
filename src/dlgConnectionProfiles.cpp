@@ -547,12 +547,12 @@ void dlgConnectionProfiles::slot_saveName()
 
     setItemName(pItem, newProfileName);
 
-    const QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
+    const QDir currentPath(mudlet::getMudletPath(enums::profileHomePath, currentProfileEditName));
     const QDir dir;
 
     if (currentPath.exists()) {
         // CHECKME: previous code specified a path ending in a '/'
-        QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
+        QDir parentpath(mudlet::getMudletPath(enums::profilesPath));
         if (!parentpath.rename(currentProfileEditName, newProfileName)) {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
@@ -561,7 +561,7 @@ void dlgConnectionProfiles::slot_saveName()
             notificationAreaMessageBox->show();
             notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
         }
-    } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
+    } else if (!dir.mkpath(mudlet::getMudletPath(enums::profileHomePath, newProfileName))) {
         notificationArea->show();
         notificationAreaIconLabelWarning->show();
         notificationAreaIconLabelError->hide();
@@ -668,7 +668,7 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 {
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
+    QDir dir(mudlet::getMudletPath(enums::profileHomePath, profile));
     dir.removeRecursively();
 
     // record the deleted default profile so it does not get re-created in the future
@@ -698,7 +698,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    const QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    const QDir profileDirContents(mudlet::getMudletPath(enums::profileXmlFilesPath, profile));
     if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
         // shortcut - don't show profile deletion confirmation if there is no data to delete
         reallyDeleteProfile(profile);
@@ -740,7 +740,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+    QFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -757,7 +757,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+    QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
@@ -900,7 +900,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     profile_history->clear();
 
-    QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
+    QDir dir(mudlet::getMudletPath(enums::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
     const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
@@ -1017,7 +1017,7 @@ void dlgConnectionProfiles::fillout_form()
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    mProfileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     if (mProfileList.isEmpty()) {
         welcome_message->show();
@@ -1094,7 +1094,7 @@ void dlgConnectionProfiles::fillout_form()
         if (profileName == qsl("Mudlet self-test")) {
             test_profile_row = i;
         }
-        const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
+        const auto fileinfo = QFileInfo(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
             const QDateTime profile_lastRead = fileinfo.lastModified();
@@ -1163,7 +1163,7 @@ void dlgConnectionProfiles::setProfileIcon() const
 
 bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
 {
-    return QFileInfo::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profileicon")));
+    return QFileInfo::exists(mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon")));
 }
 
 void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
@@ -1181,7 +1181,7 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
 
 void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
 {
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profileicon"));
+    auto profileIconPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
     auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profile->setIcon(icon);
 }
@@ -1226,7 +1226,7 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 
 std::optional<QColor> getCustomColor(const QString& profileName)
 {
-    auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
+    auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
     if (QFileInfo::exists(profileColorPath)) {
         QFile file(profileColorPath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1305,7 +1305,7 @@ void dlgConnectionProfiles::slot_setCustomColor()
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
-        auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
+        auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QSaveFile file(profileColorPath);
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         auto colorName = color.name();
@@ -1370,7 +1370,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     }
 
     // copy the folder on-disk
-    const QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    const QDir dir(mudlet::getMudletPath(enums::profileHomePath, oldname));
     if (!dir.exists()) {
         mCopyingProfile = false;
         return;
@@ -1379,7 +1379,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     QApplication::setOverrideCursor(Qt::BusyCursor);
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
-    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
     connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
         mProfileList << profile_name;
@@ -1412,7 +1412,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         return;
     }
 
-    const QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    const QDir newProfileDir(mudlet::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
         return;
@@ -1420,8 +1420,8 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     // copy relevant profile files
     for (const QString& file : {"url", "port", "password", "login", "description"}) {
-        auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
-        auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
+        auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, oldname), file);
+        auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
     }
 
@@ -1481,8 +1481,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
 {
-    const QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
-    const QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    const QDir oldProfiledir(mudlet::getMudletPath(enums::profileXmlFilesPath, oldname));
+    const QDir newProfiledir(mudlet::getMudletPath(enums::profileXmlFilesPath, newname));
     newProfiledir.mkpath(newProfiledir.absolutePath());
     QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     if (entries.empty()) {
