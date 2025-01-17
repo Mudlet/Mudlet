@@ -5105,8 +5105,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
-                                                      qsl("stickmud.com")}},
-        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
+                                                      qsl("stickmud.com")}}
         // clang-format on
     };
 
