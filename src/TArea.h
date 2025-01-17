@@ -62,8 +62,8 @@ public:
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
     int createLabelId() const;
-    void writeJsonArea(QJsonArray&) const;
-    std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
+    void writeJsonArea(QJsonArray&, const double);
+    std::pair<int, QString> readJsonArea(const QJsonArray&, const int, const double);
     QList<int> getPermanentLabelIds() const;
     bool hasPermanentLabels() const;
     qreal get2DMapZoom() const { return mLast2DMapZoom; }
@@ -98,25 +98,25 @@ public:
 
 
 private:
-    TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
+    TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); }
 
 
-    void readJsonUserData(const QJsonObject& obj);
-    void writeJsonUserData(QJsonObject&) const;
+    void readJsonUserData(const QJsonObject& obj, const double);
+    void writeJsonUserData(QJsonObject&, const double);
 
-    void readJsonLabels(const QJsonObject&);
-    void writeJsonLabels(QJsonObject&) const;
+    void readJsonLabels(const QJsonObject&, const double);
+    void writeJsonLabels(QJsonObject&, const double) const;
 
-    void writeJsonLabel(QJsonArray&, const int, const TMapLabel*) const;
-    void readJsonLabel(const QJsonObject&);
+    void writeJsonLabel(QJsonArray&, const int, const TMapLabel*, const double) const;
+    void readJsonLabel(const QJsonObject&, const double);
 
-    QSizeF readJsonSize(const QJsonObject&, const QString&) const;
-    void writeJsonSize(QJsonObject&, const QString&, const QSizeF&) const;
+    QSizeF readJsonSize(const QJsonObject&, const QString&, const double) const;
+    void writeJsonSize(QJsonObject&, const QString&, const QSizeF&, const double) const;
 
-    void writeTwinValues(QJsonObject&, const QString&, const QPointF&) const;
+    void writeTwinValues(QJsonObject&, const QString&, const QPointF&, const double) const;
 
-    QVector3D readJson3DCoordinates(const QJsonObject&, const QString&) const;
-    void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
+    QVector3D readJson3DCoordinates(const QJsonObject&, const QString&, const double) const;
+    void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&, const double) const;
 
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
     QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;

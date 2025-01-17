@@ -131,8 +131,8 @@ public:
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
     bool hasExitOrSpecialExit(const QString&) const;
-    void writeJsonRoom(QJsonArray&) const;
-    int readJsonRoom(const QJsonArray&, const int, const int);
+    void writeJsonRoom(QJsonArray&, const double) const;
+    int readJsonRoom(const QJsonArray&, const int, const int, const double);
     QSet<int> normalStubExits() const;
     QSet<QString> specialStubExits() const;
     bool hasAStubExit(const bool alsoConsiderSpecialExits = false) const;
@@ -173,25 +173,25 @@ public:
 
 
 private:
-    bool readJsonExits(const QJsonObject&);
-    void readJsonExitStubs(const QJsonObject&);
-    bool readJsonNormalExit(const QJsonObject&, const int);
-    bool readJsonSpecialExit(const QJsonObject&, const QString&);
-    void readJsonCustomExitLine(const QJsonObject&, const QString&);
-    void readJsonUserData(const QJsonObject&);
-    void readJsonDoor(const QJsonObject&, const QString&);
-    void readJsonHighlight(const QJsonObject&);
-    void readJsonSymbol(const QJsonObject&);
+    bool readJsonExits(const QJsonObject&, const double);
+    void readJsonExitStubs(const QJsonObject&, const double);
+    bool readJsonNormalExit(const QJsonObject&, const int, const double);
+    bool readJsonSpecialExit(const QJsonObject&, const QString&, const double);
+    void readJsonCustomExitLine(const QJsonObject&, const QString&, const double);
+    void readJsonUserData(const QJsonObject&, const double);
+    void readJsonDoor(const QJsonObject&, const QString&, const double);
+    void readJsonHighlight(const QJsonObject&, const double);
+    void readJsonSymbol(const QJsonObject&, const double);
 
-    void writeJsonExits(QJsonObject&) const;
-    void writeJsonExitStubs(QJsonObject&) const;
-    void writeJsonNormalExit(QJsonArray&, const int) const;
-    void writeJsonSpecialExit(QJsonArray&, const QString&, const int) const;
-    void writeJsonCustomExitLine(QJsonObject&, const QString&) const;
-    void writeJsonUserData(QJsonObject&) const;
-    void writeJsonDoor(QJsonObject&, const QString&) const;
-    void writeJsonHighlight(QJsonObject&) const;
-    void writeJsonSymbol(QJsonObject&) const;
+    void writeJsonExits(QJsonObject&, const double) const;
+    void writeJsonExitStubs(QJsonObject&, const double) const;
+    void writeJsonNormalExit(QJsonArray&, const int, const double) const;
+    void writeJsonSpecialExit(QJsonArray&, const QString&, const int, const double) const;
+    void writeJsonCustomExitLine(QJsonObject&, const QString&, const double) const;
+    void writeJsonUserData(QJsonObject&, const double) const;
+    void writeJsonDoor(QJsonObject&, const QString&, const double) const;
+    void writeJsonHighlight(QJsonObject&, const double) const;
+    void writeJsonSymbol(QJsonObject&, const double) const;
 
 
     int id = 0;

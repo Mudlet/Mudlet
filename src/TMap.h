@@ -178,18 +178,21 @@ public:
     bool getRoomNamesShown();
     void setRoomNamesShown(bool shown);
 
-    std::pair<bool, QString> writeJsonMapFile(const QString&);
+    std::pair<bool, QString> writeJsonMapFile(const QString&, double version = -1.0f);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
-
     QColor getColor(int id);
-
-    static void writeJsonColor(QJsonObject&, const QColor&);
-    static QColor readJsonColor(const QJsonObject&);
     void restore16ColorSet();
+    void setDefaultAreaShown(bool);
+    bool getDefaultAreaShown() { return mShowDefaultArea; }
+
+    static void writeJsonColor(QJsonObject&, const QColor&, const double);
+    static QColor readJsonColor(const QJsonObject&, const double);
+    static void writeJsonFont(QJsonObject&, const QLatin1String&, const QFont&, const double);
+    static QFont readJsonFont(const QJsonObject&, const QLatin1String&, const double);
 
     // These trivial methods are to prevent casual modification to the
     // underlying flag (and by setting a breakpoint on setUnsave() we can
@@ -197,8 +200,6 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
-    void setDefaultAreaShown(bool);
-    bool getDefaultAreaShown() { return mShowDefaultArea; }
 
 
     TRoomDB* mpRoomDB = nullptr;
@@ -359,8 +360,8 @@ public slots:
 
 private:
     const QString createFileHeaderLine(QString, QChar);
-    void writeJsonUserData(QJsonObject&) const;
-    void readJsonUserData(const QJsonObject&);
+    void readJsonUserData(const QJsonObject&, const double);
+    void writeJsonUserData(QJsonObject&, const double);
     bool validatePotentialMapFile(QFile&, QDataStream&);
 
     QStringList mStoredMessages;

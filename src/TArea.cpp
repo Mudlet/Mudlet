@@ -584,7 +584,7 @@ int TArea::createLabelId() const
     return labelId;
 }
 
-void TArea::writeJsonArea(QJsonArray& array) const
+void TArea::writeJsonArea(QJsonArray& array, const double version)
 {
     QJsonObject areaObj;
     const int id = mpRoomDB->getAreaID(const_cast<TArea*>(this));
@@ -597,7 +597,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
         areaObj.insert(QLatin1String("gridMode"), true);
     }
 
-    writeJsonUserData(areaObj);
+    writeJsonUserData(areaObj, version);
 
     QList<int> roomList{rooms.begin(), rooms.end()};
     const int roomCount = roomList.count();
@@ -612,7 +612,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
         auto pR = mpRoomDB->getRoom(roomId);
         if (pR) {
             ++currentRoomCount;
-            pR->writeJsonRoom(roomsArray);
+            pR->writeJsonRoom(roomsArray, version);
             if (currentRoomCount % 10 == 0) {
                 if (mpMap->incrementJsonProgressDialog(true, true, 10)) {
                     // Cancel has been hit - so give up straight away:
@@ -631,22 +631,22 @@ void TArea::writeJsonArea(QJsonArray& array) const
     // Process the labels after the rooms so that the first area shows something
     // quickly (from the rooms) even if it has a number of labels to do.
 
-    writeJsonLabels(areaObj);
+    writeJsonLabels(areaObj, version);
     const QJsonValue areaValue{areaObj};
     array.append(areaValue);
 }
 
-std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex)
+std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex, const double version)
 {
     const QJsonObject areaObj{array.at(areaIndex).toObject()};
     const int id = areaObj.value(QLatin1String("id")).toInt();
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
-    readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
+    readJsonUserData(areaObj.value(QLatin1String("userData")).toObject(), version);
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
-        const int roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id);
+        const int roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id, version);
         rooms.insert(roomId);
         // This also sets the room id for the TRoom:
         mpRoomDB->addRoom(roomId, pR, true);
@@ -663,14 +663,26 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     }
 
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
-        readJsonLabels(areaObj);
+        readJsonLabels(areaObj, version);
     }
     return {id, name};
 }
 
-void TArea::writeJsonUserData(QJsonObject& obj) const
+void TArea::writeJsonUserData(QJsonObject& obj, const double version)
 {
+    // Holds onto user data keys we need to insert temporily to contain data
+    // added since verison 1.000 was codified:
+    QStringList areaFallBackKeys;
+
     QJsonObject userDataObj;
+
+    // Handle data not in earlier formats:
+    if (version < 1.0010) {
+        QString key = QLatin1String("system.fallback_map2DZoom");
+        mUserData.insert(key, QString::number(mLast2DMapZoom));
+        areaFallBackKeys << key;
+    }
+
     if (mUserData.isEmpty()) {
         // Skip creating a user data array if it will be empty:
         return;
@@ -683,10 +695,18 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     }
     const QJsonValue userDatasValue{userDataObj};
     obj.insert(QLatin1String("userData"), userDatasValue);
+
+    // Remove extra user data failbacks for earlier versions
+    if (!areaFallBackKeys.isEmpty()) {
+        QStringListIterator itAreaFallBackKey(areaFallBackKeys);
+        while (itAreaFallBackKey.hasNext()) {
+            mUserData.remove(itAreaFallBackKey.next());
+        }
+    }
 }
 
 // Takes a userData object and parses all its elements
-void TArea::readJsonUserData(const QJsonObject& obj)
+void TArea::readJsonUserData(const QJsonObject& obj, const double version)
 {
     if (obj.isEmpty()) {
         // Skip doing anything more if there is nothing to do:
@@ -698,9 +718,21 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
+
+    // Handle data not in earlier formats:
+    if (version < 1.0010) {
+        const QString dataItem = mUserData.take(QLatin1String("system.fallback_map2DZoom"));
+        bool isOkay = false;
+        const qreal zoom = dataItem.toDouble(&isOkay);
+        if (isOkay && !qFuzzyIsNull(zoom)) {
+            mLast2DMapZoom = zoom;
+        } else {
+            mLast2DMapZoom = T2DMap::csmDefaultXYZoom;
+        }
+    }
 }
 
-void TArea::writeJsonLabels(QJsonObject& obj) const
+void TArea::writeJsonLabels(QJsonObject& obj, const double version) const
 {
     if (mMapLabels.isEmpty()) {
         // No labels in this area - so nothing to do
@@ -712,7 +744,7 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         if (!itMapLabel.value().temporary) {
-            writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
+            writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value(), version);
             if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
                 // Cancel has been hit - so give up straight away:
                 return;
@@ -724,7 +756,7 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
 }
 
 // obj is the (area) container that contains the label array
-void TArea::readJsonLabels(const QJsonObject& obj)
+void TArea::readJsonLabels(const QJsonObject& obj, const double version)
 {
     const QJsonArray labelsArray = obj.value(QLatin1String("labels")).toArray();
 
@@ -734,7 +766,7 @@ void TArea::readJsonLabels(const QJsonObject& obj)
     }
 
     for (const auto labelValue : labelsArray) {
-        readJsonLabel(labelValue.toObject());
+        readJsonLabel(labelValue.toObject(), version);
         if (mpMap->incrementJsonProgressDialog(false, false, 1)) {
             // Cancel has been hit - so give up straight away:
             return;
@@ -742,15 +774,15 @@ void TArea::readJsonLabels(const QJsonObject& obj)
     }
 }
 
-void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLabel) const
+void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLabel, const double version) const
 {
     QJsonObject labelObj;
 
     labelObj.insert(QLatin1String("id"), static_cast<double>(id));
 
-    writeJson3DCoordinates(labelObj, QLatin1String("coordinates"), pLabel->pos);
+    writeJson3DCoordinates(labelObj, QLatin1String("coordinates"), pLabel->pos, version);
 
-    writeJsonSize(labelObj, QLatin1String("size"), pLabel->size);
+    writeJsonSize(labelObj, QLatin1String("size"), pLabel->size, version);
 
     //: Default text if a label is created in mapper with no text
     if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text")))) {
@@ -776,8 +808,8 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         QJsonArray colorsArray;
         QJsonObject foregroundColorObj;
         QJsonObject backgroundColorObj;
-        TMap::writeJsonColor(foregroundColorObj, pLabel->fgColor);
-        TMap::writeJsonColor(backgroundColorObj, pLabel->bgColor);
+        TMap::writeJsonColor(foregroundColorObj, pLabel->fgColor, version);
+        TMap::writeJsonColor(backgroundColorObj, pLabel->bgColor, version);
         const QJsonValue foregroundColorValue{foregroundColorObj};
         const QJsonValue backgroundColorValue{backgroundColorObj};
         colorsArray.append(foregroundColorValue);
@@ -804,15 +836,15 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     array.append(labelValue);
 }
 
-void TArea::readJsonLabel(const QJsonObject& labelObj)
+void TArea::readJsonLabel(const QJsonObject& labelObj, const double version)
 {
     TMapLabel label;
 
     const int labelId = labelObj.value(QLatin1String("id")).toInt();
 
-    label.pos = readJson3DCoordinates(labelObj, QLatin1String("coordinates"));
+    label.pos = readJson3DCoordinates(labelObj, QLatin1String("coordinates"), version);
 
-    label.size = readJsonSize(labelObj, QLatin1String("size"));
+    label.size = readJsonSize(labelObj, QLatin1String("size"), version);
 
     if (labelObj.contains(QLatin1String("text")) && labelObj.value(QLatin1String("text")).isString()) {
         label.text = labelObj.value(QLatin1String("text")).toString();
@@ -825,8 +857,8 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         // way the colour was put together (color spec type) can make them NOT
         // seem to be the same when we'd think they were...
         const QJsonArray colorsArray = labelObj.value(QLatin1String("colors")).toArray();
-        label.fgColor = TMap::readJsonColor(colorsArray.at(0).toObject());
-        label.bgColor = TMap::readJsonColor(colorsArray.at(1).toObject());
+        label.fgColor = TMap::readJsonColor(colorsArray.at(0).toObject(), version);
+        label.bgColor = TMap::readJsonColor(colorsArray.at(1).toObject(), version);
     } else {
         label.fgColor = defaultLabelForeground;
         label.bgColor = defaultLabelBackground;
@@ -846,8 +878,9 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
     mMapLabels.insert(labelId, label);
 }
 
-void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QPointF& point) const
+void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QPointF& point, const double version) const
 {
+    Q_UNUSED(version)
     QJsonArray valueArray;
     valueArray.append(static_cast<double>(point.x()));
     valueArray.append(static_cast<double>(point.y()));
@@ -855,8 +888,9 @@ void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QPoint
     obj.insert(title, valuesValue);
 }
 
-void TArea::writeJsonSize(QJsonObject& obj, const QString& title, const QSizeF& size) const
+void TArea::writeJsonSize(QJsonObject& obj, const QString& title, const QSizeF& size, const double version) const
 {
+    Q_UNUSED(version)
     QJsonArray valueArray;
     valueArray.append(static_cast<double>(size.width()));
     valueArray.append(static_cast<double>(size.height()));
@@ -864,8 +898,9 @@ void TArea::writeJsonSize(QJsonObject& obj, const QString& title, const QSizeF& 
     obj.insert(title, valuesValue);
 }
 
-QSizeF TArea::readJsonSize(const QJsonObject& obj, const QString& title) const
+QSizeF TArea::readJsonSize(const QJsonObject& obj, const QString& title, const double version) const
 {
+    Q_UNUSED(version)
     QSizeF size;
     if (!obj.value(title).isArray() || obj.value(title).toArray().size() != 2) {
         return size;
@@ -881,8 +916,9 @@ QSizeF TArea::readJsonSize(const QJsonObject& obj, const QString& title) const
     return size;
 }
 
-void TArea::writeJson3DCoordinates(QJsonObject& obj, const QString& title, const QVector3D& vector) const
+void TArea::writeJson3DCoordinates(QJsonObject& obj, const QString& title, const QVector3D& vector, const double version) const
 {
+    Q_UNUSED(version)
     QJsonArray valueArray;
     valueArray.append(static_cast<double>(vector.x()));
     valueArray.append(static_cast<double>(vector.y()));
@@ -891,8 +927,9 @@ void TArea::writeJson3DCoordinates(QJsonObject& obj, const QString& title, const
     obj.insert(title, valuesValue);
 }
 
-QVector3D TArea::readJson3DCoordinates(const QJsonObject& obj, const QString& title) const
+QVector3D TArea::readJson3DCoordinates(const QJsonObject& obj, const QString& title, const double version) const
 {
+    Q_UNUSED(version)
     QVector3D position;
     if (!obj.value(title).isArray() || obj.value(title).toArray().size() != 3) {
         return position;

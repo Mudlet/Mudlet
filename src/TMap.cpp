@@ -1634,10 +1634,10 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                         // This custom line is for a normal exit/stub
                         if (pR->getExit(dirCode) > 0) {
                             // It is a real exit
-                            oldLinesData.insert(direction.toUpper(), itCustomLine.value());
-                            oldLinesArrowData.insert(direction.toUpper(), pR->customLinesArrow.value(direction, false));
-                            oldLinesColorData.insert(direction.toUpper(), color);
-                            oldLinesStyleData.insert(direction.toUpper(), pR->customLinesStyle.value(direction, Qt::SolidLine));
+                            oldLinesData.insert(direction, itCustomLine.value());
+                            oldLinesArrowData.insert(direction, pR->customLinesArrow.value(direction, false));
+                            oldLinesColorData.insert(direction, color);
+                            oldLinesStyleData.insert(direction, pR->customLinesStyle.value(direction, Qt::SolidLine));
                         } else {
                             // It is a stub - so create the (normal) fallback data:
                             appendStubCustomExitLineData(pR, dirCode, direction, QMap<int, QString>(), roomFallBackKeys);
@@ -3218,8 +3218,13 @@ void TMap::setRoomNamesShown(bool shown)
  *
  * Currently only version 1.000 is expected or handled
  */
-std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
+std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest, double version)
 {
+    // The default value if not overriden:
+    const static double JSONVersion = 1.000;
+    if (version < 0.00) {
+        version = JSONVersion;
+    }
     QString destination{dest};
 
     if (destination.isEmpty()) {
@@ -3281,9 +3286,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
 
     QJsonObject mapObj;
-    mapObj.insert(QLatin1String("formatVersion"), static_cast<double>(1.000));
+    mapObj.insert(QLatin1String("formatVersion"), static_cast<double>(version));
 
-    writeJsonUserData(mapObj);
+    writeJsonUserData(mapObj, version);
+
 
     QList<int> areaRawIdsList{mpRoomDB->getAreaMap().keys()};
     QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
@@ -3302,7 +3308,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QJsonArray areasArray;
     for (const auto area : mpRoomDB->getAreaMap()) {
         if (area) {
-            area->writeJsonArea(areasArray);
+            area->writeJsonArea(areasArray, version);
         }
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(true, true, 0)) {
@@ -3362,7 +3368,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         QJsonObject customEnvColorObj{};
         // Should insert an array value into the customEnvColorObj with the key
         // "colorRGBA"
-        writeJsonColor(customEnvColorObj, itCustomEnvColor.value());
+        writeJsonColor(customEnvColorObj, itCustomEnvColor.value(), version);
         customEnvColorObj.insert(QLatin1String("id"), QJsonValue{itCustomEnvColor.key()});
         // Convert the customEnvColorObj into a QJsonValue:
         const QJsonValue customEnvColorValue{customEnvColorObj};
@@ -3381,8 +3387,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QJsonArray playerRoomColorsArray;
     QJsonObject playerRoomOuterColorObj;
     QJsonObject playerRoomInnerColorObj;
-    writeJsonColor(playerRoomOuterColorObj, mPlayerRoomOuterColor);
-    writeJsonColor(playerRoomInnerColorObj, mPlayerRoomInnerColor);
+    writeJsonColor(playerRoomOuterColorObj, mPlayerRoomOuterColor, version);
+    writeJsonColor(playerRoomInnerColorObj, mPlayerRoomInnerColor, version);
     const QJsonValue playerRoomOuterColorValue{playerRoomOuterColorObj};
     const QJsonValue playerRoomInnerColorValue{playerRoomInnerColorObj};
     playerRoomColorsArray.append(playerRoomOuterColorValue);
@@ -3457,7 +3463,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     double formatVersion = 0.0f;
     if (mapObj.contains(QLatin1String("formatVersion")) && mapObj[QLatin1String("formatVersion")].isDouble()) {
         formatVersion = mapObj[QLatin1String("formatVersion")].toDouble();
-        if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 1.0000 || formatVersion > 1.0000) {
+        if (qFuzzyCompare(1.0, formatVersion + 1.0) || (formatVersion < 1.0000) || (formatVersion > 1.0000)) {
             // We only handle 1.000f right now (0.001f was borked, 0.002f
             // didn't include room symbol color, 0.003 is the same as 1.000
             // but the numbered was changed for release into the wild):
@@ -3512,7 +3518,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
     if (mapObj.contains(QLatin1String("userData"))) {
-        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+        readJsonUserData(mapObj[QLatin1String("userData")].toObject(), formatVersion);
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     const float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
@@ -3526,8 +3532,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mapObj.contains(QLatin1String("playerRoomColors")) && mapObj.value(QLatin1String("playerRoomColors")).isArray()) {
         const QJsonArray playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
         if (playerRoomColorArray.size() == 2 && playerRoomColorArray.at(0).isObject() && playerRoomColorArray.at(1).isObject()) {
-            playerRoomOuterColor = readJsonColor(playerRoomColorArray.at(0).toObject());
-            playerRoomInnerColor = readJsonColor(playerRoomColorArray.at(1).toObject());
+            playerRoomOuterColor = readJsonColor(playerRoomColorArray.at(0).toObject(), formatVersion);
+            playerRoomInnerColor = readJsonColor(playerRoomColorArray.at(1).toObject(), formatVersion);
         }
     }
 
@@ -3558,7 +3564,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                     && customEnvColorObj.value(QLatin1String("id")).isDouble()) {
 
                     const int id{customEnvColorObj.value(QLatin1String("id")).toInt()};
-                    const QColor color{readJsonColor(customEnvColorObj)};
+                    const QColor color{readJsonColor(customEnvColorObj, formatVersion)};
                     customEnvColors.insert(id, color);
                 }
             }
@@ -3581,7 +3587,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     bool abort = false;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB);
-        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
+        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i, formatVersion);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
             if (allowUserCancellation) {
@@ -3639,7 +3645,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     return {true, QString()};
 }
 
-void TMap::writeJsonUserData(QJsonObject& obj) const
+void TMap::writeJsonUserData(QJsonObject& obj, const double version)
 {
     QJsonObject userDataObj;
     if (mUserData.isEmpty()) {
@@ -3657,7 +3663,7 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
 }
 
 // Takes a userData object and parses all its elements
-void TMap::readJsonUserData(const QJsonObject& obj)
+void TMap::readJsonUserData(const QJsonObject& obj, const double version)
 {
     if (obj.isEmpty()) {
         // Skip doing anything more if there is nothing to do:
@@ -3673,8 +3679,9 @@ void TMap::readJsonUserData(const QJsonObject& obj)
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
 // supplied object.
-void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
+/*static*/ void TMap::writeJsonColor(QJsonObject& obj, const QColor& color, const double version)
 {
+    Q_UNUSED(version)
     QJsonArray colorRGBAArray;
     colorRGBAArray.append(static_cast<double>(color.red()));
     colorRGBAArray.append(static_cast<double>(color.green()));
@@ -3689,8 +3696,9 @@ void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
     }
 }
 
-QColor TMap::readJsonColor(const QJsonObject& obj)
+/*static*/ QColor TMap::readJsonColor(const QJsonObject& obj, const double version)
 {
+    Q_UNUSED(version)
     if (!(   (obj.contains(QLatin1String("color32RGBA")) && obj.value(QLatin1String("color32RGBA")).isArray())
           || (obj.contains(QLatin1String("color24RGB")) && obj.value(QLatin1String("color24RGB")).isArray()))) {
         // Return a null color if one was not found
@@ -3710,6 +3718,11 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
         colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
     const int size = colorRGBAArray.size();
+
+    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
+        alpha = qRound(colorRGBAArray.at(3).toDouble());
+    }
+
     if ((size == 3 || size == 4)
         && colorRGBAArray.at(0).isDouble()
         && colorRGBAArray.at(1).isDouble()
@@ -3718,17 +3731,40 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
         red = qRound(colorRGBAArray.at(0).toDouble());
         green = qRound(colorRGBAArray.at(1).toDouble());
         blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
         return QColor(red, green, blue, alpha);
     }
 
     return QColor();
 }
 
+/*static*/ void TMap::writeJsonFont(QJsonObject& obj, const QLatin1String& identifer, const QFont& font, const double version)
+{
+    if (version < 1.0010) {
+        // We added support for fonts only in 1.001 so skip any found before
+        // that
+        return;
+    }
+
+    QJsonValue fontValue{font.toString()};
+    obj.insert(identifer, fontValue);
+}
+
+/*static*/ QFont TMap::readJsonFont(const QJsonObject& obj, const QLatin1String& identifier, const double version)
+{
+    QFont font;
+    if (version < 1.0010) {
+        // We added support for fonts only in 1.001 so skip any found before
+        // that
+        return font;
+    }
+
+    if (!obj.isEmpty() && obj.contains(identifier)) {
+        const auto fontString = obj.value(identifier).toString();
+        font.fromString(fontString);
+    }
+
+    return font;
+}
 
 bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment)
 {
