@@ -562,7 +562,7 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-    const QString medieviaFontDirectory(qsl("%1/ttf-medievia-mudlet-sans-mono-1.03").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString medieviaFontDirectory(qsl("%1/ttf-medievia-mudlet-sans-mono-1.03").arg(mudlet::getMudletPath(enums::mainFontsPath)));
 
     if (!dir.exists(medieviaFontDirectory)) {
         dir.mkpath(medieviaFontDirectory);
