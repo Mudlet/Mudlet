@@ -852,7 +852,7 @@ COMMIT_LINE:
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
-            wrap(lineBuffer.size() - 1);
+            wrap(line);
 
             // Start a new, but empty line in the various buffers
             ++localBufferPosition;

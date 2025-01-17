@@ -71,7 +71,7 @@
 #include <hunspell/hunspell.h>
 
 // for system physical memory info
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <Windows.h>
 #include <Psapi.h>
 #elif defined(Q_OS_MACOS)
@@ -137,105 +137,7 @@ public:
     mudlet();
     ~mudlet() override;
 
-    enum Appearance {
-        systemSetting = 0,
-        light = 1,
-        dark = 2
-    };
-
-    enum controlsVisibilityFlag {
-        visibleNever = 0,
-        visibleOnlyWithoutLoadedProfile = 0x1,
-        visibleMaskNormally = 0x2,
-        visibleAlways = 0x3
-    };
-    Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-
-    enum mudletPathType {
-        // The root of all mudlet data for the user - does not end in a '/'
-        mainPath = 0,
-        // Takes one extra argument as a file (or directory) relating to
-        // (profile independent) mudlet data - may end with a '/' if the extra
-        // argument does:
-        mainDataItemPath,
-        // (Added for 3.5.0) a revised location to store Mudlet provided fonts:
-        mainFontsPath,
-        // The directory containing all the saved user's profiles - does not end
-        // in '/':
-        profilesPath,
-        // Takes one extra argument (profile name) that returns the base
-        // directory for that profile - does NOT end in a '/' unless the
-        // supplied profle name does:
-        profileHomePath,
-        // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save media files - does NOT end in a '/'
-        profileMediaPath,
-        // Takes two extra arguments (profile name, mediaFileName) that returns
-        // the pathFile name for any media file:
-        profileMediaPathFileName,
-        // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save XML files - ends in a '/':
-        profileXmlFilesPath,
-        // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save maps files - does NOT end in a '/'
-        profileMapsPath,
-        // Takes two extra arguments (profile name, dataTime stamp) that returns
-        // the pathFile name for a dateTime stamped map file:
-        profileDateTimeStampedMapPathFileName,
-        // Takes two extra arguments (profile name, dataTime stamp) that returns
-        // the pathFile name for a dateTime stamped JSON map file:
-        profileDateTimeStampedJsonMapPathFileName,
-        // Takes two extra arguments (profile name, mapFileName) that returns
-        // the pathFile name for any map file:
-        profileMapPathFileName,
-        // Takes one extra argument (profile name) that returns the file
-        // location for the downloaded MMP map:
-        profileXmlMapPathFileName,
-        // Takes two extra arguments (profile name, data item) that gives a
-        // path file name for, typically a data item stored as a single item
-        // (binary) profile data) file (ideally these can be moved to a per
-        // profile QSettings file but that is a future pipe-dream on my part
-        // SlySven):
-        profileDataItemPath,
-        // Takes two extra arguments (profile name, package name) returns the
-        // per profile directory used to store (unpacked) package contents
-        // - ends with a '/':
-        profilePackagePath,
-        // Takes two extra arguments (profile name, package name) returns the
-        // filename of the XML file that contains the (per profile, unpacked)
-        // package mudlet items in that package/module:
-        profilePackagePathFileName,
-        // Takes one extra argument (profile name) that returns the directory
-        // that contains replays (*.dat files) and logs (*.html or *.txt) files
-        // for that profile - does NOT end in '/':
-        profileReplayAndLogFilesPath,
-        // Takes one extra argument (profile name) that returns the pathFileName
-        // to the map auditing report file that is appended to each time a
-        // map is loaded:
-        profileLogErrorsFilePath,
-        // Takes two extra arguments (profile name, theme name) that returns the
-        // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.thTheme" that
-        // is carried internally in the resource file:
-        editorWidgetThemePathFile,
-        // Returns the pathFileName to the external JSON file needed to process
-        // an edbee edtor widget theme:
-        editorWidgetThemeJsonFile,
-        // Returns the directory used to store module backups that is used in
-        // when saving/resyncing packages/modules - ends in a '/'
-        moduleBackupsPath,
-        // Returns path to Qt's own translation files
-        qtTranslationsPath,
-        // Takes one extra argument - a (dictionary) language code that should
-        // match a hunspell affix file name e.g. "en_US" in the default case
-        // to yield "en_US.aff" that is searched for in one or more OS dependent
-        // places - returns the path ending in a '/' to use to get the
-        // dictionaries from:
-        hunspellDictionaryPath
-    };
-
-
-    static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QString getMudletPath(enums::mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -353,7 +255,7 @@ public:
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
-    controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
     void onlyShowProfiles(const QStringList&);
@@ -378,7 +280,7 @@ public:
     void replayOver();
     bool replayStart();
     std::pair<bool, QString> resetProfileIcon(const QString&);
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
     // This will save and replace the .dic file with just the words in the
@@ -388,20 +290,20 @@ public:
     bool saveWindowLayout();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
-    void setAppearance(Appearance, const bool& loading = false);
+    void setAppearance(enums::Appearance, const bool& loading = false);
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
     void setEnableFullScreenMode(const bool);
     void setGlobalStyleSheet(const QString&);
     void setInterfaceLanguage(const QString&);
-    void setMenuBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(enums::controlsVisibility);
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setupPreInstallPackages(const QString&);
     void setToolBarIconSize(int);
-    void setToolBarVisibility(controlsVisibility);
+    void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
@@ -410,7 +312,7 @@ public:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
-    controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
+    enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
@@ -426,7 +328,7 @@ public:
     void showedMuteAllMediaTutorial();
     bool experiencedMudletPlayer();
 
-    Appearance mAppearance = Appearance::systemSetting;
+    enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
     QString mBG_ONLY_STYLESHEET;
@@ -500,6 +402,8 @@ public:
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
+    bool mDrawUpperLowerLevels = true;
+
 
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
@@ -536,8 +440,8 @@ public slots:
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
     void slot_replayTimeChanged();
-    void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
-    void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
+    void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
+    void slot_restoreMainToolBar() { setToolBarVisibility(enums::visibleAlways); }
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
@@ -559,13 +463,13 @@ protected:
 
 signals:
     void signal_adjustAccessibleNames();
-    void signal_appearanceChanged(mudlet::Appearance);
+    void signal_appearanceChanged(enums::Appearance);
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_enableFulScreenModeChanged(bool);
     void signal_guiLanguageChanged(const QString&);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
-    void signal_menuBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_menuBarVisibilityChanged(const enums::controlsVisibility);
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
@@ -577,7 +481,7 @@ signals:
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_tabChanged(const QString&);
-    void signal_toolBarVisibilityChanged(const mudlet::controlsVisibility);
+    void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
 
 
@@ -667,7 +571,7 @@ private:
     QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
-    controlsVisibility mMenuBarVisibility = visibleAlways;
+    enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
     // time the main if () logic changes state - will be true if the menu is
     // supposed to be visible, false if not and not have a value initially:
@@ -754,7 +658,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    controlsVisibility mToolbarVisibility = visibleAlways;
+    enums::controlsVisibility mToolbarVisibility = enums::visibleAlways;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
     // hold all the details:
@@ -771,7 +675,7 @@ private:
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
+
 
 class TConsoleMonitor : public QObject
 {

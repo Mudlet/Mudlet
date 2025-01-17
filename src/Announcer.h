@@ -30,12 +30,12 @@
 #include <QAccessibleWidget>
 #include <QObject>
 #include <QWidget>
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <QLibrary>
 #endif
 #include "post_guard.h"
 
-#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN32)
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WINDOWS)
 // i.e. all other OSes
 // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
 class InvisibleNotification : public QWidget
@@ -93,7 +93,7 @@ public:
     explicit Announcer(QWidget* parent = nullptr);
     void announce(const QString& text, const QString& processing = QString());
 
-#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN32)
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WINDOWS)
     // i.e. all other OSes
     static QAccessibleInterface* accessibleFactory(const QString& classname, QObject* object)
     {
@@ -111,7 +111,7 @@ public:
 #endif
 
 private:
-#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN32)
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WINDOWS)
     // i.e. all other OSes
     InvisibleNotification* notification;
     InvisibleStatusbar* statusbar;
