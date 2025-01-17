@@ -29,7 +29,6 @@
 
 
 #include "EAction.h"
-#include "Host.h"
 #include "TAlias.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -53,6 +52,8 @@
 #include "glwidget.h"
 #endif
 
+
+#include <limits>
 #include <math.h>
 
 #include "pre_guard.h"
@@ -5253,6 +5254,28 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
+    lua_register(pGlobalLua, "chat", TLuaInterpreter::chat);
+    lua_register(pGlobalLua, "chatAccept", TLuaInterpreter::chatAccept);
+    lua_register(pGlobalLua, "chatAll", TLuaInterpreter::chatAll);
+    lua_register(pGlobalLua, "chatAllowSnoop", TLuaInterpreter::chatAllowSnoop);
+    lua_register(pGlobalLua, "chatCall", TLuaInterpreter::chatCall);
+    lua_register(pGlobalLua, "chatDeny", TLuaInterpreter::chatDeny);
+    lua_register(pGlobalLua, "chatDoNotDisturb", TLuaInterpreter::chatDoNotDisturb);
+    lua_register(pGlobalLua, "chatEmoteAll", TLuaInterpreter::chatEmoteAll);
+    lua_register(pGlobalLua, "chatGroup", TLuaInterpreter::chatGroup);
+    lua_register(pGlobalLua, "chatIgnore", TLuaInterpreter::chatIgnore);
+    lua_register(pGlobalLua, "chatList", TLuaInterpreter::chatList);
+    lua_register(pGlobalLua, "chatName", TLuaInterpreter::chatName);
+    lua_register(pGlobalLua, "chatPeek", TLuaInterpreter::chatPeek);
+    lua_register(pGlobalLua, "chatPing", TLuaInterpreter::chatPing);
+    lua_register(pGlobalLua, "chatPrivate", TLuaInterpreter::chatPrivate);
+    lua_register(pGlobalLua, "chatServe", TLuaInterpreter::chatServe);
+    lua_register(pGlobalLua, "chatSetGroup", TLuaInterpreter::chatSetGroup);
+    lua_register(pGlobalLua, "chatSideChannel", TLuaInterpreter::chatSideChannel);
+    lua_register(pGlobalLua, "chatSnoop", TLuaInterpreter::chatSnoop);
+    lua_register(pGlobalLua, "chatStartServer", TLuaInterpreter::chatStartServer);
+    lua_register(pGlobalLua, "chatStopServer", TLuaInterpreter::chatStopServer);
+    lua_register(pGlobalLua, "chatUnChat", TLuaInterpreter::chatUnChat);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
