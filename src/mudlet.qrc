@@ -6,7 +6,6 @@
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.mpackage</file>
         <file>echo.mpackage</file>
-        <file>MedBootstrap.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
@@ -216,7 +215,6 @@
         <file>splash/Mudlet_splashscreen_main.png</file>
         <file>run-lua-code.mpackage</file>
         <file>run-tests.xml</file>
-        <file>MedBootstrap.xml</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>
         <file>ui/delete_profile_confirmation.ui</file>
