@@ -218,7 +218,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
-    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemActivated, this, &dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection);
+
 
     // source editor area
     mpSourceEditorArea = new dlgSourceEditorArea(this);
@@ -4373,6 +4375,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     }
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->label_idNumber->clear();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;
@@ -8425,15 +8428,17 @@ void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
     }
 }
 
+
 // Should the functionality change in this method be sure to review the code
 // for "case SearchResultIsEventHandler" for "Scripts" in:
 // slot_itemSelectedInSearchResults(...)
-void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
+void dlgTriggerEditor::slot_scriptMainAreaEditHandler()
 {
     QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
     if (!pItem) {
         return;
     }
+
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
     const QString regex = pItem->text();
@@ -8444,16 +8449,38 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
+void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem*)
+{
+    mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
+    mIsScriptsMainAreaEditHandler = false;
+    mpScriptsMainAreaEditHandlerItem = nullptr;
+}
+
 void dlgTriggerEditor::slot_scriptMainAreaDeleteHandler()
 {
     mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
 void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
 {
     auto addEventHandler = [&] () {
+        if (mpScriptsMainArea->lineEdit_script_event_handler_entry->text().isEmpty()) {
+            return;
+        }
+
+        // check for duplicate handlers
+        QString newHandlerText = mpScriptsMainArea->lineEdit_script_event_handler_entry->text();
+        QListWidget* list = mpScriptsMainArea->listWidget_script_registered_event_handlers;
+        for (int i = 0; i < list->count(); i++) {
+            if (list->item(i)->text() == newHandlerText) {
+                return;
+            }
+        }
+
         auto pItem = new QListWidgetItem;
-        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
+        pItem->setText(newHandlerText);
         mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
     };
 
@@ -8463,17 +8490,18 @@ void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
             mIsScriptsMainAreaEditHandler = false;
             addEventHandler();
         } else {
-            QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
-            if (!pItem) {
-                addEventHandler();
+            if (mpScriptsMainAreaEditHandlerItem->text() == mpScriptsMainArea->lineEdit_script_event_handler_entry->text()
+            || mpScriptsMainArea->lineEdit_script_event_handler_entry->text().isEmpty()) {
+                return;
             }
+            mpScriptsMainAreaEditHandlerItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
+            mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
         }
-        mIsScriptsMainAreaEditHandler = false;
-        mpScriptsMainAreaEditHandlerItem = nullptr;
     } else {
         addEventHandler();
     }
-    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
+
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
 void dlgTriggerEditor::slot_toggleCentralDebugConsole()

@@ -2583,6 +2583,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 
         QString url = mudlet::self()->readProfileData(profile, qsl("url"));
         QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+        QString description = mudlet::self()->readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -2610,6 +2611,11 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_pushstring(L, port.toUtf8().constData());
             lua_settable(L, -3);
         }
+
+        lua_pushstring(L, "description");
+        lua_pushstring(L, description.toUtf8().constData());
+        lua_settable(L, -3);
+
 
         auto host = hostManager.getHost(profile);
         const auto loaded = static_cast<bool>(host);
@@ -2642,8 +2648,6 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    Host& host = getHostFromLua(L);
-
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "loadProfile: profile name cannot be empty");
@@ -2674,4 +2678,38 @@ int TLuaInterpreter::loadProfile(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
+int TLuaInterpreter::closeProfile(lua_State* L)
+{
+    auto& hostManager = mudlet::self()->getHostManager();
+    QString profileName;
+
+    if (lua_gettop(L) == 0) {
+        Host& host = getHostFromLua(L);
+        profileName = host.getName();
+    } else {
+        profileName = getVerifiedString(L, __func__, 1, "profile name");
+    }
+
+    if (!mudlet::self()->profileExists(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "closeProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    if (!hostManager.hostLoaded(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "closeProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
+    if (profileIndex != -1) {
+        emit mudlet::self()->mpTabBar->tabCloseRequested(profileIndex);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    return 0;
 }

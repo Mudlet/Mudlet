@@ -2089,7 +2089,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
-
+    mDrawUpperLowerLevels = settings.value("drawUpperLowerLevels", QVariant(true)).toBool();
     // Make a local version of the value so that we can update the real one
     // by calling the slot method that does that and ALSO carry out the
     // other things needed for it:
@@ -2246,6 +2246,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
+    settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2877,7 +2878,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
     int loadedProfiles = 0;
-    
+
     for (auto& hostName : cliProfiles){
         if (hostList.contains(hostName)) {
             QElapsedTimer timer;
@@ -5074,10 +5075,10 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
         {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
-        {qsl(":/echo.xml"),                          {qsl("*")}},
-        {qsl(":/deleteOldProfiles.xml"),             {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.xml"), {qsl("*")}},
+        {qsl(":/echo.mpackage"),                          {qsl("*")}},
+        {qsl(":/deleteOldProfiles.mpackage"),             {qsl("*")}},
+        {qsl(":/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
         {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
@@ -5102,7 +5103,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     }
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
     }
 }
 
