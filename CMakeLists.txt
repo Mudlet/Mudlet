@@ -36,7 +36,7 @@
 cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
-  # minimum supported version by Qt6 for our Qt5/Qt6 build compatibility
+  # minimum supported version by Qt6
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
 endif()
 

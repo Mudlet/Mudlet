@@ -28,7 +28,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
@@ -36,19 +36,19 @@ jobs:
             triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
-            qt: '5.14.2'
+            qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
-            qt: '5.15.13'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -65,14 +65,12 @@ jobs:
         fetch-depth: 0
 
     - name: Install Qt
-      # need to install qt via homebrew for qt5 on arm64-osx
-      if: ${{ !(matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5')) }}
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: ${{ startsWith(matrix.qt, '6') && 'qt5compat qtmultimedia' || '' }}
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
       id: restore-boost
@@ -116,11 +114,6 @@ jobs:
       run: |
         # dependencies needed for vcpkg specifically.
         BREWS=("automake" "autoconf" "pkg-config")
-
-        # for qt5 on arm64, also install libtool and qt@5
-        if [[ "$(uname -m)" = "arm64" && "$QT_VERSION" == 5* ]]; then
-         BREWS+=("libtool" "qt@5")
-        fi
 
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
@@ -192,17 +185,6 @@ jobs:
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
-
-    - name: (macOS) Add additional paths for Qt5 on arm64 (1/1)
-      if: ${{ matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5') }}
-      run: |
-        echo "LDFLAGS=-L$(brew --prefix qt@5)/lib" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I$(brew --prefix qt@5)/include" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$(brew --prefix qt@5)/lib/pkgconfig" >> $GITHUB_ENV
-        echo "QT_PREFIX=$(brew --prefix qt@5)" >> $GITHUB_ENV
-        # both of these needed for the packager / installer on Github
-        echo "PATH=$(brew --prefix qt@5)/bin:$PATH" >> $GITHUB_ENV
-        echo "QT_DIR=$(brew --prefix qt@5)" >> $GITHUB_ENV
 
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works

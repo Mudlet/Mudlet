@@ -949,6 +949,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
         remove_profile_button->setEnabled(false);
         remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+        connect_button->setEnabled(false);
+        offline_button->setEnabled(false);
 
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
