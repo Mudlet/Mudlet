@@ -3694,12 +3694,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="192"/>
       <source>There are currently no updates available.</source>
-      <translation>当前没有可用的更新。</translation>
+      <translation>目前沒有可用的更新。</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="208"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation>您当前版本为 %APPNAME% %CURRENT_VERSION%</translation>
+      <translation>目前使用的版本為 %APPNAME% %CURRENT_VERSION%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="321"/>
@@ -4002,10 +4002,10 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ 错误 ] - 主机名称查找失败!
-无法建立连接.
-服务器名称不正确, 不能正常工作,
-或者你的域名服务器没有正常工作.</translation>
+      <translation>[ 錯誤 ] - 主機名稱查詢失敗！
+無法建立連線
+伺服器名稱不正確，不能正常工作
+或者名稱伺服器（nameserver）沒有正常運作。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="463"/>
@@ -4335,7 +4335,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="466"/>
       <source>welcome message</source>
-      <translation>欢迎信息</translation>
+      <translation>歡迎訊息</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="492"/>
@@ -4406,7 +4406,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
       <source>Options</source>
-      <translation>选项</translation>
+      <translation>選項</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
@@ -4431,7 +4431,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="646"/>
       <source>The characters name</source>
-      <translation>人物名字</translation>
+      <translation>角色名稱</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="649"/>
@@ -6621,7 +6621,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2669"/>
       <source>Backing up current map - please wait...</source>
-      <translation>正在备份当前地图 - 请稍候...</translation>
+      <translation>正在備份目前地圖 - 請稍候...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2679"/>
@@ -12827,7 +12827,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1951"/>
       <source>Save your current map:</source>
-      <translation>保存你的当前地图到：</translation>
+      <translation>儲存目前地圖：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1978"/>
