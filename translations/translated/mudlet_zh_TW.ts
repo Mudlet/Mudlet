@@ -1593,7 +1593,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4890"/>
       <source>Lua error: %1</source>
-      <translation>Lua 错误: %1</translation>
+      <translation>Lua 錯誤：%1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4898"/>
@@ -3804,7 +3804,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="41"/>
       <source>About Mudlet</source>
-      <translation>关于 Mudlet</translation>
+      <translation>關於</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="101"/>
@@ -4123,7 +4123,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="3160"/>
       <source>ERROR</source>
       <extracomment>Keep the capitalisation, the translated text at 7 letters max so it aligns nicely</extracomment>
-      <translation>错误</translation>
+      <translation>錯誤</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3173"/>
@@ -4356,7 +4356,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="520"/>
       <source>Server address:</source>
-      <translation>服务器地址:</translation>
+      <translation>主機位址</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="541"/>
@@ -4371,7 +4371,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="551"/>
       <source>Port:</source>
-      <translation>端口:</translation>
+      <translation>埠號</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="578"/>
@@ -4381,7 +4381,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="486"/>
       <source>Connect to</source>
-      <translation>连接到</translation>
+      <translation>連線資訊</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="581"/>
@@ -4426,7 +4426,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="636"/>
       <source>Character name:</source>
-      <translation>角色名稱：</translation>
+      <translation>角色名稱</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="646"/>
@@ -4446,17 +4446,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="763"/>
       <source>Auto-open profile</source>
-      <translation>自动打开配置文件</translation>
+      <translation>自動開啟設定文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="766"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation>当Mudlet运行时，自动启动此配置文件。</translation>
+      <translation>啟動 Mudlet 時，自動載入此設定文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="779"/>
       <source>Auto-reconnect</source>
-      <translation>自动重连</translation>
+      <translation>自動重新連接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="782"/>
@@ -4466,7 +4466,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="675"/>
       <source>Password</source>
-      <translation>密码</translation>
+      <translation>密碼</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="678"/>
@@ -4476,7 +4476,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="727"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation>启用Discord整合 (不被游戏支持)</translation>
+      <translation>啟用 Discord 整合（當前遊戲不支援）</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="733"/>
@@ -4522,7 +4522,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="730"/>
       <source>Discord integration</source>
-      <translation>Discord 集成</translation>
+      <translation>Discord 整合</translation>
     </message>
   </context>
   <context>
@@ -4608,7 +4608,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="118"/>
       <source>Color:</source>
-      <translation>颜色：</translation>
+      <translation>顏色</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="48"/>
@@ -4708,7 +4708,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="526"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;通往指定房间的命令或LUA脚本.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;通往指定房間的命令或 Lua 腳本。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="562"/>
@@ -4782,14 +4782,15 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation>符号
-(设置字体)</translation>
+      <translation>符號
+（設定字型）</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
       <source>Symbol
 (All Fonts)</source>
-      <translation>符号（所有字体）</translation>
+      <translation>符號
+（所有字型）</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
@@ -4826,7 +4827,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5595"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>东</translation>
+      <translation>東</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5597"/>
@@ -4862,7 +4863,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5607"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>东北</translation>
+      <translation>東北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5609"/>
@@ -4874,7 +4875,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5611"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>东南</translation>
+      <translation>東南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5613"/>
@@ -5349,7 +5350,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation>更多颜色</translation>
+      <translation>更多顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
@@ -5359,7 +5360,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation>默认</translation>
+      <translation>預設</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
@@ -5399,12 +5400,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Red</source>
-      <translation>红色</translation>
+      <translation>紅色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Green</source>
-      <translation>绿色</translation>
+      <translation>綠色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -5414,7 +5415,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="85"/>
       <source>Blue</source>
-      <translation>蓝色</translation>
+      <translation>藍色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
@@ -5553,7 +5554,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="112"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;欢迎使用 Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;选中列表中的一个游戏开始你的游戏之旅。&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;如果你想玩的游戏不在列表名单中，点击 %1 &lt;span style=&quot; color:#555753;&quot;&gt;新建&lt;/span&gt;，补充完善 &lt;i&gt;档案名称&lt;/i&gt;, &lt;i&gt;服务器的地址&lt;/i&gt;，和 &lt;i&gt;端口号&lt;/i&gt; 完善 &lt;i&gt;所在的 &lt;/i&gt; 区域。&lt;/p&gt;&lt;p&gt;最后，点击 %2 &lt;span style=&quot; color:#555753;&quot;&gt;连接&lt;/span&gt; 到服务器。&lt;/p&gt;&lt;p&gt;开始你的mud之旅！&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Mudlet团队 &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;歡迎使用 Mudlet！&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;选中列表中的一个游戏开始你的游戏之旅。&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;如果你想玩的游戏不在列表名单中，点击 %1 &lt;span style=&quot; color:#555753;&quot;&gt;新建&lt;/span&gt;，补充完善 &lt;i&gt;档案名称&lt;/i&gt;, &lt;i&gt;服务器的地址&lt;/i&gt;，和 &lt;i&gt;端口号&lt;/i&gt; 完善 &lt;i&gt;所在的 &lt;/i&gt; 区域。&lt;/p&gt;&lt;p&gt;最后，点击 %2 &lt;span style=&quot; color:#555753;&quot;&gt;连接&lt;/span&gt; 到服务器。&lt;/p&gt;&lt;p&gt;开始你的mud之旅！&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Mudlet团队 &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
@@ -5639,7 +5640,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1005"/>
       <source>Discord integration not supported by game</source>
-      <translation>游戏不支持 Discord集成</translation>
+      <translation>遊戲不支持 Discord 整合</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1008"/>
@@ -5847,7 +5848,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="152"/>
       <source>Label font</source>
       <extracomment>2D mapper create label font dialog title</extracomment>
-      <translation>标签字体</translation>
+      <translation>標籤字型</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="174"/>
@@ -6042,7 +6043,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="432"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation>包含素材 (图像，声音，字体)</translation>
+      <translation>包括素材（圖片、聲音、字型）</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="442"/>
@@ -6762,7 +6763,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3913"/>
       <source>State</source>
       <extracomment>Discord Rich Presence state</extracomment>
-      <translation>状态</translation>
+      <translation>狀態</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3916"/>
@@ -6780,7 +6781,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3920"/>
       <source>Time</source>
       <extracomment>Discord Rich Presence time until or time elapsed</extracomment>
-      <translation>时间</translation>
+      <translation>時間</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4423"/>
@@ -7390,7 +7391,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="455"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
-      <translation>切换触发器、脚本等的启用、停用状态</translation>
+      <translation>切換觸發、腳本等的啟用與停用狀態</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="473"/>
@@ -7460,7 +7461,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="546"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation>保存您的整个配置文件（触发器、别名、脚本、定时器、按钮和键，但不能保存地图或脚本特定设置）；同时也将 同步 被标记的模块。</translation>
+      <translation>儲存配置文件（觸發、別名、腳本、時計、按鈕和熱鍵，但不能保存地圖或特殊腳本設定），同時也會同步勾選的模組。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="548"/>
@@ -7579,7 +7580,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="3763"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4749"/>
       <source>New trigger</source>
-      <translation>新建触发器</translation>
+      <translation>新增觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3866"/>
@@ -7589,7 +7590,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3868"/>
       <source>New timer</source>
-      <translation>新建计时器</translation>
+      <translation>新增計時</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3961"/>
@@ -7633,7 +7634,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="4907"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4993"/>
       <source>New alias</source>
-      <translation>新建别名</translation>
+      <translation>新增別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4212"/>
@@ -7643,7 +7644,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4214"/>
       <source>New button</source>
-      <translation>新建按钮</translation>
+      <translation>新增按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4245"/>
@@ -7876,7 +7877,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7806"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>刪除觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7807"/>
@@ -7887,7 +7888,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7808"/>
       <location filename="../src/dlgTriggerEditor.h" line="464"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>儲存觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7809"/>
@@ -7917,7 +7918,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>刪除時計</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7817"/>
@@ -7928,7 +7929,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7818"/>
       <location filename="../src/dlgTriggerEditor.h" line="465"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>儲存時計</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7819"/>
@@ -7958,7 +7959,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>刪除別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7827"/>
@@ -7969,7 +7970,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7828"/>
       <location filename="../src/dlgTriggerEditor.h" line="466"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>儲存別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7829"/>
@@ -7999,7 +8000,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7836"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>刪除腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7837"/>
@@ -8010,7 +8011,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7838"/>
       <location filename="../src/dlgTriggerEditor.h" line="467"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>儲存腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7839"/>
@@ -8040,7 +8041,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7846"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>刪除按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7847"/>
@@ -8051,7 +8052,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7848"/>
       <location filename="../src/dlgTriggerEditor.h" line="468"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>儲存按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
@@ -8081,7 +8082,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7856"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>刪除熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7857"/>
@@ -8092,7 +8093,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7858"/>
       <location filename="../src/dlgTriggerEditor.h" line="469"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>儲存熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7859"/>
@@ -8122,7 +8123,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7866"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>刪除變數</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7867"/>
@@ -8133,7 +8134,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="7868"/>
       <location filename="../src/dlgTriggerEditor.h" line="470"/>
       <source>Save Variable</source>
-      <translation type="unfinished"/>
+      <translation>儲存變數</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
@@ -8452,7 +8453,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <location filename="../src/dlgTriggerEditor.h" line="479"/>
       <source>Errors</source>
-      <translation>错误：</translation>
+      <translation>錯誤</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="439"/>
@@ -9148,7 +9149,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="131"/>
       <source>Help</source>
-      <translation>幫助</translation>
+      <translation>說明</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="142"/>
@@ -9193,7 +9194,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="208"/>
       <source>Show errors</source>
-      <translation>显示错误</translation>
+      <translation>顯示錯誤</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="211"/>
@@ -9288,7 +9289,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="398"/>
       <source>Discord help channel</source>
-      <translation>Discord帮助频道</translation>
+      <translation>Discord 頻道</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="401"/>
@@ -9530,7 +9531,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
       <source>Font:</source>
-      <translation>字体：</translation>
+      <translation>字型</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
@@ -11137,7 +11138,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1153"/>
       <source>UTF-8 (Recommended)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>UTF-8 (推荐)</translation>
+      <translation>UTF-8（建議使用）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1155"/>
@@ -11466,7 +11467,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="364"/>
       <source>Open Discord</source>
-      <translation>打开Discord</translation>
+      <translation>開啟 Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="376"/>
@@ -11562,7 +11563,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="390"/>
       <source>Manual</source>
-      <translation>手册</translation>
+      <translation>文件</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="391"/>
@@ -11985,12 +11986,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="757"/>
       <source>Font</source>
-      <translation>字型</translation>
+      <translation>字體設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="763"/>
       <source>Font:</source>
-      <translation>字体：</translation>
+      <translation>字型</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="786"/>
@@ -12192,12 +12193,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="317"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation>启用 GMCP (通用 Mud 通信协议)</translation>
+      <translation>啟用 GMCP 協議（Generic MUD Communication Protocol）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="337"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation>启用 MSDP (Mud 服务器数据协议)</translation>
+      <translation>啟用 MSDP 協議（MUD Server Data Protocol）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="324"/>
@@ -12207,7 +12208,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="327"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation>启用 MSSP (Mud Server 状态协议)</translation>
+      <translation>啟用 MSSP 協議（MUD Server Status Protocol）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="553"/>
@@ -12267,7 +12268,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="801"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation>所选字体无法在 Mudlet 里使用，请选择另一个字体</translation>
+      <translation>選擇的字型無法在 Mudlet 中使用，請選擇其他字型</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="858"/>
