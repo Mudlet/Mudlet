@@ -3221,7 +3221,7 @@ void TMap::setRoomNamesShown(bool shown)
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest, double version)
 {
     // The default value if not overriden:
-    const static double JSONVersion = 1.000;
+    static const double JSONVersion = 1.000;
     if (version < 0.00) {
         version = JSONVersion;
     }
