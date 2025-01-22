@@ -83,9 +83,10 @@ void dlgPackageManager::resetPackageTable()
         packageName->setText(mpHost->mInstalledPackages.at(i));
         auto packageInfo{mpHost->mPackageInfo.value(packageName->text())};
         auto iconName = packageInfo.value(qsl("icon"));
-        auto iconDir = iconName.isEmpty() ? qsl(":/icons/mudlet.png")
-                                          : mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
-        packageName->setIcon(QIcon(iconDir));
+        if (!iconName.isEmpty()) {
+            auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
+            packageName->setIcon(QIcon(iconDir));
+        }
         auto title = packageInfo.value(qsl("title"));
         shortDescription->setText(title);
         packageTable->setItem(i, 0, packageName);
