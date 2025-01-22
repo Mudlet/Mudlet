@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -54,6 +54,15 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setFont(mpHost->getDisplayFont());
     document()->setDocumentMargin(2);
+
+    if (mType & (MainCommandLine|ConsoleCommandLine)) {
+        // put an outline around the command line when it is integrated into
+        // bottom of a TConsole - so that it can be visually separated from
+        // the text output area - particulary when "dark" mode is in effect
+        // as that modified "Fusion" style suffers from the division being
+        // invisible without this:
+        setFrameShape(QFrame::Box);
+    }
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -382,13 +391,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                bool shouldClearInput = historyMove(MOVE_DOWN);
-
-                // If the user has pressed DOWN while in the middle of typing a command
-                // the command line should be cleared
-                if (shouldClearInput) {
-                    clear();
-                }
+                historyMove(MOVE_DOWN);
                 ke->accept();
                 return true;
             }
@@ -1123,16 +1126,11 @@ void TCommandLine::handleAutoCompletion()
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
-// If the user is currently typing in the command line, a DOWN key will indicate
-// that the input line should be cleared
 
-bool TCommandLine::historyMove(MoveDirection direction)
+void TCommandLine::historyMove(MoveDirection direction)
 {
-    bool shouldClearInput = false;
-    
     if (mHistoryList.empty()) {
-        // If the history is empty, we may still want to clear the input line...
-        return true;
+        return;
     }
     const int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
@@ -1151,16 +1149,10 @@ bool TCommandLine::historyMove(MoveDirection direction)
             moveCursor(QTextCursor::End);
         }
     } else {
-        if (direction == MOVE_DOWN && !toPlainText().isEmpty()) {
-            shouldClearInput = true;
-        } else {
-            mAutoCompletionCount += shift;
-            handleAutoCompletion();
-        }
+        mAutoCompletionCount += shift;
+        handleAutoCompletion();
     }
     adjustHeight();
-
-    return shouldClearInput;
 }
 
 void TCommandLine::slot_clearSelection(bool yes)
@@ -1496,7 +1488,7 @@ void TCommandLine::restoreHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
@@ -1558,7 +1550,7 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);

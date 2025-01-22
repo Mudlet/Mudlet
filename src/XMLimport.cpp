@@ -786,6 +786,10 @@ void XMLimport::readHost(Host* pHost)
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    if (pHost->mEditorTheme.isEmpty() || pHost->mEditorThemeFile.isEmpty()) {
+        pHost->mEditorTheme = qsl("Mudlet");
+        pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
+    }
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -1178,8 +1182,14 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
                 pHost->mBgColor_2.setNamedColor(readElementText());
+            } else if (name() == qsl("mLowerLevelColor")) {
+                pHost->mLowerLevelColor.setNamedColor(readElementText());
+            } else if (name() == qsl("mUpperLevelColor")) {
+                pHost->mUpperLevelColor.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == qsl("mRoomCollisionBorderColor")) {
+                pHost->mRoomCollisionBorderColor.setNamedColor(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg.setNamedColor(readElementText());
@@ -1222,6 +1232,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mBgColor_2 = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mRoomCollisionBorderColor")) {
+                pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg = QColor::fromString(readElementText());

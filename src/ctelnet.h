@@ -52,7 +52,7 @@
 #include <queue>
 #include <string>
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else

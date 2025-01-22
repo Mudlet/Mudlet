@@ -65,7 +65,7 @@ Discord::Discord(QObject* parent)
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
     mpLibrary.reset(new QLibrary(qsl("discord-rpc64")));
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     // Defined on both 32 and 64 bit Windows
     mpLibrary.reset(new QLibrary(qsl("discord-rpc32")));
 #else

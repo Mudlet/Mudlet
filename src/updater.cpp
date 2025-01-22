@@ -24,6 +24,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
+#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -44,13 +45,24 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObje
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            testVersion ? qsl("public-test-build") : qsl("release"));
+    QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
+    QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
+
+    // On 32-bit Windows, check if we can upgrade to 64-bit
+#if defined(Q_OS_WINDOWS)
+    QString arch = is64BitCompatible() ? QStringLiteral("x86_64") : QStringLiteral("x86");
+#else
+    QString arch = QString(); // Let Feed auto-detect for other platforms
+#endif
+
+    feed = new dblsqd::Feed();
+    feed->setUrl(baseUrl, channel, QString(), arch, QString());
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();
     }
 }
+
 Updater::~Updater()
 {
     delete (feed);
@@ -65,14 +77,14 @@ void Updater::checkUpdatesOnStart()
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
     setupOnLinux();
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     setupOnWindows();
 #endif
 
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-          qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
+          qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
           if (updates.isEmpty()) {
               return;
           } else if (!updateAutomatically()) {
@@ -121,6 +133,7 @@ void Updater::showDialogManually() const
     QObject::disconnect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 }
 
+// only shows the changelog since the last version
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
@@ -128,11 +141,28 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 
+// shows the full changelog
+void Updater::showFullChangelog() const
+{
+    if (!feed->isReady()) {
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() { showChangelog(); });
+        feed->load();
+        return;
+    }
+
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    auto releases = feed->getReleases();
+    const auto firstVersion = releases.constLast().getVersion();
+    changelogDialog->setMinVersion(firstVersion);
+    changelogDialog->setMaxVersion(QApplication::applicationVersion());
+    changelogDialog->show();
+}
+
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
@@ -149,7 +179,7 @@ void Updater::setupOnMacOS()
 }
 #endif // Q_OS_MACOS
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
@@ -198,7 +228,7 @@ void Updater::setupOnWindows()
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
     QDir dir;
-    auto newPath = QString(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup.exe"));
+    auto newPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
     QFileInfo newPathFileInfo(newPath);
     if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
         qDebug() << "Couldn't delete the old installer";
@@ -340,7 +370,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run([&, filePath]() { untarOnLinux(filePath); });
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     QFuture<void> future = QtConcurrent::run([&, filePath]() { prepareSetupOnWindows(filePath); });
 #endif
 
@@ -349,7 +379,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
 #if defined(Q_OS_LINUX)
         slot_updateLinuxBinary();
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
         mpInstallOrRestart->setText(tr("Restart to apply update"));
@@ -366,7 +396,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // updated, then you do want to see the changelog.
 void Updater::recordUpdateTime() const
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -387,7 +417,7 @@ void Updater::recordUpdateTime() const
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
-    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -418,7 +448,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
 
-    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::ReadOnly);
     qint64 updateTimestamp;
     if (!opened) {
@@ -446,7 +476,7 @@ bool Updater::shouldShowChangelog()
 // return a null QString on failure
 QString Updater::getPreviousVersion() const
 {
-    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString previousVersion;
     if (!opened) {
@@ -463,3 +493,25 @@ QString Updater::getPreviousVersion() const
 
     return previousVersion;
 }
+
+#if defined(Q_OS_WINDOWS)
+// we are trying to detect machines running a 32-Bit build of Mudlet on a 64-Bit Intel/AMD processor
+bool Updater::is64BitCompatible() const 
+{
+#if defined(Q_OS_WIN64)
+    return true;
+#endif
+
+    BOOL isWow64 = FALSE;
+    typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)
+        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+
+    if (fnIsWow64Process) {
+        if (fnIsWow64Process(GetCurrentProcess(), &isWow64)) {
+            return isWow64 ? true : false;
+        }
+    }
+    return false;
+}
+#endif

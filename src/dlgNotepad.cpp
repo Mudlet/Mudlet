@@ -61,8 +61,8 @@ dlgNotepad::~dlgNotepad()
 
 void dlgNotepad::save()
 {
-    const QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
-    const QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    const QString directoryFile = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
+    const QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     const QDir dirFile;
     if (!dirFile.exists(directoryFile)) {
         dirFile.mkpath(directoryFile);
@@ -109,7 +109,7 @@ void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
 
 void dlgNotepad::restore()
 {
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     if (QFile::exists(fileName)) {
         restoreFile(fileName, true);
         return;
@@ -119,7 +119,7 @@ void dlgNotepad::restore()
     // where we did not enforce an encoding (and, at least on Windows, it
     // defaulted to the local8Bit one) and it would break if characters were
     // used {e.g. emojis} that that encoding did not handle:
-    fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+    fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
     restoreFile(fileName, false);
 }
 

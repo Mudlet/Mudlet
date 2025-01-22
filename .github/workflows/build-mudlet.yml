@@ -27,29 +27,28 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 8
-            qt: '5.14.2'
+            gcc_compiler_version: 10
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            # We still need a gcc for some sub-stages - and it ain't always the same one:
-            gcc_compiler_version: 9
-            qt: '5.14.2'
+            gcc_compiler_version: 10
+            qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
-            qt: '5.15.13'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -66,27 +65,24 @@ jobs:
         fetch-depth: 0
 
     - name: Install Qt
-      # need to install qt via homebrew for qt5 on arm64-osx
-      if: ${{ !(matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5')) }}
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: ${{ startsWith(matrix.qt, '6') && 'qt5compat qtmultimedia' || '' }}
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
-      uses: actions/cache@v4
-      id: cache-boost
+      id: restore-boost
+      uses: actions/cache/restore@v4
       with:
         path: ${{env.BOOST_ROOT}}
         key: boost
 
     - name: Install Boost
-      if: steps.cache-boost.outputs.cache-hit != 'true'
+      if: steps.restore-boost.outputs.cache-hit != 'true'
       run: |
         if [ "$OS" == "Windows_NT" ]; then
-          # fix up paths to be forward slashes consistently
           BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
         fi
         mkdir -p $BOOST_ROOT
@@ -97,6 +93,12 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
+    - name: Save Boost cache
+      if: steps.restore-boost.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: ${{ steps.restore-boost.outputs.cache-primary-key }}
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
@@ -112,11 +114,6 @@ jobs:
       run: |
         # dependencies needed for vcpkg specifically.
         BREWS=("automake" "autoconf" "pkg-config")
-
-        # for qt5 on arm64, also install libtool and qt@5
-        if [[ "$(uname -m)" = "arm64" && "$QT_VERSION" == 5* ]]; then
-         BREWS+=("libtool" "qt@5")
-        fi
 
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
@@ -158,7 +155,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect" "mitchellh/gon/gon")
+        BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect")
 
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
@@ -189,17 +186,6 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (macOS) Add additional paths for Qt5 on arm64 (1/1)
-      if: ${{ matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5') }}
-      run: |
-        echo "LDFLAGS=-L$(brew --prefix qt@5)/lib" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I$(brew --prefix qt@5)/include" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$(brew --prefix qt@5)/lib/pkgconfig" >> $GITHUB_ENV
-        echo "QT_PREFIX=$(brew --prefix qt@5)" >> $GITHUB_ENV
-        # both of these needed for the packager / installer on Github
-        echo "PATH=$(brew --prefix qt@5)/bin:$PATH" >> $GITHUB_ENV
-        echo "QT_DIR=$(brew --prefix qt@5)" >> $GITHUB_ENV
-
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
@@ -221,10 +207,10 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
+        # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
@@ -256,13 +242,13 @@ jobs:
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    - name: restore ccache
-      uses: actions/cache@v4
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
-        save-always: true
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -297,14 +283,20 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        # enable for a debug build (1/2)
-        # buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
+          -DUSE_SANITIZER=""
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: Save ccache
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
@@ -320,13 +312,6 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-
-    - name: restore Luarocks for packaging
-      uses: actions/cache@v4
-      with:
-        path: $HOME/.luarocks
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
 
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
@@ -355,7 +340,7 @@ jobs:
 
         # necessary for Qt multimedia and modern Qt
         if [ "${RUNNER_OS}" = "Linux" ]; then
-          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 -y
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb -y
         fi
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -387,12 +372,14 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
-        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
-        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
+        APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
+        APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
+        APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         TRIPLET: ${{matrix.triplet}}
 
     - name: Upload packaged Mudlet
@@ -404,8 +391,9 @@ jobs:
 
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
-      run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
+
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
@@ -430,9 +418,7 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.6
-      with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests

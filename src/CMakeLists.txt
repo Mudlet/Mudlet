@@ -364,7 +364,8 @@ set(mudlet_HDRS
     VarUnit.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    enums.h)
 
 if(WIN32)
   list(APPEND mudlet_HDRS uiawrapper.h)
@@ -402,7 +403,20 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
+# Enable sanitizers support
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
+set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
+set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
+
+set(USE_SANITIZER
+      "address"
+      CACHE STRING
+      "Compile with sanitizers. Available sanitizers are: Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
+
+add_sanitizer_support(${USE_SANITIZER})
+message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
+
 
 if(WITH_QT6)
 find_package(
@@ -504,6 +518,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 
+# Enable symbol exports from the main executable so that dynamically loaded Lua modules
+# can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
+# will fail to load with "undefined symbol" errors.
+set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
+
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in
@@ -588,7 +607,7 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
-# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
 # for an #ifdef because we need a symbol that is defined BEFORE we include
 # any Qt header file!
 if(WIN32)

@@ -60,6 +60,9 @@ public:
     std::optional<QString> getLoadingError();
     void setLoadingError(const QString& error);
     void clearLoadingError();
+    QString packageName(TScript* pScript);
+    QString moduleName(TScript* pScript);
+
     bool exportItem;
     bool mModuleMasterFolder;
 

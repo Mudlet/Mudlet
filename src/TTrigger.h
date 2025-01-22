@@ -73,7 +73,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, Host* pHost); //throws exception ExObjNoCreate
+    TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
 
     // Used as ANSI color code for either fore or back ground in color triggers
     // that is not considered when checking the color - both being set to this
@@ -104,7 +104,7 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds);
+    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
@@ -138,6 +138,8 @@ public:
     TColorTable* createColorPattern(int, int);
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
+    QString packageName(TTrigger* pTrigger);
+    QString moduleName(TTrigger* pTrigger);
 
 
     bool mTriggerContainsPerlRegex;

@@ -44,6 +44,7 @@ public:
     QString getText();
     QColor& getBgColor();
     QColor& getFgColor();
+    QColor& getOutlineColor();
     QFont& getFont();
     bool isOnTop();
     bool noScale();
@@ -55,16 +56,19 @@ private:
     QFontDialog* fontDialog = nullptr;
     QColorDialog* bgColorDialog = nullptr;
     QColorDialog* fgColorDialog = nullptr;
+    QColorDialog* outlineColorDialog = nullptr;
     QString imagePath;
     QString text;
     QColor fgColor = QColor(255, 255, 50, 255);
     QColor bgColor = QColor(50, 50, 150, 100);
+    QColor outlineColor = QColor(255, 255, 50, 255);
     QFont font;
 
 private slots:
     void slot_save();
     void slot_pickFgColor();
     void slot_pickBgColor();
+    void slot_pickOutlineColor();
     void slot_pickFont();
     void slot_pickFile();
     void slot_updateControls();
