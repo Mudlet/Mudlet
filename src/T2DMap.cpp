@@ -2443,7 +2443,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         // multiple selected rooms but that must be done after all the rooms
         // have been drawn otherwise later drawn rooms will overwrite the
         // mark, especially on areas in gridmode.
-        // The first test will (usefully) skip trying this on stub custom
+        // The first test will (usefully) skip trying this on stub custom lines
         if (customLineDestinationTarget > 0 && customLineDestinationTarget == _id) {
             const QPen savePen = painter.pen();
             const QBrush saveBrush = painter.brush();

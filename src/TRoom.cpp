@@ -900,7 +900,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             QMapIterator<QString, QList<QPointF>> itCustomLine(oldLinesData);
             while (itCustomLine.hasNext()) {
                 itCustomLine.next();
-                const QString direction(itCustomLine.key());
+                QString direction(itCustomLine.key());
                 if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
                     || direction == QLatin1String("DOWN")
                     || direction == QLatin1String("NE")
@@ -909,10 +909,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     || direction == QLatin1String("NW")
                     || direction == QLatin1String("IN")
                     || direction == QLatin1String("OUT")) {
-                    customLines.insert(itCustomLine.key().toLower(), itCustomLine.value());
-                } else {
-                    customLines.insert(itCustomLine.key(), itCustomLine.value());
+
+                    direction = direction.toLower();
                 }
+                customLines.insert(direction, itCustomLine.value());
             }
 
             QMap<QString, bool> oldLinesArrowData;
@@ -920,7 +920,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             QMapIterator<QString, bool> itCustomLineArrow(oldLinesArrowData);
             while (itCustomLineArrow.hasNext()) {
                 itCustomLineArrow.next();
-                const QString direction(itCustomLineArrow.key());
+                QString direction(itCustomLineArrow.key());
                 if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
                     || direction == QLatin1String("DOWN")
                     || direction == QLatin1String("NE")
@@ -929,10 +929,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     || direction == QLatin1String("NW")
                     || direction == QLatin1String("IN")
                     || direction == QLatin1String("OUT")) {
-                    customLinesArrow.insert(itCustomLineArrow.key().toLower(), itCustomLineArrow.value());
-                } else {
-                    customLinesArrow.insert(itCustomLineArrow.key(), itCustomLineArrow.value());
+
+                    direction = direction.toLower();
                 }
+                customLinesArrow.insert(direction, itCustomLineArrow.value());
             }
 
             QMap<QString, QList<int>> oldLinesColorData;
@@ -940,7 +940,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
             while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
-                const QString direction(itCustomLineColor.key());
+                QString direction(itCustomLineColor.key());
                 if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
                     || direction == QLatin1String("DOWN")
                     || direction == QLatin1String("NE")
@@ -950,21 +950,18 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     || direction == QLatin1String("IN")
                     || direction == QLatin1String("OUT")) {
 
-                    // Fixup broken custom lines caused by maps saved prior to
-                    // https://github.com/Mudlet/Mudlet/pull/2559 going into the
-                    // code by only adding the value if it contains enough
-                    // colour components to be a valid colour:
-                    if (itCustomLineColor.value().count() > 2) {
-                        customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
-                    }
-                    // Otherwise we will fixup both empty
-                    // itCustomLineColor.value() entities AND altogether missing
-                    // ones outside of the while() {...}:
-                } else {
-                    if (itCustomLineColor.value().count() > 2) {
-                        customLinesColor.insert(itCustomLineColor.key(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
-                    }
+                    direction = direction.toLower();
                 }
+                // Fixup broken custom lines caused by maps saved prior to
+                // https://github.com/Mudlet/Mudlet/pull/2559 going into the
+                // code by only adding the value if it contains enough
+                // colour components to be a valid colour:
+                if (itCustomLineColor.value().count() > 2) {
+                    customLinesColor.insert(direction, QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                }
+                // Otherwise we will fixup both empty
+                // itCustomLineColor.value() entities AND altogether missing
+                // ones outside of the while() {...}:
             }
 
             // Create new (RED) colour customLinesColor entities for any custom
@@ -1001,6 +998,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     || direction == QLatin1String("NW")
                     || direction == QLatin1String("IN")
                     || direction == QLatin1String("OUT")) {
+
                     direction = direction.toLower();
                 }
 
