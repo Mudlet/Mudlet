@@ -2300,58 +2300,70 @@ void dlgConnectionProfiles::slot_reorderItems()
      * position of each item. If there are not sufficient items to fill the
      * first row then we will have to estimate the second - to, say (2 x A) +
      * the height of an icon:
-     * +------------------------------~ =      -
-     * |   /point we track              #      |- topLeftCornerYOfFirstItemOnFirstRow (A)
-     * |  #----+  #----+          #---~ 1      _
-     * |  |    |  |    |  #----+  |     #
-     * |  +----+  +----+  |    |  +---~ #
-     * |                  +----+        = <- Bottom of where we will accept an item to be on row 1
-     * |  #----+  #----+  #----+  #---~ #
-     * |  |    |  |    |  |    |  |     2
-     * |  +----+  +----+  +----+  +---~ #
-     *                                  =
-     * If y of an item is in range 0 to (B - A) - 1 then make it be A
-     * If y of an item is in range (N * B - (A/2)) to (2B - (A/2)) - 1  then make it
-     * be A + ((B-A) * N) where N is the row.
+     *     +------------------------------~ =
+     *     |   /point we track       top|   #
+     * l0  |  #----+  #----+          #---~ 1  <-- top = v. position of top row
+     * ->  |  |    |  |    |  #----+  |h|   #  <--   h = item height
+     *     |  +----+  +----+  |    |  +---~ #
+     *     |                  +----+   s|   =  <--   s = spacing between items
+     * l1  |  #----+  #----+  #----+  #---~ #
+     * ->  |  |    |  |    |  |    |  |     2
+     *     |  +----+  +----+  +----+  +---~ #
+     * l2                                   =
+     * Starting from row 0 we want to check for the point (top left corner)
+     * y-coordinate to be less than limit lN = (top + s * N + h * (1 + 2N)/2)
      *
      */
-    const bool hasVerticalSpacingDetails = (mTopLeftCornerYOfFirstItemOnFirstRow >=0);
-    QList<int> verticalBins;
-    if (hasVerticalSpacingDetails) {
-        int yBinNumber = 0;
-        int yLimit = mTopLeftCornerYOfFirstItemOnNextRow - ((mTopLeftCornerYOfFirstItemOnFirstRow)/2) - 1;
-        verticalBins << yLimit;
-        while (yLimit < profiles_tree_widget->geometry().height() {
-             yLimit = mTopLeftCornerYOfFirstItemOnNextRow
-        }
-    } else {
-
-    }
     QMap<QPair<int, int>, int> positionMap;
     for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
         auto pItem = profiles_tree_widget->item(i);
         auto itemRect = profiles_tree_widget->visualItemRect(pItem);
-        const auto rawPosition = itemRect.topLeft();
+        const auto itemPos = itemRect.topLeft();
+        if (!mTopRowY.has_value()) {
+            mTopRowY = itemPos.y();
+        }
+        if (!mItemSpacing.has_value()) {
+            if (itemPos.y() > (mTopRowY.value() + (itemRect.height() / 2))) {
+                // This item is not on the first (0) row but another, presumably
+                // the second, so work out what the spacing between the rows is:
+                mItemSpacing = itemPos.y() - (mTopRowY.value() + itemRect.height());
+                qDebug().noquote().nospace() << "dlgConnectionProfiles::slot_reorderItems() INFO - it seems that the items are sized vertically so that:";
+                qDebug().noquote().nospace() << "     Top of first row: " << mTopRowY.value();
+                qDebug().noquote().nospace() << "  Height of each item: " << itemRect.height();
+                qDebug().noquote().nospace() << "   Space between rows: " << mItemSpacing.value();
+            }
+        }
+
         // "invert" because we swap to make the y-coordinate the first one:
         QPair<int, int> itemInvertPos;
-        itemInvertPos = qMakePair(rawPosition.y(), rawPosition.x());
-        while (Q_UNLIKELY(positionMap.contains(itemInvertPos))) {
-            itemInvertPos.second += 1;
-        }
-        if (mTopLeftCornerYOfFirstItemOnFirstRow < 0) {
-            // As the items will be snapped to grid on the first use we can
-            // immediately store this value:
-            mTopLeftCornerYOfFirstItemOnFirstRow = rawPosition.y();
-            mTopLeftCornerYOfFirstItemOnNextRow = mTopLeftCornerYOfFirstItemOnFirstRow;
-        }
-        if ((mTopLeftCornerYOfFirstItemOnFirstRow == mTopLeftCornerYOfFirstItemOnNextRow)
-            && (mTopLeftCornerYOfFirstItemOnNextRow < rawPosition.y())) {
+        itemInvertPos = qMakePair(itemPos.y(), itemPos.x());
 
-            mTopLeftCornerYOfFirstItemOnNextRow = rawPosition.y();
-            qDebug().nospace().noquote() << "dlgConnectionProfiles::slot_reorderItems() INFO - have identified that the offset to the top of the first row of items is: "
-                                         << mTopLeftCornerYOfFirstItemOnFirstRow
-                                         << " and the inter row gap is: "
-                                         << mTopLeftCornerYOfFirstItemOnNextRow - mTopLeftCornerYOfFirstItemOnFirstRow - 1;
+        if (mItemSpacing.has_value()) {
+            // work out which "row" an item is in:
+            int row = -1;
+            qDebug().noquote().nospace() << "For item: " << pItem->data(csmNameRole).toString() << " at: " << itemPos << ".";
+            auto limit = [=](const int r, const int top, const int spacing, const int widgetHeight) {
+                return top + r * spacing + ((5 * r)/2) * widgetHeight;
+            };
+
+            do {
+                ++row;
+                qDebug().noquote().nospace() << "    checking against upper limit of:" <<  limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height());
+            } while (limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height()) < itemInvertPos.first);
+
+            qDebug().nospace().noquote() << "    Item: \"" << pItem->data(csmNameRole).toString() << "\" is on row: " << row;
+            // row should now indicate which row (0-based) the item should be in
+            // use that to "bin" the y-coordinate values:
+            qDebug().nospace().noquote() << "  Setting it's Y-value to: " << limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height());
+            itemInvertPos.first = limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height());
+        }
+
+        // Nudges right an item slightly if there is already an item at the same
+        // y and x - once we determined the spacings between rows we have been
+        // able to "bin" the y-values so they will all be the same for items in
+        // same row - and this will then order them left to right:
+        while (positionMap.contains(itemInvertPos)) {
+            itemInvertPos.second += 1;
         }
         positionMap.insert(itemInvertPos, i);
     }

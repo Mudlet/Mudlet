@@ -160,8 +160,11 @@ private:
     QTimer mAlignItemsInLayoutTimer;
     bool mAutoAlignIcons = true;
 
-    int mTopLeftCornerYOfFirstItemOnFirstRow = -1;
-    int mTopLeftCornerYOfFirstItemOnNextRow = -1;
+    // Y-coordinate of top of first row:
+    std::optional<int> mTopRowY;
+    // Vertical spacing between subsequent rows of items (does NOT include
+    // the space of each item itself:
+    std::optional<int> mItemSpacing;
 
 
 private slots:
