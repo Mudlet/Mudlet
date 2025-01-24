@@ -140,7 +140,7 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
                 // A number but not valid:
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
                 roomIdToolTipText = doubleParagraph.arg(tr("Entered number is invalid. If left like this, this exit will be deleted when <tt>save</tt> is clicked."),
-                                                        tr("Set the number of the room that this special exit goes to or enter zero to make this exit a stub."));
+                                                        tr("Set the number of the room that this special exit goes to or use zero to make this a stub."));
             } else if (dlgRoomExits::textMatchesStub(text)) {
 
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_stub);
@@ -148,7 +148,7 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             } else if (text.isEmpty()) {
                 // Nothing is entered (or the text was the placeholder):
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
-                roomIdToolTipText = utils::richText(tr("Set the number of the room that this special exit goes to, or enter zero to make this a stub."));
+                roomIdToolTipText = utils::richText(tr("Set the number of the room that this special exit goes to or use zero to make this a stub."));
             } else {
                 // Something else that isn't a positive number:
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
@@ -224,7 +224,7 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
         // A number but not valid
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
         roomIdToolTipText = doubleParagraph.arg(tr("Entered number is invalid. If left like this, this exit will be deleted when <tt>save</tt> is clicked."),
-                                                tr("Set the number of the room that this special exit goes to."));
+                                                tr("Set the number of the room that this special exit goes to or use zero to make this a stub."));
     } else if (dlgRoomExits::textMatchesStub(text)) {
         // Exactly zero - so a stub:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_stub);
@@ -233,7 +233,7 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     } else if (text.isEmpty() || text == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
         // Nothing is entered:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
-        roomIdToolTipText = utils::richText(tr("Set the number of the room that this special exit goes to."));
+        roomIdToolTipText = utils::richText(tr("Set the number of the room that this special exit goes to or use zero to make this a stub."));
     } else {
         // Something else that isn't a positive number:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
@@ -859,7 +859,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
     normalExitEdited(text, nw, noroute_nw, weight_nw,
                      doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northwest of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northwest of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room northwest of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -868,7 +868,7 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
     normalExitEdited(text, n, noroute_n, weight_n,
                      doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room north of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room north of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room north of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -877,7 +877,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
     normalExitEdited(text, ne, noroute_ne, weight_ne,
                      doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northeast of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northeast of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room northeast of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -886,7 +886,7 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
     normalExitEdited(text, up, noroute_up, weight_up,
                      doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room up from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room up from this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room up from this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -895,7 +895,7 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
     normalExitEdited(text, w, noroute_w, weight_w,
                      doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room west of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room west of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room west of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -904,7 +904,7 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
     normalExitEdited(text, e, noroute_e, weight_e,
                      doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room east of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room east of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room east of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -913,7 +913,7 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
     normalExitEdited(text, down, noroute_down, weight_down,
                      doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room down from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room down from this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room down from this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -922,7 +922,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
     normalExitEdited(text, sw, noroute_sw, weight_sw,
                      doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southwest of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southwest of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room southwest of this on or use zero to make a stub for this direction..")));
     slot_checkModified();
 }
@@ -931,7 +931,7 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
     normalExitEdited(text, s, noroute_s, weight_s,
                      doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room south of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room south of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room south of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -940,7 +940,7 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
     normalExitEdited(text, se, noroute_se, weight_se,
                      doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southeast of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southeast of this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room southeast of this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -949,7 +949,7 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
     normalExitEdited(text, in, noroute_in, weight_in,
                      doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room in from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room in from this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room in from this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -958,7 +958,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     normalExitEdited(text, out, noroute_out, weight_out,
                      doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room out from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room out from this one or use zero to make this a stub.")),
                      utils::richText(tr("Set the number of the room out from this one or use zero to make a stub for this direction.")));
     slot_checkModified();
 }
@@ -1089,29 +1089,29 @@ void dlgRoomExits::init()
     // Because we are manipulating the settings for the exit we need to know
     // explicitly where the weight comes from, pR->getExitWeight() hides that
     // detail deliberately for normal usage
-    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw, utils::richText(tr("Set the number of the room northwest of this one.")));
+    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw, utils::richText(tr("Set the number of the room northwest of this one or use zero to make this a stub.")));
 
-    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n, utils::richText(tr("Set the number of the room north of this one.")));
+    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n, utils::richText(tr("Set the number of the room north of this one or use zero to make this a stub.")));
 
-    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne, utils::richText(tr("Set the number of the room northeast of this one.")));
+    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne, utils::richText(tr("Set the number of the room northeast of this one or use zero to make this a stub.")));
 
-    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up, utils::richText(tr("Set the number of the room up from this one.")));
+    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up, utils::richText(tr("Set the number of the room up from this one or use zero to make this a stub.")));
 
-    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w, utils::richText(tr("Set the number of the room west of this one.")));
+    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w, utils::richText(tr("Set the number of the room west of this one or use zero to make this a stub.")));
 
-    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e, utils::richText(tr("Set the number of the room east of this one.")));
+    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e, utils::richText(tr("Set the number of the room east of this one or use zero to make this a stub.")));
 
-    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down, utils::richText(tr("Set the number of the room down from this one.")));
+    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down, utils::richText(tr("Set the number of the room down from this one or use zero to make this a stub.")));
 
-    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw, utils::richText(tr("Set the number of the room southwest of this one.")));
+    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw, utils::richText(tr("Set the number of the room southwest of this one or use zero to make this a stub.")));
 
-    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s, utils::richText(tr("Set the number of the room south of this one.")));
+    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s, utils::richText(tr("Set the number of the room south of this one or use zero to make this a stub.")));
 
-    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se, utils::richText(tr("Set the number of the room southeast of this one.")));
+    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se, utils::richText(tr("Set the number of the room southeast of this one or use zero to make this a stub.")));
 
-    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in, utils::richText(tr("Set the number of the room in from this one.")));
+    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in, utils::richText(tr("Set the number of the room in from this one or use zero to make this a stub.")));
 
-    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, utils::richText(tr("Set the number of the room out from this one.")));
+    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, utils::richText(tr("Set the number of the room out from this one or use zero to make this a stub.")));
 
     QMapIterator<QString, int> it(pR->getSpecialExits(true));
     while (it.hasNext()) {
