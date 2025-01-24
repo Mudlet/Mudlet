@@ -282,7 +282,8 @@ public slots:
     void slot_rightSplitterMoved(const int pos, const int handle);
     void slot_scriptMainAreaDeleteHandler();
     void slot_scriptMainAreaAddHandler();
-    void slot_scriptMainAreaEditHandler(QListWidgetItem*);
+    void slot_scriptMainAreaEditHandler();
+    void slot_scriptMainAreaClearHandlerSelection(QListWidgetItem *);
     void slot_keyGrab();
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
