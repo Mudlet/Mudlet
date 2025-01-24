@@ -13359,12 +13359,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2486"/>
       <source>Lower level color:</source>
-      <translation type="unfinished"/>
+      <translation>Colore livello inferiore:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2506"/>
       <source>Upper level color:</source>
-      <translation type="unfinished"/>
+      <translation>Colore livello superiore:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2526"/>
