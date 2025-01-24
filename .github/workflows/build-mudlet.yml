@@ -157,6 +157,9 @@ jobs:
         # these aren't available or don't work well in vcpkg
         BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect")
 
+        # these are available in vcpkg but not working in our old version
+        BREWS+=("hunspell")
+
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
           if ! brew list --formula "{brew}" &>/dev/null; then
