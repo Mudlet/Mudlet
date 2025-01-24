@@ -13253,12 +13253,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2486"/>
       <source>Lower level color:</source>
-      <translation type="unfinished"/>
+      <translation>Lower level colour:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2506"/>
       <source>Upper level color:</source>
-      <translation type="unfinished"/>
+      <translation>Upper level colour:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2526"/>
