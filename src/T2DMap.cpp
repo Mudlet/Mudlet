@@ -601,7 +601,9 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                              const float rx,
                              const float ry,
                              const QMap<int, QPointF>& areaExitsMap,
-                             const bool showRoomCollision)
+                             const bool showRoomCollision,
+                             const QSet<QPair<int, quint8>>& nonXYCustomLineLessExitsRooms,
+                             const QSet<int>& specialStubWithoutCustomLineRooms)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -698,14 +700,30 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     painter.setBrush(roomColor);
 
     if (showRoomCollision) {
+        // This room collides with another
         roomPen.setColor(mpHost->mRoomCollisionBorderColor);
-    } else if (shouldDrawBorder) {
-        if (mRoomWidth >= 12) {
-            roomPen.setColor(mpHost->mRoomBorderColor);
-        } else if (shouldDrawBorder) {
-            auto fadingColor = QColor(mpHost->mRoomBorderColor);
-            fadingColor.setAlpha(255 * (mRoomWidth / 12));
-            roomPen.setColor(fadingColor);
+    } else {
+        if (nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_OTHER))) {
+            // This room has a real special exit without a custom line
+            roomPen.setColor(mpHost->mFgColor_2);
+            roomPen.setStyle(Qt::DashLine);
+        } else {
+            if (specialStubWithoutCustomLineRooms.contains(currentRoomId)) {
+                // This room has a special stub exit without a custom line
+                roomPen.setColor(mpHost->mFgColor_2);
+                roomPen.setStyle(Qt::DotLine);
+            } else {
+                if (shouldDrawBorder) {
+                    // The user wants borders:
+                    if (mRoomWidth >= 12) {
+                        roomPen.setColor(mpHost->mRoomBorderColor);
+                    } else if (shouldDrawBorder) {
+                        auto fadingColor = QColor(mpHost->mRoomBorderColor);
+                        fadingColor.setAlpha(255 * (mRoomWidth / 12));
+                        roomPen.setColor(fadingColor);
+                    }
+                }
+            }
         }
     }
 
@@ -920,7 +938,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 
     QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
-    if (pRoom->getUp() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_UP)).count()) {
+    if (pRoom->getUp() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_UP))) {
         // We now only draw this triangular symbol if there is NOT a custom exit
         // line for this exit (or stub):
         QPolygonF poly_up;
@@ -968,7 +986,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getDown() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_DOWN)).count()) {
+    if (pRoom->getDown() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_DOWN))) {
         QPolygonF poly_down;
         poly_down.append(QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)));
         poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
@@ -1011,7 +1029,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getIn() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_IN)).count()) {
+    if (pRoom->getIn() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_IN))) {
         QPolygonF poly_in_left;
         QPolygonF poly_in_right;
         poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
@@ -1060,7 +1078,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getOut() >= 0 && !pRoom->customLines.value(TRoom::dirCodeToShortString(DIR_OUT)).count()) {
+    if (pRoom->getOut() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_OUT))) {
         QPolygonF poly_out_left;
         QPolygonF poly_out_right;
         poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry));
@@ -1481,9 +1499,21 @@ void T2DMap::paintEvent(QPaintEvent* e)
         itRoom.toFront();
     }
 
+    // first is the roomID, second is the DIR_XXXX (in range DIR_UP to DIR_OTHER)
+    // of an exit where we do NOT have a custom exit line so must draw the
+    // triangle marks for the "normal" exits or a modified room border for the
+    // "special" exits:
+    QSet<QPair<int, quint8>> roomsWithNonXYPlainExitsWithoutCustomLines;
+    // RoomIDs where we must draw a modified room border to indicate a special
+    // stub exit IF and only IF there isn't an QPair<roomID, DIR_OTHER> entry
+    // in the prior container:
+    QSet<int> roomsWithSpecialStubExitWithoutCustomLine;
     // draw room exits
     if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel,
+                       exitWidth, areaExitsMap,
+                       roomsWithNonXYPlainExitsWithoutCustomLines,
+                       roomsWithSpecialStubExitWithoutCustomLine);
     }
 
     // now draw rooms on selected z-level
@@ -1513,14 +1543,24 @@ void T2DMap::paintEvent(QPaintEvent* e)
             const QPair<int, int> roomPos{room->x(), room->y()};
             const bool roomCollision = usedRoomPositions.contains(roomPos);
             usedRoomPositions.insert(roomPos);
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap, roomCollision);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode,
+                     isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId,
+                     rx, ry, areaExitsMap, roomCollision,
+                     roomsWithNonXYPlainExitsWithoutCustomLines,
+                     roomsWithSpecialStubExitWithoutCustomLine);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
         const QPair<int, int> roomPos{pPlayerRoom->x(), pPlayerRoom->y()};
         const bool roomCollision = usedRoomPositions.contains(roomPos);
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap, roomCollision);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode,
+                 isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId,
+                 static_cast<float>(playerRoomOnWidgetCoordinates.x()),
+                 static_cast<float>(playerRoomOnWidgetCoordinates.y()),
+                 areaExitsMap, roomCollision,
+                 roomsWithNonXYPlainExitsWithoutCustomLines,
+                 roomsWithSpecialStubExitWithoutCustomLine);
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -1692,7 +1732,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 // the "exitLine". Various features of the QPen that is used are redefined
 // as appropriate - but they are restored afterwards so there should be
 // no change to the QPainter as a result of calling this method.
-void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
+/* inline */ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
 {
     // A set of numbers that can be converted to "static" type and be frobbed
     // during development:
@@ -1759,7 +1799,11 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
+void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
+                            QList<int>& oneWayExits, const TArea* pArea, int zLevel,
+                            float exitWidth, QMap<int, QPointF>& areaExitsMap,
+                            QSet<QPair<int, quint8>>& nonXYCustomLineLessExitsRooms,
+                            QSet<int>& specialStubWithoutCustomLineRooms)
 {
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
@@ -1802,8 +1846,8 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
     }
     QSetIterator<int> itRoom2(pArea->getAreaRooms());
     while (itRoom2.hasNext()) {
-        const int _id = itRoom2.next();
-        TRoom* room = mpMap->mpRoomDB->getRoom(_id);
+        const int currentRoomID = itRoom2.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(currentRoomID);
         if (!room) {
             continue;
         }
@@ -1853,7 +1897,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getNorth());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
                 if (pER) {
-                    if (pER->getSouth() != _id) {
+                    if (pER->getSouth() != currentRoomID) {
                         oneWayExits.push_back(room->getNorth());
                     }
                 }
@@ -1862,7 +1906,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getNortheast());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
                 if (pER) {
-                    if (pER->getSouthwest() != _id) {
+                    if (pER->getSouthwest() != currentRoomID) {
                         oneWayExits.push_back(room->getNortheast());
                     }
                 }
@@ -1871,7 +1915,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getEast());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
                 if (pER) {
-                    if (pER->getWest() != _id) {
+                    if (pER->getWest() != currentRoomID) {
                         oneWayExits.push_back(room->getEast());
                     }
                 }
@@ -1880,7 +1924,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getSoutheast());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
                 if (pER) {
-                    if (pER->getNorthwest() != _id) {
+                    if (pER->getNorthwest() != currentRoomID) {
                         oneWayExits.push_back(room->getSoutheast());
                     }
                 }
@@ -1889,7 +1933,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getSouth());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
                 if (pER) {
-                    if (pER->getNorth() != _id) {
+                    if (pER->getNorth() != currentRoomID) {
                         oneWayExits.push_back(room->getSouth());
                     }
                 }
@@ -1898,7 +1942,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getSouthwest());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
                 if (pER) {
-                    if (pER->getNortheast() != _id) {
+                    if (pER->getNortheast() != currentRoomID) {
                         oneWayExits.push_back(room->getSouthwest());
                     }
                 }
@@ -1907,7 +1951,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getWest());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
                 if (pER) {
-                    if (pER->getEast() != _id) {
+                    if (pER->getEast() != currentRoomID) {
                         oneWayExits.push_back(room->getWest());
                     }
                 }
@@ -1916,7 +1960,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(room->getNorthwest());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
                 if (pER) {
-                    if (pER->getSoutheast() != _id) {
+                    if (pER->getSoutheast() != currentRoomID) {
                         oneWayExits.push_back(room->getNorthwest());
                     }
                 }
@@ -1927,7 +1971,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getSouth() != _id) {
+                    if (pER->getSouth() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1937,7 +1981,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getSouthwest() != _id) {
+                    if (pER->getSouthwest() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1947,7 +1991,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getWest() != _id) {
+                    if (pER->getWest() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1957,7 +2001,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getNorthwest() != _id) {
+                    if (pER->getNorthwest() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1967,7 +2011,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getNorth() != _id) {
+                    if (pER->getNorth() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1977,7 +2021,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getNortheast() != _id) {
+                    if (pER->getNortheast() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1987,7 +2031,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getEast() != _id) {
+                    if (pER->getEast() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -1997,7 +2041,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER) {
-                    if (pER->getSoutheast() != _id) {
+                    if (pER->getSoutheast() != currentRoomID) {
                         oneWayExits.push_back(exitRoomId);
                     }
                 }
@@ -2010,7 +2054,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             while (itk.hasNext()) {
                 itk.next();
                 QColor customLineColor;
-                if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
+                if (currentRoomID == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
                     customLineColor = QColor(255, 155, 55);
                 } else {
                     customLineColor = room->customLinesColor.value(itk.key(), Qt::red);
@@ -2113,7 +2157,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                         painter.drawPolygon(_poly);
                     }
 
-                    if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
+                    if (currentRoomID == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
                         const QPen _savedPen = painter.pen();
                         QPen _pen;
                         const QBrush _brush = painter.brush();
@@ -2182,13 +2226,11 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         drawExitStubs(DIR_WEST);
         drawExitStubs(DIR_NORTHWEST);
 
-        // Draw a marker for any special exits that do not have exit lines or
-        // are stubs. In the past we only drew special exits which did have
-        // custom lines, but we now support having special exit stubs so this
-        // can now indicate BOTH - but not at the same time - a real exit has
-        // priority:
-        bool hasSpecialExitStubWithoutCustomLine = false;
-        bool hasSpecialExitWithoutCustomLine = false;
+        // Record that we need to mark any special exits that do not have exit
+        // lines or are stubs. In the past we only drew special exits which did
+        // have custom lines, but we now support having special exit stubs so
+        // this can now indicate BOTH - but not at the same time - a real exit
+        // has priority:
         // Use true in TRoom::getSpecialExits(...) to include stub exits:
         QMapIterator<QString, int> itSpecialExit(room->getSpecialExits(true));
         while (itSpecialExit.hasNext()) {
@@ -2196,36 +2238,19 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             if (!room->customLines.value(itSpecialExit.key()).size()) {
                 // This special exit does NOT have a custom line
                 if (itSpecialExit.value()) {
-                    // And it is a real exit
-                    hasSpecialExitWithoutCustomLine = true;
+                    // And it is a real exit so record it in the appropriate
+                    // container:
+                    nonXYCustomLineLessExitsRooms.insert(qMakePair(currentRoomID, DIR_OTHER));
                     // No need to check the rest as we have already established
                     // what we need to indicate
                     break;
                 } else {
-                    hasSpecialExitStubWithoutCustomLine = true;
+                    specialStubWithoutCustomLineRooms.insert(currentRoomID);
                     // We don't break for this case because we might have a real
                     // exit that will override what we would otherwise draw for
                     // this special stub
                 }
             }
-        }
-        if (hasSpecialExitWithoutCustomLine || hasSpecialExitStubWithoutCustomLine) {
-            painter.save();
-            const float roomRadius = mRoomWidth * 0.75;
-            const QPointF roomCenter = QPointF(rx, ry);
-
-            QPen hiddenExitPen(mpHost->mFgColor_2); // Exit colour
-            hiddenExitPen.setWidth(mRoomWidth * 0.1);
-            if (!hasSpecialExitWithoutCustomLine) {
-                // Use a dotted line for special stub exits
-                hiddenExitPen.setStyle(Qt::DotLine);
-            }
-            QPainterPath myPath;
-            painter.setPen(hiddenExitPen);
-            painter.setBrush(Qt::NoBrush);
-            myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(myPath);
-            painter.restore();
         }
 
         for (const int& k : exitList) {
@@ -2444,7 +2469,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         // have been drawn otherwise later drawn rooms will overwrite the
         // mark, especially on areas in gridmode.
         // The first test will (usefully) skip trying this on stub custom lines
-        if (customLineDestinationTarget > 0 && customLineDestinationTarget == _id) {
+        if (customLineDestinationTarget > 0 && customLineDestinationTarget == currentRoomID) {
             const QPen savePen = painter.pen();
             const QBrush saveBrush = painter.brush();
             const float roomRadius = mRoomWidth * 1.2;
