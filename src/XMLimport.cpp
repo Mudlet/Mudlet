@@ -713,6 +713,17 @@ void XMLimport::readHostPackage()
     }
 }
 
+inline static QColor colorFromText(QAnyStringView text) {
+// QColor::setNamedColor(...) is depracated since Qt 6.6
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+    QColor color;
+    color.setNamedColor(text);
+    return color;
+#else
+    return QColor::fromString(text);
+#endif
+}
+
 void XMLimport::readHost(Host* pHost)
 {
     auto setBoolAttributeWithDefault = [&](const QString& attribute, bool& target, const bool defaultsTo) {
@@ -892,14 +903,8 @@ void XMLimport::readHost(Host* pHost)
         styleCode = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomStyle")).toInt(), 255));
         outerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomOuterDiameter")).toInt(), 255));
         innerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomInnerDiameter")).toInt(), 255));
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-        // QColor::setNamedColor(...) is depracated since Qt 6.6
-        outerColor.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
-        innerColor.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
-#else
-        outerColor = QColor::fromString(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
-        innerColor = QColor::fromString(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
-#endif
+        outerColor = colorFromText(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
+        innerColor = colorFromText(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
         // Store all the settings in the Host instance:
         pHost->setPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
 
@@ -1070,95 +1075,49 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                pHost->mCommandLineFgColor.setNamedColor(readElementText());
+                pHost->mCommandLineFgColor = colorFromText(readElementText());
             } else if (name() == qsl("mCommandLineBgColor")) {
-                pHost->mCommandLineBgColor.setNamedColor(readElementText());
+                pHost->mCommandLineBgColor = colorFromText(readElementText());
             } else if (name() == qsl("mFgColor")) {
-                pHost->mFgColor.setNamedColor(readElementText());
+                pHost->mFgColor = colorFromText(readElementText());
             } else if (name() == qsl("mBgColor")) {
-                pHost->mBgColor.setNamedColor(readElementText());
+                pHost->mBgColor = colorFromText(readElementText());
             } else if (name() == qsl("mCommandFgColor")) {
-                pHost->mCommandFgColor.setNamedColor(readElementText());
+                pHost->mCommandFgColor = colorFromText(readElementText());
             } else if (name() == qsl("mCommandBgColor")) {
-                pHost->mCommandBgColor.setNamedColor(readElementText());
+                pHost->mCommandBgColor = colorFromText(readElementText());
             } else if (name() == qsl("mBlack")) {
-                pHost->mBlack.setNamedColor(readElementText());
+                pHost->mBlack = colorFromText(readElementText());
             } else if (name() == qsl("mLightBlack")) {
-                pHost->mLightBlack.setNamedColor(readElementText());
+                pHost->mLightBlack = colorFromText(readElementText());
             } else if (name() == qsl("mRed")) {
-                pHost->mRed.setNamedColor(readElementText());
+                pHost->mRed = colorFromText(readElementText());
             } else if (name() == qsl("mLightRed")) {
-                pHost->mLightRed.setNamedColor(readElementText());
+                pHost->mLightRed = colorFromText(readElementText());
             } else if (name() == qsl("mBlue")) {
-                pHost->mBlue.setNamedColor(readElementText());
+                pHost->mBlue = colorFromText(readElementText());
             } else if (name() == qsl("mLightBlue")) {
-                pHost->mLightBlue.setNamedColor(readElementText());
+                pHost->mLightBlue = colorFromText(readElementText());
             } else if (name() == qsl("mGreen")) {
-                pHost->mGreen.setNamedColor(readElementText());
+                pHost->mGreen = colorFromText(readElementText());
             } else if (name() == qsl("mLightGreen")) {
-                pHost->mLightGreen.setNamedColor(readElementText());
+                pHost->mLightGreen = colorFromText(readElementText());
             } else if (name() == qsl("mYellow")) {
-                pHost->mYellow.setNamedColor(readElementText());
+                pHost->mYellow = colorFromText(readElementText());
             } else if (name() == qsl("mLightYellow")) {
-                pHost->mLightYellow.setNamedColor(readElementText());
+                pHost->mLightYellow = colorFromText(readElementText());
             } else if (name() == qsl("mCyan")) {
-                pHost->mCyan.setNamedColor(readElementText());
+                pHost->mCyan = colorFromText(readElementText());
             } else if (name() == qsl("mLightCyan")) {
-                pHost->mLightCyan.setNamedColor(readElementText());
+                pHost->mLightCyan = colorFromText(readElementText());
             } else if (name() == qsl("mMagenta")) {
-                pHost->mMagenta.setNamedColor(readElementText());
+                pHost->mMagenta = colorFromText(readElementText());
             } else if (name() == qsl("mLightMagenta")) {
-                pHost->mLightMagenta.setNamedColor(readElementText());
+                pHost->mLightMagenta = colorFromText(readElementText());
             } else if (name() == qsl("mWhite")) {
-                pHost->mWhite.setNamedColor(readElementText());
+                pHost->mWhite = colorFromText(readElementText());
             } else if (name() == qsl("mLightWhite")) {
-                pHost->mLightWhite.setNamedColor(readElementText());
-#else
-                pHost->mCommandLineFgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mCommandLineBgColor")) {
-                pHost->mCommandLineBgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mFgColor")) {
-                pHost->mFgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mBgColor")) {
-                pHost->mBgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mCommandFgColor")) {
-                pHost->mCommandFgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mCommandBgColor")) {
-                pHost->mCommandBgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mBlack")) {
-                pHost->mBlack = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightBlack")) {
-                pHost->mLightBlack = QColor::fromString(readElementText());
-            } else if (name() == qsl("mRed")) {
-                pHost->mRed = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightRed")) {
-                pHost->mLightRed = QColor::fromString(readElementText());
-            } else if (name() == qsl("mBlue")) {
-                pHost->mBlue = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightBlue")) {
-                pHost->mLightBlue = QColor::fromString(readElementText());
-            } else if (name() == qsl("mGreen")) {
-                pHost->mGreen = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightGreen")) {
-                pHost->mLightGreen = QColor::fromString(readElementText());
-            } else if (name() == qsl("mYellow")) {
-                pHost->mYellow = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightYellow")) {
-                pHost->mLightYellow = QColor::fromString(readElementText());
-            } else if (name() == qsl("mCyan")) {
-                pHost->mCyan = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightCyan")) {
-                pHost->mLightCyan = QColor::fromString(readElementText());
-            } else if (name() == qsl("mMagenta")) {
-                pHost->mMagenta = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightMagenta")) {
-                pHost->mLightMagenta = QColor::fromString(readElementText());
-            } else if (name() == qsl("mWhite")) {
-                pHost->mWhite = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightWhite")) {
-                pHost->mLightWhite = QColor::fromString(readElementText());
-#endif
+                pHost->mLightWhite = colorFromText(readElementText());
             } else if (name() == qsl("mDisplayFont")) {
                 pHost->setDisplayFontFromString(readElementText());
 #if defined(Q_OS_LINUX)
@@ -1180,99 +1139,49 @@ void XMLimport::readHost(Host* pHost)
                 // readUnknownElement(...) for "anything not otherwise parsed"
                 Q_UNUSED(readElementText())
             } else if (name() == qsl("mFgColor2")) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                pHost->mFgColor_2.setNamedColor(readElementText());
+                pHost->mFgColor_2 = colorFromText(readElementText());
             } else if (name() == qsl("mBgColor2")) {
-                pHost->mBgColor_2.setNamedColor(readElementText());
-            } else if (name() == qsl("mLowerLevelColor")) {
-                pHost->mLowerLevelColor.setNamedColor(readElementText());
-            } else if (name() == qsl("mUpperLevelColor")) {
-                pHost->mUpperLevelColor.setNamedColor(readElementText());
+                pHost->mBgColor_2 = colorFromText(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
-                pHost->mRoomBorderColor.setNamedColor(readElementText());
+                pHost->mRoomBorderColor = colorFromText(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
-                pHost->mRoomCollisionBorderColor.setNamedColor(readElementText());
+                pHost->mRoomCollisionBorderColor = colorFromText(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
-                pHost->mMapInfoBg.setNamedColor(readElementText());
+                pHost->mMapInfoBg = colorFromText(readElementText());
                 pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == qsl("mBlack2")) {
-                pHost->mBlack_2.setNamedColor(readElementText());
+                pHost->mBlack_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightBlack2")) {
-                pHost->mLightBlack_2.setNamedColor(readElementText());
+                pHost->mLightBlack_2 = colorFromText(readElementText());
             } else if (name() == qsl("mRed2")) {
-                pHost->mRed_2.setNamedColor(readElementText());
+                pHost->mRed_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightRed2")) {
-                pHost->mLightRed_2.setNamedColor(readElementText());
+                pHost->mLightRed_2 = colorFromText(readElementText());
             } else if (name() == qsl("mBlue2")) {
-                pHost->mBlue_2.setNamedColor(readElementText());
+                pHost->mBlue_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightBlue2")) {
-                pHost->mLightBlue_2.setNamedColor(readElementText());
+                pHost->mLightBlue_2 = colorFromText(readElementText());
             } else if (name() == qsl("mGreen2")) {
-                pHost->mGreen_2.setNamedColor(readElementText());
+                pHost->mGreen_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightGreen2")) {
-                pHost->mLightGreen_2.setNamedColor(readElementText());
+                pHost->mLightGreen_2 = colorFromText(readElementText());
             } else if (name() == qsl("mYellow2")) {
-                pHost->mYellow_2.setNamedColor(readElementText());
+                pHost->mYellow_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightYellow2")) {
-                pHost->mLightYellow_2.setNamedColor(readElementText());
+                pHost->mLightYellow_2 = colorFromText(readElementText());
             } else if (name() == qsl("mCyan2")) {
-                pHost->mCyan_2.setNamedColor(readElementText());
+                pHost->mCyan_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightCyan2")) {
-                pHost->mLightCyan_2.setNamedColor(readElementText());
+                pHost->mLightCyan_2 = colorFromText(readElementText());
             } else if (name() == qsl("mMagenta2")) {
-                pHost->mMagenta_2.setNamedColor(readElementText());
+                pHost->mMagenta_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightMagenta2")) {
-                pHost->mLightMagenta_2.setNamedColor(readElementText());
+                pHost->mLightMagenta_2 = colorFromText(readElementText());
             } else if (name() == qsl("mWhite2")) {
-                pHost->mWhite_2.setNamedColor(readElementText());
+                pHost->mWhite_2 = colorFromText(readElementText());
             } else if (name() == qsl("mLightWhite2")) {
-                pHost->mLightWhite_2.setNamedColor(readElementText());
-#else
-                pHost->mFgColor_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mBgColor2")) {
-                pHost->mBgColor_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mRoomBorderColor")) {
-                pHost->mRoomBorderColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mRoomCollisionBorderColor")) {
-                pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mMapInfoBg")) {
-                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
-                pHost->mMapInfoBg = QColor::fromString(readElementText());
-                pHost->mMapInfoBg.setAlpha(alpha);
-            } else if (name() == qsl("mBlack2")) {
-                pHost->mBlack_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightBlack2")) {
-                pHost->mLightBlack_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mRed2")) {
-                pHost->mRed_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightRed2")) {
-                pHost->mLightRed_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mBlue2")) {
-                pHost->mBlue_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightBlue2")) {
-                pHost->mLightBlue_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mGreen2")) {
-                pHost->mGreen_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightGreen2")) {
-                pHost->mLightGreen_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mYellow2")) {
-                pHost->mYellow_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightYellow2")) {
-                pHost->mLightYellow_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mCyan2")) {
-                pHost->mCyan_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightCyan2")) {
-                pHost->mLightCyan_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mMagenta2")) {
-                pHost->mMagenta_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightMagenta2")) {
-                pHost->mLightMagenta_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mWhite2")) {
-                pHost->mWhite_2 = QColor::fromString(readElementText());
-            } else if (name() == qsl("mLightWhite2")) {
-                pHost->mLightWhite_2 = QColor::fromString(readElementText());
-#endif
+                pHost->mLightWhite_2 = colorFromText(readElementText());
             } else if (name() == qsl("mSpellDic")) {
                 pHost->setSpellDic(readElementText());
             } else if (name() == qsl("mLineSize") || name() == qsl("mRoomSize")) {
@@ -1380,23 +1289,13 @@ int XMLimport::readTrigger(TTrigger* pParent)
             } else if (name() == qsl("mCommand")) {
                 pT->mCommand = readElementText();
             } else if (name() == qsl("mFgColor")) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                pT->mFgColor.setNamedColor(readElementText());
+                pT->mFgColor = colorFromText(readElementText());
             } else if (name() == qsl("mBgColor")) {
-                pT->mBgColor.setNamedColor(readElementText());
+                pT->mBgColor = colorFromText(readElementText());
             } else if (name() == qsl("colorTriggerFgColor")) {
-                pT->mColorTriggerFgColor.setNamedColor(readElementText());
+                pT->mColorTriggerFgColor = colorFromText(readElementText());
             } else if (name() == qsl("colorTriggerBgColor")) {
-                pT->mColorTriggerBgColor.setNamedColor(readElementText());
-#else
-                pT->mFgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("mBgColor")) {
-                pT->mBgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("colorTriggerFgColor")) {
-                pT->mColorTriggerFgColor = QColor::fromString(readElementText());
-            } else if (name() == qsl("colorTriggerBgColor")) {
-                pT->mColorTriggerBgColor = QColor::fromString(readElementText());
-#endif
+                pT->mColorTriggerBgColor = colorFromText(readElementText());
             } else if (name() == qsl("mSoundFile")) {
                 pT->mSoundFile = readElementText();
             } else if (name() == qsl("regexCodeList")) {
