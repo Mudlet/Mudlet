@@ -556,6 +556,7 @@ public:
     bool mUSE_UNIX_EOL;
     int mWrapAt;
     int mWrapIndentCount;
+    int mWrapHangingIndentCount;
 
     bool mEditorAutoComplete;
 

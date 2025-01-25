@@ -928,6 +928,7 @@ void TConsole::changeColors()
     if (mType & (MainConsole|Buffer)) {
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;
+        buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
     }
 }
 
