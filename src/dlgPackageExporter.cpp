@@ -357,7 +357,7 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
     ui->lineEdit_filePath->setPlaceholderText(path);
 }
 
-void dlgPackageExporter::checkToEnableExportButton() 
+void dlgPackageExporter::checkToEnableExportButton()
 {
     QStringList missingFields;
     if (ui->lineEdit_packageName->text().isEmpty()) {
@@ -1535,7 +1535,7 @@ void dlgPackageExporter::displayResultMessage(const QString& html, const bool is
                             'upload' in between them in the source text, (associated with uploading
                             the resulting package to the Mudlet forums) should be translated.
                             */
-                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?")));
+                                tr("Why not <a href=\"https://packages.mudlet.org/upload\">upload</a> your package for other Mudlet users?")));
     ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->infoLabel->setOpenExternalLinks(true);
 }

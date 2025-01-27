@@ -6,6 +6,7 @@
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.mpackage</file>
         <file>echo.mpackage</file>
+        <file>mpkg.mpackage</file>
         <file>MedBootstrap.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>

@@ -1,7 +1,6 @@
 --triplet
 x64-osx
 yajl
-hunspell
 pugixml
 --overlay-ports=../our-vcpkg-dependencies/lua
 lua[core]
