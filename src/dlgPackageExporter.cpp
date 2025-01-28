@@ -296,7 +296,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    const QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+    const QString packagePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
@@ -357,7 +357,7 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
     ui->lineEdit_filePath->setPlaceholderText(path);
 }
 
-void dlgPackageExporter::checkToEnableExportButton() 
+void dlgPackageExporter::checkToEnableExportButton()
 {
     QStringList missingFields;
     if (ui->lineEdit_packageName->text().isEmpty()) {
@@ -438,7 +438,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            const QString profilePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+            const QString profilePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 const QString packageName = ui->packageList->currentText();
@@ -954,7 +954,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         return {false, errMsg};
     }
     // Opened/created archive file successfully
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     /*
      * From Qt Docs:
@@ -975,7 +975,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
      */
     qEnableNtfsPermissionChecks();
 #endif
-#endif // defined(Q_OS_WIN32)
+#endif // defined(Q_OS_WINDOWS)
     QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
     // relative names to use in archive:
     QStringList directoryEntries;
@@ -1012,7 +1012,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         }
     }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // Turn off permission checking on NTFS file systems
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     qt_ntfs_permission_lookup--;
@@ -1535,7 +1535,7 @@ void dlgPackageExporter::displayResultMessage(const QString& html, const bool is
                             'upload' in between them in the source text, (associated with uploading
                             the resulting package to the Mudlet forums) should be translated.
                             */
-                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?")));
+                                tr("Why not <a href=\"https://packages.mudlet.org/upload\">upload</a> your package for other Mudlet users?")));
     ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->infoLabel->setOpenExternalLinks(true);
 }

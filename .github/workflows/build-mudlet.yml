@@ -28,7 +28,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
@@ -36,19 +36,19 @@ jobs:
             triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
-            qt: '5.14.2'
+            qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
-            qt: '5.15.13'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -65,14 +65,12 @@ jobs:
         fetch-depth: 0
 
     - name: Install Qt
-      # need to install qt via homebrew for qt5 on arm64-osx
-      if: ${{ !(matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5')) }}
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: ${{ startsWith(matrix.qt, '6') && 'qt5compat qtmultimedia' || '' }}
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
       id: restore-boost
@@ -117,11 +115,6 @@ jobs:
         # dependencies needed for vcpkg specifically.
         BREWS=("automake" "autoconf" "pkg-config")
 
-        # for qt5 on arm64, also install libtool and qt@5
-        if [[ "$(uname -m)" = "arm64" && "$QT_VERSION" == 5* ]]; then
-         BREWS+=("libtool" "qt@5")
-        fi
-
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
          if ! brew list --formula "${brew}" &>/dev/null; then
@@ -164,6 +157,9 @@ jobs:
         # these aren't available or don't work well in vcpkg
         BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect")
 
+        # these are available in vcpkg but not working in our old version
+        BREWS+=("hunspell")
+
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
           if ! brew list --formula "{brew}" &>/dev/null; then
@@ -193,17 +189,6 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (macOS) Add additional paths for Qt5 on arm64 (1/1)
-      if: ${{ matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5') }}
-      run: |
-        echo "LDFLAGS=-L$(brew --prefix qt@5)/lib" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I$(brew --prefix qt@5)/include" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$(brew --prefix qt@5)/lib/pkgconfig" >> $GITHUB_ENV
-        echo "QT_PREFIX=$(brew --prefix qt@5)" >> $GITHUB_ENV
-        # both of these needed for the packager / installer on Github
-        echo "PATH=$(brew --prefix qt@5)/bin:$PATH" >> $GITHUB_ENV
-        echo "QT_DIR=$(brew --prefix qt@5)" >> $GITHUB_ENV
-
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
@@ -225,7 +210,7 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -409,8 +394,9 @@ jobs:
 
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
-      run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
+
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests

@@ -1260,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.3"
+local version = "2.1.5"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -4089,7 +4089,9 @@ end
 -- some games embed an ASCII map on the same line, which messes up the room room name
 -- extract the longest continuous piece of text from the line to be the room name
 function map.sanitizeRoomName(roomtitle)
-  assert(type(roomtitle) == "string", "map.sanitizeRoomName: bad argument #1 expected room title, got "..type(roomtitle).."!")
+  -- sometimes we get 'nil' for a room title - ignore that silently
+  if type(roomtitle) ~= "string" then return roomtitle end
+  
   if not roomtitle:match("  ") then return roomtitle end
 
   local parts = roomtitle:split("  ")
@@ -5358,7 +5360,7 @@ end
 		</Script>
 	</ScriptPackage>
 	<KeyPackage />
-	<VariablePackage>
-		<HiddenVariables />
-	</VariablePackage>
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
 </MudletPackage>

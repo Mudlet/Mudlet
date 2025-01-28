@@ -1633,7 +1633,7 @@ db.__SheetMT = {
     local sht_name = rawget(t, "_sht_name")
     local f_name = k
 
-    local errormsg = "Attempt to access field %s in sheet %s in database %s that does not exist."
+    local errormsg = "Attempt to access field '%s' which does not exist (in sheet '%s' within database '%s')"
 
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
     if assert(field, errormsg:format(k, sht_name, db_name)) then

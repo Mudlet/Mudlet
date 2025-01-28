@@ -75,7 +75,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 {
 }
 
-TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, Host* pHost)
+TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex(false)
 , mPerlSlashGOption(false)
@@ -98,6 +98,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 , mIsLineTrigger(false)
 , mStartOfLineDelta(0)
 , mLineDelta(3)
+, mIsMultiline(isMultiline)
 , mConditionLineDelta(0)
 , mpLua(mpHost->getLuaInterpreter())
 , mFgColor(QColor(Qt::red))

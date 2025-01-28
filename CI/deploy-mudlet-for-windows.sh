@@ -183,6 +183,7 @@ else
     VersionAndSha="$VERSION"
   fi
 
+  echo "VersionAndSha: $VersionAndSha"
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "$GITHUB_WORKSPACE/installers"
   cd "$GITHUB_WORKSPACE/installers/windows" || exit 1
@@ -191,20 +192,23 @@ else
   export JAVA_HOME="$(cygpath -u $JAVA_HOME_21_X64)"
   export PATH="$JAVA_HOME/bin:$PATH"
 
-  echo "=== Signing Mudlet and dll files ==="
-  if [[ "$PublicTestBuild" == "true" ]]; then
-    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
-        --keystore eus.codesigning.azure.net \
-        --storepass ${AZURE_ACCESS_TOKEN} \
-        --alias Mudlet/Mudlet \
-        "$PACKAGE_DIR/Mudlet PTB.exe" "$PACKAGE_DIR/**/*.dll"
-
+  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
+      echo "=== Code signing skipped - no Azure token provided ==="
   else
-    java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass ${AZURE_ACCESS_TOKEN} \
-      --alias Mudlet/Mudlet \
-      "$PACKAGE_DIR/Mudlet.exe" "$PACKAGE_DIR/**/*.dll"
+      echo "=== Signing Mudlet and dll files ==="
+      if [[ "$PublicTestBuild" == "true" ]]; then
+          java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+              --keystore eus.codesigning.azure.net \
+              --storepass ${AZURE_ACCESS_TOKEN} \
+              --alias Mudlet/Mudlet \
+              "$PACKAGE_DIR/Mudlet PTB.exe" "$PACKAGE_DIR/**/*.dll"
+      else
+          java.exe -jar $GITHUB_WORKSPACE/installers/windows/jsign-7.0-SNAPSHOT.jar --storetype TRUSTEDSIGNING \
+              --keystore eus.codesigning.azure.net \
+              --storepass ${AZURE_ACCESS_TOKEN} \
+              --alias Mudlet/Mudlet \
+              "$PACKAGE_DIR/Mudlet.exe" "$PACKAGE_DIR/**/*.dll"
+      fi
   fi
 
   echo "=== Installing Squirrel for Windows ==="
@@ -281,6 +285,7 @@ else
   else # release
     installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION-windows-$BUILD_BITNESS-installer.exe"
   fi
+  echo  "installerExePath: $installerExePath"
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Sign the final installer
@@ -314,6 +319,7 @@ else
     echo "=== Uploading public test build to make.mudlet.org ==="
 
     uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS-installer.exe"
+    echo "uploadFilename: $uploadFilename"
 
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
@@ -364,7 +370,7 @@ EOF
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "$current_timestamp"
 
-    curl -X POST 'https://www.mudlet.org/download-add.php' \
+    curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
@@ -406,7 +412,13 @@ EOF
   echo "$Changelog"
 
   echo "=== Creating release in Dblsqd ==="
-  VersionString="${VERSION}"
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  else # release
+    VersionString="${VERSION}"
+  fi
+  
+  echo "VersionString: $VersionString"
   export VersionString
 
   # This may fail as a build from another architecture may have already registered a release with dblsqd,
