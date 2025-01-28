@@ -778,8 +778,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_data_protocol->hide();
 
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
-    checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
+    checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader); 
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
+
+    // Block signals before setting initial state to prevent toggled signal
+    checkBox_f3SearchEnabled->blockSignals(true);
+    checkBox_f3SearchEnabled->setChecked(pHost->getF3SearchEnabled());
+    checkBox_f3SearchEnabled->blockSignals(false);
+    // Now connect the signal
+    connect(checkBox_f3SearchEnabled, &QCheckBox::toggled, pHost, &Host::setF3SearchEnabled);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -3143,7 +3150,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
-
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
