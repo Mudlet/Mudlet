@@ -422,7 +422,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
 {
     // Some constants used to prevent small, unreadable symbols:
     static const float symbolLowerSizeLimit = 8.0;
-    static unsigned const int minimumUsableFontSize = 8;
+    static const unsigned int minimumUsableFontSize = 4;
 
     // Draw onto a rectangle that will fit the room symbol rectangle,
     // Must tweak the size so it fits within circle when round room symbols are
@@ -1403,10 +1403,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
-    if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
-    }
-
     // Draw label sizing or group selection box
     if (mSizeLabel) {
         painter.fillRect(mMultiRect, QColor(250, 190, 0, 190));
@@ -1420,6 +1416,75 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QSet<QPair<int, int>> usedRoomPositions;
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
+
+    if (mudlet::self()->mDrawUpperLowerLevels) {
+        // draw room on lower z-levels
+        while (itRoom.hasNext()) {
+            const int currentAreaRoom = itRoom.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+            if (!room) {
+                continue;
+            }
+
+            if (room->z() == zLevel - 1) {
+                const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+                const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+                if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
+                    painter.save();
+                    painter.setPen(Qt::NoPen);
+                    painter.setBrush(mpHost->mLowerLevelColor);
+                    if (mBubbleMode) {
+                        const float roomRadius = 0.5 * rSize * mRoomWidth;
+                        const QPointF roomCenter = QPointF(rx - (roomRadius * rSize * 0.5), ry + (roomRadius * rSize * 0.5));
+                        QPainterPath diameterPath;
+                        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                        painter.drawPath(diameterPath);
+                    } else {
+                        painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
+                    }
+                painter.restore();
+                }
+            }
+        }
+        itRoom.toFront();
+
+        // draw rooms on upper z-levels
+        while (itRoom.hasNext()) {
+            const int currentAreaRoom = itRoom.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+            if (!room) {
+                continue;
+            }
+
+            if (room->z() == zLevel + 1) {
+                const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+                const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+                if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
+                    painter.save();
+                    painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
+                    painter.setBrush(Qt::transparent);
+                    if (mBubbleMode) {
+                        const float roomRadius = 0.5 * rSize * mRoomWidth;
+                        const QPointF roomCenter = QPointF(rx + (roomRadius * rSize * 0.5), ry - (roomRadius * rSize * 0.5));
+                        QPainterPath diameterPath;
+                        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                        painter.drawPath(diameterPath);
+                    } else {
+                        painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
+                    }
+                    painter.restore();
+                }
+            }
+        }
+        itRoom.toFront();
+    }
+
+    // draw room exits
+    if (!pDrawnArea->gridMode) {
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
+    }
+
+    // now draw rooms on selected z-level
     while (itRoom.hasNext()) {
         const int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
@@ -2502,6 +2567,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
         imagePath = mpDlgMapLabel->getImagePath();
     }
     label.bgColor = mpDlgMapLabel->getBgColor();
+    label.outlineColor = mpDlgMapLabel->getOutlineColor();
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
 
@@ -2509,19 +2575,37 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     pixmap.fill(Qt::transparent);
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
-    QPainter labelPainter(&pixmap);
-    QPen labelPen;
-    labelPainter.setFont(font);
-    labelPen.setColor(label.fgColor);
-    labelPainter.setPen(labelPen);
-    labelPainter.fillRect(drawRectangle, label.bgColor);
+    QPainter lp(&pixmap);
+    lp.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
+    lp.fillRect(drawRectangle, label.bgColor);
+    int labelWidth = drawRectangle.width();
+    int labelHeight = drawRectangle.height();
 
     if (mpDlgMapLabel->isTextLabel()) {
-        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
+
+        lp.setFont(font);
+        QRectF br;
+
+        if (label.fgColor != label.outlineColor) {
+            QPen outlinePen(label.outlineColor);
+            outlinePen.setCosmetic(mMapperUseAntiAlias);
+            outlinePen.setWidth(1);
+            lp.setPen(outlinePen);
+
+            // Draw the outline by offsetting the text slightly in all directions
+            lp.drawText(QRect(-1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(0, -1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+            lp.drawText(QRect(0, 1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
+        }
+
+        // Draw the main text on top
+        lp.setPen(label.fgColor);
+        lp.drawText(QRect(0, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignCenter, label.text, &br);
     } else {
         const QPixmap imagePixmap = QPixmap(imagePath).scaled(drawRectangle.size(), mpDlgMapLabel->stretchImage() ? Qt::IgnoreAspectRatio : Qt::KeepAspectRatio);
         auto point = mpDlgMapLabel->stretchImage() ? QPoint(0, 0) : pixmap.rect().center() - imagePixmap.rect().center();
-        labelPainter.drawPixmap(point, imagePixmap);
+        lp.drawPixmap(point, imagePixmap);
     }
 
     label.pix = pixmap.copy(drawRectangle);
@@ -4114,7 +4198,7 @@ void T2DMap::slot_loadMap() {
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(

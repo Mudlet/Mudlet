@@ -463,7 +463,6 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
-// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);
@@ -511,7 +510,7 @@ void dlgRoomExits::save()
     }
 
     // Clean up after any deleted specialExits originally present but not now so
-    for (auto value : originalExitCmds) {
+    for (const auto& value : originalExitCmds) {
         pR->customLinesArrow.remove(value);
         pR->customLinesColor.remove(value);
         pR->customLinesStyle.remove(value);

@@ -99,6 +99,9 @@ public:
     // Override the Tree version as we need to insert the id number as a
     // property into the QTimer that mpQTimer points to as well:
     void setID(int) override;
+    QString packageName(TTimer* pTimer);
+    QString moduleName(TTimer* pTimer);
+
 
 
     // specifies whenever the payload is Lua code as a string

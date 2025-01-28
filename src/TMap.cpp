@@ -72,7 +72,7 @@ TMap::~TMap()
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
                    << "------------";
-        for (auto message : mStoredMessages) {
+        for (const auto& message : mStoredMessages) {
             qWarning() << message << "\n------------";
         }
     }
@@ -549,7 +549,7 @@ void TMap::audit()
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt);
+                        const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt, l.fgColor);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 const QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -1582,7 +1582,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+        folder = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir dir(folder);
         QStringList filters;
         filters << qsl("*.[dD][aA][tT]");
@@ -1917,7 +1917,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     QString folder;
     QStringList entries;
-    folder = mudlet::getMudletPath(mudlet::profileMapsPath, profile);
+    folder = mudlet::getMudletPath(enums::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
@@ -2155,7 +2155,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 }
 
 //NOLINT(readability-make-member-function-const)
-int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName, QColor outline)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2170,25 +2170,38 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.text = text;
     label.bgColor = bg;
     label.fgColor = fg;
+    label.outlineColor = outline;
     label.size = QSizeF(100, 100);
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    const QRectF lr = QRectF(0, 0, 1000, 1000);
+    const QRectF lr = QRectF(0, 0, 2000, 2000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
+
     QPainter lp(&pix);
     lp.fillRect(lr, label.bgColor);
-    QPen lpen;
-    lpen.setColor(label.fgColor);
-    const QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
-    lp.setRenderHint(QPainter::TextAntialiasing, true);
-    lp.setPen(lpen);
+    lp.setRenderHint(QPainter::Antialiasing);
+
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setFont(font);
+
+    QPen outlinePen(label.outlineColor);
+    outlinePen.setWidth(1);
+    lp.setPen(outlinePen);
+
     QRectF br;
-    lp.drawText(lr, Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+
+    if (label.fgColor != label.outlineColor) {
+        lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    }
+    lp.setPen(label.fgColor);
+    lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
 
     label.size = br.normalized().size();
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
@@ -2417,7 +2430,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mProfileName), title));
+                    .arg(mudlet::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
     } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
@@ -2425,7 +2438,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mProfileName), title));
+                    .arg(mudlet::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2473,7 +2486,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Check to ensure we have a map directory to save the map files to.
     const QDir toProfileDir;
-    const QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+    const QString toProfileDirPathString = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
     if (!toProfileDir.mkpath(toProfileDirPathString)) {
         const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
                             "Please check that you have permissions/access to:\n"
@@ -2487,9 +2500,9 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     if (localFileName.isEmpty()) {
         if (url.toString().endsWith(QLatin1String("xml"))) {
-            mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, mProfileName);
+            mLocalMapFileName = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
-            mLocalMapFileName = mudlet::getMudletPath(mudlet::profileMapPathFileName, mProfileName, qsl("map.dat"));
+            mLocalMapFileName = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         }
     } else {
         mLocalMapFileName = localFileName;
@@ -2861,12 +2874,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QString destination{dest};
 
     if (destination.isEmpty()) {
-        const QString destFolder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+        const QString destFolder = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir destDir(destFolder);
         if (!destDir.exists()) {
             destDir.mkdir(destFolder);
         }
-        destination = mudlet::getMudletPath(mudlet::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        destination = mudlet::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     }
 
     if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {

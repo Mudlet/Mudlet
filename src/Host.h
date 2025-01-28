@@ -39,6 +39,7 @@
 #include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
+#include "enums.h"
 
 #include "pre_guard.h"
 #include <QColor>
@@ -165,6 +166,8 @@ public:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
+
 
 
     QString         getName()                        { return mHostName; }
@@ -312,8 +315,8 @@ public:
 
     void updateDisplayDimensions();
 
-    std::pair<bool, QString> installPackage(const QString&, int);
-    bool uninstallPackage(const QString&, int);
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing);
+    bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
     QString getPackageConfig(const QString&, bool isModule = false);
@@ -616,6 +619,8 @@ public:
     QColor mWhite_2{QColorConstants::LightGray};
     QColor mFgColor_2{QColorConstants::LightGray};
     QColor mBgColor_2{QColorConstants::Black};
+    QColor mLowerLevelColor{QColorConstants::DarkGray};
+    QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
 

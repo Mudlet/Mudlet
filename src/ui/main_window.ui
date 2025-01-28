@@ -143,6 +143,7 @@
     </property>
     <addaction name="dactionAbout"/>
     <addaction name="dactionUpdate"/>
+    <addaction name="dactionChangelog"/>
     <addaction name="dactionReportIssue"/>
    </widget>
    <widget class="QMenu" name="menuGames">
@@ -414,6 +415,11 @@
   <action name="dactionCloseProfile">
    <property name="text">
     <string>Close profile</string>
+   </property>
+  </action>
+  <action name="dactionChangelog">
+   <property name="text">
+    <string>Show changelog</string>
    </property>
   </action>
   <action name="dactionToggleTimeStamp">

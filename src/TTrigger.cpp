@@ -75,7 +75,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 {
 }
 
-TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, Host* pHost)
+TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex(false)
 , mPerlSlashGOption(false)
@@ -98,6 +98,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 , mIsLineTrigger(false)
 , mStartOfLineDelta(0)
 , mLineDelta(3)
+, mIsMultiline(isMultiline)
 , mConditionLineDelta(0)
 , mpLua(mpHost->getLuaInterpreter())
 , mFgColor(QColor(Qt::red))
@@ -1504,4 +1505,38 @@ void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCo
         fgColorCode = scmIgnored;
         bgColorCode = scmIgnored;
     }
+}
+
+QString TTrigger::packageName(TTrigger* pTrigger)
+{
+    if (!pTrigger) {
+        return QString();
+    }
+
+    if (!pTrigger->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
+    }
+
+    if (pTrigger->getParent()) {
+        return packageName(pTrigger->getParent());
+    }
+
+    return QString();
+}
+
+QString TTrigger::moduleName(TTrigger* pTrigger)
+{
+    if (!pTrigger) {
+        return QString();
+    }
+
+    if (!pTrigger->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
+    }
+
+    if (pTrigger->getParent()) {
+        return moduleName(pTrigger->getParent());
+    }
+
+    return QString();
 }

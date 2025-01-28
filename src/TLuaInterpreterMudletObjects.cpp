@@ -851,7 +851,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
     const int n = lua_gettop(L);
     Host& host = getHostFromLua(L);
-    QString location = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
+    QString location = mudlet::getMudletPath(enums::profileHomePath, host.getName());
     const bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     const QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
@@ -1405,17 +1405,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    int multilineDelta = -1;
-    if (lua_gettop(L) > 4) {
-        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
-    } else {
-        // Reproduce old, prior to 4.19, behaviour, in absence of argument:
-        if (parent.isEmpty() && regList.count() > 1) {
-            multilineDelta = 0;
-        }
-    }
-
-    auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script, multilineDelta);
+    auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script);
     if (triggerId == -1) {
         lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         return lua_error(L);
@@ -1455,17 +1445,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    int multilineDelta = -1;
-    if (lua_gettop(L) > 4) {
-        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
-    } else {
-        // Reproduce old, prior to 4.19, behaviour, in absence of argument:
-        if (parent.isEmpty() && regList.count() > 1) {
-            multilineDelta = 0;
-        }
-    }
-
-    auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script, multilineDelta);
+    auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script);
     if (triggerId == -1) {
         lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         return lua_error(L);
@@ -1504,17 +1484,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    int multilineDelta = -1;
-    if (lua_gettop(L) > 4) {
-        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
-    } else {
-        // Reproduce old, prior to 4.19, behaviour, in absence of argument:
-        if (parent.isEmpty() && regList.count() > 1) {
-            multilineDelta = 0;
-        }
-    }
-
-    auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script, multilineDelta);
+    auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script);
     if(triggerID == - 1) {
         lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         return lua_error(L);
@@ -2563,12 +2533,12 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         propertyList << REGEX_PERL;
     }
 
-    auto pT = new TTrigger(triggerName, patterns, propertyList, &host);
+    auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
-    pT->setIsMultiline(multiLine);
     pT->registerTrigger();
+    pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -2889,7 +2859,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
@@ -2900,6 +2870,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 
         QString url = mudlet::self()->readProfileData(profile, qsl("url"));
         QString port = mudlet::self()->readProfileData(profile, qsl("port"));
+        QString description = mudlet::self()->readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -2927,6 +2898,11 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             lua_pushstring(L, port.toUtf8().constData());
             lua_settable(L, -3);
         }
+
+        lua_pushstring(L, "description");
+        lua_pushstring(L, description.toUtf8().constData());
+        lua_settable(L, -3);
+
 
         auto host = hostManager.getHost(profile);
         const auto loaded = static_cast<bool>(host);
@@ -2959,8 +2935,6 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
-    Host& host = getHostFromLua(L);
-
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "loadProfile: profile name cannot be empty");
@@ -2991,4 +2965,38 @@ int TLuaInterpreter::loadProfile(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
+int TLuaInterpreter::closeProfile(lua_State* L)
+{
+    auto& hostManager = mudlet::self()->getHostManager();
+    QString profileName;
+
+    if (lua_gettop(L) == 0) {
+        Host& host = getHostFromLua(L);
+        profileName = host.getName();
+    } else {
+        profileName = getVerifiedString(L, __func__, 1, "profile name");
+    }
+
+    if (!mudlet::self()->profileExists(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "closeProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    if (!hostManager.hostLoaded(profileName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "closeProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
+    if (profileIndex != -1) {
+        emit mudlet::self()->mpTabBar->tabCloseRequested(profileIndex);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    return 0;
 }

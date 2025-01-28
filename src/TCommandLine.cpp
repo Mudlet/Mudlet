@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -54,6 +54,15 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setFont(mpHost->getDisplayFont());
     document()->setDocumentMargin(2);
+
+    if (mType & (MainCommandLine|ConsoleCommandLine)) {
+        // put an outline around the command line when it is integrated into
+        // bottom of a TConsole - so that it can be visually separated from
+        // the text output area - particulary when "dark" mode is in effect
+        // as that modified "Fusion" style suffers from the division being
+        // invisible without this:
+        setFrameShape(QFrame::Box);
+    }
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -1479,7 +1488,7 @@ void TCommandLine::restoreHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
@@ -1541,7 +1550,7 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);

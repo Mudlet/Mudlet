@@ -287,7 +287,7 @@ bool TRoomDB::removeRoom(int id)
             // Now we store mRoomId for each profile, we must remove any where
             // this room was used
             QList<QString> const profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys(id);
-            for (auto key : profilesWithUserInThisRoom) {
+            for (const auto& key : profilesWithUserInThisRoom) {
                 mpMap->mRoomIdHash[key] = 0;
             }
         }

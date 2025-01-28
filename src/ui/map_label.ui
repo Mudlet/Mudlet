@@ -93,12 +93,18 @@
          <string>Label text:</string>
         </property>
         <property name="buddy">
-         <cstring>lineEdit_text</cstring>
+         <cstring>plainTextEdit_labelText</cstring>
         </property>
        </widget>
       </item>
       <item row="3" column="1" colspan="2">
-       <widget class="QLineEdit" name="lineEdit_text">
+       <widget class="QPlainTextEdit" name="plainTextEdit_labelText">
+        <property name="tabChangesFocus">
+         <bool>true</bool>
+        </property>
+        <property name="lineWrapMode">
+         <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
+        </property>
         <property name="placeholderText">
          <string>My Label</string>
         </property>
@@ -163,6 +169,23 @@
        </widget>
       </item>
       <item row="7" column="0">
+       <widget class="QLabel" name="label_outline">
+        <property name="text">
+         <string>Text outline:</string>
+        </property>
+        <property name="buddy">
+         <cstring>pushButton_outlineColor</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1" colspan="2">
+       <widget class="QPushButton" name="pushButton_outlineColor">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
        <widget class="QLabel" name="label_position">
         <property name="text">
          <string>Position:</string>
@@ -172,7 +195,7 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="1" colspan="2">
+      <item row="8" column="1" colspan="2">
        <widget class="QComboBox" name="comboBox_position">
         <item>
          <property name="text">
@@ -186,7 +209,7 @@
         </item>
        </widget>
       </item>
-      <item row="8" column="1">
+      <item row="9" column="1">
        <widget class="QCheckBox" name="checkBox_scaling">
         <property name="toolTip">
          <string>&lt;p&gt;If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.&lt;/p&gt;</string>
