@@ -6354,7 +6354,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta)
+std::pair<int, QString> TLuaInterpreter::startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
 {
     TTrigger* pT = nullptr;
     QList<int> propertyList;
@@ -6362,30 +6362,29 @@ std::pair<int, QString> TLuaInterpreter::startPermColorTrigger(const QString& na
         propertyList << REGEX_COLOR_PATTERN;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger(name, patterns, propertyList, mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setName(name);
+
         pT->setRegexCodeList(patterns, propertyList);
     }
     pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
-    pT->setIsMultiline(multilineDelta >= 0);
-    pT->setConditionLineDelta(std::max(0, multilineDelta));
     pT->registerTrigger();
     pT->setScript(function);
 
+    pT->setName(name);
     updateEditor();
     return std::pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta)
+std::pair<int, QString> TLuaInterpreter::startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
 {
     TTrigger* pT = nullptr;
     QList<int> propertyList;
@@ -6393,29 +6392,27 @@ std::pair<int, QString> TLuaInterpreter::startPermExactStringTrigger(const QStri
         propertyList << REGEX_EXACT_MATCH;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger(name, patterns, propertyList, mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setName(name);
         pT->setRegexCodeList(patterns, propertyList);
     }
     pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
-    pT->setIsMultiline(multilineDelta >= 0);
-    pT->setConditionLineDelta(std::max(0, multilineDelta));
     pT->registerTrigger();
     pT->setScript(function);
 
+    pT->setName(name);
     updateEditor();
     return std::pair(pT->getID(), QString());
 }
 
-std::pair<int, QString> TLuaInterpreter::startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta)
+std::pair<int, QString> TLuaInterpreter::startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
 {
     TTrigger* pT = nullptr;
     QList<int> propertyList;
@@ -6423,24 +6420,22 @@ std::pair<int, QString> TLuaInterpreter::startPermLuaFunctionTrigger(const QStri
         propertyList << REGEX_LUA_CODE;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger(name, patterns, propertyList, mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setName(name);
         pT->setRegexCodeList(patterns, propertyList);
     }
     pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
-    pT->setIsMultiline(multilineDelta >= 0);
-    pT->setConditionLineDelta(std::max(0, multilineDelta));
     pT->registerTrigger();
     pT->setScript(function);
 
+    pT->setName(name);
     updateEditor();
     return std::pair(pT->getID(), QString());
 }

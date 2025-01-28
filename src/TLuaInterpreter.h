@@ -151,9 +151,9 @@ public:
     std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
     std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function, const int multilineDelta = -1);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
-    std::pair<int, QString> startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
-    std::pair<int, QString> startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
-    std::pair<int, QString> startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function, const int multilineDelta = -1);
+    std::pair<int, QString> startPermExactStringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermColorTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermLuaFunctionTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
     std::pair<int, QString> setScriptCode(const QString& name, const QString& luaCode, const int pos);

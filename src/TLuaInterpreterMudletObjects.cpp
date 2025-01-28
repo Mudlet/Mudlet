@@ -1247,18 +1247,7 @@ int TLuaInterpreter::permColorTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    int multilineDelta = -1;
-    if (lua_gettop(L) > 4) {
-        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
-    } else {
-        // Reproduce old, prior to 4.19, behaviour in other trigger types, in
-        // absence of argument:
-        if (parent.isEmpty() && regList.count() > 1) {
-            multilineDelta = 0;
-        }
-    }
-
-    auto [triggerId, message] = pLuaInterpreter->startPermColorTrigger(name, parent, regList, script, multilineDelta);
+    auto [triggerId, message] = pLuaInterpreter->startPermColorTrigger(name, parent, regList, script);
     if (triggerId == -1) {
         lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         lua_error(L);
@@ -1311,18 +1300,7 @@ int TLuaInterpreter::permExactMatchStringTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    int multilineDelta = -1;
-    if (lua_gettop(L) > 4) {
-        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
-    } else {
-        // Reproduce old, prior to 4.19, behaviour in other trigger types, in
-        // absence of argument:
-        if (parent.isEmpty() && regList.count() > 1) {
-            multilineDelta = 0;
-        }
-    }
-
-    auto [triggerId, message] = pLuaInterpreter->startPermExactStringTrigger(name, parent, regList, script, multilineDelta);
+    auto [triggerId, message] = pLuaInterpreter->startPermExactStringTrigger(name, parent, regList, script);
     if (triggerId == -1) {
         lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         lua_error(L);
@@ -1364,18 +1342,7 @@ int TLuaInterpreter::permLuaFunctionTrigger(lua_State* L)
     }
 
     const QString script{lua_tostring(L, 4)};
-    int multilineDelta = -1;
-    if (lua_gettop(L) > 4) {
-        multilineDelta = getVerifiedInt(L, __func__, 5, "AND/Multi-line trigger delta (>=0), OR/Multi-item (<0, default)", true);
-    } else {
-        // Reproduce old, prior to 4.19, behaviour in other trigger types, in
-        // absence of argument:
-        if (parent.isEmpty() && regList.count() > 1) {
-            multilineDelta = 0;
-        }
-    }
-
-    auto [triggerId, message] = pLuaInterpreter->startPermLuaFunctionTrigger(name, parent, regList, script, multilineDelta);
+    auto [triggerId, message] = pLuaInterpreter->startPermLuaFunctionTrigger(name, parent, regList, script);
     if (triggerId == -1) {
         lua_pushfstring(L, "%s: cannot create trigger (%s)", __func__, message.toUtf8().constData());
         lua_error(L);
