@@ -243,6 +243,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
+, mF3SearchEnabled(false)
 , mIsRemoteEchoingActive(false)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)

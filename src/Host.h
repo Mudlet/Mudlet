@@ -426,6 +426,13 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+    bool getF3SearchEnabled() const { return mF3SearchEnabled; }
+    void setF3SearchEnabled(const bool enabled) { 
+        mF3SearchEnabled = enabled;
+        if (mpConsole) {
+            mpConsole->setF3SearchEnabled(enabled);
+        }
+    }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -920,6 +927,9 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Whether F3 search functionality is enabled
+    bool mF3SearchEnabled = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:

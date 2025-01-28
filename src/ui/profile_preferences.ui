@@ -3802,6 +3802,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_f3SearchEnabled">
+            <property name="toolTip">
+             <string>Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer</string>
+            </property>
+            <property name="text">
+             <string>Enable F3 search shortcuts</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

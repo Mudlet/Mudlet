@@ -7375,6 +7375,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("f3SearchEnabled")) {
+        const bool value = getVerifiedBool(L, __func__, 2, "value");
+        host.setF3SearchEnabled(value);
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7483,7 +7488,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "asis");
             }
         } },
-        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } } //, <- not needed until another one is added
+        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
+        { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } } //, <- not needed until another one is added
     };
 
     auto it = configMap.find(key);
