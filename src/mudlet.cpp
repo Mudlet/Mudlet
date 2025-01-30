@@ -5078,6 +5078,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/echo.mpackage"),                          {qsl("*")}},
         {qsl(":/deleteOldProfiles.mpackage"),             {qsl("*")}},
         {qsl(":/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/mpkg.mpackage"),                    {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
