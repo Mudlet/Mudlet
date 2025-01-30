@@ -284,7 +284,7 @@ public:
      *   directly into the TArea class serialization - for lower map versions it
      *   is placed into a "system.fallback_map2DZoom" value in the Area userdata.
      *   SlySven - 2023/03
-     * Stubs have been merged into exits so that special exits can be stubified
+     * * Stubs have been merged into exits so that special exits can be stubified
      *   the destination room ID is zero. Also, all stub exits (normal AND
      *   special) can now have custom exit lines (to say point at a map label!)
      *   To allow the reproduction/retention of custom exit lines and doors data
@@ -296,9 +296,9 @@ public:
      *   Non-existant normal exits remain as -1, with 0 being a stub - a planned
      *   future development is intended to replace a fixed number of "normal"
      *   exits with a container (QHash/QMap) only populated with actual exits
-     *   or stubs.
+     *   or stubs. - 2025/01
      */
-    const int mMaxVersion = 21;
+    const int mMaxVersion = 20;
 
     // Ideally would be the same as mDefaultVersion but we have it lower,
     // particularly for release builds and is the minimum version allowed for
