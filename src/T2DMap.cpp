@@ -602,7 +602,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                              const float ry,
                              const QMap<int, QPointF>& areaExitsMap,
                              const bool showRoomCollision,
-                             const QSet<QPair<int, quint8>>& nonXYCustomLineLessExitsRooms,
+                             const QSet<QPair<int, quint8>>& roomsWithNonXYCustomLineLessExitsOrStubs,
                              const QSet<int>& specialStubWithoutCustomLineRooms)
 {
     const int currentRoomId = pRoom->getId();
@@ -703,7 +703,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         // This room collides with another
         roomPen.setColor(mpHost->mRoomCollisionBorderColor);
     } else {
-        if (nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_OTHER))) {
+        if (roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_OTHER))) {
             // This room has a real special exit without a custom line
             roomPen.setColor(mpHost->mFgColor_2);
             roomPen.setStyle(Qt::DashLine);
@@ -938,7 +938,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 
     QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
-    if (pRoom->getUp() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_UP))) {
+    if (pRoom->getUp() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_UP))) {
         // We now only draw this triangular symbol if there is NOT a custom exit
         // line for this exit (or stub):
         QPolygonF poly_up;
@@ -986,7 +986,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getDown() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_DOWN))) {
+    if (pRoom->getDown() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_DOWN))) {
         QPolygonF poly_down;
         poly_down.append(QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)));
         poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
@@ -1029,7 +1029,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getIn() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_IN))) {
+    if (pRoom->getIn() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_IN))) {
         QPolygonF poly_in_left;
         QPolygonF poly_in_right;
         poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
@@ -1078,7 +1078,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getOut() >= 0 && nonXYCustomLineLessExitsRooms.contains(qMakePair(currentRoomId, DIR_OUT))) {
+    if (pRoom->getOut() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_OUT))) {
         QPolygonF poly_out_left;
         QPolygonF poly_out_right;
         poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry));
@@ -1802,7 +1802,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
                             QList<int>& oneWayExits, const TArea* pArea, int zLevel,
                             float exitWidth, QMap<int, QPointF>& areaExitsMap,
-                            QSet<QPair<int, quint8>>& nonXYCustomLineLessExitsRooms,
+                            QSet<QPair<int, quint8>>& roomsWithNonXYCustomLineLessExitsOrStubs,
                             QSet<int>& specialStubWithoutCustomLineRooms)
 {
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
@@ -1881,171 +1881,57 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
         room->rendered = true;
 
         // exitList is a list of the destination rooms reached by exit lines
-        // that are NOT custom exit lines from this room so are places to
-        // which a straight line is to be drawn from the centre of this room
-        // to (now half way for a two-way exit) the center of the exit room,
-        // this does mean that multiple exits to the same room are drawn
+        // in the XY-plane that are NOT custom exit lines from this room so are
+        // places to which a straight line is to be drawn from the centre of
+        // this room to (now half way for a two-way exit) the center of the exit
+        // room, this does mean that multiple exits to the same room are drawn
         // on top of each other and that there is no indication from which
         // exit direction they are for...!
         exitList.clear();
         // oneWayExits contain the sub-set of exitList where the opposite
         // exit from the exit room does NOT return to the current room:
         oneWayExits.clear();
+
+        auto addToExitLists = [&] (const int dirCode) {
+            int exitRoomId = room->getExit(dirCode);
+            if (exitRoomId > 0) {
+                // It does have an exit (not a stub)
+                exitList.push_back(exitRoomId);
+                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
+                if (pER) {
+                    // The room on the other end of the exit exists
+                    if (pER->getExit(TMap::scmReverseDirections.value(dirCode)) != currentRoomID) {
+                        // But it's reverse exit does not come back to this room
+                        oneWayExits.push_back(exitRoomId);
+                    }
+                }
+            }
+        };
+
+        auto addToExitListsIfNoCustomLine = [&] (const int dirCode) {
+            if (!room->customLines.contains(TRoom::dirCodeToShortString(dirCode))) {
+                addToExitLists(dirCode);
+            }
+        };
+
         if (!room->customLines.empty()) {
-            // This room has custom exit lines:
-            if (!room->customLines.contains(key_n)) {
-                exitList.push_back(room->getNorth());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
-                if (pER) {
-                    if (pER->getSouth() != currentRoomID) {
-                        oneWayExits.push_back(room->getNorth());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_ne)) {
-                exitList.push_back(room->getNortheast());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
-                if (pER) {
-                    if (pER->getSouthwest() != currentRoomID) {
-                        oneWayExits.push_back(room->getNortheast());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_e)) {
-                exitList.push_back(room->getEast());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
-                if (pER) {
-                    if (pER->getWest() != currentRoomID) {
-                        oneWayExits.push_back(room->getEast());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_se)) {
-                exitList.push_back(room->getSoutheast());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
-                if (pER) {
-                    if (pER->getNorthwest() != currentRoomID) {
-                        oneWayExits.push_back(room->getSoutheast());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_s)) {
-                exitList.push_back(room->getSouth());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
-                if (pER) {
-                    if (pER->getNorth() != currentRoomID) {
-                        oneWayExits.push_back(room->getSouth());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_sw)) {
-                exitList.push_back(room->getSouthwest());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
-                if (pER) {
-                    if (pER->getNortheast() != currentRoomID) {
-                        oneWayExits.push_back(room->getSouthwest());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_w)) {
-                exitList.push_back(room->getWest());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
-                if (pER) {
-                    if (pER->getEast() != currentRoomID) {
-                        oneWayExits.push_back(room->getWest());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_nw)) {
-                exitList.push_back(room->getNorthwest());
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
-                if (pER) {
-                    if (pER->getSoutheast() != currentRoomID) {
-                        oneWayExits.push_back(room->getNorthwest());
-                    }
-                }
-            }
+            addToExitListsIfNoCustomLine(DIR_NORTH);
+            addToExitListsIfNoCustomLine(DIR_NORTHEAST);
+            addToExitListsIfNoCustomLine(DIR_EAST);
+            addToExitListsIfNoCustomLine(DIR_SOUTHEAST);
+            addToExitListsIfNoCustomLine(DIR_SOUTH);
+            addToExitListsIfNoCustomLine(DIR_SOUTHWEST);
+            addToExitListsIfNoCustomLine(DIR_WEST);
+            addToExitListsIfNoCustomLine(DIR_NORTHWEST);
         } else {
-            int exitRoomId = room->getNorth();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getSouth() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getNortheast();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getSouthwest() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getEast();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getWest() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getSoutheast();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getNorthwest() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getSouth();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getNorth() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getSouthwest();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getNortheast() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getWest();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getEast() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getNorthwest();
-            if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
-                    if (pER->getSoutheast() != currentRoomID) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
+            addToExitLists(DIR_NORTH);
+            addToExitLists(DIR_NORTHEAST);
+            addToExitLists(DIR_EAST);
+            addToExitLists(DIR_SOUTHEAST);
+            addToExitLists(DIR_SOUTH);
+            addToExitLists(DIR_SOUTHWEST);
+            addToExitLists(DIR_WEST);
+            addToExitLists(DIR_NORTHWEST);
         }
 
         if (!room->customLines.empty()) {
@@ -2069,31 +1955,51 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
                 // that cannot be moved - for XY-plane exits:
                 QPointF fixedOffsetPoint;
                 bool isXYPlainExit = false;
-                if (itk.key() == key_n) {
+                const int dirCode = TRoom::stringToDirCode(itk.key());
+                switch (dirCode) {
+                case DIR_NORTH:
                     fixedOffsetPoint = QPointF(ex, ey - mRoomHeight / 2.0);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_ne) {
+                    break;
+                case DIR_NORTHEAST:
                     fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_e) {
+                    break;
+                case DIR_EAST:
                     fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_se) {
+                    break;
+                case DIR_SOUTHEAST:
                     fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_s) {
+                    break;
+                case DIR_SOUTH:
                     fixedOffsetPoint = QPointF(ex, ey + mRoomHeight / 2.0);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_sw) {
+                    break;
+                case DIR_SOUTHWEST:
                     fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_w) {
+                    break;
+                case DIR_WEST:
                     fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey);
                     isXYPlainExit = true;
-                } else if (itk.key() == key_nw) {
+                    break;
+                case DIR_NORTHWEST:
                     fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
                     isXYPlainExit = true;
-                } else {
+                    break;
+                case DIR_UP:
+                    [[fallthrough]];
+                case DIR_DOWN:
+                    [[fallthrough]];
+                case DIR_IN:
+                    [[fallthrough]];
+                case DIR_OUT:
+                    [[fallthrough]];
+                case DIR_OTHER:
+                    [[fallthrough]];
+                default:
                     fixedOffsetPoint = QPointF(ex, ey);
                 }
                 QPen customLinePen = painter.pen();
@@ -2188,8 +2094,8 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
             painter.restore();
         }
 
-        // draw normal exit stubs - that do not have custom exit lines:
-        auto drawExitStubs = [&] (int direction) {
+        // draw normal XY-Plane exit stubs - that do not have custom exit lines:
+        auto drawExitStubs = [&] (const int direction) {
             if (room->getExit(direction) == 0 && !room->hasANormalExitCustomLine(direction)) {
                 // Stubs on non-XY plane exits are handled differently:
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
@@ -2226,6 +2132,21 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
         drawExitStubs(DIR_WEST);
         drawExitStubs(DIR_NORTHWEST);
 
+        // Record that we need to mark any non-XY-plane "normal" exits or stubs
+        // that do NOT have a custom exit line so they can be shown by markings
+        // on the room when we draw that:
+        auto addToExitsOrStubsWithNoCustomLine = [&] (const int direction) {
+            if (room->getExit(direction) >= 0 && !room->hasANormalExitCustomLine(direction)) {
+                // It has an exit OR a stub - but NOT a custom exit line
+                roomsWithNonXYCustomLineLessExitsOrStubs.insert(qMakePair(currentRoomID, direction));
+            }
+        };
+
+        addToExitsOrStubsWithNoCustomLine(DIR_UP);
+        addToExitsOrStubsWithNoCustomLine(DIR_DOWN);
+        addToExitsOrStubsWithNoCustomLine(DIR_IN);
+        addToExitsOrStubsWithNoCustomLine(DIR_OUT);
+
         // Record that we need to mark any special exits that do not have exit
         // lines or are stubs. In the past we only drew special exits which did
         // have custom lines, but we now support having special exit stubs so
@@ -2240,7 +2161,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
                 if (itSpecialExit.value()) {
                     // And it is a real exit so record it in the appropriate
                     // container:
-                    nonXYCustomLineLessExitsRooms.insert(qMakePair(currentRoomID, DIR_OTHER));
+                    roomsWithNonXYCustomLineLessExitsOrStubs.insert(qMakePair(currentRoomID, DIR_OTHER));
                     // No need to check the rest as we have already established
                     // what we need to indicate
                     break;
