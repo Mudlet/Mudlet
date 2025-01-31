@@ -6253,7 +6253,7 @@ Inserisci altro materiale utile, per esempio un link alla wiki di mudlet, al for
       <location filename="../src/dlgPackageExporter.cpp" line="1538"/>
       <source>Why not &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perché non &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;pubblichi&lt;/a&gt; il tuo package anche per altri utenti Mudlet?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageExporter.cpp" line="1556"/>
@@ -13374,12 +13374,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3808"/>
       <source>Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer</source>
-      <translation type="unfinished"/>
+      <translation>Abilita i tasti F3 e Maiusc+F3 di scelta rapida per cercare nel buffer</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3811"/>
       <source>Enable F3 search shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Abilita i tasti F3 di scelta rapida</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3838"/>
