@@ -602,7 +602,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                              const float ry,
                              const QMap<int, QPointF>& areaExitsMap,
                              const bool showRoomCollision,
-                             const QSet<QPair<int, quint8>>& roomsWithNonXYCustomLineLessExitsOrStubs,
+                             const QSet<QPair<int, quint8>>& roomExitsOrStubsWithoutCustomLines,
                              const QSet<int>& specialStubWithoutCustomLineRooms)
 {
     const int currentRoomId = pRoom->getId();
@@ -703,7 +703,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         // This room collides with another
         roomPen.setColor(mpHost->mRoomCollisionBorderColor);
     } else {
-        if (roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_OTHER))) {
+        if (roomExitsOrStubsWithoutCustomLines.contains(qMakePair(currentRoomId, DIR_OTHER))) {
             // This room has a real special exit without a custom line
             roomPen.setColor(mpHost->mFgColor_2);
             roomPen.setStyle(Qt::DashLine);
@@ -938,7 +938,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 
     QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
-    if (pRoom->getUp() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_UP))) {
+    if (pRoom->getUp() >= 0 && roomExitsOrStubsWithoutCustomLines.contains(qMakePair(currentRoomId, DIR_UP))) {
         // We now only draw this triangular symbol if there is NOT a custom exit
         // line for this exit (or stub):
         QPolygonF poly_up;
@@ -986,7 +986,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getDown() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_DOWN))) {
+    if (pRoom->getDown() >= 0 && roomExitsOrStubsWithoutCustomLines.contains(qMakePair(currentRoomId, DIR_DOWN))) {
         QPolygonF poly_down;
         poly_down.append(QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)));
         poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
@@ -1029,7 +1029,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getIn() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_IN))) {
+    if (pRoom->getIn() >= 0 && roomExitsOrStubsWithoutCustomLines.contains(qMakePair(currentRoomId, DIR_IN))) {
         QPolygonF poly_in_left;
         QPolygonF poly_in_right;
         poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
@@ -1078,7 +1078,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         }
     }
 
-    if (pRoom->getOut() >= 0 && roomsWithNonXYCustomLineLessExitsOrStubs.contains(qMakePair(currentRoomId, DIR_OUT))) {
+    if (pRoom->getOut() >= 0 && roomExitsOrStubsWithoutCustomLines.contains(qMakePair(currentRoomId, DIR_OUT))) {
         QPolygonF poly_out_left;
         QPolygonF poly_out_right;
         poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry));
@@ -1802,7 +1802,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
                             QList<int>& oneWayExits, const TArea* pArea, int zLevel,
                             float exitWidth, QMap<int, QPointF>& areaExitsMap,
-                            QSet<QPair<int, quint8>>& roomsWithNonXYCustomLineLessExitsOrStubs,
+                            QSet<QPair<int, quint8>>& roomExitsOrStubsWithoutCustomLines,
                             QSet<int>& specialStubWithoutCustomLineRooms)
 {
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
@@ -2138,7 +2138,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
         auto addToExitsOrStubsWithNoCustomLine = [&] (const int direction) {
             if (room->getExit(direction) >= 0 && !room->hasANormalExitCustomLine(direction)) {
                 // It has an exit OR a stub - but NOT a custom exit line
-                roomsWithNonXYCustomLineLessExitsOrStubs.insert(qMakePair(currentRoomID, direction));
+                roomExitsOrStubsWithoutCustomLines.insert(qMakePair(currentRoomID, direction));
             }
         };
 
@@ -2161,7 +2161,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList,
                 if (itSpecialExit.value()) {
                     // And it is a real exit so record it in the appropriate
                     // container:
-                    roomsWithNonXYCustomLineLessExitsOrStubs.insert(qMakePair(currentRoomID, DIR_OTHER));
+                    roomExitsOrStubsWithoutCustomLines.insert(qMakePair(currentRoomID, DIR_OTHER));
                     // No need to check the rest as we have already established
                     // what we need to indicate
                     break;
