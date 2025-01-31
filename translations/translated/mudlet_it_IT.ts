@@ -3662,7 +3662,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1581"/>
       <source>Mudlet, main console extract from %1 profile</source>
-      <translation>Mudlet, estratto della console principale dal profilo %1</translation>
+      <translation>Mudlet, estratto della finestra principale dal profilo %1</translation>
     </message>
   </context>
   <context>
@@ -9491,7 +9491,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="430"/>
       <source>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Attiva/Disattiva ora e data nella console principale.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Attiva/Disattiva ora e data nella finestra principale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="435"/>
@@ -12268,7 +12268,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
       <source>Echo Lua errors to the main console</source>
-      <translation>Mostra errori Lua nella console principale</translation>
+      <translation>Mostra errori Lua nella finestra principale</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1201"/>
