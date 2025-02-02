@@ -3073,65 +3073,95 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getOS
 int TLuaInterpreter::getOS(lua_State* L)
 {
+    auto pushProcessor = [&] () {
+#if defined(Q_PROCESSOR_IA64)
+        lua_pushstring(L, "ia64");
+        return 1;
+#elif defined(Q_PROCESSOR_X86_64)
+        lua_pushstring(L, "x86 (64-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_X86_32)
+        lua_pushstring(L, "x86 (32-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_POWER_64)
+        lua_pushstring(L, "ppc (64-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_POWER_32)
+        lua_pushstring(L, "ppc (32-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_ARM_V7)
+        lua_pushstring(L, "arm7");
+        return 1;
+#elif defined(Q_PROCESSOR_ARM_V6)
+        lua_pushstring(L, "arm6");
+        return 1;
+#elif defined(Q_PROCESSOR_ARM_V5)
+        lua_pushstring(L, "arm5");
+        return 1;
+#else
+        return 0;
+#endif
+    };
+
 #if defined(Q_OS_CYGWIN)
     // Try for this one before Q_OS_WINDOWS as both are likely to be defined on
     // a Cygwin platform
     // CHECK: hopefully will NOT be triggered on mingw/msys
     lua_pushstring(L, "cygwin");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_WINDOWS)
     lua_pushstring(L, "windows");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_LINUX)
     lua_pushstring(L, "linux");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     lua_pushstring(L, QSysInfo::productType().toUtf8().constData());
-    return 3;
+    return 3 + pushProcessor();
 #elif defined(Q_OS_HURD)
     lua_pushstring(L, "hurd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_FREEBSD)
     // Only defined on FreeBSD but NOT Debian kFreeBSD so we should check for
     // this first
     lua_pushstring(L, "freebsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_FREEBSD_KERNEL)
     // Defined for BOTH Debian kFreeBSD hybrid with a GNU userland and
     // main FreeBSD so it must be after Q_OS_FREEBSD check; included for Debian
     // packager who may want to have this!
     lua_pushstring(L, "kfreebsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_OPENBSD)
     lua_pushstring(L, "openbsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_NETBSD)
     lua_pushstring(L, "netbsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_BSD4)
     // Generic *nix - must be before unix and after other more specific results
     lua_pushstring(L, "bsd4");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_UNIX)
     // Most generic *nix - must be after bsd4 and other more specific results
     lua_pushstring(L, "unix");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #else
     lua_pushstring(L, "unknown");
     lua_pushstring(L, "unknown");
-    return 2;
+    return 2 + pushProcessor();
 #endif
 }
 
