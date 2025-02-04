@@ -1151,7 +1151,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 </size>
                </property>
                <property name="toolTip">
-                <string>&lt;p&gt;When displaying wrapped lines, lines after first line will have this amount indent&lt;/p&gt;</string>
+                <string>&lt;p&gt;Subsequent wrapped lines will be indented by this amount&lt;/p&gt;</string>
                </property>
                <property name="text">
                 <string>Indent hanging wrapped lines by:</string>
