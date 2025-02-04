@@ -4317,6 +4317,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>rightBorderWidth</tabstop>
   <tabstop>wrap_at_spinBox</tabstop>
   <tabstop>indent_wrapped_spinBox</tabstop>
+  <tabstop>hanging_indent_wrapped_spinBox</tabstop>
   <tabstop>doubleclick_ignore_lineedit</tabstop>
   <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
   <tabstop>checkBox_USE_SMALL_SCREEN</tabstop>
