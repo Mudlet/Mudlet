@@ -236,7 +236,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
-    connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateName);
+    connect(profile_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateName);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateUrl);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updatePort);
