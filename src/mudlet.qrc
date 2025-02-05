@@ -4,14 +4,15 @@
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
         <file>app-build.txt</file>
         <file>CF-loader.xml</file>
-        <file>deleteOldProfiles.xml</file>
-        <file>echo.xml</file>
+        <file>deleteOldProfiles.mpackage</file>
+        <file>echo.mpackage</file>
+        <file>mpkg.mpackage</file>
         <file>MedBootstrap.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
-        <file>icons/3klogo.png</file>
-        <file>icons/3slogo.png</file>
+        <file>icons/3Kingdoms.png</file>
+        <file>icons/3Scapes.png</file>
         <file>icons/aardwolf_mud.png</file>
         <file>icons/abandonedrealms_icon.jpg</file>
         <file>icons/accessories-text-editor.png</file>
@@ -207,14 +208,14 @@
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
         <file>mg-loader.xml</file>
-        <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
-        <file>mudlet-lua/lua/gui-drop/gui-drop.xml</file>
-        <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
+        <file>mudlet-lua/lua/generic-mapper/generic_mapper.mpackage</file>
+        <file>mudlet-lua/lua/gui-drop/gui-drop.mpackage</file>
+        <file>enable-accessibility.mpackage</file>
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>splash/Mudlet_splashscreen_main.png</file>
-        <file>run-lua-code.xml</file>
+        <file>run-lua-code.mpackage</file>
         <file>run-tests.xml</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>

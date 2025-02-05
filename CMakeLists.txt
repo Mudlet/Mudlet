@@ -36,7 +36,7 @@
 cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
-  # minimum supported version by Qt6 for our Qt5/Qt6 build compatibility
+  # minimum supported version by Qt6
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
 endif()
 
@@ -101,7 +101,7 @@ else()
 endif()
 
 # Set APP_VERSION (update in mudlet.pro as well)
-set(APP_VERSION 4.19.0)
+set(APP_VERSION 4.19.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")

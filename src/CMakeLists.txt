@@ -187,15 +187,17 @@ set(mudlet_SRCS
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
   # Sparkle updater for macOS
-  list(APPEND mudlet_SRCS sparkleupdater.mm)
-  list(APPEND mudlet_HDRS sparkleupdater.h)
-  set_source_files_properties(
-    src/sparkleupdater.mm
-    src/sparkleupdater.h
-    PROPERTIES
-    LANGUAGE OBJCXX
-    COMPILE_OPTIONS "-fobjc-arc"
-)
+  if(USE_UPDATER)
+    list(APPEND mudlet_SRCS sparkleupdater.mm)
+    list(APPEND mudlet_HDRS sparkleupdater.h)
+    set_source_files_properties(
+      src/sparkleupdater.mm
+      src/sparkleupdater.h
+      PROPERTIES
+      LANGUAGE OBJCXX
+      COMPILE_OPTIONS "-fobjc-arc"
+  )
+  endif()
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
@@ -364,7 +366,8 @@ set(mudlet_HDRS
     VarUnit.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    enums.h)
 
 if(WIN32)
   list(APPEND mudlet_HDRS uiawrapper.h)
@@ -606,7 +609,7 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
-# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
 # for an #ifdef because we need a symbol that is defined BEFORE we include
 # any Qt header file!
 if(WIN32)

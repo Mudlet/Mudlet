@@ -62,6 +62,7 @@ Q_DECLARE_METATYPE(ControlCharacterMode)
 class QCloseEvent;
 class QLineEdit;
 class QScrollBar;
+class QShortcut;
 class QToolButton;
 
 class dlgMapper;
@@ -167,9 +168,9 @@ public:
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
-    void print(const QString&, QColor fgColor, QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
+    void print(const QString& msg, QColor fgColor, QColor bgColor);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
@@ -208,6 +209,7 @@ public:
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const SearchOptions);
+    void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
     // Raises an event if the number of lines (in the
@@ -250,6 +252,7 @@ public:
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
+    int mHangingIndentCount = 0;
     QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
@@ -328,6 +331,7 @@ protected:
 private slots:
     void slot_adjustAccessibleNames();
     void slot_clearSearchResults();
+    void focusOnSearchResultAndAnnounce(int searchX, int searchY);
 
 private:
     void createSearchOptionIcon();
@@ -338,6 +342,8 @@ private:
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
+    QShortcut* searchNextShortcut = nullptr;
+    QShortcut* searchPrevShortcut = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
@@ -364,4 +370,3 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 #endif // !defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H
-

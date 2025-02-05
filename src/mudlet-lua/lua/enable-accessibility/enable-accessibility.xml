@@ -17,6 +17,11 @@ echo("Text sent to the game will not appear in the main window ✓\n")
 setConfig("caretShortcut", "ctrltab")
 echo("Shortcut to switch between input line and main window set to Ctrl+Tab. You can also change it to either Tab or F6 in settings.\n")
 
+if not getConfig("f3SearchEnabled") then
+	setConfig("f3SearchEnabled", true)
+end
+echo("F3 search functionality enabled ✓\n")
+
 if getOS() == "windows" then
   setConfig("blankLinesBehaviour", "hide")
   echo("Blank lines will be removed from the output ✓\n")

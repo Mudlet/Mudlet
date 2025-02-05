@@ -164,7 +164,7 @@ cTelnet::~cTelnet()
     }
 
     if (!messageStack.empty()) {
-#if defined (Q_OS_WIN32)
+#if defined (Q_OS_WINDOWS)
         // Windows does not seem to accept line-feeds in these strings:
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,");
         qWarning("messages are:");
@@ -173,7 +173,7 @@ cTelnet::~cTelnet()
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
 #endif
         for (const auto& message : messageStack) {
-#if defined (Q_OS_WIN32)
+#if defined (Q_OS_WINDOWS)
             qWarning("%s", qPrintable(message));
             qWarning("------------");
 #else
@@ -837,7 +837,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         }
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
-        mpHost->installPackage(mServerPackage, 0);
+        mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package);
         QString packageName = mServerPackage.section("/", -1);
         packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
         packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
@@ -981,10 +981,10 @@ QString cTelnet::getNewEnvironValueSystemType()
     // "SYSTEMTYPE" Inspired by https://www.rfc-editor.org/rfc/rfc1340.txt
     // Ordering redone to follow general format of TLuaInterpreter::getOs()
 #if defined(Q_OS_CYGWIN)
-    // Try for this one before Q_OS_WIN32 as both are likely to be defined on
+    // Try for this one before Q_OS_WINDOWS as both are likely to be defined on
     // a Cygwin platform
     systemType = qsl("CYGWIN");
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     // This is defined on BOTH Win32 and Win64 hosts - but it reflects
     // the build machine rather than the run-time one and our published
     // builds are actually 32-bit ones that can run on either. If we
@@ -2395,7 +2395,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
 
                     // Uninstall the old version
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
 
                     // Download and install the new version
                     mpHost->mServerGUI_Package_version = version;
@@ -2700,7 +2700,7 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url) {
     postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     auto request = QNetworkRequest(QUrl(url));
@@ -2753,7 +2753,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
                     .arg(version, mpHost->mServerGUI_Package_version, url));
 
         // Uninstall the old version
-        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
 
         // Download and install the new version
         mpHost->mServerGUI_Package_version = version;
@@ -3845,7 +3845,7 @@ void cTelnet::setKeepAlive(int socketHandle)
     int interval = 75;
     // send up to 10 keepalive packets out - then disconnect if no response:
     int count = 10;
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     // Both Windows 32 and 64 bit despite the "32"
 
     // Windows is hardwired to use 10 for the count value (TCP_KEEPCNT) in Vista
@@ -3911,7 +3911,7 @@ void cTelnet::setKeepAlive(int socketHandle)
     // Number of failed keep alives before forcing a close:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
 #endif // !defined(Q_OS_OPENBSD)
-#endif // !defined(Q_OS_WIN32)
+#endif // !defined(Q_OS_WINDOWS)
 }
 
 // Used to convert a collection of Bytes in the current MUD Server encoding

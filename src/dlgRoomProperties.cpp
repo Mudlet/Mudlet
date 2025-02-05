@@ -91,6 +91,12 @@ void dlgRoomProperties::init(
             comboBox_roomSymbol->lineEdit()->selectAll();
         }
     }
+    if (!lineEdit_roomSymbol->isHidden()) {
+        lineEdit_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+    }
+    if (!comboBox_roomSymbol->isHidden()) {
+        comboBox_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+    }
     initSymbolInstructions();
 
     // Configure icon display

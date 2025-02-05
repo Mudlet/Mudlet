@@ -1260,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.5"
+local version = "2.1.6"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -4090,10 +4090,21 @@ end
 -- extract the longest continuous piece of text from the line to be the room name
 function map.sanitizeRoomName(roomtitle)
   -- sometimes we get 'nil' for a room title - ignore that silently
-  if type(roomtitle) ~= "string" then return roomtitle end
-  
-  if not roomtitle:match("  ") then return roomtitle end
+  if type(roomtitle) ~= "string" then
+    return roomtitle
+  end
 
+  if not roomtitle:match("   ") then
+    -- if the whole line does not contain a run of three consecutive spaces then
+    -- consider the whole line as the room name; this was previously two spaces
+    -- but some MUDs do have titles that are multiple (short) sentances AND
+    -- put TWO spaces after a full-stop for the first (e.g. After the Plague MUD
+    -- on telnet://atp.pedia.szote.u-szeged.hu:3000)
+    return roomtitle
+  end
+
+  -- otherwise split the text up in double-spaced chunks and return the longest
+  -- run of bytes found in those chunks
   local parts = roomtitle:split("  ")
   table.sort(parts, function(a,b) return #a &lt; #b end)
   local longestpart = parts[#parts]

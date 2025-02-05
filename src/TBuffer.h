@@ -316,6 +316,7 @@ public:
     int mBatchDeleteSize = 1000;
     int mWrapAt = 99999999;
     int mWrapIndent = 0;
+    int mWrapHangingIndent = 0;
     int mCursorY = 0;
     bool mEchoingText = false;
 

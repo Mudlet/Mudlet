@@ -21,7 +21,9 @@
 #include "dlgMapLabel.h"
 #include "mudlet.h"
 #include "utils.h"
+#include "pre_guard.h"
 #include <QSettings>
+#include "post_guard.h"
 
 static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
@@ -38,8 +40,8 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
     connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::slot_pickFile);
     connect(checkBox_stretchImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
-    connect(lineEdit_text, &QLineEdit::textChanged, this, [&](const QString& pText) {
-        text = pText;
+    connect(plainTextEdit_labelText, &QPlainTextEdit::textChanged, this, [&]() {
+        text = plainTextEdit_labelText->toPlainText();
         emit updated();
     });
     connect(pushButton_bgColor, &QPushButton::released, this, &dlgMapLabel::slot_pickBgColor);
@@ -54,7 +56,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
 
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
-    text = lineEdit_text->placeholderText();
+    text = plainTextEdit_labelText->placeholderText();
 
     QSettings& settings = *mudlet::getQSettings();
     fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
@@ -244,7 +246,7 @@ void dlgMapLabel::slot_updateControlsVisibility()
     checkBox_stretchImage->setVisible(!isText);
     toolButton_imagePick->setVisible(!isText);
     label_text->setVisible(isText);
-    lineEdit_text->setVisible(isText);
+    plainTextEdit_labelText->setVisible(isText);
     label_font->setVisible(isText);
     lineEdit_font->setVisible(isText);
     toolButton_fontPick->setVisible(isText);

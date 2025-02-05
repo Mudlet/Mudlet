@@ -1065,6 +1065,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWrapAt = readElementText().toInt();
             } else if (name() == qsl("wrapIndentCount")) {
                 pHost->mWrapIndentCount = readElementText().toInt();
+            } else if (name() == qsl("wrapHangingIndentCount")) {
+                pHost->mWrapHangingIndentCount = readElementText().toInt();
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
@@ -1182,6 +1184,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
                 pHost->mBgColor_2.setNamedColor(readElementText());
+            } else if (name() == qsl("mLowerLevelColor")) {
+                pHost->mLowerLevelColor.setNamedColor(readElementText());
+            } else if (name() == qsl("mUpperLevelColor")) {
+                pHost->mUpperLevelColor.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
