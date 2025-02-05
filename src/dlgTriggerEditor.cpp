@@ -960,6 +960,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
 {
+    Q_UNUSED(pos)
+    Q_UNUSED(index)
     mSearchSplitterState = searchSplitter->saveState();
 }
 
