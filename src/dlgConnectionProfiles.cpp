@@ -240,16 +240,26 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateUrl);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updatePort);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(port_ssl_tsl, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateSslTslPort);
+    connect(autologin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateAutoConnect);
+    connect(auto_reconnect, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
+#else
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateSslTslPort);
     connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoConnect);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
+#endif
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateLogin);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updatePassword);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(discord_optin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
+#else
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
+#endif
 
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));

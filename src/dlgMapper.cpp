@@ -103,8 +103,13 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 #else
     pushButton_3D->hide();
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(checkBox_showRoomIds, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+    connect(checkBox_showRoomNames, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#else
     connect(checkBox_showRoomIds, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     connect(checkBox_showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#endif
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
