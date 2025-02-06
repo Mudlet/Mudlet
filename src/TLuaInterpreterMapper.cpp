@@ -1399,7 +1399,7 @@ int TLuaInterpreter::getAreaRooms1(lua_State* L)
     }
     lua_newtable(L);
     int i = 0;
-    for (const auto& room : std::as_const(pA->getAreaRooms())) {
+    for (const int room : std::as_const(pA->getAreaRooms())) {
         lua_pushnumber(L, ++i);
         lua_pushnumber(L, room);
         lua_settable(L, -3);
