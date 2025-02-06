@@ -494,6 +494,11 @@ function logTestError()
     file = io.open("/tmp/busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
+  elseif getOS() == "windows" then
+    temp_directory = os.getenv("TEMP")
+    file = io.open(temp_directory.."\\busted-tests-failed", "w")
+    file:write("Lua busted tests failed")
+    file:close()
   else
     ioprint("Tests failed, but did not know how to log the error for "..getOS())
   end
