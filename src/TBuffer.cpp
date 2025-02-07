@@ -2237,6 +2237,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         sub_end = text.size() - 1;
     }
 
+    int indent = 0;
     for (int i = sub_start; i < length; ++i) {
         //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
@@ -2247,6 +2248,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
+            indent = 0;
             continue;
         }
 
@@ -2254,9 +2256,10 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
+            for (int i = lineBuffer.back().size() - 1; i >= indent; --i) {
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == indent) {
+                    const int linebreakPos = (i != indent) ? i + 1 : lineBuffer.back().size();
+                    indent = mWrapIndent;
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
@@ -2271,12 +2274,18 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                         }
                     }
 
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
+                    const TChar pSpace(mpConsole);
+                    for (int i = 0; i < indent; ++i) {
+                        newLine.push_front(pSpace);
                     }
+                    buffer.push_back(newLine);
+
+                    const QString qIndent(indent, QChar::Space);
+                    if (lineRest.size() > 0) {
+                        lineBuffer.append(qIndent + lineRest);
+                    } {
+                        lineBuffer.append(qIndent);
+                    } 
                     timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
@@ -2342,6 +2351,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         sub_end = text.size() - 1;
     }
 
+    int indent = 0;
     for (int i = sub_start; i < length; ++i) {
         if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
@@ -2351,6 +2361,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
+            indent = 0;
             continue;
         }
 
@@ -2358,10 +2369,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
+            for (int i = lineBuffer.back().size() - 1; i >= indent; --i) {
                 // insert linebreak either at linebreaking character location or at last character of line
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == 0) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == indent) {
+                    const int linebreakPos = (i != indent) ? i + 1 : lineBuffer.back().size();
+                    indent = mWrapIndent;
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
@@ -2376,11 +2388,17 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                         }
                     }
 
+                    const TChar pSpace(mpConsole);
+                    for (int i = 0; i < indent; ++i) {
+                        newLine.push_front(pSpace);
+                    }
                     buffer.push_back(newLine);
+
+                    const QString qIndent(indent, QChar::Space);
                     if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
+                        lineBuffer.append(qIndent + lineRest);
                     } else {
-                        lineBuffer.append(QString());
+                        lineBuffer.append(qIndent);
                     }
                     timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
