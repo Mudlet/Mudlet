@@ -1096,12 +1096,12 @@ if false then
   end
 
 
-  ---- <b><u>TODO</u></b>  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent
+  --- <b><u>TODO</u></b>  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent
   function setWindowWrapIndent()
   end
 
 
--- <b><u>TODO</u></b>  setWindowWrapHangingIndent - TLuaInterpreter::setWindowWrapHangingIndent
+  --- <b><u>TODO</u></b>  setWindowWrapHangingIndent - TLuaInterpreter::setWindowWrapHangingIndent
   function setWindowWrapHangingIndent()
   end
 
