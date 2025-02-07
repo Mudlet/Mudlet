@@ -67,9 +67,13 @@ QList<QByteArray> TEncodingTable::getEncodingNames() const
                         itEncoding.insert(pTTextCodec_869->name());
                     }
                 } else if (encoding == "MEDIEVIA") {
-                    auto* pTTextCodec_medievia = new TTextCodec_medievia();
-                    if (pTTextCodec_medievia) {
-                        itEncoding.insert(pTTextCodec_medievia->name());
+                    try {
+                        auto* pTTextCodec_medievia = new TTextCodec_medievia();
+                        if (pTTextCodec_medievia) {
+                            itEncoding.insert(pTTextCodec_medievia->name());
+                        }
+                    } catch (const std::bad_alloc&) {
+                        // Handle allocation failure if necessary
                     }
                 }
             }
