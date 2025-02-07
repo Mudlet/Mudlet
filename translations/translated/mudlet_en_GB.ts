@@ -12611,12 +12611,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Subsequent wrapped lines will be indented by this amount&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1157"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Indent hanging wrapped lines by:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1242"/>
