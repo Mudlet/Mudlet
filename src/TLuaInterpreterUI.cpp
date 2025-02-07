@@ -2964,7 +2964,7 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     return 0;
 }
 
-//TODO: add Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
 int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
 {
     const QString windowName {WINDOW_NAME(L, 1)};
