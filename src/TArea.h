@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -58,8 +58,15 @@ public:
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
     void removeRoom(int, bool deferAreaRecalculations = false);
-    QList<int> getCollisionNodes();
+    // List of coordinate triples (x,y,z) where there are multiple rooms
+    QList<std::tuple<int, int, int>> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
+    /*
+     * Outer key: z coordinate,
+     * Middle key: y coordinate
+     * Inner key: x coordinate
+     * Inner value: is roomId:
+     */
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
     int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
@@ -98,7 +105,7 @@ public:
 
 
 private:
-    TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
+    TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); }
 
 
     void readJsonUserData(const QJsonObject& obj);

@@ -4589,7 +4589,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 room->offset(dx, dy, 0);
                 // Previously we would move all the rooms to the same level as
                 // the center room but this is not really helpful as it
-                // squashes mulitple levels of rooms all onto the same level!
+                // squashes multiple levels of rooms all onto the same level!
 
                 QMapIterator<QString, QList<QPointF>> itk(room->customLines);
                 QMap<QString, QList<QPointF>> newMap;
