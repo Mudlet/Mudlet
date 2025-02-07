@@ -12717,12 +12717,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Le righe consecutive che tornano a capo, saranno indentate di questo valore&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1157"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Indenta i ritorni a capo di:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1242"/>
