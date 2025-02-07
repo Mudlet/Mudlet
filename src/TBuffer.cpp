@@ -2263,7 +2263,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
             for (int i = lineBuffer.back().size() - 1 - indent; i >= hangingIndent; --i) {
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == hangingIndent) {
-                    const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size();
+                    const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size() - indent;
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
                     const TChar indentSpace(mpConsole);
@@ -2391,7 +2391,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             for (int i = lineBuffer.back().size() - 1 - indent; i >= hangingIndent; --i) {
                 // insert linebreak either at linebreaking character location or at last character of line
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == hangingIndent) {
-                    const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size();
+                    const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size() - indent;
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
 
