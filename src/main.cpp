@@ -155,8 +155,7 @@ QTranslator* loadTranslationsForCommandLine()
 }
 
 #ifdef Q_OS_WINDOWS
-// qt logging for windows gui apps is inconsistent, lets simplify it
-void windowsConsoleMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
+void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
     switch (type) {
     case QtDebugMsg:
@@ -173,10 +172,17 @@ void windowsConsoleMessageHandler(QtMsgType type, const QMessageLogContext& cont
 
 int main(int argc, char* argv[])
 {
-    // print qt logs to stdout and stderr if Mudlet is started in a console in Windows
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-        qInstallMessageHandler(windowsConsoleMessageHandler);
+        if (qgetenv("MSYSTEM").isNull()) {
+            // print stdout to console if Mudlet is started in a console in Windows
+            // credit to https://stackoverflow.com/a/41701133 for the workaround
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+        } else {
+            // simply print qt logs into stdout and stderr if it's MSYS2
+            qInstallMessageHandler(msys2QtMessageHandler);
+        }
     }
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
