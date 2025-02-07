@@ -154,12 +154,30 @@ QTranslator* loadTranslationsForCommandLine()
     return pMudletTranslator;
 }
 
+#ifdef Q_OS_WINDOWS
+// qt logging for windows gui apps is inconsistent, lets simplify it
+void windowsConsoleMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
+{
+    switch (type) {
+    case QtDebugMsg:
+    case QtInfoMsg:
+        std::cout << msg.toUtf8().constData() << std::endl;
+        break;
+    case QtWarningMsg:
+    case QtCriticalMsg:
+    case QtFatalMsg:
+        std::cerr << msg.toUtf8().constData() << std::endl;
+    }
+}
+#endif
+
 int main(int argc, char* argv[])
 {
-    // print stdout to console if Mudlet is started in a console in Windows
-    // credit to https://stackoverflow.com/a/41701133 for the workaround
+    // print qt logs to stdout and stderr if Mudlet is started in a console in Windows
 #ifdef Q_OS_WINDOWS
-    AttachConsole(ATTACH_PARENT_PROCESS);
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        qInstallMessageHandler(windowsConsoleMessageHandler);
+    }
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Enable leak detection for MSVC debug builds.
