@@ -2237,7 +2237,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         sub_end = text.size() - 1;
     }
 
-    int indent = 0;
+    int indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
+    int hangingIndent = 0;
     for (int i = sub_start; i < length; ++i) {
         //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
@@ -2248,7 +2249,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
-            indent = 0;
+            // after newline, re-enable first indent and disable hanging
+            indent = mWrapIndent;
+            hangingIndent = 0;
             continue;
         }
 
@@ -2256,15 +2259,27 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= indent; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == indent) {
-                    const int linebreakPos = (i != indent) ? i + 1 : lineBuffer.back().size();
-                    indent = mWrapIndent;
+            const QString qIndent(mWrapIndent, QChar::Space);
+            const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
+            for (int i = lineBuffer.back().size() - 1 - indent; i >= hangingIndent; --i) {
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == hangingIndent) {
+                    const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size();
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
+                    const TChar indentSpace(mpConsole);
+                    if (indent > 0) {
+                        lineBuffer.back() = qIndent + tmp;
+                        while (indent > 0) {
+                            buffer.back().push_front(indentSpace);
+                            indent--;
+                        }
+                    } else {
+                        lineBuffer.back() = tmp;
+                    }
+                    // after the first-line indentation, we enable the hanging-indent
+                    hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
 
+                    std::deque<TChar> newLine;
                     int restOfLine = lineRest.size();
                     if (restOfLine > 0) {
                         while (restOfLine > 0) {
@@ -2274,17 +2289,16 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                         }
                     }
 
-                    const TChar pSpace(mpConsole);
-                    for (int i = 0; i < indent; ++i) {
-                        newLine.push_front(pSpace);
+                    const TChar hangingSpace(mpConsole);
+                    for (int i = 0; i < hangingIndent; ++i) {
+                        newLine.push_front(hangingSpace);
                     }
                     buffer.push_back(newLine);
 
-                    const QString qIndent(indent, QChar::Space);
                     if (lineRest.size() > 0) {
-                        lineBuffer.append(qIndent + lineRest);
+                        lineBuffer.append(qHangingIndent + lineRest);
                     } {
-                        lineBuffer.append(qIndent);
+                        lineBuffer.append(qHangingIndent);
                     } 
                     timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;
@@ -2351,7 +2365,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         sub_end = text.size() - 1;
     }
 
-    int indent = 0;
+    int indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
+    int hangingIndent = 0;
     for (int i = sub_start; i < length; ++i) {
         if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
@@ -2361,7 +2376,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             timeBuffer << csmBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
-            indent = 0;
+            // after newline, re-enable first indent and disable hanging
+            indent = mWrapIndent;
+            hangingIndent = 0;
             continue;
         }
 
@@ -2369,16 +2386,29 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= indent; --i) {
+            const QString qIndent(mWrapIndent, QChar::Space);
+            const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
+            for (int i = lineBuffer.back().size() - 1 - indent; i >= hangingIndent; --i) {
                 // insert linebreak either at linebreaking character location or at last character of line
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == indent) {
-                    const int linebreakPos = (i != indent) ? i + 1 : lineBuffer.back().size();
-                    indent = mWrapIndent;
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == hangingIndent) {
+                    const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size();
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
 
+                    const TChar indentSpace(mpConsole);
+                    if (indent > 0) {
+                        lineBuffer.back() = qIndent + tmp;
+                        while (indent > 0) {
+                            buffer.back().push_front(indentSpace);
+                            indent--;
+                        }
+                    } else {
+                        lineBuffer.back() = tmp;
+                    }
+                    // after the first-line indentation, we enable the hanging-indent
+                    hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
+
+                    std::deque<TChar> newLine;
                     int restOfLine = lineRest.size();
                     if (restOfLine > 0) {
                         while (restOfLine > 0) {
@@ -2388,17 +2418,16 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                         }
                     }
 
-                    const TChar pSpace(mpConsole);
-                    for (int i = 0; i < indent; ++i) {
-                        newLine.push_front(pSpace);
+                    const TChar hangingSpace(mpConsole);
+                    for (int i = 0; i < hangingIndent; ++i) {
+                        newLine.push_front(hangingSpace);
                     }
                     buffer.push_back(newLine);
 
-                    const QString qIndent(indent, QChar::Space);
                     if (lineRest.size() > 0) {
-                        lineBuffer.append(qIndent + lineRest);
+                        lineBuffer.append(qHangingIndent + lineRest);
                     } else {
-                        lineBuffer.append(qIndent);
+                        lineBuffer.append(qHangingIndent);
                     }
                     timeBuffer << csmBlankTimeStamp;
                     promptBuffer << false;

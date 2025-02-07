@@ -284,6 +284,7 @@ public:
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
+    void setWrapHangingIndent(int i) { mWrapHangingIndent = i; }
     void updateColors();
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
