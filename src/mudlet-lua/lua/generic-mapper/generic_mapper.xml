@@ -1260,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.6"
+local version = "2.2"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -4086,6 +4086,35 @@ function map.showMap(shown)
     end
 end
 
+function map.isLikelyMapLine(line)
+  -- A quick heuristic: check ratio of typical ASCII map chars or punctuation vs letters
+  -- plus ensure it has fewer alphabetic characters, etc.
+  local asciiMapChars = "[%|%-%+%#%/%\\%*]"
+  local asciiCount = 0
+  local total = #line
+  local letterCount = 0
+
+  for i = 1, total do
+    local c = line:sub(i,i)
+    if c:match(asciiMapChars) then
+      asciiCount = asciiCount + 1
+    end
+    if c:match("%a") then
+      letterCount = letterCount + 1
+    end
+  end
+
+  -- Example rule: if more than 50% of the characters are map chars
+  -- OR there are almost no letters, treat it as a map line.
+  if total &gt; 0 then
+    local asciiRatio = asciiCount / total
+    if asciiRatio &gt; 0.5 or letterCount == 0 then
+      return true
+    end
+  end
+  return false
+end
+
 -- some games embed an ASCII map on the same line, which messes up the room room name
 -- extract the longest continuous piece of text from the line to be the room name
 function map.sanitizeRoomName(roomtitle)
@@ -4094,14 +4123,7 @@ function map.sanitizeRoomName(roomtitle)
     return roomtitle
   end
 
-  if not roomtitle:match("   ") then
-    -- if the whole line does not contain a run of three consecutive spaces then
-    -- consider the whole line as the room name; this was previously two spaces
-    -- but some MUDs do have titles that are multiple (short) sentances AND
-    -- put TWO spaces after a full-stop for the first (e.g. After the Plague MUD
-    -- on telnet://atp.pedia.szote.u-szeged.hu:3000)
-    return roomtitle
-  end
+  if not map.isLikelyMapLine(roomtitle) then return roomtitle end
 
   -- otherwise split the text up in double-spaced chunks and return the longest
   -- run of bytes found in those chunks
