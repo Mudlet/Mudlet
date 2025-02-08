@@ -2804,18 +2804,18 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             if (lines.size() < 2) {
                 return;
             }
-        
+
             QString version = lines[0].remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive).trimmed();
             QString url = lines[1].trimmed();
-        
+
             if (version.isEmpty() || url.isEmpty()) {
                 return;
             }
-        
+
             rawTelnet = true;
             document = QJsonDocument(QJsonObject{{"version", version}, {"url", url}});
         }
-        
+
         handleGUIPackageInstallationAndUpgrade(document);
 
         if (rawTelnet) {
