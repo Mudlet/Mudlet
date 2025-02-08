@@ -50,9 +50,9 @@
 # 7 - One of more packages failed to install
 
 
-if [ "${MSYSTEM}" = "MINGW32" ]; then
-  export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
+if [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="x86_64"
 elif [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from an MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
