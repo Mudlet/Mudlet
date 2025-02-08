@@ -24,8 +24,6 @@ jobs:
         include:
           - os: windows-2019
             buildname: 'windows64'
-          - os: windows-2019
-            buildname: 'windows32'
 
     steps:
     - name: Checkout Mudlet source code
