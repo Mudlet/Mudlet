@@ -32,18 +32,11 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: (Windows 64) Setup MSYS2
+    - name: (Windows) Setup MSYS2
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
-        update: true
-
-    - name: (Windows 32) Setup MSYS2
-      if: matrix.buildname == 'windows32'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW32
         update: true
 
     - name: (Windows) Build Environment Setup

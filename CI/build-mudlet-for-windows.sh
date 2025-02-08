@@ -29,7 +29,7 @@
 #          1.0.0    Original version
 
 # Script to build the Mudlet code currently checked out in
-# ${GITHUB_WORKSPACE} in a MINGW32 or MINGW64 shell
+# ${GITHUB_WORKSPACE} in a MINGW64 shell
 
 # To be used AFTER setup-windows-sdk.sh has been run; once this has completed
 # successfully, package-mudlet-for-windows.sh is run by the workflow
@@ -41,19 +41,16 @@
 # 3 - Unsupported build type
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
+  echo "Please run this script from an MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
   echo "you wish to do both."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW32" ]; then
-  export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
 else
-  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
-  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW64"
+  echo "are currently supported. Please rerun this in a bash terminal of one"
   echo "of those two types."
   exit 2
 fi

@@ -46,19 +46,16 @@
 # 6 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
+  echo "Please run this script from an MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
   echo "you wish to do both."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW32" ]; then
-  export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
 else
-  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
-  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW64"
+  echo "are currently supported. Please rerun this in a bash terminal of one"
   echo "of those two types."
   exit 2
 fi
@@ -109,11 +106,7 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
-else
-    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt" ./mudlet.exe
-fi
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
 ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 
 
@@ -122,9 +115,8 @@ ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 # continually trying to run the executable on the target type system
 # and adding in the libraries to the same directory and repeating that
 # until the executable actually starts to run. Alternatively running
-# ntldd ./mudlet.exe | grep "/mingw32" {for the 32 bit case, use "64" for
-# the other one} inside an Mingw32 (or 64) shell as appropriate will
-# produce the libraries that are likely to be needed below. Unfortunetly
+# ntldd ./mudlet.exe | grep "/mingw64" inside an Mingw63 shell as appropriate 
+# will produce the libraries that are likely to be needed below. Unfortunately
 # this process is a little recursive in that you may have to repeat the
 # process for individual librarys. For ones used by lua modules this
 # can manifest as being unable to "require" the library within lua
@@ -133,21 +125,13 @@ ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 #
 echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-    NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-      | /usr/bin/grep -v "Qt5" \
-      | /usr/bin/grep -i "mingw" \
-      | /usr/bin/cut -d ">" -f2 \
-      | /usr/bin/cut -d "(" -f1 \
-      | /usr/bin/sort)
-else
-    NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-      | /usr/bin/grep -v "Qt6" \
-      | /usr/bin/grep -i "mingw" \
-      | /usr/bin/cut -d ">" -f2 \
-      | /usr/bin/cut -d "(" -f1 \
-      | /usr/bin/sort)
-fi
+NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
+  | /usr/bin/grep -v "Qt5" \
+  | /usr/bin/grep -i "mingw" \
+  | /usr/bin/cut -d ">" -f2 \
+  | /usr/bin/cut -d "(" -f1 \
+  | /usr/bin/sort)
+
 echo ""
 echo "Copying these identified libraries..."
 for LIB in ${NEEDED_LIBS} ; do
@@ -168,42 +152,17 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
-# For some reason as of September 2024 ntldd no longer identifies these
-# libraries for the 32-Bit case and our Qt5 (in this case) application
-# refuses to start without them. At a guess they are being loaded
-# dynamically so cannot be identified by static analysis like (nt)ldd
-# seems to do. Yet the same thing works for the now Qt6 based 64-Bit
-# application. Unfortunately this might bite us again for other libraries
-# I guess - I only deduced these omissions by comparing the file list
-# against an older working build. Slysven - 2024/11
-if [ "${MSYSTEM}" = "MINGW32" ]; then
-    cp -v -p -t . \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlicommon.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlidec.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libfreetype-6.dll"
-fi
 echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness:
-if [ "${MSYSTEM}" = "MINGW32" ]; then
-    cp -v -p -t . \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3.dll"
-
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
     cp -v -p -t . \
         "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
         "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
 
-fi
 
 echo ""
 echo "Copying discord-rpc library in..."
-if [ "${MSYSTEM}" = "MINGW32" ]; then
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc32.dll"  .
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
-fi
+cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
 echo ""
 
 # Lua libraries:

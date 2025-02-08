@@ -89,13 +89,7 @@ bool TAlias::match(const QString& haystack)
         return false; //regex compile error
     }
 
-#if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* haystackC = static_cast<char*>(malloc(strlen(haystack.toUtf8().constData()) + 1));
-    strcpy(haystackC, haystack.toUtf8().constData());
-#else
     char* haystackC = strndup(haystack.toUtf8().constData(), strlen(haystack.toUtf8().constData()));
-#endif
 
     // These must be initialised before any goto so the latter does not jump
     // over them:

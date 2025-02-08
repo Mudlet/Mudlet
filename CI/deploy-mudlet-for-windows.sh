@@ -30,21 +30,17 @@
 # 5 - squirrel error
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
+  echo "Please run this script from an MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
   echo "you wish to do both."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW32" ]; then
-  export BUILD_BITNESS="32"
-  export BUILDCOMPONENT="i686"
-  export ARCH="x86"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
   export ARCH="x86_64"
 else
-  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
-  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW64"
+  echo "are currently supported. Please rerun this in a bash terminal of one"
   echo "of those two types."
   exit 2
 fi
@@ -361,11 +357,7 @@ EOF
     echo "=== Updating WP-Download-Manager ==="
     echo "sha256 of installer: $SHA256SUM"
 
-    if [ "${BUILD_BITNESS}" = "32" ]; then
-      FILE_CATEGORY="1"
-    else
-      FILE_CATEGORY="2"
-    fi
+    FILE_CATEGORY="2"
 
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "$current_timestamp"

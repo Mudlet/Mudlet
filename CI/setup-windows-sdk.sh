@@ -33,7 +33,7 @@
 #          1.0.0    Original version
 
 # Script to run once in a ${GITHUB_WORKFLOW} directory in a MSYS2 shell to
-# install as much as possible to be able to develop 64/32 Bit Windows
+# install as much as possible to be able to develop 64 Bit Windows
 # version of Mudlet
 
 # To be used prior to building Mudlet, after that run:
@@ -50,20 +50,17 @@
 # 7 - One of more packages failed to install
 
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
-elif [ "${MSYSTEM}" = "MINGW32" ]; then
+if [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
 elif [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
+  echo "Please run this script from an MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
   echo "you wish to do both."
   exit 2
 else
-  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
-  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW64"
+  echo "are currently supported. Please rerun this in a bash terminal of one"
   echo "of those two types."
   exit 2
 fi
@@ -91,60 +88,32 @@ echo "    This could take a long time if it is needed to fetch everything, so fe
 echo "    to go and have a cup of tea (other beverages are available) in the meantime...!"
 echo ""
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-  echo "=== Installing Qt6 Packages ==="
-  pacman_attempts=1
-  while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-      "mingw-w64-${BUILDCOMPONENT}-angleproject" \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
-        break
-    fi
+echo "=== Installing Qt6 Packages ==="
+pacman_attempts=1
+while true; do
+  if /usr/bin/pacman -Su --needed --noconfirm \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+    "mingw-w64-${BUILDCOMPONENT}-angleproject" \
+    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then
+      break
+  fi
 
-    if [ $pacman_attempts -eq 10 ]; then
-      exit 7
-    fi
-    pacman_attempts=$((pacman_attempts +1))
+  if [ $pacman_attempts -eq 10 ]; then
+    exit 7
+  fi
+  pacman_attempts=$((pacman_attempts +1))
 
-    echo "=== Some packages failed to install, waiting and trying again ==="
-    sleep 10
-  done
-
-else
-
-  echo "=== Installing Qt5 Packages ==="
-  pacman_attempts=1
-  while true; do
-    if /usr/bin/pacman -Su --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-tools" \
-      "mingw-w64-${BUILDCOMPONENT}-qt5-translations"; then
-        break
-    fi
-
-    if [ $pacman_attempts -eq 10 ]; then
-      exit 7
-    fi
-    pacman_attempts=$((pacman_attempts +1))
-
-    echo "=== Some packages failed to install, waiting and trying again ==="
-    sleep 10
-  done
-fi
+  echo "=== Some packages failed to install, waiting and trying again ==="
+  sleep 10
+done
 
 pacman_attempts=1
 while true; do
