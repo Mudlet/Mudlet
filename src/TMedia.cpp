@@ -1247,7 +1247,7 @@ void TMedia::play(TMediaData& mediaData)
 
         if (sameMediaIsPlaying) {
             if (mediaData.mediaContinue() == TMediaData::MediaContinueRestart) {
-                mpHost->mpMedia->stopMedia(mediaData); // Stop the music; Restart it below.
+                mpHost->mpMedia->stopMedia(mediaData); // Stop the media; Restart it below.
 
                 if (!playlist->isEmpty()) {
                     playlist->clear();
@@ -1257,7 +1257,7 @@ void TMedia::play(TMediaData& mediaData)
                     playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
                 }
 
-                return; // No action required. Continue playing the same music.
+                return; // No action required. Continue playing the same media.
             }
         }
 
@@ -1291,13 +1291,13 @@ void TMedia::play(TMediaData& mediaData)
 
             if (sameMediaIsPlaying) {
                 if (mediaData.mediaContinue() == TMediaData::MediaContinueRestart) {
-                    mpHost->mpMedia->stopMedia(mediaData); // Stop the music; Restart it below.
+                    mpHost->mpMedia->stopMedia(mediaData); // Stop the media; Restart it below.
 
                     if (!playlist->isEmpty()) {
                         playlist->clear();
                     }
                 } else {
-                    return; // No action required. Continue playing the same music.
+                    return; // No action required. Continue playing the same media.
                 }
             }
 
@@ -1326,7 +1326,7 @@ void TMedia::play(TMediaData& mediaData)
 
             if (sameMediaIsPlaying) {
                 if (mediaData.mediaContinue() == TMediaData::MediaContinueRestart) {
-                    mpHost->mpMedia->stopMedia(mediaData); // Stop the music; Restart it below.
+                    mpHost->mpMedia->stopMedia(mediaData); // Stop the media; Restart it below.
 
                     if (!playlist->isEmpty()) {
                         playlist->clear();
@@ -1336,7 +1336,7 @@ void TMedia::play(TMediaData& mediaData)
                         playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
                     }
 
-                    mediaData.setMediaLoops(mediaData.mediaLoops() - 1); // Subtract the currently playing music from the total
+                    mediaData.setMediaLoops(mediaData.mediaLoops() - 1); // Subtract the currently playing media from the total
                 }
             }
 
@@ -1415,7 +1415,7 @@ void TMedia::play(TMediaData& mediaData)
     }
 
     if (mediaData.mediaType() == TMediaData::MediaTypeVideo) {
-        // TODO: Implement video widget
+        // Implement video widget
     }
 
     pPlayer.mediaPlayer()->play();
@@ -1435,6 +1435,8 @@ TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
             mediaType = TMediaData::MediaTypeSound;
         } else if (mediaTypeJSON.toString().toLower() == "music") {
             mediaType = TMediaData::MediaTypeMusic;
+        } else if (mediaTypeJSON.toString().toLower() == "video") {
+            mediaType = TMediaData::MediaTypeVideo;
         }
     }
 
