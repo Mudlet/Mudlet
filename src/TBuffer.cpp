@@ -2259,6 +2259,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
+            const TChar indentSpace(mBackGroundColor, mBackGroundColor, TChar::None);
             const QString qIndent(mWrapIndent, QChar::Space);
             const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
             for (int i = lineBuffer.back().size() - 1 - indent; i >= hangingIndent; --i) {
@@ -2266,7 +2267,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     const int linebreakPos = (i != hangingIndent) ? i + 1 : lineBuffer.back().size() - indent;
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    const TChar indentSpace(mpConsole);
                     if (indent > 0) {
                         lineBuffer.back() = qIndent + tmp;
                         while (indent > 0) {
@@ -2289,9 +2289,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                         }
                     }
 
-                    const TChar hangingSpace(mpConsole);
                     for (int i = 0; i < hangingIndent; ++i) {
-                        newLine.push_front(hangingSpace);
+                        newLine.push_front(indentSpace);
                     }
                     buffer.push_back(newLine);
 
@@ -2386,6 +2385,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
+            const TChar indentSpace(mBackGroundColor, mBackGroundColor, TChar::None);
             const QString qIndent(mWrapIndent, QChar::Space);
             const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
             for (int i = lineBuffer.back().size() - 1 - indent; i >= hangingIndent; --i) {
@@ -2395,7 +2395,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     const QString tmp = lineBuffer.back().mid(0, linebreakPos);
                     const QString lineRest = lineBuffer.back().mid(linebreakPos);
 
-                    const TChar indentSpace(mpConsole);
                     if (indent > 0) {
                         lineBuffer.back() = qIndent + tmp;
                         while (indent > 0) {
@@ -2418,9 +2417,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                         }
                     }
 
-                    const TChar hangingSpace(mpConsole);
                     for (int i = 0; i < hangingIndent; ++i) {
-                        newLine.push_front(hangingSpace);
+                        newLine.push_front(indentSpace);
                     }
                     buffer.push_back(newLine);
 
