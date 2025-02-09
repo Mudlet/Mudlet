@@ -46,6 +46,7 @@
 #include "TAccessibleTextEdit.h"
 #include "Announcer.h"
 #include "FileOpenHandler.h"
+#include <sentry.h>
 
 using namespace std::chrono_literals;
 
@@ -170,6 +171,18 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+void setupSentry(const char* version)
+{
+    sentry_options_t* options = sentry_options_new();
+    // TODO: replace this with actual dsn, for now just use SENTRY_DSN env var in runtime
+    // sentry_options_set_dsn(options, "");
+    sentry_options_set_database_path(options, ".sentry-native");
+    sentry_options_set_release(options, version);
+    // TODO: do we need debug logs of sentry?
+    sentry_options_set_debug(options, 1);
+    sentry_init(options);
+}
+
 int main(int argc, char* argv[])
 {
 #ifdef Q_OS_WINDOWS
@@ -272,11 +285,16 @@ int main(int argc, char* argv[])
     } else {
         app->setApplicationName(qsl("Mudlet"));
     }
-    if (releaseVersion) {
-        app->setApplicationVersion(APP_VERSION);
-    } else {
-        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
+
+    QString appVersion(APP_VERSION);
+    if (!releaseVersion) {
+        appVersion.append(appBuild);
     }
+    app->setApplicationVersion(appVersion);
+
+    setupSentry(appVersion.toUtf8().constData());
+    // Make sure everything flushes
+    auto sentryClose = qScopeGuard([] { sentry_close(); });
 
     mudlet::start();
     // Detect config path before any files are read

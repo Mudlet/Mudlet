@@ -170,6 +170,18 @@ option(BUILD_WITH_QT6 "" ${WITH_QT6})
 include(InitGitSubmodule)
 
 git_submodule_init(
+  CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
+  "3rdparty/sentry-native" READABLE_NAME "sentry error tracking and performance monitoring tool")
+
+set(SENTRY_LIBRARY_TYPE STATIC)
+set(SENTRY_INTEGRATION_QT YES)
+# TODO: hmm 'inproc' or 'crashpad'?
+# 'crashpad' requires 'crashpad_handler' binary to be shipped alongside the program and
+# to my tests it really doesn't have much difference
+set(SENTRY_BACKEND "inproc")
+add_subdirectory(3rdparty/sentry-native)
+
+git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
