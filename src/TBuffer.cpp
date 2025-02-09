@@ -2259,6 +2259,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
+            // if the line starts with a space we consider it to already be aligned and prevent the firstline indentation:
+            if (lineBuffer.back().at(0) == QChar::Space) {
+                indent = 0;
+                hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
+            }
+
             const TChar indentSpace(mBackGroundColor, mBackGroundColor, TChar::None);
             const QString qIndent(mWrapIndent, QChar::Space);
             const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
@@ -2385,6 +2391,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
+            // if the line starts with a space we consider it to already be aligned and prevent the firstline indentation:
+            if (lineBuffer.back().at(0) == QChar::Space) {
+                indent = 0;
+                hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
+            }
+
             const TChar indentSpace(mBackGroundColor, mBackGroundColor, TChar::None);
             const QString qIndent(mWrapIndent, QChar::Space);
             const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
