@@ -6,6 +6,7 @@
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2019, 2022. 2024 by Stephen Lyons                  *
  *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -61,9 +62,9 @@ public:
     }
     ~TMediaPlayer() = default;
 
-    TMediaData getMediaData() const { return mMediaData; }
+    TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
-    QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
+    QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
     QMediaPlayerPlaybackState getPlaybackState() const {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -121,6 +122,7 @@ private:
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
+    QString getStreamUrl(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
@@ -134,7 +136,7 @@ private:
     void connectMediaPlayer(TMediaPlayer& player);
     void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
+    TMediaPlayer matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
     void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& pPlayer);
@@ -142,6 +144,7 @@ private:
     void play(TMediaData& mediaData);
 
     static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
+    static int parseJSONByMediaInput(QJsonObject& json);
     static QString parseJSONByMediaFileName(QJsonObject& json);
     static int parseJSONByMediaVolume(QJsonObject& json);
     static int parseJSONByMediaFadeIn(QJsonObject& json);
@@ -168,8 +171,10 @@ private:
     QList<TMediaPlayer> mMSPMusicList;
     QList<TMediaPlayer> mGMCPSoundList;
     QList<TMediaPlayer> mGMCPMusicList;
+    QList<TMediaPlayer> mGMCPVideoList;
     QList<TMediaPlayer> mAPISoundList;
     QList<TMediaPlayer> mAPIMusicList;
+    QList<TMediaPlayer> mAPIVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;

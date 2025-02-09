@@ -425,6 +425,7 @@ find_package(
   Qt6 6.2.0 REQUIRED
   COMPONENTS Core
              Multimedia
+             MultimediaWidgets
              Network
              OpenGL
              UiTools
@@ -440,6 +441,7 @@ find_package(
               Qt6::Core
               Qt6::Network
               Qt6::Multimedia
+              Qt6::MultimediaWidgets
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
@@ -455,6 +457,7 @@ else()
           Qt5 5.14 REQUIRED
           COMPONENTS Core
           Multimedia
+          MultimediaWidgets
           Network
           OpenGL
           UiTools
@@ -469,6 +472,7 @@ else()
               Qt5::Core
               Qt5::Network
               Qt5::Multimedia
+              Qt5::MultimediaWidgets
               Qt5::OpenGL
               Qt5::UiTools
               Qt5::Widgets

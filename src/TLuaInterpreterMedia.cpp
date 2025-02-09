@@ -89,7 +89,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L)
         }
     }
 
-    if (mediaData.getMediaFileName().isEmpty()) {
+    if (mediaData.mediaFileName().isEmpty()) {
         return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
     }
 
@@ -133,7 +133,7 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (mediaData.getMediaFileName().isEmpty()) {
+    if (mediaData.mediaFileName().isEmpty()) {
         lua_pushstring(L, R"(loadMusicFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
@@ -174,6 +174,22 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
     }
 
     return loadMediaFileAsOrderedArguments(L);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadVideoFile
+int TLuaInterpreter::loadVideoFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "%s: needs to be a table", __func__);
+        return lua_error(L);
+    }
+
+    return loadMediaFileAsTableArgument(L);
 }
 
 // Private
@@ -286,7 +302,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
         }
     }
 
-    if (mediaData.getMediaFileName().isEmpty()) {
+    if (mediaData.mediaFileName().isEmpty()) {
         return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
     }
 
@@ -399,7 +415,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (mediaData.getMediaFileName().isEmpty()) {
+    if (mediaData.mediaFileName().isEmpty()) {
         lua_pushstring(L, R"(playMusicFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
@@ -542,7 +558,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
         }
     }
 
-    if (mediaData.getMediaFileName().isEmpty()) {
+    if (mediaData.mediaFileName().isEmpty()) {
         return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
     }
 
@@ -663,7 +679,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (mediaData.getMediaFileName().isEmpty()) {
+    if (mediaData.mediaFileName().isEmpty()) {
         lua_pushstring(L, R"(playSoundFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
@@ -692,6 +708,112 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
 }
 
 // Private
+int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)
+            || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                              : !key.compare(QLatin1String("tag"), Qt::CaseInsensitive) ? "value for tag"
+                                                                                                        : "value for url");
+
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
+                mediaData.setMediaUrl(value);
+
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
+            int value = getVerifiedInt(L,
+                                       __func__,
+                                       -1,
+                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)  ? "value for volume"
+                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive) ? "value for start"
+                                                                                                   : "value for loops");
+
+            if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive)) {
+                if (value != TMediaData::MediaVolumePreload) {
+                    value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
+                }
+
+                mediaData.setMediaVolume(value);
+            } else if (!key.compare(QLatin1String("start"), Qt::CaseInsensitive)) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaStart(value);
+            } else if (!key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
+                if (value < TMediaData::MediaLoopsRepeat || value == 0) {
+                    value = TMediaData::MediaLoopsDefault;
+                }
+
+                mediaData.setMediaLoops(value);
+            }
+        } else if (!key.compare(QLatin1String("continue"), Qt::CaseInsensitive)) {
+            bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
+            mediaData.setMediaContinue(value);
+        } else if (!key.compare(QLatin1String("stream"), Qt::CaseInsensitive)) {
+            bool value = getVerifiedBool(L, __func__, -1, "value for stream must be boolean");
+            mediaData.setMediaInput(value ? TMediaData::MediaInputStream : TMediaData::MediaInputNotSet);
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    if (mediaData.mediaFileName().isEmpty()) {
+        lua_pushstring(L, R"(playVideoFile: missing name (add name = "file to play"))");
+        return lua_error(L);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playVideoFile
+int TLuaInterpreter::playVideoFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "%s: needs to be a table", __func__);
+        return lua_error(L);
+    }
+
+    return playVideoFileAsTableArgument(L);
+}
+
+// Private
 void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaData)
 {
     const Host& host = getHostFromLua(L);
@@ -707,33 +829,33 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
         lua_pushinteger(L, index++);
         lua_newtable(L);
 
-        if (!matchedMediaData.getMediaFileName().isEmpty()) {
+        if (!matchedMediaData.mediaFileName().isEmpty()) {
             lua_pushstring(L, "name");
-            lua_pushstring(L, matchedMediaData.getMediaFileName().toUtf8().constData());
+            lua_pushstring(L, matchedMediaData.mediaFileName().toUtf8().constData());
             lua_settable(L, -3);
         }
 
-        if (matchedMediaData.getMediaVolume() != TMediaData::MediaVolumePreload) {
+        if (matchedMediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
             lua_pushstring(L, "volume");
-            lua_pushinteger(L, matchedMediaData.getMediaVolume());
+            lua_pushinteger(L, matchedMediaData.mediaVolume());
             lua_settable(L, -3);
         }
 
-        if (matchedMediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet) {
+        if (matchedMediaData.mediaPriority() != TMediaData::MediaPriorityNotSet) {
             lua_pushstring(L, "priority");
-            lua_pushinteger(L, matchedMediaData.getMediaPriority());
+            lua_pushinteger(L, matchedMediaData.mediaPriority());
             lua_settable(L, -3);
         }
 
-        if (!matchedMediaData.getMediaTag().isEmpty()) {
+        if (!matchedMediaData.mediaTag().isEmpty()) {
             lua_pushstring(L, "tag");
-            lua_pushstring(L, matchedMediaData.getMediaTag().toUtf8().constData());
+            lua_pushstring(L, matchedMediaData.mediaTag().toUtf8().constData());
             lua_settable(L, -3);
         }
 
-        if (!matchedMediaData.getMediaKey().isEmpty()) {
+        if (!matchedMediaData.mediaKey().isEmpty()) {
             lua_pushstring(L, "key");
-            lua_pushstring(L, matchedMediaData.getMediaKey().toUtf8().constData());
+            lua_pushstring(L, matchedMediaData.mediaKey().toUtf8().constData());
             lua_settable(L, -3);
         }
 
@@ -969,6 +1091,68 @@ int TLuaInterpreter::getPlayingSounds(lua_State* L)
     // no args
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    processPlayingMediaTable(L, mediaData);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L)
+{
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+
+    processPlayingMediaTable(L, mediaData);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayingVideos
+int TLuaInterpreter::getPlayingVideos(lua_State* L)
+{
+    TMediaData mediaData{};
+
+    if (lua_gettop(L)) {
+        if (!lua_istable(L, 1)) {
+            lua_pushfstring(L, "%s: needs to be a table", __func__);
+            return lua_error(L);
+        }
+
+        return getPlayingVideosAsTableArgument(L);
+    }
+
+    // no args
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
 
     processPlayingMediaTable(L, mediaData);
     return 1;
@@ -1267,6 +1451,84 @@ int TLuaInterpreter::stopSounds(lua_State* L)
     // no args
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        } else if (key == QLatin1String("fadeaway")) {
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
+            mediaData.setMediaFadeAway(value);
+        } else if (key == QLatin1String("fadeout")) {
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
+
+            if (value < 0) {
+                lua_pushfstring(L, "stopVideos: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(value);
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopVideos
+int TLuaInterpreter::stopVideos(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    if (lua_gettop(L)) {
+        if (!lua_istable(L, 1)) {
+            lua_pushfstring(L, "%s: needs to be a table", __func__);
+            return lua_error(L);
+        }
+
+        return stopVideosAsTableArgument(L);
+    }
+
+    // no args
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
 
     host.mpMedia->stopMedia(mediaData);
     lua_pushboolean(L, true);

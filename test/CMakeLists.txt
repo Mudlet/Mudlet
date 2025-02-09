@@ -15,6 +15,7 @@ if (WITH_QT6)
     find_package(Qt6 REQUIRED
             COMPONENTS Core
             Multimedia
+            MultimediaWidgets
             Network
             OpenGL
             UiTools
@@ -28,12 +29,14 @@ if (WITH_QT6)
             Qt6::Core
             Qt6::Network
             Qt6::Multimedia
+            Qt6::MultimediaWidgets
             Qt6::UiTools
             Qt6::Widgets)
 else()
     find_package(Qt5 REQUIRED
             COMPONENTS Core
             Multimedia
+            MultimediaWidgets
             Network
             OpenGL
             UiTools
@@ -47,6 +50,7 @@ else()
             Qt5::Core
             Qt5::Network
             Qt5::Multimedia
+            Qt5::MultimediaWidgets
             Qt5::UiTools
             Qt5::Widgets)
 endif()
