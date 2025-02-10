@@ -755,7 +755,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=]() {
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
             reloadModule(syncModuleName);
             obj->deleteLater();
         });
@@ -935,12 +935,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     qApp->processEvents();
 
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=]() {
+    mModuleFuture = QtConcurrent::run([=, this]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
@@ -2983,7 +2983,7 @@ void Host::loadSecuredPassword()
 
     job->setKey(getName());
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
         if (task->error()) {
             const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
