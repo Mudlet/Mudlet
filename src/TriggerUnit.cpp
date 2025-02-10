@@ -244,7 +244,8 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     strcpy(subject, data.toUtf8().constData());
 #else
     char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif```
+#endif
+
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
