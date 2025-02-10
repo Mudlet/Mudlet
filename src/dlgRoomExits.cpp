@@ -1223,6 +1223,20 @@ void dlgRoomExits::init()
     connect(se,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_se_textEdited);
     connect(in,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_in_textEdited);
     connect(out,                   &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_out_textEdited);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(noroute_nw,            &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_n,             &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_ne,            &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_up,            &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_w,             &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_e,             &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_down,          &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_sw,            &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_s,             &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_se,            &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_in,            &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_out,           &QCheckBox::checkStateChanged,                  this, &dlgRoomExits::slot_checkModified);
+#else
     connect(noroute_nw,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
     connect(noroute_n,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
     connect(noroute_ne,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
@@ -1235,6 +1249,7 @@ void dlgRoomExits::init()
     connect(noroute_se,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
     connect(noroute_in,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
     connect(noroute_out,           &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+#endif
     connect(weight_nw,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
     connect(weight_n,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
     connect(weight_ne,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);

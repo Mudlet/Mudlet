@@ -154,14 +154,35 @@ QTranslator* loadTranslationsForCommandLine()
     return pMudletTranslator;
 }
 
+#ifdef Q_OS_WINDOWS
+void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
+{
+    switch (type) {
+    case QtDebugMsg:
+    case QtInfoMsg:
+        std::cout << msg.toUtf8().constData() << std::endl;
+        break;
+    case QtWarningMsg:
+    case QtCriticalMsg:
+    case QtFatalMsg:
+        std::cerr << msg.toUtf8().constData() << std::endl;
+    }
+}
+#endif
+
 int main(int argc, char* argv[])
 {
-    // print stdout to console if Mudlet is started in a console in Windows
-    // credit to https://stackoverflow.com/a/41701133 for the workaround
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
+        if (qgetenv("MSYSTEM").isNull()) {
+            // print stdout to console if Mudlet is started in a console in Windows
+            // credit to https://stackoverflow.com/a/41701133 for the workaround
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+        } else {
+            // simply print qt logs into stdout and stderr if it's MSYS2
+            qInstallMessageHandler(msys2QtMessageHandler);
+        }
     }
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -485,7 +506,8 @@ int main(int argc, char* argv[])
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            const QFont font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(qsl("Bitstream Vera Serif"), fontSize, 75);
+            font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -520,7 +542,8 @@ int main(int argc, char* argv[])
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
         const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
-        const QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QFont font(qsl("Bitstream Vera Serif"), 16, 75);
+        font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
