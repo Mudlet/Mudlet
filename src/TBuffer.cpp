@@ -2692,6 +2692,12 @@ inline int TBuffer::wrap(int startLine)
                     i2++;
                     break;
                 }
+                if (i3 == 0 && i2 != 0) {
+                    for (int j = 0; j < mWrapHangingIndent; ++j) {
+                        newLine.push_back(pSpace);
+                        lineText.append(" ");
+                    }
+                }
                 newLine.push_back(buffer[i][i2]);
                 lineText.append(lineBuffer[i].at(i2));
                 i2++;
@@ -2710,7 +2716,7 @@ inline int TBuffer::wrap(int startLine)
             }
             newLine.clear();
             lineText = "";
-            indent = 0;
+            indent = mWrapHangingIndent;
             i2 += skipSpacesAtBeginOfLine(i, i2);
         }
         lineCount++;

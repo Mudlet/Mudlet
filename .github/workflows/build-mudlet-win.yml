@@ -24,8 +24,6 @@ jobs:
         include:
           - os: windows-2019
             buildname: 'windows64'
-          - os: windows-2019
-            buildname: 'windows32'
 
     steps:
     - name: Checkout Mudlet source code
@@ -72,6 +70,30 @@ jobs:
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    - name: (Windows) Run Lua tests
+      timeout-minutes: 5
+      shell: msys2 {0}
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+      run: |
+        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        export LUA_PATH
+        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        export LUA_CPATH
+
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+
+    - name: Passed Lua tests
+      shell: msys2 {0}
+      run: |
+        if [ -e $TEMP/busted-tests-failed ]
+        then
+          echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'

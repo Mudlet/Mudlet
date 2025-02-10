@@ -39,7 +39,11 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::slot_updateControlsVisibility);
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
     connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::slot_pickFile);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(checkBox_stretchImage, &QCheckBox::checkStateChanged, this, &dlgMapLabel::updated);
+#else
     connect(checkBox_stretchImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
+#endif
     connect(plainTextEdit_labelText, &QPlainTextEdit::textChanged, this, [&]() {
         text = plainTextEdit_labelText->toPlainText();
         emit updated();
@@ -50,8 +54,12 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     connect(toolButton_fontPick, &QToolButton::released, this, &dlgMapLabel::slot_pickFont);
     connect(pushButton_save, &QPushButton::released, this, &dlgMapLabel::slot_save);
     connect(pushButton_cancel, &QPushButton::released, this, &dlgMapLabel::close);
-    connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() { emit updated(); });
-    connect(checkBox_scaling, &QCheckBox::stateChanged, this, [this]() { emit updated(); });
+    connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(checkBox_scaling, &QCheckBox::checkStateChanged, this, &dlgMapLabel::updated);
+#else
+    connect(checkBox_scaling, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
+#endif
     connect(this, &dlgMapLabel::updated, this, &dlgMapLabel::slot_updateControls);
 
     font = QApplication::font();
