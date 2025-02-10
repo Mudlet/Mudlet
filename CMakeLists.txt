@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024 by Stephen Lyons            #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -143,29 +143,13 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
-                        OPTION_VARIABLE USE_QT6
-                        READABLE_NAME "build with Qt6 (if installed)")
 
-if(USE_QT6)
-  find_package(
-          Qt6 6.2.0
-          QUIET)
-  if(NOT Qt6_FOUND)
-    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
-  endif()
-endif()
+find_package(Qt6 6.4.0 REQUIRED)
 
-# Set Qt version for src, test, translations and communi
-set(WITH_QT6 ${Qt6_FOUND} CACHE BOOL "Whether to build with Qt6 or Qt5.")
 # Set Qt version for edbee-lib and dblsqd
-if(WITH_QT6)
-  option(BUILD_WITH_QT5 "" OFF)
-else()
-  option(BUILD_WITH_QT5 "" ON)
-endif()
+option(BUILD_WITH_QT5 "" OFF)
 # Set Qt version for qtkeychain
-option(BUILD_WITH_QT6 "" ${WITH_QT6})
+option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
 

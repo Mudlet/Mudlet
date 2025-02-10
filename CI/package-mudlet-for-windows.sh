@@ -1,7 +1,7 @@
 #!/bin/bash
 ###########################################################################
 #   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
-#   Copyright (C) 2023-2024  by Stephen Lyons - slysven@virginmedia.com   #
+#   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
+# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+#          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
 #          1.4.0    No change
@@ -46,37 +47,36 @@
 # 6 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from an MINGW64 type bash terminal appropriate"
-  echo "to the bitness you want to work on. You may do this once for each of them should"
-  echo "you wish to do both."
+  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
+  echo "does not supported what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
 else
-  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW64"
-  echo "are currently supported. Please rerun this in a bash terminal of one"
-  echo "of those two types."
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
+  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
+  echo "that type."
   exit 2
 fi
 
 BUILD_CONFIG="release"
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
-GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
+GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
 echo "MSYSTEM is: ${MSYSTEM}"
 echo ""
 
-cd $GITHUB_WORKSPACE_UNIX_PATH || exit 1
+cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
 
 if [ -d "${PACKAGE_DIR}" ]; then
   # The wanted packaging dir exists - as is wanted
   echo ""
   echo "Checking for an empty ${PACKAGE_DIR} in which to assemble files..."
   echo ""
-  if [ -n "$(ls -A ${PACKAGE_DIR})" ]; then
+  if [ -n "$(ls -A "${PACKAGE_DIR}")" ]; then
     # But it isn't empty...
     echo "${PACKAGE_DIR} does not appear to be empty, please"
     echo "erase everything there and try again."
@@ -107,7 +107,6 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
 fi
 
 "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
-ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 
 
 
@@ -126,11 +125,12 @@ ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
 NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-  | /usr/bin/grep -v "Qt5" \
+  | /usr/bin/grep -v "Qt6" \
   | /usr/bin/grep -i "mingw" \
   | /usr/bin/cut -d ">" -f2 \
   | /usr/bin/cut -d "(" -f1 \
-  | /usr/bin/sort)
+  | /usr/bin/sort \
+  | /usr/bin/uniq)
 
 echo ""
 echo "Copying these identified libraries..."
@@ -154,10 +154,11 @@ cp -v -p -t . \
 
 echo ""
 echo "Copying OpenSSL libraries in..."
-# The openSSL libraries has a different name depending on the bitness:
-    cp -v -p -t . \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
+# The openSSL libraries has a different name depending on the bitness - but we
+# only do 64-bits now:
+cp -v -p -t . \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
 
 
 echo ""
@@ -192,26 +193,26 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR ${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua/./* ./mudlet-lua/
+rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR ${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf/./* ./lcf/
+rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
 echo ""
 
 echo "Copying Lua translation files in..."
 mkdir -p ./translations/lua/translated
 cp -v -p -t ./translations/lua/translated \
-    ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/translated/mudlet-lua_??_??.json
-cp -v -p -t ./translations/lua ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/mudlet-lua.json
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/translations/lua/translated/mudlet-lua_??_??.json
+cp -v -p -t ./translations/lua "${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/mudlet-lua.json"
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
-    ${GITHUB_WORKSPACE_UNIX_PATH}/src/*.aff \
-    ${GITHUB_WORKSPACE_UNIX_PATH}/src/*.dic
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
 echo ""
 
