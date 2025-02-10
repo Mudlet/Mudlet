@@ -134,7 +134,7 @@ while true; do
   else
     echo "=== Some packages failed to install after ${pacman_attempts} attempts, giving up ==="
     exit 7
-  end
+  fi
 done
 
 echo "Removing harfbuzz installed by qt"
