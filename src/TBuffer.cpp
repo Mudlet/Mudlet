@@ -2302,7 +2302,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
 
                     if (lineRest.size() > 0) {
                         lineBuffer.append(qHangingIndent + lineRest);
-                    } {
+                    } else {
                         lineBuffer.append(qHangingIndent);
                     } 
                     timeBuffer << csmBlankTimeStamp;
