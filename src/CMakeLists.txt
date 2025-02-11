@@ -31,8 +31,8 @@ endif()
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
-  if(CMAKE_SYSTEM_NAME STREQUAL Linux)
-    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+    list(APPEND mudlet_RCCS mudlet_fonts_posix.qrc)
   endif()
 endif()
 

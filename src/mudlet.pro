@@ -933,9 +933,9 @@ contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \
         mudlet_fonts_common.qrc
 
-    linux {
+    linux|freebsd {
         RESOURCES += \
-            mudlet_fonts_linux.qrc
+            mudlet_fonts_posix.qrc
     }
 
     !build_pass{
