@@ -145,7 +145,7 @@ void Updater::showChangelog() const
 void Updater::showFullChangelog() const
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=]() { showChangelog(); });
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=, this]() { showChangelog(); });
         feed->load();
         return;
     }
@@ -183,7 +183,7 @@ void Updater::setupOnMacOS()
 void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
-    connect(feed, &dblsqd::Feed::ready, feed, [=]() {
+    connect(feed, &dblsqd::Feed::ready, feed, [=, this]() {
         if (mudlet::self()->developmentVersion) {
             return;
         }
@@ -200,13 +200,13 @@ void Updater::setupOnWindows()
     });
 
     // Setup to run setup.exe to replace the old installation
-    connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
+    connect(feed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run([=]() {
+        QFuture<void> future = QtConcurrent::run([=, this]() {
             prepareSetupOnWindows(feed->getDownloadFile()->fileName());
         });
 
@@ -248,7 +248,7 @@ void Updater::setupOnLinux()
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
-    connect(feed, &dblsqd::Feed::ready, this, [=]() {
+    connect(feed, &dblsqd::Feed::ready, this, [=, this]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::self()->developmentVersion) {
@@ -268,7 +268,7 @@ void Updater::setupOnLinux()
     });
 
     // Setup to unzip and replace old binary when the download is done
-    connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
+    connect(feed, &dblsqd::Feed::downloadFinished, this, [=, this]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
@@ -353,7 +353,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         // timer is necessary as calling close right way doesn't seem to do the trick
-        QTimer::singleShot(0, this, [=]() {
+        QTimer::singleShot(0, this, [=, this]() {
             updateDialog->close();
             updateDialog->done(0);
         });
@@ -376,7 +376,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
     // replace current binary with the unzipped one
     auto watcher = new QFutureWatcher<void>;
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
 #if defined(Q_OS_LINUX)
         slot_updateLinuxBinary();
 #elif defined(Q_OS_WINDOWS)
