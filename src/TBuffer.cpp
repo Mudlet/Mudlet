@@ -2250,7 +2250,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             promptBuffer << false;
             firstChar = true;
             // after newline, re-enable first indent and disable hanging
-            indent = mWrapIndent;
+            indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
             hangingIndent = 0;
             continue;
         }
@@ -2382,7 +2382,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             promptBuffer << false;
             firstChar = true;
             // after newline, re-enable first indent and disable hanging
-            indent = mWrapIndent;
+            indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
             hangingIndent = 0;
             continue;
         }
