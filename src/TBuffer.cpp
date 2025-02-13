@@ -26,6 +26,7 @@
 #include "mudlet.h"
 #include "TEvent.h"
 #include "TStringUtils.h"
+#include "widechar_width.h"
 
 #include "pre_guard.h"
 #include <QTextBoundaryFinder>
@@ -2555,11 +2556,20 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
     return offset;
 }
 
+int TBuffer::getCharWidth(const QChar& c)
+{
+    if (c == QChar::Tabulation) {
+        return 8;
+    }
+    return std::max(1, widechar_wcwidth(c.unicode()));
+}
+
 inline int TBuffer::wrap(int startLine)
 {
     if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
     }
+    const QString lineBreaks = qsl(",.- ");
     std::queue<std::deque<TChar>> queue;
     QStringList tempList;
     QStringList timeList;
@@ -2573,14 +2583,7 @@ inline int TBuffer::wrap(int startLine)
         QString lineText = QString();
         const QString time = timeBuffer[i];
         int indent = 0;
-        if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
-            for (int i3 = 0; i3 < mWrapIndent; ++i3) {
-                newLine.push_back(pSpace);
-                lineText.append(QChar::Space);
-            }
-            indent = mWrapIndent;
-        }
-        int lastSpace = 0;
+        int xPos = 0;
         int wrapPos = 0;
         const int length = buffer[i].size();
         if (length == 0) {
@@ -2591,54 +2594,77 @@ inline int TBuffer::wrap(int startLine)
             promptList.append(false);
             continue;
         }
-        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
-            if (length - i2 > mWrapAt - indent) {
-                wrapPos = calculateWrapPosition(i, i2, i2 + mWrapAt - indent);
-                lastSpace = qMax(0, wrapPos);
-            } else {
-                lastSpace = 0;
-            }
-            const int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
-            for (int i3 = 0; i3 < wrapPosition; ++i3) {
-                if (lastSpace > 0) {
-                    if (i2 > lastSpace) {
-                        break;
-                    }
-                }
-                if (i2 >= static_cast<int>(buffer[i].size())) {
-                    break;
-                }
-                if (lineBuffer[i].at(i2) == QChar::LineFeed) {
-                    i2++;
-                    break;
-                }
-                if (i3 == 0 && i2 != 0) {
-                    for (int j = 0; j < mWrapHangingIndent; ++j) {
-                        newLine.push_back(pSpace);
-                        lineText.append(QChar::Space);
-                    }
-                }
-                newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
-            }
-            if (newLine.empty()) {
-                tempList.append(QString());
-                std::deque<TChar> const emptyLine;
-                queue.push(emptyLine);
-                timeList.append(QString());
-                promptList.append(false);
-            } else {
+        for (int i2 = 0; i2 < length; ++i2) {
+            const QChar c = lineBuffer[i].at(i2);
+            // line breaks reset everything
+            if (c == QChar::LineFeed) {
                 queue.push(newLine);
                 tempList.append(lineText);
                 timeList.append(time);
                 promptList.append(isPrompt);
+                newLine.clear();
+                lineText = QString();
+                wrapPos = 0;
+                xPos = 0;
+                continue;
             }
-            newLine.clear();
-            lineText = "";
-            indent = mWrapHangingIndent;
-            i2 += skipSpacesAtBeginOfLine(i, i2);
+            const int charWidth = getCharWidth(c);
+            xPos += charWidth;
+            if (xPos > mWrapAt) {
+                const int linebreakPos = (wrapPos != 0) ? wrapPos + 1 : lineText.size();
+                const QString tmp = lineText.mid(0, linebreakPos);
+                const QString lineRest = lineText.mid(linebreakPos);
+                wrapPos = 0;
+                xPos = charWidth;
+
+                tempList.append(tmp);
+                lineText = lineRest;
+
+                int charCount = 0;
+                for (const QChar wrappedChar : lineText) {
+                    const int width = getCharWidth(wrappedChar);
+                    xPos += width;
+                    if (width > 1 || lineBreaks.indexOf(wrappedChar) > -1) {
+                        wrapPos = charCount;
+                    }
+                    charCount++;
+                }
+
+                timeList.append(time);
+                promptList.append(isPrompt);
+
+                queue.push(newLine);
+                newLine.clear();
+                int restOfLine = lineRest.size();
+                if (restOfLine > 0) {
+                    while (restOfLine > 0) {
+                        newLine.push_front(queue.back().back());
+                        queue.back().pop_back();
+                        restOfLine--;
+                    }
+                }
+            } else {
+                if (charWidth > 1 || lineBreaks.indexOf(c) > -1) {
+                    wrapPos = lineText.size();
+                }
+            }
+            newLine.push_back(buffer[i][i2]);
+            lineText.append(lineBuffer[i].at(i2));
         }
+        if (newLine.empty()) {
+            tempList.append(QString());
+            std::deque<TChar> const emptyLine;
+            queue.push(emptyLine);
+            timeList.append(QString());
+            promptList.append(false);
+        } else {
+            queue.push(newLine);
+            tempList.append(lineText);
+            timeList.append(time);
+            promptList.append(isPrompt);
+        }
+        newLine.clear();
+        lineText = QString();
     }
     for (int i = 0; i < lineCount; ++i) {
         buffer.pop_back();
