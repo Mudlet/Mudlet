@@ -505,7 +505,7 @@ bool TMedia::isValidUrl(QUrl& url)
     bool isValid = false;
 
     if (!url.isValid()) {
-        qWarning() << qsl("TMedia::isValidUrl() WARNING - attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
+        qWarning() << qsl("TMedia::isValidUrl() WARNING - attempt made to reference an invalid URL: %1 and the error message was: \"%2\".").arg(url.toString(), url.errorString());
     } else {
         isValid = true;
     }
