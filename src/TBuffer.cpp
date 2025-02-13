@@ -2200,9 +2200,6 @@ void TBuffer::resetColors()
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = qsl(",.- ");
-
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
@@ -2240,7 +2237,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     for (int i = sub_start; i < length; ++i) {
         //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
-            log(size() - 1, size() - 1);
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
@@ -2250,43 +2246,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             continue;
         }
 
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    const QString tmp = lineBuffer.back().mid(0, linebreakPos);
-                    const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int restOfLine = lineRest.size();
-                    if (restOfLine > 0) {
-                        while (restOfLine > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            restOfLine--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << csmBlankTimeStamp;
-                    promptBuffer << false;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
-                }
-            }
-        }
         lineBuffer.back().append(text.at(i));
         const TChar c(format.mFgColor,
                 format.mBgColor,
@@ -2300,21 +2259,16 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         }
     }
 
-    // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
-    // limit to prevent it growing beyond a "reasonable" size we also
-    // want to check - for TConsoles that have been set to be "non-scrollable"
-    // - that the content has not exceeded the number of lines that can be
-    // shown in the upper pane and to raise an event if it has
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    // optimization for common case of starting an append action with a newline (skip wrapping previous line) 
+    if (text.at(0) == QChar::LineFeed) {
+        wrap(last+1);
+    } else {
+        wrap(last);
     }
 }
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = qsl(",.- ");
-
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
@@ -2343,8 +2297,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 
     for (int i = sub_start; i < length; ++i) {
-        if (text.at(i) == '\n') {
-            log(size() - 1, size() - 1);
+
+        if (text.at(i) == QChar::LineFeed) {
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
@@ -2354,44 +2308,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             continue;
         }
 
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                // insert linebreak either at linebreaking character location or at last character of line
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == 0) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    const QString tmp = lineBuffer.back().mid(0, linebreakPos);
-                    const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int restOfLine = lineRest.size();
-                    if (restOfLine > 0) {
-                        while (restOfLine > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            restOfLine--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << csmBlankTimeStamp;
-                    promptBuffer << false;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
-                }
-            }
-        }
         lineBuffer.back().append(text.at(i));
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
@@ -2400,10 +2316,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             firstChar = false;
         }
     }
-    // Check - for "non-scrollable" TConsoles that the content has not exceeded
-    // the number of lines that can be shown and raise an event if it has:
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    // optimization for common case of starting an append action with a newline (skip wrapping previous line) 
+    if (text.at(0) == QChar::LineFeed) {
+        wrap(last+1);
+    } else {
+        wrap(last);
     }
 }
 
@@ -2650,15 +2567,16 @@ inline int TBuffer::wrap(int startLine)
     int lineCount = 0;
     const TChar pSpace(mpConsole);
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
+        lineCount++;
         const bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
-        QString lineText = "";
+        QString lineText = QString();
         const QString time = timeBuffer[i];
         int indent = 0;
         if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
             for (int i3 = 0; i3 < mWrapIndent; ++i3) {
                 newLine.push_back(pSpace);
-                lineText.append(" ");
+                lineText.append(QChar::Space);
             }
             indent = mWrapIndent;
         }
@@ -2670,6 +2588,8 @@ inline int TBuffer::wrap(int startLine)
             std::deque<TChar> const emptyLine;
             queue.push(emptyLine);
             timeList.append(time);
+            promptList.append(false);
+            continue;
         }
         for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
             if (length - i2 > mWrapAt - indent) {
@@ -2688,14 +2608,14 @@ inline int TBuffer::wrap(int startLine)
                 if (i2 >= static_cast<int>(buffer[i].size())) {
                     break;
                 }
-                if (lineBuffer[i].at(i2) == '\n') {
+                if (lineBuffer[i].at(i2) == QChar::LineFeed) {
                     i2++;
                     break;
                 }
                 if (i3 == 0 && i2 != 0) {
                     for (int j = 0; j < mWrapHangingIndent; ++j) {
                         newLine.push_back(pSpace);
-                        lineText.append(" ");
+                        lineText.append(QChar::Space);
                     }
                 }
                 newLine.push_back(buffer[i][i2]);
@@ -2719,7 +2639,6 @@ inline int TBuffer::wrap(int startLine)
             indent = mWrapHangingIndent;
             i2 += skipSpacesAtBeginOfLine(i, i2);
         }
-        lineCount++;
     }
     for (int i = 0; i < lineCount; ++i) {
         buffer.pop_back();
