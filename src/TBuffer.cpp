@@ -2266,6 +2266,14 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     } else {
         wrap(last);
     }
+    // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
+    // limit to prevent it growing beyond a "reasonable" size we also
+    // want to check - for TConsoles that have been set to be "non-scrollable"
+    // - that the content has not exceeded the number of lines that can be
+    // shown in the upper pane and to raise an event if it has
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    }
 }
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
@@ -2322,6 +2330,14 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         wrap(last+1);
     } else {
         wrap(last);
+    }
+    // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
+    // limit to prevent it growing beyond a "reasonable" size we also
+    // want to check - for TConsoles that have been set to be "non-scrollable"
+    // - that the content has not exceeded the number of lines that can be
+    // shown in the upper pane and to raise an event if it has
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
 
