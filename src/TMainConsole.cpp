@@ -1152,13 +1152,15 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 {
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
-    mTriggerEngineMode = true;
-    const QStringList bufferBeforeTriggers = buffer.lineBuffer;
 
+    mTriggerEngineMode = true;
+    const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
+    const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
-    const bool bufferChanged = buffer.lineBuffer != bufferBeforeTriggers;
+    const int lastLineNumber = buffer.getLastLineNumber();
+    const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
     if (mAlertOnNewData && isFromServer && bufferChanged) {
         QApplication::alert(mudlet::self(), 0);
     }
