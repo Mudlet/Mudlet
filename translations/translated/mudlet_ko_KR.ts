@@ -601,20 +601,20 @@ please wait...</source>
   <context>
     <name>T2DMap</name>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2673"/>
+      <location filename="../src/T2DMap.cpp" line="2674"/>
       <source>Undo</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
       <translation>실행 취소</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2675"/>
+      <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Undo last point</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
       <translation>마지막 지점 실행 취소</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2682"/>
-      <location filename="../src/T2DMap.cpp" line="2957"/>
+      <location filename="../src/T2DMap.cpp" line="2683"/>
+      <location filename="../src/T2DMap.cpp" line="2958"/>
       <source>Properties</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
 ----------
@@ -622,8 +622,8 @@ please wait...</source>
       <translation>속성</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2684"/>
-      <location filename="../src/T2DMap.cpp" line="2961"/>
+      <location filename="../src/T2DMap.cpp" line="2685"/>
+      <location filename="../src/T2DMap.cpp" line="2962"/>
       <source>properties...</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
 ----------
@@ -631,44 +631,44 @@ please wait...</source>
       <translation>속성...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2686"/>
+      <location filename="../src/T2DMap.cpp" line="2687"/>
       <source>Change the properties of this line</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
       <translation>이 선의 속성 변경</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2689"/>
+      <location filename="../src/T2DMap.cpp" line="2690"/>
       <source>Finish</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
       <translation>완료</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2691"/>
+      <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Finish drawing this line</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
       <translation>이 라인 그리기 완료</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2758"/>
+      <location filename="../src/T2DMap.cpp" line="2759"/>
       <source>Create new map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
       <translation>새로운 맵 생성</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2761"/>
+      <location filename="../src/T2DMap.cpp" line="2762"/>
       <source>Load map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
       <translation>맵 불러오기</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2778"/>
+      <location filename="../src/T2DMap.cpp" line="2779"/>
       <source>Create new room here</source>
       <extracomment>Menu option to create a new room in the mapper</extracomment>
       <translation>여기에 새로운 방 생성</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2785"/>
-      <location filename="../src/T2DMap.cpp" line="2893"/>
+      <location filename="../src/T2DMap.cpp" line="2786"/>
+      <location filename="../src/T2DMap.cpp" line="2894"/>
       <source>Move</source>
       <extracomment>2D Mapper context menu (room) item
 ----------
@@ -676,68 +676,68 @@ please wait...</source>
       <translation>이동</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2792"/>
+      <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Configure room...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>방 설정...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2794"/>
+      <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
       <translation>방&apos;의 이름과 아이콘 색상, 가중치 및 잠금 설정, 빠른 이동을 위한 기호 설정</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2801"/>
+      <location filename="../src/T2DMap.cpp" line="2802"/>
       <source>Set exits...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>출구 설정...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2808"/>
+      <location filename="../src/T2DMap.cpp" line="2809"/>
       <source>Create exit line...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>출구 라인 생성...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2811"/>
+      <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Replace an exit line with a custom line</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
       <translation>출구 라인을 사용자 정의 라인으로 대체합니다</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2816"/>
+      <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <extracomment>2D Mapper context menu (room) item tooltip (disabled state)</extracomment>
       <translation>사용자 정의 출구 라인은 그리드 모드에서 표시되지 않고 편집할 수 없습니다</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2825"/>
+      <location filename="../src/T2DMap.cpp" line="2826"/>
       <source>Spread...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>확...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2827"/>
+      <location filename="../src/T2DMap.cpp" line="2828"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
       <translation>선택한 방 그룹의 맵 X-Y 간격을 증가합니다</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2834"/>
+      <location filename="../src/T2DMap.cpp" line="2835"/>
       <source>Shrink...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>축소...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2836"/>
+      <location filename="../src/T2DMap.cpp" line="2837"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
       <translation>선택한 방 그룹의 맵 X-Y 간격을 감소합니다</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2843"/>
-      <location filename="../src/T2DMap.cpp" line="2898"/>
+      <location filename="../src/T2DMap.cpp" line="2844"/>
+      <location filename="../src/T2DMap.cpp" line="2899"/>
       <source>Delete</source>
       <extracomment>2D Mapper context menu (room) item
 ----------
@@ -745,214 +745,214 @@ please wait...</source>
       <translation>삭제</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2850"/>
+      <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Move to position...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>위치로 이동...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2852"/>
+      <location filename="../src/T2DMap.cpp" line="2853"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
       <translation>선택한 방 또는 방 그룹을 해당 지역의 지정된 좌표로 이동합니다</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2859"/>
+      <location filename="../src/T2DMap.cpp" line="2860"/>
       <source>Move to area...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>지역으로 이동...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2864"/>
+      <location filename="../src/T2DMap.cpp" line="2865"/>
       <source>Create label...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>라벨 생성...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2866"/>
+      <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Create label to show text or an image</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
       <translation>텍스트 또는 이미지를 보여주는 라벨 생성</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2873"/>
+      <location filename="../src/T2DMap.cpp" line="2874"/>
       <source>Set player location</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>플레이어 위치 설정</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2875"/>
+      <location filename="../src/T2DMap.cpp" line="2876"/>
       <source>Set the player&apos;s current location to here</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
       <translation>플레이어&apos;초의 현재 위치를 여기로 설정</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2884"/>
+      <location filename="../src/T2DMap.cpp" line="2885"/>
       <source>Switch to editing mode</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>편집 모드로 전환</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2886"/>
+      <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Switch to viewing mode</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
       <translation>보기 모드로 전환</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2895"/>
+      <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move label</source>
       <extracomment>2D Mapper context menu item (label) tooltip</extracomment>
       <translation>라벨 이동</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2900"/>
+      <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Delete label</source>
       <extracomment>2D Mapper context menu (label) item tooltip</extracomment>
       <translation>라벨 삭제</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2915"/>
+      <location filename="../src/T2DMap.cpp" line="2916"/>
       <source>Add point</source>
       <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
       <translation>점 추가</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2923"/>
+      <location filename="../src/T2DMap.cpp" line="2924"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</extracomment>
       <translation>새로운 점을 중간에 추가하여 세그먼트 분할</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2927"/>
+      <location filename="../src/T2DMap.cpp" line="2928"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</extracomment>
       <translation>먼저 한 지점을 선택한 다음에 방으로 향하는 선분의 중간 지점에 새로운 지점을 추가하세요</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2931"/>
+      <location filename="../src/T2DMap.cpp" line="2932"/>
       <source>Remove point</source>
       <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
       <translation>지점 삭제</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2939"/>
+      <location filename="../src/T2DMap.cpp" line="2940"/>
       <source>Merge pair of segments by removing this point</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</extracomment>
       <translation>이 지점을 제거하여 세그먼트 쌍을 병합하세요</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2943"/>
+      <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Remove last segment by removing this point</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</extracomment>
       <translation>이 지점을 제거하여 마지막 세그먼트를 제거하세요</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2948"/>
+      <location filename="../src/T2DMap.cpp" line="2949"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
       <translation>&quot;삭제 선&quot; 사용하여 편집 가능한 지점에서 끝나는 유일한 세그먼트를 제거하세요</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2953"/>
+      <location filename="../src/T2DMap.cpp" line="2954"/>
       <source>Select a point first, then remove it</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</extracomment>
       <translation>먼저 한 지점을 선택한 다음에 제거하세요</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2962"/>
+      <location filename="../src/T2DMap.cpp" line="2963"/>
       <source>Change the properties of this custom line</source>
       <translation>이 사용자 정의 라인의 속성 변경</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2966"/>
+      <location filename="../src/T2DMap.cpp" line="2967"/>
       <source>Delete line</source>
       <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
       <translation>선 삭제</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2968"/>
+      <location filename="../src/T2DMap.cpp" line="2969"/>
       <source>Delete all of this custom line</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip</extracomment>
       <translation>이 사용자 정의 선 전체를 삭제하세요</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3209"/>
+      <location filename="../src/T2DMap.cpp" line="3210"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
       <translation>여러 개의 방 또는 라벨을 선택하려면 드래그하여 선택한 후 놓으세요...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3472"/>
-      <location filename="../src/T2DMap.cpp" line="5025"/>
+      <location filename="../src/T2DMap.cpp" line="3473"/>
+      <location filename="../src/T2DMap.cpp" line="5026"/>
       <source>Solid line</source>
       <translation>실선</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3473"/>
-      <location filename="../src/T2DMap.cpp" line="5026"/>
+      <location filename="../src/T2DMap.cpp" line="3474"/>
+      <location filename="../src/T2DMap.cpp" line="5027"/>
       <source>Dot line</source>
       <translation>점선</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3474"/>
-      <location filename="../src/T2DMap.cpp" line="5027"/>
+      <location filename="../src/T2DMap.cpp" line="3475"/>
+      <location filename="../src/T2DMap.cpp" line="5028"/>
       <source>Dash line</source>
       <translation>대시선</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3475"/>
-      <location filename="../src/T2DMap.cpp" line="5028"/>
+      <location filename="../src/T2DMap.cpp" line="3476"/>
+      <location filename="../src/T2DMap.cpp" line="5029"/>
       <source>Dash-dot line</source>
       <translation>대시-점선</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3476"/>
-      <location filename="../src/T2DMap.cpp" line="5029"/>
+      <location filename="../src/T2DMap.cpp" line="3477"/>
+      <location filename="../src/T2DMap.cpp" line="5030"/>
       <source>Dash-dot-dot line</source>
       <translation>대시-점-점선</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3779"/>
+      <location filename="../src/T2DMap.cpp" line="3780"/>
       <source>Move the selection, centered on the highlighted room (%1) to:</source>
       <comment>%1 is a room number</comment>
       <translation>강조된 방 (%1)을 중심으로 선택 영역을 이동합니다:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3785"/>
+      <location filename="../src/T2DMap.cpp" line="3786"/>
       <source>x coordinate (was %1):</source>
       <translation>x 좌표 (이전 값: %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3786"/>
+      <location filename="../src/T2DMap.cpp" line="3787"/>
       <source>y coordinate (was %1):</source>
       <translation>y 좌표 (이전 값: %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3787"/>
+      <location filename="../src/T2DMap.cpp" line="3788"/>
       <source>z coordinate (was %1):</source>
       <translation>z 좌표 (이전 %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3803"/>
+      <location filename="../src/T2DMap.cpp" line="3804"/>
       <source>OK</source>
       <extracomment>dialog (room(s) move) button</extracomment>
       <translation>확인</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3809"/>
+      <location filename="../src/T2DMap.cpp" line="3810"/>
       <source>Cancel</source>
       <extracomment>dialog (room(s) move) button</extracomment>
       <translation>취소</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5173"/>
-      <location filename="../src/T2DMap.cpp" line="5207"/>
+      <location filename="../src/T2DMap.cpp" line="5174"/>
+      <location filename="../src/T2DMap.cpp" line="5208"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
       <translation>왼쪽 클릭하여 지점 추가, 오른쪽 클릭하여 취소/변경/완료...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5218"/>
+      <location filename="../src/T2DMap.cpp" line="5219"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
       <translation>왼쪽 클릭하고 사각형을 드래그하여 라벨의 크기와 위치를 설정하세요</translation>
@@ -1008,12 +1008,12 @@ please wait...</source>
       <translation>해당 방 번호를 선택하거나 선택 해제하려면 해당 줄을 클릭하십시오 (방에 이름이 지정된 경우 해당 이름이 표시됨). 해당 방법으로 정렬하려면 해당 헤더를 클릭하십시오. 이름 열은 최소한 하나의 방에 이름이 있는 경우에만 표시됩니다.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4048"/>
+      <location filename="../src/T2DMap.cpp" line="4049"/>
       <source>Spread out rooms</source>
       <translation>방들을 펼치기</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4049"/>
+      <location filename="../src/T2DMap.cpp" line="4050"/>
       <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1026,12 +1026,12 @@ factor of:</source>
 배로 늘립니다.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4120"/>
+      <location filename="../src/T2DMap.cpp" line="4121"/>
       <source>Shrink in rooms</source>
       <translation>방들을 줄이기</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4121"/>
+      <location filename="../src/T2DMap.cpp" line="4122"/>
       <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1044,23 +1044,23 @@ factor of:</source>
 배로 줄입니다.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4206"/>
+      <location filename="../src/T2DMap.cpp" line="4207"/>
       <source>Load Mudlet map</source>
       <translation>Mudlet 맵 불러오기</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4208"/>
+      <location filename="../src/T2DMap.cpp" line="4209"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
       <translation>Mudlet 맵 (*.dat);;Xml 맵 데이터 (*.xml);;모든 파일 (*)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4302"/>
+      <location filename="../src/T2DMap.cpp" line="4303"/>
       <source>This will create new area: %1</source>
       <translation>새로운 지역을 생성합니다: %1</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4318"/>
+      <location filename="../src/T2DMap.cpp" line="4319"/>
       <source>[ ERROR ] - Unable to add &quot;%1&quot; as an area to the map.
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
@@ -1069,7 +1069,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
 이유를 확인하려면 &quot;[맵 오류:]&quot; 메시지를 참조하세요.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4326"/>
+      <location filename="../src/T2DMap.cpp" line="4327"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
       <translation>[  성공  ]  - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
     </message>
@@ -1077,13 +1077,13 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
   <context>
     <name>TAlias</name>
     <message>
-      <location filename="../src/TAlias.cpp" line="127"/>
-      <location filename="../src/TAlias.cpp" line="200"/>
+      <location filename="../src/TAlias.cpp" line="128"/>
+      <location filename="../src/TAlias.cpp" line="201"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
       <translation>[줄임말 오류:] %1 캡처 그룹 제한을 초과하여, 그룹을 더 적게 캡처하세요.</translation>
     </message>
     <message>
-      <location filename="../src/TAlias.cpp" line="272"/>
+      <location filename="../src/TAlias.cpp" line="273"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
       <translation>오류: &quot;패턴:&quot;, 잘못된 정규식, 이유: &quot;%1&quot;.</translation>
     </message>
@@ -1486,22 +1486,22 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="310"/>
       <source>Toggle time stamps</source>
-      <translation type="unfinished"/>
+      <translation>시간 표시 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="322"/>
       <source>Toggle recording of replays</source>
-      <translation type="unfinished"/>
+      <translation>재생 녹화 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="331"/>
       <source>Toggle logging</source>
-      <translation type="unfinished"/>
+      <translation>로그 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="386"/>
       <source>Emergency stop! Stop all scripts</source>
-      <translation type="unfinished"/>
+      <translation>비상 정지! 모든 스크립트를 중지하세요</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2122"/>
@@ -2988,7 +2988,9 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation type="unfinished"/>
+      <translation>[  확인  ]  - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
+  이 경우를 해결하기 위해, 여기에서 이름이 없는 영역(또는 미래에 생성된 경우)은 자동으로 &quot;%1&quot;이라는 이름이 지정됩니다.
+  이러한 일이 여러 번 발생하면, 영역 이름의 중복으로 인해 처음 발견된 것을 제외한 모든 영역에 &quot;_###&quot; 스타일의 접미사가 추가되며, 여기서 각 &quot;###&quot;은 증가하는 숫자입니다; 이러한 이름들을 더 의미 있는 영역 이름으로 변경하실 수 있으며, 이는 전적으로 귀하의 선택에 달려 있습니다. 단, 한 영역의 이름을 해당 시점에 존재하는 다른 영역의 이름과 동일하게 설정할 수는 없습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1248"/>
@@ -3512,7 +3514,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2406"/>
       <source>{FitzPatrick modifier 4}</source>
       <extracomment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</extracomment>
-      <translation type="unfinished"/>
+      <translation/>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2408"/>
@@ -3538,21 +3540,21 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2758"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <extracomment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>U+&lt;i&gt;####&lt;/i&gt; 유니코드 코드 포인트 &lt;i&gt;(상위:하위 쌍 문자)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2697"/>
       <location filename="../src/TTextEdit.cpp" line="2763"/>
       <source>Visual</source>
       <extracomment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>시각적</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2702"/>
       <location filename="../src/TTextEdit.cpp" line="2768"/>
       <source>Index (UTF-8)</source>
       <extracomment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>색인 (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2707"/>
@@ -3576,7 +3578,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1577"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 미니 콘솔 %2 프로필에서 추출</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1579"/>
@@ -3602,7 +3604,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="194"/>
       <source>error: this trigger has no patterns defined</source>
-      <translation type="unfinished"/>
+      <translation>오류: 이 트리거에는 정의된 패턴이 없음</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="226"/>
@@ -3920,12 +3922,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="316"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;버튼이 눌렸을 때 게임으로 직접 전송할 하나 이상의 명령어를 입력하세요. (선택 사항)&lt;/p&gt;&lt;p&gt;이 버튼이 &lt;i&gt;누름&lt;/i&gt; 버튼인 경우, 버튼이 &lt;i&gt;올림&lt;/i&gt; 상태에서 &lt;i&gt;누름&lt;/i&gt; 상태로 변경될 때만 전송됩니다.&lt;/p&gt;&lt;p&gt;이 프로필 내 변수에 따라 달라지거나 수정이 필요한 복잡한 명령어를 보내려면 아래 편집 영역에 Lua 스크립트를 &lt;i&gt;대신&lt;/i&gt; 입력해야 합니다. 여기 입력된 내용은 문자 그대로 게임 서버로 전송됩니다.&lt;/p&gt;&lt;p&gt;이 기능과 Lua 스크립트를 &lt;i&gt;동시에&lt;/i&gt; 사용하는 것도 가능합니다. 이 경우 명령어가 &lt;b&gt;스크립트 실행 전에&lt;/b&gt; 전송됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="336"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;버튼이 &lt;i&gt;누름&lt;/i&gt; 상태에서 &lt;i&gt;올림&lt;/i&gt; 상태로 변경될 때 게임으로 직접 전송할 하나 이상의 명령어를 입력하세요.&lt;/p&gt;&lt;p&gt;이 프로필 내 변수에 따라 달라지거나 수정이 필요한 복잡한 명령어를 보내려면 아래 편집 영역에 Lua 스크립트를 &lt;i&gt;대신&lt;/i&gt; 입력해야 합니다. 여기 입력된 내용은 문자 그대로 게임 서버로 전송됩니다.&lt;/p&gt;&lt;p&gt;이 기능과 Lua 스크립트를 &lt;i&gt;동시에&lt;/i&gt; 사용하는 것도 가능합니다. 이 경우 명령어가 &lt;b&gt;스크립트 실행 전에&lt;/b&gt; 전송됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="358"/>
@@ -3973,7 +3975,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="170"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;주어진 명령어가 패턴과 일치할 경우 사용할 하나 이상의 명령어를 입력하세요. (선택 사항)&lt;/p&gt;&lt;p&gt;이 명령어는 다른 별칭이거나 게임으로 직접 전송할 명령어일 수 있습니다. 이 프로필 내 변수의 수정이 필요한 복잡한 명령어의 경우, 아래 편집 영역에 Lua 스크립트를 &lt;i&gt;대신&lt;/i&gt; 사용하세요. 이 필드와 Lua 스크립트를 &lt;i&gt;동시에&lt;/i&gt; 사용하는 것도 가능합니다. 이 경우 이 필드의 내용이 &lt;b&gt;스크립트 실행 전에&lt;/b&gt; 사용됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="173"/>
@@ -4063,18 +4065,23 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 오류 ] - 내부 오류: 현재 설정된 {&quot;%1&quot;}에 대해 사용 가능한 코덱을 찾을 수 없습니다.
+따라서 Mudlet은 이 형식으로 게임 서버에 데이터를 전송할 수 없습니다.
+MUD와 Mudlet에서 사용할 수 있는 대안을 확인해 보세요.
+Mudlet은 ASCII 인코딩을 사용하여 데이터를 전송하려 시도하겠지만,
+기본 영어의 악센트 없는 문자로만 제한됩니다.
+참고: 이 경고는 인코딩이 변경될 때까지 한 번만 표시됩니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2394"/>
       <location filename="../src/ctelnet.cpp" line="2752"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - GUI를 버전 &apos;%2&apos;에서 새 버전 &apos;%1&apos;(url=&apos;%3&apos;)으로 업그레이드합니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2701"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - 패키지 &apos;%1&apos;(url=&apos;%2&apos;)를 다운로드하고 설치 중입니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2710"/>
@@ -4084,97 +4091,97 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2710"/>
       <source>Downloading game GUI from server...</source>
-      <translation type="unfinished"/>
+      <translation>게임 GUI를 서버에서 다운로드 중...</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3004"/>
+      <location filename="../src/ctelnet.cpp" line="3005"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ctelnet.cpp" line="3009"/>
-      <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - 포트 %1에서 더 안전한 연결을 사용할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3010"/>
-      <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
+      <translation>데이터 전송 보호와 개인정보 보호를 위해 이 연결은 안전한 포트를 알립니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3160"/>
+      <location filename="../src/ctelnet.cpp" line="3011"/>
+      <source>Update to port %1 and connect with encryption?</source>
+      <translation>포트 %1로 업데이트하고 암호화된 연결을 시도하시겠습니까?</translation>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="3161"/>
       <source>ERROR</source>
       <extracomment>Keep the capitalisation, the translated text at 7 letters max so it aligns nicely</extracomment>
       <translation>오류</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3173"/>
+      <location filename="../src/ctelnet.cpp" line="3174"/>
       <source>LUA</source>
       <translation>Lua</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3185"/>
+      <location filename="../src/ctelnet.cpp" line="3186"/>
       <source>WARN</source>
       <translation>경고</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3197"/>
+      <location filename="../src/ctelnet.cpp" line="3198"/>
       <source>ALERT</source>
       <translation>경고</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3209"/>
+      <location filename="../src/ctelnet.cpp" line="3210"/>
       <source>INFO</source>
       <translation>정보</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3221"/>
+      <location filename="../src/ctelnet.cpp" line="3222"/>
       <source>OK</source>
       <translation>확인</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3419"/>
+      <location filename="../src/ctelnet.cpp" line="3420"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
       <translation>[ 정보 ]  - 재생 파일 로딩 중:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3443"/>
+      <location filename="../src/ctelnet.cpp" line="3444"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
       <translation>&quot;%1&quot;파일을 재생할 수 없습니다. 오류 메시지: &quot;리플레이 파일이 손상되었습니다.&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3445"/>
+      <location filename="../src/ctelnet.cpp" line="3446"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
       <translation>[경고] - 파일이 손상되어 리플레이가 중단되었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3454"/>
+      <location filename="../src/ctelnet.cpp" line="3455"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
       <translation>다른 재생을 수행할 수 없습니다. 완료될 때까지 다시 시도하세요.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3456"/>
+      <location filename="../src/ctelnet.cpp" line="3457"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
       <translation>[ 경고 ]  - 다른 재생을 수행할 수 없습니다.
 완료될 때까지 다시 시도하세요.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3464"/>
+      <location filename="../src/ctelnet.cpp" line="3465"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
       <translation>파일 &quot;%1&quot;을(를) 읽을 수 없습니다. 오류 메시지: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3467"/>
+      <location filename="../src/ctelnet.cpp" line="3468"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
       <translation>[ ERROR ] - 파일 읽기 실패 &quot;%1&quot;,
 오류 메시지: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3506"/>
+      <location filename="../src/ctelnet.cpp" line="3507"/>
       <source>[  OK  ]  - The replay has ended.</source>
       <translation>[  OK  ]  - 재생이 종료되었습니다.</translation>
     </message>
@@ -4468,7 +4475,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="811"/>
       <source>Information</source>
-      <translation type="unfinished"/>
+      <translation>정보</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
@@ -4484,7 +4491,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="672"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>캐릭터 비밀번호. 이 비밀번호는 저장 시 암호화되지 않음을 유의하십시오</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="760"/>
@@ -4737,7 +4744,9 @@ custom line?</source>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>이 프로필을 삭제하시겠습니까? 모든 내용(줄임말, 트리거, 백업 등)이 삭제됩니다
+
+삭제를 원하시면 확인을 위해 프로필 이름을 입력하세요:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="77"/>
@@ -4939,7 +4948,7 @@ Count</source>
   <context>
     <name>dlgAboutDialog</name>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="143"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="145"/>
       <source>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Homepage&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Forums&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentation&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
@@ -4954,17 +4963,27 @@ Count</source>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;기능/버그&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="246"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="248"/>
       <source>&lt;p&gt;Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; list (on our former bug-tracking site), or for on-going contributors they may well be included in the &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Contributors&lt;/a&gt;&lt;/b&gt; list on GitHub.&lt;/p&gt;
 &lt;br&gt;
 &lt;p&gt;Many icons are taken from the &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 oxygen icon theme&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; at &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; or &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten&apos;s work with the other sources.&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet 프로젝트의 다양한 측면에 기여한 다른 사람들도 있습니다. 이곳에 언급되지 않았더라도 그것은 결코 의도적인 것이 아닙니다! 과거 기여자를 확인하려면 &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; 목록(이전 버그 추적 사이트)을 참조할 수 있으며, 현재 기여자는 GitHub의 &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Contributors&lt;/a&gt;&lt;/b&gt; 목록에 포함되어 있을 수 있습니다.&lt;/p&gt;
+
+&lt;br&gt;
+
+&lt;p&gt;많은 아이콘은 &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 산소 아이콘 테마&lt;/u&gt;&lt;/b&gt;&lt;/span&gt;에서 가져왔으며, &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; 또는 &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;에서 확인할 수 있습니다. 나머지 대부분의 아이콘은 Thorsten Wilms가 제작했거나, 그의 작업을 기반으로 Stephen Lyons가 다른 소스를 결합하여 만든 것입니다.&lt;/p&gt;
+
+&lt;p&gt;특별히 &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt;와 &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;에게 감사드립니다. 이들은 많은 좋은 아이디어를 제공하여 스크립트 프레임워크 개선에 크게 기여했습니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt;(&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;)에게도 감사드립니다. 그는 KMuddy 프로젝트로 우리를 하나로 모아주었고, 많은 영감을 주었습니다. Mudlet은 그의 KMuddy 프로젝트를 위해 작성된 일부 텔넷 코드를 사용하고 있습니다. (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;또한 &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt;(&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;)에게도 소중한 조언을 제공해 주신 것에 대해 감사드립니다.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="291"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="293"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
@@ -4972,345 +4991,351 @@ Count</source>
 &lt;p&gt;Mudlet은 GPL 라이선스 버전 2에 따라 배포되며, 아래에 재현되어 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="587"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="589"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
       <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; 은 FOSS 세계의 다른 프로젝트들을 기반으로 만들어졌습니다. GPL 컴포넌트뿐만 아니라 다른 라이선스를 가진 일부 타사 소프트웨어도 사용하고 있습니다:&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="829"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="831"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Communi IRC 라이브러리&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2008-2020 The Communi Project&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="832"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="834"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt; &lt;tt&gt;irctextformat.cpp&lt;/t&gt; 코드의 일부는 Konversation에서 가져와 저작권이 있습니다:&lt;br&gt;저작권 © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;저작권 © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;저작권 © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;저작권 © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="838"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="840"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="841"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="843"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2003-2020, Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="844"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="846"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저자: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;저작권 © 2009 Brian Maher&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="848"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="850"/>
       <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Luautf8 - Lua를 위한 UTF-8 지원 모듈입니다.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2018 Xavier Wang&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="851"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="853"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Lua 프로그래밍 언어의 데이터베이스 연결성입니다 (Sqlite3 구성 요소).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2003-2019, The Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="854"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="856"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre -  Regular expression library binding (PCRE flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre - 정규 표현식 라이브러리 바인딩 (PCRE flavor).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © Reuben Thomas 2000-2020&lt;br&gt;저작권 © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="865"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="867"/>
       <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Edbee - 다기능 편집기 위젯입니다.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="883"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="885"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="890"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="892"/>
       <source>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="919"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="921"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - KDToolBox의 일부&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2020-2021 Klarälvdalens Datakonsult AB, KDAB 그룹 회사, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="923"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="925"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - 표준 Lua 함수를 수정하여 Windows에서 UTF-8 파일 이름을 사용할 수 있게 함&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2019 Egor-Skriptunoff&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="859"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="861"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;LuaZip - zip 파일 내부의 파일 읽기&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작자: Danilo Tuler&lt;br&gt;저작권 © 2003-2007 Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="153"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="155"/>
       <source>Original author, original project lead, Mudlet core coding, retired.</source>
       <extracomment>about:Heiko</extracomment>
       <translation>원래 작성자, 원래 프로젝트 리드, Mudlet 핵심 코딩, 은퇴.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="156"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="158"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <extracomment>about:Vadi</extracomment>
-      <translation type="unfinished"/>
+      <translation>GUI 디자인 및 초기 기능 계획을 담당했습니다. 프로젝트 홈페이지와 사용자 매뉴얼을 관리합니다. 
+Windows, macOS, Ubuntu 및 범용 Linux 설치 관리자를 유지 관리하며, Mudlet 위키, Lua API를 관리하고 
+프로젝트 관리, 홍보 및 사용자 지원을 담당합니다. 프로젝트 초기부터 참여했으며 공식 대변인 역할을 맡고 있습니다. 
+Heiko가 은퇴한 이후, Mudlet 프로젝트의 책임자가 되었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="163"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="165"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <extracomment>about:SlySven</extracomment>
       <translation>2013년에 가입한 이후로 C++ 코드와 GUI의 여러 부분을 가리키며 가시적으로 수정하려고 노력했습니다. 최근에는 Mudlet 4.0.0의 I18n 및 L10n 작업에 참여하여 미국 영어 이외의 언어로 Mudlet을 플레이하는 경우 사용되는 스펠링 차이에 질려 영국 영어를 보고 싶었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="170"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="172"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <extracomment>about:demonnic</extracomment>
       <translation>이른 시기의 Windows 및 Apple OSX 패키지의 이전 유지 관리자입니다. 또한 서버를 관리하고 프로젝트를 여러 가지 방식으로 돕습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="174"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="176"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <extracomment>about:keneanung</extracomment>
       <translation>Mudlet에 많은 개선 사항을 기여했습니다.&apos;s db: 인터페이스, 이벤트 시스템 및 매우 오랜 기간 동안 프로젝트에 참여하여 사용자를 돕습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="178"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="180"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <extracomment>about:Leris</extracomment>
       <translation>Mudlet, 웹 사이트 및 위키를 어떤 언어를 사용하든 접근 가능하게 만드는 데 많은 작업을 하고 장르를 홍보합니다!</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="182"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="184"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <extracomment>about:ahmedcharles</extracomment>
       <translation>Travis 통합, CMake 및 Visual C++ 빌드에 기여했으며, 코드 품질 및 메모리 관리 개선에 많은 노력을 기울였습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="186"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="188"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <extracomment>about:Chris7</extracomment>
       <translation>스크립트 패키지를 프로필 간에 공유할 수 있는 공유 모듈 시스템을 개발하였으며, Lua 변수를 볼 수 있는 UI, 맵퍼 개선 등을 수행했습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="190"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="192"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <extracomment>about:Ben Carlsen</extracomment>
       <translation>Mac OSX 설치 프로그램의 첫 번째 버전을 개발하였습니다. 또한 Mac 버전의 Mudlet의 이전 유지 관리자입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="194"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="196"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <extracomment>about:Ben Smith</extracomment>
-      <translation type="unfinished"/>
+      <translation>2009년 12월에 합류했지만 훨씬 이전부터 활동해 왔습니다. Lua API에 기여했으며, 이전 Lua API 관리자였습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="198"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <extracomment>about:Blaine von Roeder</extracomment>
       <translation>2009년 12월에 가입하였습니다. Lua API에 기여하였으며, 작은 버그 수정 패치를 제출하고 1.0.5의 릴리스 관리에 도움을 주었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="202"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="204"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <extracomment>about:Bruno Bigras</extracomment>
       <translation>원래의 cmake 빌드 스크립트를 개발하였으며, 여러 패치를 커밋하였습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="205"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="207"/>
       <source>Contributed to the Lua API.</source>
       <extracomment>about:Carter Dewey</extracomment>
       <translation>Lua API에 기여하였습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="208"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="210"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <extracomment>about:Oneymus</extracomment>
       <translation>Mudlet의 Vyzor GUI 매니저를 개발했습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="211"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="213"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <extracomment>about:TheFae</extracomment>
       <translation>2017년에 우리 웹사이트를 새롭게 만들었으며, 약간의 익명성을 선호하는 사람입니다. 만약 당신이 &lt;i&gt;스팸봇&lt;/i&gt; 이라면 포럼에 접속할 수 없습니다. 또한 유용한 C++ 핵심 코드 기여를 했으며, 해당 지역에서의 향후 리뷰와 작업을 기대하고 있습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="216"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <extracomment>about:Dicene</extracomment>
       <translation>2017년에 합류하여 유용한 C++ 및 Lua 기여를 했습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="219"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <extracomment>about:James Younquist</extracomment>
       <translation>2010년 3월에 Mudlet을 위한 Geyser 레이아웃 매니저를 기여했습니다. Lua로 작성되었으며, 사용자 GUI 스크립팅을 간소화하는 것을 목표로 합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="223"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="225"/>
       <source>Helped develop and debug the Lua API.</source>
       <extracomment>about:John Dahlström</extracomment>
       <translation>Lua API 개발 및 디버깅에 도움을 주었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="226"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="228"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <extracomment>about:Beliaar</extracomment>
       <translation>Geyser를 위한 여러 개선 사항과 새로운 기능을 기여했습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="229"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="231"/>
       <source>The original author of our Windows installer.</source>
       <extracomment>about:Leigh Stillard</extracomment>
       <translation>Windows 설치 프로그램의 원래 저자입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="232"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="234"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <extracomment>about:Maksym Grinenko</extracomment>
       <translation>매뉴얼, 포럼 도움말 및 GUI 디자인 및 문서 작업을 도왔습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="235"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="237"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <extracomment>about:Stephen Hansen</extracomment>
       <translation>데이터베이스 Lua API를 개발하여 데이터베이스의 사용을 훨씬 쉽게 할 수 있게 했으며, 원래의 OSX 설치 프로그램 중 하나입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="238"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="240"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <extracomment>about:Thorsten Wilms</extracomment>
       <translation>아름다운 로고, 스플래시 화면, about 대화상자, 웹사이트, 여러 아이콘과 배지를 디자인했습니다. 그의 홈페이지를 방문하세요. &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="868"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="870"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
       <translation>&lt;b&gt;edbee-lib&lt;/b&gt; 위젯 자체에는 라이선스가 필요한 다른 구성 요소가 포함되어 있습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="870"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="872"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;저작권 © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;판권 소유.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="875"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="877"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;판권 소유.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="879"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="881"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;판권 소유.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="893"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="895"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;스파클 - macOS 업데이트 프로그램&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2006-2013 Andy Matuschak.&lt;br&gt;저작권 © 2009-2013 Elgato Systems GmbH.&lt;br&gt;저작권 © 2011-2014 Kornel Lesiński.&lt;br&gt;저작권 © 2015-2017 Mayur Pawashe.&lt;br&gt;저작권 © 2014 C.W. Betts.&lt;br&gt;저작권 © 2014 Petroules Corporation.&lt;br&gt;저작권 © 2014 Big Nerd Ranch.&lt;br&gt;모든 권리 보유.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="903"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="905"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h4&gt;bspatch.c 및 bsdiff.c, bsdiff 4.3에서 가져옴 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;저작권 © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c 및 sais.c, sais-lite (2010/08/07)에서 가져옴 &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;저작권 © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;저작권 © 2011 Mark Hamlin.&lt;br&gt;모든 권리 보유.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="913"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="915"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="916"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="918"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;QtKeyChain - 플랫폼 독립적인 Qt API로 비밀번호를 안전하게 저장하는 방법&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;저작권 © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1084"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1086"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>                           이 위대한 분들은 Mudlet의 Patreon에서 아낌없는 재정적 지원을 해주신 분들로&lt;br&gt; 영원히 소중히 기억될 것입니다:
+                           </translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1092"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1094"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>                            이 위대한 분들은 &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet의 Patreon&lt;/a&gt;에서&lt;br&gt;아낌없는 재정적 지원을 해주신 분들로 영원히 소중히 기억될 것입니다:
+                           </translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1128"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1130"/>
       <source>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</source>
-      <translation type="unfinished"/>
+      <translation>64비트 버전의 Windows에서 32비트 버전의 Mudlet을 사용 중입니다.  
+Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설치하면 업그레이드할 수 있습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1131"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1133"/>
       <source>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</source>
-      <translation type="unfinished"/>
+      <translation>64비트 버전의 Windows에서 32비트 버전의 Mudlet이 실행 중입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1144"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1190"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1231"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1261"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1146"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1192"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1233"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1263"/>
       <source>Technical information:</source>
       <translation>기술적인 정보:</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1145"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1191"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1232"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1262"/>
-      <source>Version</source>
-      <translation>버전</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1147"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1193"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1234"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1264"/>
+      <source>Version</source>
+      <translation>버전</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="1149"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1195"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1236"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1266"/>
       <source>OS</source>
       <translation>운영 체제</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1152"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1198"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1154"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1200"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1159"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1205"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1161"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1207"/>
       <source>CPU (%1-bits)</source>
-      <translation type="unfinished"/>
+      <translation>CPU (%1-비트)</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1164"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1211"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1237"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1267"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1166"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1213"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1239"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1269"/>
       <source>CPU</source>
       <extracomment>This is shown for all other OSes than Windows.</extracomment>
       <translation>CPU</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1170"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1243"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1172"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1245"/>
       <source>Qt version (compilation)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt 버전 (컴파일)</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1176"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1249"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1178"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1251"/>
       <source>Qt version (run-time)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
       <translation>Qt 버전 (런타임)</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1216"/>
-      <location filename="../src/dlgAboutDialog.cpp" line="1272"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1218"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1274"/>
       <source>Qt version</source>
       <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
       <translation>Qt 버전</translation>
@@ -5355,22 +5380,22 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>텍스트의 배경색이 기본 값에서 변경되지 않았을 때 색상 트리거를 활성화하려면 클릭하십시오.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>텍스트의 전경색이 기본 값에서 변경되지 않았을 때 색상 트리거를 활성화하려면 클릭하십시오.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="75"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>텍스트의 배경색이 지정된 색상 번호와 일치할 때만 트리거가 작동하도록 하려면 색상을 클릭하십시오.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="76"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>텍스트의 전경색이 지정된 색상 번호와 일치할 때만 트리거가 작동하도록 하려면 색상을 클릭하십시오.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
@@ -5477,56 +5502,56 @@ Count</source>
       <translation>문자 비밀번호입니다. 비밀번호는 저장 시 암호화되지 않습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="278"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="288"/>
       <source>Game name: %1</source>
       <translation>게임 이름: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="280"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="290"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <extracomment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</extracomment>
       <translation>MUD 게임을 선택하려면 버튼을 누르고 더블 클릭하여 연결하고 시작하십시오.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="947"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="957"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>이 프로필은 현재로드되어 있습니다. 연결 매개 변수를 변경하기 전에 프로필을 닫으십시오.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1264"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1274"/>
       <source>Reset icon</source>
       <extracomment>Reset the custom picture for this profile in the connection dialog and show the default one instead</extracomment>
       <translation>커스텀 이미지를 재설정합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1268"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1278"/>
       <source>Set custom icon</source>
       <extracomment>Set a custom picture to show for the profile in the connection dialog</extracomment>
       <translation>커스텀 아이콘 설정</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1273"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1283"/>
       <source>Set custom color</source>
       <extracomment>Set a custom color to show for the profile in the connection dialog</extracomment>
       <translation>커스텀 색상 설정</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1643"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1653"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
       <translation>%1 문자는 허용되지 않습니다. 다음 중 하나를 사용하세요:</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1666"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1676"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>숫자를 입력해야 합니다. 다른 문자는 허용되지 않습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1655"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1665"/>
       <source>This profile name is already in use.</source>
       <translation>이 프로필 이름은 이미 사용 중입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="562"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="572"/>
       <source>Could not rename your profile data on the computer.</source>
       <translation>컴퓨터에서 프로필 데이터의 이름을 변경할 수 없습니다.</translation>
     </message>
@@ -5543,7 +5568,7 @@ Count</source>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="125"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1400"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1410"/>
       <source>Copy</source>
       <translation>복사</translation>
     </message>
@@ -5575,122 +5600,122 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="226"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation type="unfinished"/>
+      <translation>캐릭터 비밀번호가 컴퓨터의 자격 증명 관리자에 안전하게 저장되었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="275"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="285"/>
       <source>Click to load but not connect the selected profile.</source>
       <translation>선택한 프로필을 로드하되 연결하지는 마십시오.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="276"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="286"/>
       <source>Click to load and connect the selected profile.</source>
       <translation>선택한 프로필을 로드하고 연결하려면 클릭하십시오.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="277"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="287"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
       <translation>이 버튼을 활성화하려면 유효한 프로필 이름, 게임 서버 주소 및 포트가 필요합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="570"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="580"/>
       <source>Could not create the new profile folder on your computer.</source>
       <translation>컴퓨터에 새로운 프로필 폴더를 생성할 수 없습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="616"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="626"/>
       <source>new profile name</source>
       <translation>새 프로필 이름</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="734"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="744"/>
       <source>Deleting &apos;%1&apos;</source>
       <translation>&apos;%1&apos;을(를) 삭제 중입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="951"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="961"/>
       <source>A profile that is in use cannot be removed</source>
-      <translation type="unfinished"/>
+      <translation>사용 중인 프로필은 제거할 수 없습니다</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1001"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1011"/>
       <source>Discord integration not available on this platform</source>
       <translation>이 플랫폼에서는 Discord 통합을 사용할 수 없습니다</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1007"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1017"/>
       <source>Discord integration not supported by game</source>
       <translation>게임에서 Discord 통합을 지원하지 않습니다</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1010"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1020"/>
       <source>Check to enable Discord integration</source>
       <translation>Discord 통합을 사용하려면 선택하십시오</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1289"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1299"/>
       <source>Select custom image for profile (should be 120x30)</source>
       <translation>Select custom image for profile (should be 120x30)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1289"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1299"/>
       <source>Images (%1)</source>
       <translation>이미지 (%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1382"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1392"/>
       <source>Copying...</source>
       <translation>복사 중...</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1676"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1686"/>
       <source>Port number must be above zero and below 65535.</source>
       <translation>포트 번호는 0보다 크고 65535보다 작아야 합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1696"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1706"/>
       <source>Mudlet can not load support for secure connections.</source>
       <translation>Mudlet은 안전한 연결을 지원할 수 없습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1718"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1728"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1738"/>
       <source>Please enter the URL or IP address of the Game server.</source>
       <translation>게임 서버의 URL 또는 IP 주소를 입력하세요.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1739"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1749"/>
       <source>SSL connections require the URL of the Game server.</source>
       <translation>SSL 연결은 게임 서버의 URL이 필요합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1756"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1766"/>
       <source>Load profile without connecting.</source>
       <translation>연결하지 않고 프로필을 불러옵니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1772"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1782"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
       <translation>로딩하기 전에 유효한 프로필 이름, 게임 서버 주소 및 게임 포트를 설정해주세요.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1777"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1787"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
       <translation>연결하기 전에 유효한 프로필 이름, 게임 서버 주소 및 게임 포트를 설정해주세요.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1831"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1841"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
       <translation>비밀번호를 숨기려면 클릭하세요. 다른 프로필이 선택되면 비밀번호도 숨겨집니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1835"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1845"/>
       <source>Click to reveal the password for this profile.</source>
       <translation>이 프로필의 비밀번호를 표시하려면 클릭하세요.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1684"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1687"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1694"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1697"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet는 안전한 연결에 대해 구성되지 않았습니다.</translation>
     </message>
@@ -5807,31 +5832,31 @@ Count</source>
       <translation>라벨 생성</translation>
     </message>
     <message>
-      <location filename="../src/dlgMapLabel.cpp" line="86"/>
+      <location filename="../src/dlgMapLabel.cpp" line="94"/>
       <source>Foreground color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
       <translation>전경색</translation>
     </message>
     <message>
-      <location filename="../src/dlgMapLabel.cpp" line="109"/>
+      <location filename="../src/dlgMapLabel.cpp" line="117"/>
       <source>Background color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
       <translation>배경색</translation>
     </message>
     <message>
-      <location filename="../src/dlgMapLabel.cpp" line="132"/>
+      <location filename="../src/dlgMapLabel.cpp" line="140"/>
       <source>Text outline color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>텍스트 윤곽선 색상</translation>
     </message>
     <message>
-      <location filename="../src/dlgMapLabel.cpp" line="154"/>
+      <location filename="../src/dlgMapLabel.cpp" line="162"/>
       <source>Label font</source>
       <extracomment>2D mapper create label font dialog title</extracomment>
       <translation>라벨 글꼴</translation>
     </message>
     <message>
-      <location filename="../src/dlgMapLabel.cpp" line="176"/>
+      <location filename="../src/dlgMapLabel.cpp" line="184"/>
       <source>Select image</source>
       <translation>이미지 선택</translation>
     </message>
@@ -5839,7 +5864,7 @@ Count</source>
   <context>
     <name>dlgMapper</name>
     <message>
-      <location filename="../src/dlgMapper.cpp" line="380"/>
+      <location filename="../src/dlgMapper.cpp" line="385"/>
       <source>None</source>
       <extracomment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</extracomment>
       <translation>없음</translation>
@@ -5875,7 +5900,8 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="102"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>이 옵션을 선택하면 편집기에서 &lt;i&gt;프로필 저장&lt;/i&gt; 버튼을 클릭하거나 세션 종료 시 저장할 때  
+모든 공유 세션에 모듈이 저장되고 &lt;i&gt;동기화&lt;/i&gt;됩니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="135"/>
@@ -5921,7 +5947,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="333"/>
       <source>(recommended)</source>
-      <translation type="unfinished"/>
+      <translation>(권장)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
@@ -5937,13 +5963,14 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>one-line description (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>한 줄 설명 (권장)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
       <source>Description
 (e.g. how to use)</source>
-      <translation type="unfinished"/>
+      <translation>설명  
+(예: 사용 방법)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="289"/>
@@ -7295,106 +7322,106 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
   <context>
     <name>dlgTriggerEditor</name>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="404"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6711"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="408"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6717"/>
       <location filename="../src/dlgTriggerEditor.h" line="473"/>
       <source>Triggers</source>
       <translation>트리거</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="405"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="406"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="410"/>
       <source>Show Triggers</source>
       <translation>트리거 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6739"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6745"/>
       <location filename="../src/dlgTriggerEditor.h" line="479"/>
       <source>Buttons</source>
       <translation>버튼</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="435"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="439"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="440"/>
       <source>Show Buttons</source>
       <translation>버튼 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="413"/>
       <location filename="../src/dlgTriggerEditor.h" line="474"/>
       <source>Aliases</source>
       <translation>줄임말</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="410"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="411"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
       <source>Show Aliases</source>
       <translation>줄임말 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="419"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6718"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6724"/>
       <location filename="../src/dlgTriggerEditor.h" line="476"/>
       <source>Timers</source>
       <translation>타이머</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="424"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
       <source>Show Timers</source>
       <translation>타이머 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6725"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6731"/>
       <location filename="../src/dlgTriggerEditor.h" line="475"/>
       <source>Scripts</source>
       <translation>스크립트</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="419"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
       <source>Show Scripts</source>
       <translation>스크립트 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="424"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
       <location filename="../src/dlgTriggerEditor.h" line="477"/>
       <source>Keys</source>
       <translation>키</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="429"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
       <source>Show Keybindings</source>
       <translation>단축키 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="429"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7234"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7240"/>
       <location filename="../src/dlgTriggerEditor.h" line="478"/>
       <source>Variables</source>
       <translation>변수</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="431"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="435"/>
       <source>Show Variables</source>
       <translation>변수 보기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="456"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="460"/>
       <source>Activate</source>
       <translation>활성화</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="457"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="461"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
       <translation>트리거, 스크립트 등의 활성 또는 비활성 모드 전환</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="475"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="479"/>
       <source>Delete Item</source>
       <translation>항목 삭제</translation>
     </message>
@@ -7411,44 +7438,44 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <translation>Ctrl+S</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="496"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10034"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10040"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="500"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10041"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10047"/>
       <source>Copy</source>
       <translation>복사</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="500"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="501"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="504"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="505"/>
       <source>Copy the trigger/script/alias/etc</source>
       <translation>트리거/스크립트/줄임말 등 복사</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="510"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10035"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10041"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="514"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10042"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10048"/>
       <source>Paste</source>
       <translation>붙여넣기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="514"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="515"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="518"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="519"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
       <translation>클립보드에서 트리거/스크립트/줄임말 등을 붙여넣기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="529"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="533"/>
       <source>Import</source>
       <translation>가져오기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="533"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="537"/>
       <source>Export</source>
       <translation>내보내기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="537"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9876"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9883"/>
       <location filename="../src/dlgTriggerEditor.h" line="472"/>
       <source>Save Profile</source>
       <translation>프로필 저장</translation>
@@ -7459,17 +7486,17 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="548"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="552"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
       <translation>트리거, 줄임말, 스크립트, 타이머, 버튼 및 키를 포함한 전체 프로필을 저장합니다. (지도 또는 스크립트별 설정은 저장되지 않음); 또한 표시된 모듈을 &quot;동기화&quot; 합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="554"/>
       <source>Save Profile As</source>
       <translation>다른 이름으로 프로필 저장</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="449"/>
       <location filename="../src/dlgTriggerEditor.h" line="481"/>
       <source>Statistics</source>
       <translation>통계</translation>
@@ -7500,212 +7527,212 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <translation>%1 - 편집기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="322"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="326"/>
       <source>*** starting new session ***</source>
       <translation>*** 새 세션 시작 ***</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="450"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="454"/>
       <location filename="../src/dlgTriggerEditor.h" line="482"/>
       <source>Debug</source>
       <translation>디버그</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="491"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="495"/>
       <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
       <translation>&lt;p&gt;선택한 항목을 저장합니다. (Ctrl+S)&lt;/p&gt;&lt;p&gt;저장은 항목에 대한 모든 변경 사항이 적용되도록 합니다. 디스크에 저장되지 않으므로 컴퓨터/프로그램 충돌 시 변경 사항이 손실될 수 있습니다 (그러나 오른쪽의 '프로필 저장'은 안전합니다.)&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="538"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="542"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="558"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="562"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
       <translation>Mudlet 프로필을 로드하는 중에 문제가 발생하여 로드할 수 없습니다. &apos;연결 - 옵션 - 프로필 기록에서 이전 버전을 로드해 보세요.&apos;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="585"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="589"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <extracomment>This is the toolbar that is initially placed at the top of the editor.</extracomment>
       <translation>편집기 도구 모음 - %1 - 액션</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="619"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
       <source>Editor Toolbar - %1 - Items</source>
       <extracomment>This is the toolbar that is initially placed at the left side of the editor.</extracomment>
       <translation>편집기 도구 모음 - %1 - 항목</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="629"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="633"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
       <translation>도구 모음 창 복원</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="636"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
       <translation>아이템 도구 모음 창 복원</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="735"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="738"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="739"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="742"/>
       <source>Search Options</source>
       <translation>검색 옵션</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="742"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="746"/>
       <source>Case sensitive</source>
       <translation>대소문자 구분</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="879"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="883"/>
       <source>start of line</source>
       <translation>start of line</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="928"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="932"/>
       <source>Text to find (trigger pattern)</source>
       <translation>찾을 텍스트 (트리거 패턴)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3787"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4776"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3793"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4782"/>
       <source>New trigger group</source>
       <translation>새로운 트리거 그룹</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3789"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4776"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3795"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4782"/>
       <source>New trigger</source>
       <translation>새로운 트리거</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3892"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3898"/>
       <source>New timer group</source>
       <translation>새로운 타이머 그룹</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3894"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3900"/>
       <source>New timer</source>
       <translation>새로운 타이머</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3987"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3993"/>
       <source>Table name...</source>
       <translation>테이블 이름...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3994"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4000"/>
       <source>Variable name...</source>
       <translation>변수 이름...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4003"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4009"/>
       <source>New table name</source>
       <translation>새로운 테이블 이름</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4003"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4009"/>
       <source>New variable name</source>
       <translation>새로운 변수 이름</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4053"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4059"/>
       <source>New key group</source>
       <translation>새로운 키 그룹</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4055"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5614"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5682"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4061"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5620"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5688"/>
       <source>New key</source>
       <translation>새로운 키</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4141"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4147"/>
       <source>New alias group</source>
       <translation>새로운 줄임말 그룹</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4143"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4934"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5020"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4149"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4940"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5026"/>
       <source>New alias</source>
       <translation>새로운 줄임말</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4238"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4244"/>
       <source>New menu</source>
       <translation>새로운 메뉴</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4240"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4246"/>
       <source>New button</source>
       <translation>새로운 버튼</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4271"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4277"/>
       <source>New toolbar</source>
       <translation>새로운 툴바</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4328"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5326"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4334"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5332"/>
       <source>New script group</source>
       <translation>새로운 스크립트 그룹</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4330"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5326"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4336"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5332"/>
       <source>New script</source>
       <translation>새로운 스크립트</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4950"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4956"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5319"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6629"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10455"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5325"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6635"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10462"/>
       <source>While loading the profile, this script had an error that has since been fixed, possibly by another script. The error was:%2%3</source>
       <translation>프로필을 로드하는 동안 이 스크립트에는 오류가 있었으며, 현재는 다른 스크립트에 의해 수정되었을 수 있습니다. 오류:%2%3</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5578"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6425"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5584"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6431"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
       <translation>선택한 변수들은 프로필과 함께 저장되고 불러옵니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5757"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5763"/>
       <source>match on the prompt line</source>
       <translation>프롬프트 라인에서 일치합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5761"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5767"/>
       <source>match on the prompt line (disabled)</source>
       <translation>프롬프트 라인에서 일치합니다 (비활성화됨).</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5762"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5768"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
       <translation>게임으로부터 Go-Ahead (GA) 신호가 필요합니다. 이 기능을 작동시키려면.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5970"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5972"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5976"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5978"/>
       <source>fault</source>
       <translation>오류</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5830"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5938"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9778"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5836"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5944"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9785"/>
       <source>Foreground color ignored</source>
       <extracomment>Color trigger ignored foreground color button, ensure all three instances have the same text</extracomment>
       <translation>전경색 무시됨</translation>
@@ -7737,540 +7764,540 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="468"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="472"/>
       <source>Add Item</source>
       <translation>항목 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="482"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="486"/>
       <source>Add Group (Control+Shift+N)</source>
       <translation>그룹 추가 (Control+Shift+N)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2947"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2953"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3136"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3142"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3273"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3392"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3545"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3707"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3279"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3398"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3551"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3713"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4613"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4619"/>
       <source>This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5834"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5942"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9781"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5840"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5948"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9788"/>
       <source>Default foreground color</source>
       <extracomment>Color trigger default foreground color button, ensure all three instances have the same text</extracomment>
       <translation>기본 전경색</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5838"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5946"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9784"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5844"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5952"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9791"/>
       <source>Foreground color [ANSI %1]</source>
       <extracomment>Color trigger ANSI foreground color button, ensure all three instances have the same text</extracomment>
       <translation>전경색 [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5844"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5952"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9840"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5850"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5958"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9847"/>
       <source>Background color ignored</source>
       <extracomment>Color trigger ignored background color button, ensure all three instances have the same text</extracomment>
       <translation>배경색 무시됨</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5848"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5956"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9843"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5854"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5962"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9850"/>
       <source>Default background color</source>
       <extracomment>Color trigger default background color button, ensure all three instances have the same text</extracomment>
       <translation>기본 배경색</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5852"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5960"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9846"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5966"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9853"/>
       <source>Background color [ANSI %1]</source>
       <extracomment>Color trigger ANSI background color button, ensure all three instances have the same text</extracomment>
       <translation>배경색 [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6029"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6033"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9667"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9689"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10191"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10193"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6035"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6039"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9674"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9696"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10198"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10200"/>
       <source>keep</source>
       <extracomment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</extracomment>
       <translation>유지</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6486"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9645"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6492"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9652"/>
       <source>Command:</source>
       <translation>명령어:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6525"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6531"/>
       <source>Menu properties</source>
       <translation>메뉴 속성</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6535"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6541"/>
       <source>Button properties</source>
       <translation>버튼 속성</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6543"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6549"/>
       <source>Command (down);</source>
       <translation>명령어 (아래로);</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6738"/>
       <source>Aliases - Input Triggers</source>
       <translation>줄임말 - 입력 트리거</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6746"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6752"/>
       <source>Key Bindings</source>
       <translation>키 바인딩</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7837"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7843"/>
       <source>Add Trigger</source>
       <translation>트리거 추가하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7844"/>
       <source>Add new trigger</source>
       <translation>새로운 트리거 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7839"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7845"/>
       <source>Add Trigger Group</source>
       <translation>트리거 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7840"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7846"/>
       <source>Add new group of triggers</source>
       <translation>새로운 트리거 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7841"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7847"/>
       <source>Delete Trigger</source>
       <translation>트리거 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7842"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7848"/>
       <source>Delete the selected trigger</source>
       <translation>선택한 트리거 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7843"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
       <location filename="../src/dlgTriggerEditor.h" line="465"/>
       <source>Save Trigger</source>
       <translation>트리거 저장</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7844"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7850"/>
       <source>Saves the selected trigger, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 트리거 저장하여 변경 사항을 적용합니다 - 하지만 디스크에 저장하지는 않습니다...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7847"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
       <source>Add Timer</source>
       <translation>타이머 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7848"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7854"/>
       <source>Add new timer</source>
       <translation>새로운 타이머 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7855"/>
       <source>Add Timer Group</source>
       <translation>타이머 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7850"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7856"/>
       <source>Add new group of timers</source>
       <translation>새로운 타이머 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7851"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7857"/>
       <source>Delete Timer</source>
       <translation>타이머 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7852"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7858"/>
       <source>Delete the selected timer</source>
       <translation>선택한 타이머 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7859"/>
       <location filename="../src/dlgTriggerEditor.h" line="466"/>
       <source>Save Timer</source>
       <translation>타이머 저장</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7854"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7860"/>
       <source>Saves the selected timer, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 타이머 저장, 새로운 변경 사항을 적용합니다. 하지만 디스크에 저장되지는 않습니다...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7857"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7863"/>
       <source>Add Alias</source>
       <translation>줄임말 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7864"/>
       <source>Add new alias</source>
       <translation>새로운 줄임말 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7859"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7865"/>
       <source>Add Alias Group</source>
       <translation>줄임말 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7860"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7866"/>
       <source>Add new group of aliases</source>
       <translation>새로운 줄임말 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7861"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7867"/>
       <source>Delete Alias</source>
       <translation>줄임말 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7862"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7868"/>
       <source>Delete the selected alias</source>
       <translation>선택한 줄임말 삭제하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7863"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
       <location filename="../src/dlgTriggerEditor.h" line="467"/>
       <source>Save Alias</source>
       <translation>줄임말 저장하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7864"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7870"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 줄임말 저장하기, 변경 사항을 적용합니다. 하지만 디스크에는 저장되지 않습니다...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7867"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
       <source>Add Script</source>
       <translation>스크립트 추가하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7868"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
       <source>Add new script</source>
       <translation>새로운 스크립트 추가하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7875"/>
       <source>Add Script Group</source>
       <translation>스크립트 그룹 추가하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7870"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7876"/>
       <source>Add new group of scripts</source>
       <translation>새로운 스크립트 그룹 추가하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7871"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
       <source>Delete Script</source>
       <translation>스크립트 삭제하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7872"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7878"/>
       <source>Delete the selected script</source>
       <translation>선택한 스크립트 삭제하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7879"/>
       <location filename="../src/dlgTriggerEditor.h" line="468"/>
       <source>Save Script</source>
       <translation>스크립트 저장하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7880"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 스크립트를 저장하여 새로운 변경 사항이 적용되도록 합니다 - 하지만 디스크에 저장되지는 않습니다...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7883"/>
       <source>Add Button</source>
       <translation>버튼 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7878"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7884"/>
       <source>Add new button</source>
       <translation>새로운 버튼 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7879"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
       <source>Add Button Group</source>
       <translation>버튼 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7880"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7886"/>
       <source>Add new group of buttons</source>
       <translation>새로운 버튼 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7881"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7887"/>
       <source>Delete Button</source>
       <translation>버튼 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7882"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
       <source>Delete the selected button</source>
       <translation>선택한 버튼 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7883"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
       <location filename="../src/dlgTriggerEditor.h" line="469"/>
       <source>Save Button</source>
       <translation>버튼 저장</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7884"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7890"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 버튼을 저장하여 새로운 변경 사항이 적용되도록 합니다 - 하지만 디스크에 저장되지는 않습니다...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7887"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7893"/>
       <source>Add Key</source>
       <translation>키 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7894"/>
       <source>Add new key</source>
       <translation>새로운 키 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7895"/>
       <source>Add Key Group</source>
       <translation>키 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7890"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7896"/>
       <source>Add new group of keys</source>
       <translation>새로운 키 그룹 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7891"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7897"/>
       <source>Delete Key</source>
       <translation>키 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7892"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7898"/>
       <source>Delete the selected key</source>
       <translation>선택한 키 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7893"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7899"/>
       <location filename="../src/dlgTriggerEditor.h" line="470"/>
       <source>Save Key</source>
       <translation>키 저장</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7894"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7900"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 키 저장, 변경 사항을 적용함 - 하지만 디스크에 저장하지는 않음...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7897"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7903"/>
       <source>Add Variable</source>
       <translation>변수 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7898"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7904"/>
       <source>Add new variable</source>
       <translation>새로운 변수 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7899"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7905"/>
       <source>Add Lua table</source>
       <translation>Lua 테이블 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7900"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7906"/>
       <source>Add new Lua table</source>
       <translation>새로운 Lua 테이블 추가</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7901"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7907"/>
       <source>Delete Variable</source>
       <translation>변수 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7902"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7908"/>
       <source>Delete the selected variable</source>
       <translation>선택한 변수 삭제</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7903"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7909"/>
       <location filename="../src/dlgTriggerEditor.h" line="471"/>
       <source>Save Variable</source>
       <translation>변수 저장</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7904"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7910"/>
       <source>Saves the selected variable, causing new changes to take effect - does not save to disk though...</source>
       <translation>선택한 변수 저장하여 변경 사항 적용 - 하지만 디스크에 저장되지는 않음...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8545"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8552"/>
       <source>Central Debug Console</source>
       <translation>중앙 디버그 콘솔</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8827"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8831"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8851"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8855"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8875"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8879"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8899"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8903"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8923"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8927"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8947"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8952"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8972"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8976"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8995"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8999"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9018"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9022"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9041"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9045"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9064"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9068"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9087"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9092"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8834"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8862"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8882"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8886"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8906"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8910"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8930"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8934"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8954"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8959"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8979"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8983"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9002"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9006"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9025"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9029"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9048"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9052"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9071"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9075"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9094"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9099"/>
       <source>Export Package:</source>
       <translation>패키지 내보내기:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8827"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8831"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8851"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8855"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8875"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8879"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8899"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8903"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8923"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8927"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8947"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8952"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8972"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8976"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8995"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8999"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9018"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9022"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9041"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9045"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9064"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9068"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9087"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9092"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8834"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8862"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8882"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8886"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8906"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8910"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8930"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8934"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8954"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8959"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8979"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8983"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9002"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9006"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9025"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9029"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9048"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9052"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9071"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9075"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9094"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9099"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
       <translation>먼저 내보낼 항목을 선택해야 합니다. 트리 항목을 선택한 다음 다시 내보내기를 클릭하세요.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8836"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8860"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8884"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8908"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8932"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8957"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8843"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8867"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8891"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8915"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8939"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8964"/>
       <source>Package %1 saved</source>
       <translation>패키지 %1 이(가) 저장되었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8981"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9004"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9027"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9050"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9073"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9097"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8988"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9011"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9034"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9057"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9080"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9104"/>
       <source>Copied %1 to clipboard</source>
       <translation>클립보드에 복사됨 %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9110"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9117"/>
       <source>Mudlet packages (*.xml)</source>
       <translation>Mudlet 패키지 (*.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9110"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9117"/>
       <source>Export Item</source>
       <translation>항목 내보내기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9127"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9134"/>
       <source>export package:</source>
       <translation>패키지 내보내기:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9127"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9134"/>
       <source>Cannot write file %1:
 %2.</source>
       <translation>파일 %1을(를) 쓸 수 없습니다:
 %2</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9396"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9403"/>
       <source>Import Mudlet Package</source>
       <translation>Mudlet 패키지 가져오기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9492"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9499"/>
       <source>Couldn&apos;t save profile</source>
       <translation>프로필을 저장할 수 없습니다&apos;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9492"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9499"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9502"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9509"/>
       <source>Backup Profile</source>
       <translation>프로필 백업</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9502"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9509"/>
       <source>trigger files (*.trigger *.xml)</source>
       <translation>트리거 파일 (*.trigger *.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9705"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9712"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <extracomment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</extracomment>
       <translation>오디오 파일(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;고급 오디오 코딩-스트림(*.aac);;MPEG-2 오디오 레이어 3(*.mp3);;MPEG-4 오디오(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM 오디오(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;모든 파일(*.*)</translation>
@@ -8281,64 +8308,64 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <translation>Ctrl+0</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9641"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9648"/>
       <source>Command (down):</source>
       <translation>명령어 (아래로):</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9662"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9669"/>
       <source>Select foreground color to apply to matches</source>
       <translation>매치에 적용할 전경색 선택</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9684"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9691"/>
       <source>Select background color to apply to matches</source>
       <translation>일치에 적용할 배경색을 선택하세요</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9700"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9707"/>
       <source>Choose sound file</source>
       <translation>소리 파일 선택</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9758"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9765"/>
       <source>Select foreground trigger color for item %1</source>
       <translation>아이템 %1에 대한 전경 트리거 색상 선택</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9821"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9828"/>
       <source>Select background trigger color for item %1</source>
       <translation>아이템 %1에 대한 배경 트리거 색상 선택</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="9869"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9876"/>
       <source>Saving…</source>
       <translation>…저장 중</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10030"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10037"/>
       <source>Format All</source>
       <translation>모두 형식 지정</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10033"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10039"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10040"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10046"/>
       <source>Cut</source>
       <translation>잘라내기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10037"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10043"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10044"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10050"/>
       <source>Select All</source>
       <translation>모두 선택</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="10207"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="10214"/>
       <source>Sound file to play when the trigger fires.</source>
       <translation>트리거가 발동될 때 재생할 사운드 파일입니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="877"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="881"/>
       <source>substring</source>
       <translation>부분 문자열</translation>
     </message>
@@ -8403,360 +8430,360 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <translation>비활성화된 오프셋 타이머</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="232"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="236"/>
       <source>-- add your Lua code here</source>
       <translation>-- 여기에 Lua 코드를 추가하세요</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="406"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="410"/>
       <location filename="../src/dlgTriggerEditor.h" line="473"/>
       <source>Ctrl+1</source>
       <translation>Ctrl+1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="411"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
       <location filename="../src/dlgTriggerEditor.h" line="474"/>
       <source>Ctrl+2</source>
       <translation>Ctrl+2</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
       <location filename="../src/dlgTriggerEditor.h" line="475"/>
       <source>Ctrl+3</source>
       <translation>Ctrl+3</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
       <location filename="../src/dlgTriggerEditor.h" line="476"/>
       <source>Ctrl+4</source>
       <translation>Ctrl+4</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
       <location filename="../src/dlgTriggerEditor.h" line="477"/>
       <source>Ctrl+5</source>
       <translation>Ctrl+5</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="431"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="435"/>
       <location filename="../src/dlgTriggerEditor.h" line="478"/>
       <source>Ctrl+6</source>
       <translation>Ctrl+6</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="440"/>
       <location filename="../src/dlgTriggerEditor.h" line="479"/>
       <source>Ctrl+7</source>
       <translation>Ctrl+7</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="440"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
       <location filename="../src/dlgTriggerEditor.h" line="480"/>
       <source>Errors</source>
       <translation>오류</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
       <source>Show/Hide the errors console in the bottom right of this editor.</source>
       <translation>Show/Hide the errors console in the bottom right of this editor.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
       <source>Show/Hide errors console</source>
       <translation>Show/Hide errors console</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
       <location filename="../src/dlgTriggerEditor.h" line="480"/>
       <source>Ctrl+8</source>
       <translation>Ctrl+8</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="450"/>
       <source>Generate a statistics summary display on the main profile console.</source>
       <translation>메인 프로필 콘솔에 통계 요약 표시 생성하기.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
       <source>Generate statistics</source>
       <translation>통계 생성하기</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
       <location filename="../src/dlgTriggerEditor.h" line="481"/>
       <source>Ctrl+9</source>
       <translation>Ctrl+9</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="455"/>
       <source>Show/Hide the separate Central Debug Console - when being displayed the system will be slower.</source>
       <translation>별도의 중앙 디버그 콘솔 표시/숨기기 - 표시되는 경우 시스템이 느려집니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="456"/>
       <source>Show/Hide Debug Console (Ctrl+0) -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
       <translation>디버그 콘솔 표시/숨기기 (Ctrl+0) -&gt; 시스템이 &lt;b&gt;&lt;i&gt;느려집니다.&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="744"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="748"/>
       <source>Match case precisely</source>
       <translation>정확하게 대소문자를 일치시킵니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="748"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="752"/>
       <source>Include variables</source>
       <translation>변수를 포함합니다.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="750"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="754"/>
       <source>Search variables (slower)</source>
       <translation>변수를 검색합니다 (느립니다).</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="794"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="798"/>
       <source>Type</source>
       <extracomment>Heading for the first column of the search results</extracomment>
       <translation>유형</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="798"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="802"/>
       <source>Where</source>
       <translation>위치</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="800"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="804"/>
       <source>What</source>
       <translation>무엇</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="878"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="882"/>
       <source>perl regex</source>
       <translation>perl regex</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="880"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="884"/>
       <source>exact match</source>
       <translation>정확한 일치</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="881"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="885"/>
       <source>lua function</source>
       <translation>Lua 함수</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="882"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="886"/>
       <source>line spacer</source>
       <translation>줄 간격</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="883"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="887"/>
       <source>color trigger</source>
       <translation>색상 트리거</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="884"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="888"/>
       <source>prompt</source>
       <translation>프롬프트</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2036"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2048"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2076"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2108"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2138"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2150"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2177"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2212"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2042"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2054"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2082"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2114"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2144"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2156"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2183"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2218"/>
       <source>Trigger</source>
       <translation>트리거</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="796"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1556"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1599"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1671"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1743"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1865"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1949"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2036"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2138"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2244"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2333"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2419"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2543"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2617"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="800"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1562"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1605"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1677"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1749"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1871"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1955"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2042"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2144"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2250"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2339"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2425"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2549"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2623"/>
       <source>Name</source>
       <translation>이름</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1611"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1616"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1683"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1688"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1755"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1760"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1959"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1964"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2048"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2053"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2150"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2155"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2254"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2259"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2431"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2436"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2555"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2560"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2629"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2634"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1617"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1689"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1694"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1761"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1766"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1965"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1970"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2054"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2059"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2156"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2161"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2260"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2265"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2437"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2442"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2561"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2566"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2635"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2640"/>
       <source>Command</source>
       <translation>명령어</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2076"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2081"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2177"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2182"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2082"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2087"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2183"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2188"/>
       <source>Pattern {%1}</source>
       <translation>Pattern {%1}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1641"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1646"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1713"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1718"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1835"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1840"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1919"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1924"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2006"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2011"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2108"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2113"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2212"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2217"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2301"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2306"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2387"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2392"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2511"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2516"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2585"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2590"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2659"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2664"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1647"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1652"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1719"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1724"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1841"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1846"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1925"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1930"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2012"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2017"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2114"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2119"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2218"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2223"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2307"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2312"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2393"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2398"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2517"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2522"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2591"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2596"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2665"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2670"/>
       <source>Lua code (%1:%2)</source>
       <translation>Lua 코드 (%1:%2)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1949"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1959"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1976"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2006"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2244"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2254"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2271"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2301"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1955"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1965"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1982"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2012"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2250"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2260"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2277"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2307"/>
       <source>Alias</source>
       <translation>줄임말</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1976"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1981"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2271"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2276"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1982"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1987"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2277"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2282"/>
       <source>Pattern</source>
       <translation>패턴</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1865"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1887"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1919"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2333"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2355"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2387"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1871"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1893"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1925"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2339"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2361"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2393"/>
       <source>Script</source>
       <translation>스크립트</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1887"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1892"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2355"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2360"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1893"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1898"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2361"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2366"/>
       <source>Event Handler</source>
       <translation>이벤트 핸들러</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1743"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1755"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1774"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1835"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2419"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2431"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2450"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2511"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1749"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1761"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1780"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1841"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2425"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2437"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2456"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2517"/>
       <source>Button</source>
       <translation>버튼</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1755"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1760"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2431"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2436"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1761"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1766"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2437"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2442"/>
       <source>Command {Down}</source>
       <translation>명령어 {Down}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1774"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1779"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2450"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2455"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1780"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1785"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2456"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2461"/>
       <source>Command {Up}</source>
       <translation>명령어 {Up}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1803"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2479"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1809"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2485"/>
       <source>Action</source>
       <translation>액션</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1803"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1808"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2479"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2484"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1809"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1814"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2485"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2490"/>
       <source>Stylesheet {L: %1 C: %2}</source>
       <translation>스타일시트 {L: %1 C: %2}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1671"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1683"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1713"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2543"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2555"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2585"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1677"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1689"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1719"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2549"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2561"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2591"/>
       <source>Timer</source>
       <translation>타이머</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1599"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1611"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1641"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2617"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2629"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2659"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1605"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1617"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1647"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2623"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2635"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2665"/>
       <source>Key</source>
       <translation>키</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1556"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1570"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1562"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1576"/>
       <source>Variable</source>
       <translation>변수</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1570"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1576"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1582"/>
       <source>Value</source>
       <translation>값</translation>
     </message>
@@ -8943,73 +8970,73 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
   <context>
     <name>main</name>
     <message>
-      <location filename="../src/main.cpp" line="316"/>
+      <location filename="../src/main.cpp" line="337"/>
       <source>Warning: %1
 </source>
       <translation>경고: %1
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="326"/>
+      <location filename="../src/main.cpp" line="347"/>
       <source>       -h, --help                   displays this message.</source>
       <translation>       -h, --help                   이 메시지를 표시합니다.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="327"/>
+      <location filename="../src/main.cpp" line="348"/>
       <source>       -v, --version                displays version information.</source>
       <translation>       -v, --version                버전 정보를 표시합니다.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="329"/>
+      <location filename="../src/main.cpp" line="350"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="331"/>
+      <location filename="../src/main.cpp" line="352"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="333"/>
+      <location filename="../src/main.cpp" line="354"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="335"/>
+      <location filename="../src/main.cpp" line="356"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="338"/>
+      <location filename="../src/main.cpp" line="359"/>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="342"/>
+      <location filename="../src/main.cpp" line="363"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="346"/>
+      <location filename="../src/main.cpp" line="367"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="349"/>
+      <location filename="../src/main.cpp" line="370"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="350"/>
+      <location filename="../src/main.cpp" line="371"/>
       <source>       --style=style                sets the application GUI style. Possible values depend on
                                     your system configuration. If Qt was compiled with
                                     additional styles or has additional styles as plugins
@@ -9020,12 +9047,12 @@ less likely to be useful for normal use of this application:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="357"/>
+      <location filename="../src/main.cpp" line="378"/>
       <source>       --style style                is the same as listed above.</source>
       <translation>       --style style                위에 나열된 것과 동일합니다.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="358"/>
+      <location filename="../src/main.cpp" line="379"/>
       <source>       --stylesheet=stylesheet      sets the application styleSheet.
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
@@ -9033,12 +9060,12 @@ less likely to be useful for normal use of this application:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="363"/>
+      <location filename="../src/main.cpp" line="384"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
       <translation>       --stylesheet stylesheet      위에 나열된 것과 동일합니다.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="366"/>
+      <location filename="../src/main.cpp" line="387"/>
       <source>       --sync                       forces the X server to perform each X client request
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
@@ -9046,14 +9073,14 @@ less likely to be useful for normal use of this application:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="371"/>
+      <location filename="../src/main.cpp" line="392"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="374"/>
+      <location filename="../src/main.cpp" line="395"/>
       <source>       --qmljsdebugger=1234[,block] activates the QML/JS debugger with a
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
@@ -9061,72 +9088,72 @@ less likely to be useful for normal use of this application:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="378"/>
+      <location filename="../src/main.cpp" line="399"/>
       <source>Arguments:</source>
       <translation>인수:</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="379"/>
+      <location filename="../src/main.cpp" line="400"/>
       <source>        [FILE]                       File to install as a package</source>
       <translation>        [FILE]                       패키지로 설치할 파일</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="380"/>
+      <location filename="../src/main.cpp" line="401"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
       <translation>버그를 신고하려면: https://github.com/Mudlet/Mudlet/issues</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="398"/>
+      <location filename="../src/main.cpp" line="419"/>
       <source>Copyright © 2008-2025  Mudlet developers</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="321"/>
+      <location filename="../src/main.cpp" line="342"/>
       <source>Usage: %1 [OPTION...] [FILE] </source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
       <translation>사용법: %1 [옵션...] [FILE] </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="325"/>
+      <location filename="../src/main.cpp" line="346"/>
       <source>Options:</source>
       <translation>옵션:</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="328"/>
+      <location filename="../src/main.cpp" line="349"/>
       <source>       -s, --splashscreen           show splashscreen on startup.</source>
       <translation>       -s, --splashscreen           시작 시 스플래시 화면 표시.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="381"/>
+      <location filename="../src/main.cpp" line="402"/>
       <source>Project home page: http://www.mudlet.org/</source>
       <translation>프로젝트 홈페이지: http://www.mudlet.org/</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="389"/>
+      <location filename="../src/main.cpp" line="410"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
       <translation>%1 %2%3 (디버그 심볼 포함, 최적화 없음)</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="395"/>
+      <location filename="../src/main.cpp" line="416"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
       <translation>Qt 라이브러리 %1 (컴파일) %2 (실행)</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="399"/>
+      <location filename="../src/main.cpp" line="420"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
       <translation>라이선스 GPLv2+: GNU GPL 버전 2 이상 - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="400"/>
+      <location filename="../src/main.cpp" line="421"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
       <translation>이것은 자유 소프트웨어입니다. 변경하고 재배포할 수 있습니다.
 법률이 허용하는 한, 어떠한 보증도 없습니다.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="484"/>
+      <location filename="../src/main.cpp" line="505"/>
       <source>Version: %1</source>
       <translation>버전: %1</translation>
     </message>
