@@ -3352,9 +3352,6 @@ void cTelnet::postData()
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData, true);
     }
-    if (mAlertOnNewData) {
-        QApplication::alert(mudlet::self(), 0);
-    }
 }
 
 void cTelnet::initStreamDecompressor()

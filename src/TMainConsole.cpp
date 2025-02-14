@@ -1153,8 +1153,15 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
     mTriggerEngineMode = true;
+    const size_t bufferSize = buffer.size();
+
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
+
+    const bool bufferChanged = bufferSize != buffer.size();
+    if (mAlertOnNewData && isFromServer && bufferChanged) {
+        QApplication::alert(mudlet::self(), 0);
+    }
 
     // dequeues MXP events and raise them through the LuaInterpreter
     // TODO: move this somewhere else more appropriate

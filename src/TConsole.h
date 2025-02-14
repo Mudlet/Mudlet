@@ -327,6 +327,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
 
+    bool mAlertOnNewData = true;
+
 
 private slots:
     void slot_adjustAccessibleNames();
