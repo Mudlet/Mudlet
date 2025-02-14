@@ -856,6 +856,7 @@ COMMIT_LINE:
             wrap(line);
 
             // Start a new, but empty line in the various buffers
+            log(lineBuffer.size() - 1, lineBuffer.size() - 1);
             ++localBufferPosition;
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
@@ -2262,6 +2263,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
 
     // optimization for common case of starting an append action with a newline (skip wrapping previous line) 
     if (text.at(0) == QChar::LineFeed) {
+        log(last, last);
         wrap(last+1);
     } else {
         wrap(last);
@@ -2327,6 +2329,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
     // optimization for common case of starting an append action with a newline (skip wrapping previous line) 
     if (text.at(0) == QChar::LineFeed) {
+        log(last, last);
         wrap(last+1);
     } else {
         wrap(last);
@@ -2754,8 +2757,12 @@ inline int TBuffer::wrap(int startLine)
         }
     }
 
-    log(startLine, startLine + tempList.size());
-    return insertedLines > 0 ? insertedLines : 0;
+    if (insertedLines > 0) {
+        // log all lines but the last one (in case further text is appended later)
+        log(startLine, startLine + insertedLines - 1);
+        return insertedLines;
+    }
+    return 0;
 }
 
 // This only works on the Main Console for a profile
