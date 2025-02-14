@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation>Too many redirects.</translation>
+      <translation>페이지 이동이 너무 많습니다.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
@@ -7504,12 +7504,29 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="74"/>
       <source>&lt;p&gt;Alias react on user input. To add a new alias:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create aliases from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;줄임말은 사용자 입력에 반응합니다. 새 줄임말을 추가하려면:&lt;ol&gt;&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;입력 &lt;strong&gt;패턴&lt;/strong&gt;을 문자 그대로 또는 Perl 정규 표현식을 사용하여 정의하십시오.&lt;/li&gt;
+&lt;li&gt;게임에 명령어를 전달할 &apos;대체&apos; &lt;strong&gt;명령어&lt;/strong&gt;를 입력하여 줄임말 패턴 대신 전달하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;줄임말을 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;
+
+&lt;p&gt;이게 전부입니다! 입력 줄에서 줄임말을 생성하고 싶다면, 도움이 되는 몇 가지 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;패키지&lt;/a&gt;와 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;모듈&lt;/a&gt;이 있습니다.&lt;/p&gt;
+
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;매뉴얼&lt;/a&gt;을 확인하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="82"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;트리거는 게임 출력에 반응합니다. 새로운 트리거를 추가하려면:&lt;ol&gt;
+&lt;li&gt;위쪽의 &apos;아이템 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
+&lt;li&gt;트리거로 사용할 &lt;strong&gt;패턴&lt;/strong&gt;을 정의하세요.&lt;/li&gt;
+&lt;li&gt;적절한 패턴 &lt;strong&gt;유형&lt;/strong&gt;을 선택하세요.&lt;/li&gt;
+&lt;li&gt;트리거가 게임에서 패턴을 찾으면 실행할 &lt;strong&gt;명령어&lt;/strong&gt;를 정의하거나, 더 복잡한 경우 스크립트를 작성하세요.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;트리거를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
+&lt;/ol&gt;&lt;/p&gt;
+
+&lt;p&gt;그게 다예요! 입력 줄에서 트리거를 생성하고 싶다면, &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;Command Line Simple Triggers and Aliases Script&lt;/a&gt;과 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Input line alias/trigger scripts&lt;/a&gt;라는 패키지가 도움이 될 수 있어요.&lt;/p&gt;
+
+&lt;p&gt;더 자세한 정보는 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="166"/>
@@ -7740,28 +7757,97 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="91"/>
       <source>&lt;p&gt;Scripts organize code and can react to events. To add a new script:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;If needed, you can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;스크립트는 코드를 정리하고 이벤트에 반응할 수 있습니다. 새로운 스크립트를 추가하려면: &lt;ol&gt;
+&lt;li&gt;위쪽의 &apos;아이템 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
+&lt;li&gt;아래 박스에 스크립트를 입력하세요. 예를 들어, 다른 트리거나 별칭에서 호출할 &lt;strong&gt;함수&lt;/strong&gt;를 정의할 수 있습니다.&lt;/li&gt;
+&lt;li&gt;함수를 정의하지 않고 lua &lt;strong&gt;명령어&lt;/strong&gt;를 작성하면, Mudlet 시작 시와 스크립트를 편집할 때마다 실행됩니다.&lt;/li&gt;
+&lt;li&gt;필요한 경우, +와 - 기호로 &lt;strong&gt;이벤트&lt;/strong&gt; 목록을 등록할 수 있습니다. 이벤트가 발생하면, 스크립트 항목과 동일한 이름의 함수가 호출됩니다.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;스크립트를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
+&lt;/ol&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 스크립트는 비활성화되어 있어도 열람 시 자동으로 실행됩니다.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 이벤트는 메인 프로필 창의 명령줄에서 다음과 같이 추가할 수도 있습니다:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;더 자세한 정보는 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
       <source>&lt;p&gt;Timers react after a timespan once or regularly. To add a new timer:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Timers can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;타이머는 일정 시간이 지난 후 또는 주기적으로 반응합니다. 새 타이머를 추가하려면:&lt;ol&gt;
+&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;타이머가 반응할 &lt;strong&gt;시간 간격&lt;/strong&gt;을 다음 형식으로 정의하십시오: 시 : 분 : 초.&lt;/li&gt;
+&lt;li&gt;시간이 지난 후 게임으로 전송할 &lt;strong&gt;명령어&lt;/strong&gt;를 명확한 텍스트로 입력하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;타이머를 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;
+&lt;/ol&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 트리거를 한 번만 실행하고 주기적으로 실행하지 않으려면 Lua의 tempTimer() 함수를 사용하십시오.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 타이머는 메인 프로필 창의 명령줄에서도 다음과 같이 정의할 수 있습니다:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;이 코드는 생성 후 정확히 3초 후에 "hello!"를 출력합니다.&lt;/p&gt;
+
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="113"/>
       <source>&lt;p&gt;Buttons react on mouse clicks. To add a new button:&lt;ol&gt;&lt;li&gt;Add a new group to define a new &lt;strong&gt;button bar&lt;/strong&gt; in case you don&apos;t have any.&lt;/li&gt;&lt;li&gt;Add new groups as &lt;strong&gt;menus&lt;/strong&gt; to a button bar or sub-menus to menus.&lt;li&gt;&lt;li&gt;Add new items as &lt;strong&gt;buttons&lt;/strong&gt; to a button bar or menu or sub-menu.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the toolbar, menu or button. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If a button is made a &lt;strong&gt;click-down&lt;/strong&gt; button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua &apos;getButtonState()&apos; function reports whether the button is up or down.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;버튼은 마우스 클릭에 반응합니다. 새 버튼을 추가하려면:&lt;ol&gt;
+&lt;li&gt;새 &lt;strong&gt;버튼 바&lt;/strong&gt;를 정의하기 위해 새 그룹을 추가하십시오. 버튼 바가 없는 경우에만 필요합니다.&lt;/li&gt;
+&lt;li&gt;버튼 바에 &lt;strong&gt;메뉴&lt;/strong&gt;로 새 그룹을 추가하거나, 메뉴에 하위 메뉴를 추가하십시오.&lt;/li&gt;
+&lt;li&gt;버튼 바, 메뉴 또는 하위 메뉴에 &lt;strong&gt;버튼&lt;/strong&gt;으로 새 항목을 추가하십시오.&lt;/li&gt;
+&lt;li&gt;버튼이 눌렸을 때 게임으로 전송할 &lt;strong&gt;명령어&lt;/strong&gt;를 입력하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;도구 모음, 메뉴 또는 버튼을 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;
+&lt;/ol&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 비활성화된 항목은 숨겨지며, 도구 모음이나 메뉴가 비활성화되면 해당 항목에 포함된 모든 항목도 숨겨집니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 버튼이 &lt;strong&gt;클릭 다운&lt;/strong&gt; 버튼으로 설정되면, 버튼을 두 번째로 클릭하여 선택 해제할 때  
+게임에 전송할 명령어를 정의하거나, 해당 동작 시 실행할 스크립트를 작성할 수 있습니다.  
+이와 같은 스크립트 내에서 Lua &apos;getButtonState()&apos; 함수는 버튼이 눌린 상태인지 올라간 상태인지 보고합니다.&lt;/p&gt;
+
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="123"/>
       <source>&lt;p&gt;Keys react on keyboard presses. To add a new key binding:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Keys can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;키는 키보드 입력에 반응합니다. 새 키 바인딩을 추가하려면:&lt;ol&gt;
+&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&apos;키 가져오기&apos;&lt;/strong&gt;를 클릭한 후 Control, Shift와 같은 수정 키를 포함하여 원하는 키 조합을 누르십시오.&lt;/li&gt;
+&lt;li&gt;버튼을 눌렀을 때 게임으로 전송할 &lt;strong&gt;명령어&lt;/strong&gt;를 명확한 텍스트로 입력하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;새 키 바인딩을 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;
+&lt;/ol&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 키는 메인 프로필 창의 명령줄에서도 다음과 같이 정의할 수 있습니다:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;F8 키를 누르면 점프합니다.&lt;/p&gt;
+
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="133"/>
       <source>&lt;p&gt;Variables store information. To make a new variable:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables and tables can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;변수는 정보를 저장합니다. 새 변수를 만들려면:&lt;ol&gt;
+&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오. 테이블을 추가하려면 &apos;그룹 추가&apos;를 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;변수 값의 유형을 선택하십시오(문자열, 정수, 불리언 가능).&lt;/li&gt;
+&lt;li&gt;이 변수에 저장할 값을 입력하십시오.&lt;/li&gt;
+&lt;li&gt;다음 Mudlet 세션에서도 변수를 유지하려면 왼쪽 변수 목록의 체크박스를 선택하십시오.&lt;/li&gt;
+&lt;li&gt;변수를 수동으로 제거하려면 값을 &apos;nil&apos;로 설정하거나 위의 &apos;삭제&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+&lt;/ol&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 여기에서 생성된 변수는 Mudlet이 종료될 때 저장되지 않습니다.  
+왼쪽 변수 목록의 체크박스를 선택하거나, 변수를 포함하는 스크립트를 작성해야 유지됩니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 변수와 테이블은 메인 프로필 창의 명령줄에서도 다음과 같이 정의할 수 있습니다:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;이 명령은 &apos;foo&apos;라는 이름의 문자열 변수에 &apos;bar&apos; 값을 할당합니다.&lt;/p&gt;
+
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="472"/>
