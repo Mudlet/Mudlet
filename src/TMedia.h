@@ -36,13 +36,7 @@
 #include <QMediaPlayer>
 #include "post_guard.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-using QMediaPlayerPlaybackState = QMediaPlayer::State;
-#else
 using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
-#endif
-
-
 class TMediaPlayer
 {
 public:
@@ -56,9 +50,7 @@ public:
     , mPlaylist(new TMediaPlaylist())
     , initialized(true)
     {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         mMediaPlayer->setAudioOutput(new QAudioOutput());
-#endif
     }
     ~TMediaPlayer() = default;
 
@@ -67,18 +59,10 @@ public:
     QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
     QMediaPlayerPlaybackState getPlaybackState() const {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return mMediaPlayer->state();
-#else
         return mMediaPlayer->playbackState();
-#endif
     }
     void setVolume(int volume) const {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return mMediaPlayer->setVolume(volume);
-#else
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
-#endif
     }
     TMediaPlaylist* playlist() const {
         return mPlaylist;
