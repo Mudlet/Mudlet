@@ -3513,20 +3513,20 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2408"/>
       <source>{FitzPatrick modifier 5}</source>
       <extracomment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2410"/>
       <source>{FitzPatrick modifier 6}</source>
       <extracomment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2687"/>
       <location filename="../src/TTextEdit.cpp" line="2753"/>
       <source>Index (UTF-16)</source>
       <extracomment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2692"/>
@@ -5295,7 +5295,7 @@ Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설
       <location filename="../src/dlgAboutDialog.cpp" line="1200"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-      <translation type="unfinished"/>
+      <translation>CPU (WoW64)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1161"/>
@@ -6021,7 +6021,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="330"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="182"/>
@@ -9132,50 +9132,59 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/main.cpp" line="350"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>-p, --profile=&lt;profile&gt;      추가로 열 프로필을 지정합니다.
+                                    여러 번 사용할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="352"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --only=&lt;predefined&gt;      Mudlet이 특정 미리 정의된 게임만 표시하도록 합니다.
+                                    여러 번 사용할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="354"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>       --steammode                  Mudlet 설정을 Steam의 요구 사항에 맞게 조정합니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="356"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>이 애플리케이션의 일반적인 사용에는 덜 유용할 수 있는 Qt 라이브러리에서 발생하는 다른 상속된 옵션들이 있습니다:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="359"/>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb                     모든 암시적 또는 명시적 -nograb을 무시합니다.
+                                    --dograb은 --nograb보다 우선하며,
+                                    --nograb이 명령줄에서 마지막에 있어도 적용됩니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="363"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     애플리케이션이 마우스나 키보드를 잡지 않도록 설정합니다.
+                                    이 옵션은 Mudlet이 Linux에서 gdb 디버거로 실행될 때
+                                    기본적으로 설정됩니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="367"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     애플리케이션이 마우스나 키보드를
+                                    절대 잡지 않도록 설정합니다.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="370"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse                    애플리케이션의 레이아웃 방향을 오른쪽에서
+                                    왼쪽으로 설정합니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="371"/>
@@ -9186,7 +9195,13 @@ less likely to be useful for normal use of this application:</source>
                                     option. You can also set the style for all Qt
                                     applications by setting the QT_STYLE_OVERRIDE environment
                                     variable.</source>
-      <translation type="unfinished"/>
+      <translation>       --style=style                애플리케이션의 GUI 스타일을 설정합니다.
+                                    가능한 값은 시스템 구성에 따라 다릅니다.
+                                    Qt가 추가 스타일로 컴파일되었거나 플러그인으로
+                                    추가 스타일이 있는 경우, 이들은 -style 명령줄 옵션을
+                                    통해 사용할 수 있습니다.
+                                    또한 QT_STYLE_OVERRIDE 환경 변수를 설정하여
+                                    모든 Qt 애플리케이션에 대한 스타일을 설정할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="378"/>
@@ -9199,7 +9214,9 @@ less likely to be useful for normal use of this application:</source>
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
                                     are relative to the Style Sheet file&apos;s path.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet=stylesheet      애플리케이션의 스타일시트를 설정합니다.
+                                    값은 스타일시트를 포함하는 파일의 경로여야 합니다.
+                                    참고: 스타일시트 파일의 상대 URL은 스타일시트 파일의 경로를 기준으로 합니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="384"/>
@@ -9212,14 +9229,19 @@ less likely to be useful for normal use of this application:</source>
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
                                     option is only valid for the X11 version of Qt.</source>
-      <translation type="unfinished"/>
+      <translation>       --sync                       X 서버가 각 X 클라이언트 요청을 즉시 수행하도록
+                                    강제하며, 버퍼 최적화를 사용하지 않습니다.
+                                    이 옵션은 프로그램을 디버깅하기 쉽게 만들지만,
+                                    종종 훨씬 더 느려집니다.
+                                    --sync 옵션은 X11 버전의 Qt에서만 유효합니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="392"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount                위젯이 파괴되지 않고 남은 수와 동시에 존재한
+                                    최대 위젯 수에 대한 디버그 메시지를 마지막에 출력합니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="395"/>
@@ -9227,7 +9249,9 @@ less likely to be useful for normal use of this application:</source>
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
-      <translation type="unfinished"/>
+      <translation>       --qmljsdebugger=1234[,block] 지정된 포트로 QML/JS 디버거를
+                                    활성화합니다.  숫자는 포트 값이며, block은 선택 사항으로,
+                                    디버거가 연결될 때까지 애플리케이션이 기다리도록 만듭니다.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="399"/>
@@ -9247,7 +9271,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="419"/>
       <source>Copyright © 2008-2025  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>저작권 © 2008-2025 Mudlet 개발자들</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="342"/>
@@ -9380,7 +9404,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="251"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;시스템 웹 브라우저에서 &quot;Educational Mudlet screencasts&quot;의 (온라인) 컬렉션을 엽니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="259"/>
@@ -9486,7 +9510,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="422"/>
       <source>Show changelog</source>
-      <translation type="unfinished"/>
+      <translation>변경 로그 보기</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="427"/>
@@ -12519,7 +12543,8 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1225"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;일부 게임(특히 모든 IRE MUD)은 새 줄이 어디에 있어야 하는지 클라이언트와 제대로 통신하지 않는 버그가 있습니다.  
+이 옵션을 활성화하면 텍스트가 이전 프롬프트 줄에 덧붙여지는 문제를 해결할 수 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1427"/>
@@ -12620,7 +12645,8 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="3980"/>
       <location filename="../src/ui/profile_preferences.ui" line="3993"/>
       <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet의 Lua API, Mud 클라이언트 미디어 프로토콜(MCMP), 그리고 Mud 사운드 프로토콜(MSP)과 함께 사용되는 미디어 파일은 게임 프로필과 함께 캐시됩니다.  
+이 버튼을 눌러 미디어 캐시를 지울 수 있습니다. 많은 게임에서는 미디어가 필요할 때 다시 다운로드됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3983"/>
@@ -12749,17 +12775,18 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="821"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>글꼴에 앤티 앨리어싱을 사용합니다. 화면 해상도가 높고 큰 글꼴을 사용할 수 있으면 글꼴이 부드럽게 표시됩니다.  
+단, 해상도가 낮고 글꼴 크기가 작을 경우 글꼴이 흐릿해질 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;감싸인 이후의 줄은 이만큼 들여쓰기 됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1157"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>감싸인 줄을 들여쓰기할 간격:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1242"/>
@@ -12804,7 +12831,11 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1457"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet이 내부적으로 각 항목의 인스턴스를 식별하는 데 사용하는 &lt;b&gt;고유&lt;/b&gt; ID 번호를 표시합니다.  
+이 번호는 별칭, 키 바인딩 등을 생성하는 Lua API 함수가 성공적으로 실행된 후 반환하는 번호와 동일합니다.  
+이 번호는 같은 이름을 가진 동일한 유형의 항목이 여러 개 있을 때 유용하며, 관련 항목의 Lua 스크립트 이름에 포함되어 중앙 디버그 콘솔 출력에 표시됩니다.&lt;/p&gt;
+
+&lt;p&gt;이 항목에 할당된 번호는 프로필 세션 동안 일정하지만, 다른 항목이 추가되거나 제거되면 프로필을 다시 로드할 때 번호가 달라질 수 있음을 유의하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1460"/>
@@ -13031,7 +13062,14 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1956"/>
       <source>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos; to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이 옵션이 체크되면 Mud 서버는 위의 16가지 색상을 변경하거나 기본값으로 재설정하기 위해 표준 ANSI &lt;tt&gt;OSC&lt;/tt&gt; 이스케이프 코드를 사용할 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;구체적으로 &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt;는 색상 인덱스 &lt;i&gt;i&lt;/i&gt;에 대해 주어진 &lt;i&gt;rr&lt;/i&gt; 빨강, &lt;i&gt;gg&lt;/i&gt; 초록, &lt;i&gt;bb&lt;/i&gt; 파랑 색상 성분을 설정합니다.  
+여기서 i는 단일 16진수 숫자(&apos;0&apos;에서 &apos;9&apos; 또는 &apos;a&apos;에서 &apos;f&apos;, 또는 &apos;A&apos;에서 &apos;F&apos;로 0에서 15까지의 숫자)를 나타내며,  
+rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;lt;OSC&amp;gt;는 &lt;i&gt;운영 체제 명령&lt;/i&gt;으로, 일반적으로 ASCII &lt;ESC&amp;gt; 문자 다음에 &lt;tt&gt;[&lt;/tt&gt;로 인코딩됩니다.  
+그리고 &amp;lt;ST&amp;gt;는 &lt;i&gt;문자열 종료&lt;/i&gt;로, 일반적으로 ASCII &lt;ESC&amp;gt; 문자 뒤에 &lt;tt&gt;\&lt;tt&gt;로 인코딩됩니다.&lt;/p&gt;
+
+&lt;p&gt;반대로 &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt;는 색상을 기본값으로 재설정하며, 오른쪽 버튼이 수행하는 것과 동일한 동작을 합니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1959"/>
@@ -13114,12 +13152,14 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2233"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이 옵션은 2D 지도 보기에서 앤티 앨리어싱(AA)을 활성화하여 더 부드럽고 아름답게 보이게 합니다. 매우 느린 컴퓨터에서는 이 기능을 비활성화하십시오.&lt;/p&gt;
+
+&lt;p&gt;3D 지도 보기에서는 항상 앤티 앨리어싱이 활성화됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2243"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;기본 영역(영역 ID -1)은 일부 지도 스크립트에서 방이 올바른 영역에 배치되기 전에 임시 '대기 영역'으로 사용됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2318"/>
@@ -13225,7 +13265,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4077"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>컴퓨터의 비밀번호 관리자 (보안)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4082"/>
@@ -13240,7 +13280,9 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4056"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;일부 MUD는 16M 색상 모드를 위한 ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) 코드 시퀀스를 잘못 해석합니다. 이 모드는 세미콜론만 사용하고 콜론을 사용하지 않습니다. 즉, 코드가 다음과 같은 형태로 사용될 때 대신: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;여기서 &lt;i&gt;Color Space Id&lt;/i&gt;는 일반적인 (기본) 경우를 지정하기 위해 빈 문자열이어야 하며, 모든 &lt;i&gt;Parameter Elements&lt;/i&gt;(&quot;2&quot;와 &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt; 안의 값들)는 기술적으로 생략될 수 있습니다. 그들은 다음과 같이 사용합니다: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;또는: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;
+
+&lt;p&gt;이 둘의 차이를 신뢰성 있게 감지하는 것은 불가능하므로 이 옵션을 체크하면 Mudlet은 마지막 옵션을 예상하게 되며, 추가된 (비어 있는!) 파라미터도 함께 처리합니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4059"/>
@@ -13654,7 +13696,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="4123"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;지정된 최소 간격(h:mm:ss.zzz)을 가진 타이머에 대해 &apos;LUA OK&apos; 메시지를 표시합니다. 최소 값(기본값)은 모든 해당 메시지를 표시하지만, 매우 짧은 간격의 타이머가 실행 중일 경우 &lt;i&gt;중앙 디버그 콘솔&lt;/i&gt;을(를) 사용할 수 없게 만들 수 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4173"/>
@@ -13810,7 +13852,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="817"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이 방에 대한 기본 가중치로, 자체 값이 설정되지 않은 &lt;i&gt;이 방으로 연결되는&lt;/i&gt; 모든 출구에 사용됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="880"/>
@@ -13872,7 +13914,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="1802"/>
       <location filename="../src/ui/room_exits.ui" line="1986"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이 출구를 통해 경로가 생성되지 않도록 방지합니다. 이는 무한 출구 가중치와 동일한 효과를 가집니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="53"/>
@@ -14203,7 +14245,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2040"/>
       <source>&lt;p&gt;Some mapper scripts may require prefixing the keyword &quot;script:&quot;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;일부 지도 스크립트는 키워드 &quot;script:&quot;을 접두어로 사용해야 할 수 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2060"/>
@@ -14305,7 +14347,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="137"/>
       <source>&lt;p&gt;Remove (selected) event from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;목록에서 (선택된) 이벤트를 제거합니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="147"/>
@@ -14315,7 +14357,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="181"/>
       <source>&lt;p&gt;Add entered event name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;입력된 이벤트 이름을 목록에 추가합니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="140"/>
@@ -14422,7 +14464,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="440"/>
       <source>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이 &lt;b&gt;밀리초&lt;/b&gt; 타이머가 꺼지는 간격의 일부입니다(1000밀리초 = 1초).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="310"/>
@@ -14432,7 +14474,10 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="126"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;주어진 명령어가 패턴과 일치할 경우 사용할 하나 이상의 명령어를 입력하십시오. (선택 사항)&lt;/p&gt;
+
+&lt;p&gt;이것은 다른 줄임말이거나 게임으로 직접 전송할 명령일 수 있습니다. 이 프로필 내에서 변수 수정을 요구하는 복잡한 명령어는 대신 아래 편집기 영역에 Lua 스크립트를 사용하십시오.  
+이 필드와 Lua 스크립트를 동시에 사용할 수 있으며, 이 필드의 내용은 스크립트를 실행하기 전에 사용됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="129"/>
@@ -14534,13 +14579,15 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="407"/>
       <source>&lt;p&gt;If set to any value but the first the trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;If set to the first value the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;첫 번째 값을 제외한 다른 값으로 설정하면, 트리거는 지정된 줄 델타 내에서 목록의 &lt;u&gt;모든&lt;/u&gt; 조건이 충족된 경우에만 실행되며, 캡처된 결과는 &lt;tt&gt;matches&lt;/tt&gt; 대신 &lt;tt&gt;multimatches&lt;/tt&gt;에 저장됩니다.&lt;/p&gt;
+
+&lt;p&gt;첫 번째 값으로 설정하면, 트리거는 목록의 &lt;u&gt;어떤&lt;/u&gt; 조건이 충족된 경우에도 실행됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
       <source>handle multiple items as a</source>
       <extracomment>This text preceeds (is above) the content of the spinBox_lineMargin which also contain text with the text in the label_multiLineTrigger suffixed on the end (underneath).</extracomment>
-      <translation type="unfinished"/>
+      <translation>여러 항목을 하나로 처리</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
@@ -14552,13 +14599,13 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="449"/>
       <source>)</source>
       <extracomment>This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
       <source>AND / Multi-line (delta: </source>
       <extracomment>This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>AND / 여러 줄 (델타:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="465"/>
@@ -14569,7 +14616,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
       <source>&lt;p&gt;Do not pass whole line to children.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;전체 줄을 자식에게 전달하지 않습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
@@ -14606,7 +14653,10 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;주어진 명령어가 패턴과 일치할 경우 사용할 하나 이상의 명령어를 입력하십시오. (선택 사항)&lt;/p&gt;
+
+&lt;p&gt;이것은 다른 별칭이거나 게임으로 직접 전송할 명령일 수 있습니다. 이 프로필 내에서 변수 수정을 요구하는 복잡한 명령어는 대신 아래 편집기 영역에 Lua 스크립트를 사용하십시오.  
+이 필드와 Lua 스크립트를 동시에 사용할 수 있으며, 이 필드의 내용은 스크립트를 실행하기 전에 사용됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
@@ -14616,7 +14666,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="211"/>
       <source>&lt;p&gt;Match all occurrences of the pattern in the line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;줄에서 패턴의 모든 발생을 일치시킵니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
@@ -14631,7 +14681,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="302"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;트리거를 발생시킨 줄 이후 몇 개의 줄을 트리거의 자식에게 전달해야 합니까?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="371"/>
@@ -14683,7 +14733,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="81"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;여기에 &lt;i&gt;전역 변수&lt;/i&gt; 또는 &lt;i&gt;테이블 항목&lt;/i&gt; 이름을 설정하십시오. 이름은 반드시 문자로 시작해야 하며, 문자와 숫자의 조합을 포함할 수 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="114"/>
@@ -14699,7 +14749,18 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="107"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;테이블은 값을 리스트 또는 해시맵 형태로 저장할 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;리스트에서 &lt;b&gt;고유 인덱스 키&lt;/b&gt;는 값을 나타냅니다. 따라서 &lt;i&gt;1, 2, 3...&lt;/i&gt;와 같이 값을 가질 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;맵에서는 &lt;b&gt;맵&lt;/b&gt; {또는 &lt;i&gt;연관 배열&lt;/i&gt;}에서 &lt;i&gt;고유 키&lt;/i&gt;가 값을 나타냅니다.  
+따라서 원하는 식별자 아래에 값을 가질 수 있습니다(이론적으로 함수나 다른 Lua 엔티티도 가능하지만, 이 GUI는 문자열만 지원합니다).&lt;/p&gt;
+
+&lt;p&gt;새로 생성된 테이블(그룹)의 경우, 테이블을 인덱스형 또는 연관형으로 만들지 선택할 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;다른 경우에는 이곳에서 수정할 수 없는 다른 엔티티(&lt;span style=&quot; font-style:italic;&quot;&gt;함수&lt;/span&gt;)가 표시됩니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="119"/>
