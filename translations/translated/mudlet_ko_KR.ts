@@ -9440,7 +9440,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="430"/>
       <source>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;주 콘솔의 시간 표시 출력을 켜거나 끔니다.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;주 콘솔의 시간 표시 출력을 켜거나 끕니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="435"/>
@@ -9450,17 +9450,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="438"/>
       <source>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;리플레이 녹화를 켜거나 끔니다.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;재생 녹화 켜거나 끕니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="443"/>
       <source>Logging</source>
-      <translation>로그</translation>
+      <translation>갈무리</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="446"/>
       <source>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;로깅 기능을 켜거나 끔니다.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;갈무리 기능을 켜거나 끕니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="451"/>
@@ -9582,12 +9582,12 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>게임 소리 음소거(MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="368"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;게임에서 재생되는 미디어(MCMP, MSP)를 음소거합니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="379"/>
@@ -9661,7 +9661,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Text outline:</source>
-      <translation type="unfinished"/>
+      <translation>텍스트 윤곽선:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="202"/>
@@ -9802,7 +9802,24 @@ There is NO WARRANTY, to the extent permitted by law.</source>
 &lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;
+&lt;p&gt;모듈은 여러 세션에서 공통 패키지를 활용할 수 있는 방법입니다.  
+프로필별로 설치되는 패키지와는 다릅니다.&lt;/p&gt;
+
+&lt;p&gt;모듈은 우선순위가 낮은 숫자부터 로드됩니다(1이 2보다 먼저 로드됨).  
+동일한 우선순위를 가진 모듈은 **알파벳 순서**로 로드됩니다.&lt;/p&gt;
+
+&lt;p&gt;우선순위가 음수인 모듈은 스크립트 패키지보다 먼저 로드됩니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;b&gt;&lt;i&gt;동기화(Sync)&lt;/i&gt;&lt;/b&gt; 옵션이 활성화되어 있으면,  
+**이 프로필**의 모듈을 **디스크에 저장**할 때 동일한 모듈 파일을 사용하는 모든 프로필에  
+해당 모듈이 다시 로드됩니다.  
+여러 프로필에서 동일한 모듈을 사용하려면, 해당 모듈을 각 프로필에서  
+이 모듈 관리자를 통해 설치해야 합니다(이때, 해당 프로필이 **포그라운드에 활성화**되어 있어야 합니다).&lt;/p&gt;
+
+&lt;p&gt;모듈은 저장 작업마다 Mudlet 프로필 디렉토리의  
+**&lt;i&gt;moduleBackups&lt;/i&gt;** 디렉토리에 백업됩니다.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
@@ -10179,7 +10196,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="341"/>
       <location filename="../src/mudlet.cpp" line="3250"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet의 소리 음소거(트리거, 스크립트 등)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="369"/>
@@ -10199,7 +10216,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="488"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>전체 화면</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="651"/>
@@ -10239,22 +10256,22 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="664"/>
       <source>Toggle Time Stamps</source>
-      <translation type="unfinished"/>
+      <translation>시간 표시 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
       <source>Toggle Replay</source>
-      <translation type="unfinished"/>
+      <translation>재생 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="666"/>
       <source>Toggle Logging</source>
-      <translation type="unfinished"/>
+      <translation>갈무리 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="667"/>
       <source>Toggle Emergency Stop</source>
-      <translation type="unfinished"/>
+      <translation>비상 정지 켜기/끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="920"/>
@@ -10679,7 +10696,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1223"/>
       <source>Medievia {Custom codec for that MUD}</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Medievia {해당 MUD를 위한 사용자 지정 코덱}</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3216"/>
@@ -10699,7 +10716,9 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="3953"/>
       <source>Review %n update(s)...</source>
       <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n개의 업데이트 검토...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3956"/>
@@ -10719,7 +10738,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="347"/>
       <location filename="../src/mudlet.cpp" line="3255"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>게임 소리 음소거(MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1033"/>
@@ -11494,39 +11513,40 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="3235"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &lt;%1&gt; to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거되었습니다. 음소거를 해제하려면 &lt;%1&gt;을 사용하십시오.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3236"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &lt;%1&gt; to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거 해제되었습니다. 음소거하려면 &lt;%1&gt;을 사용하십시오.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4040"/>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
       <extracomment>%1 is the path and file name (i.e. the location) of the problem fil</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ 오류 ] - Mudlet 프로필을 로드하는 중 문제가 발생하여 로드할 수 없습니다.  
+&apos;연결 - 옵션 - 프로필 기록&apos;에서 이전 버전을 시도하거나 %1이 올바른지 다시 확인하십시오.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3238"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3238"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - Mudlet과 게임 소리의 음소거가 해제되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3250"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 소리(트리거, 스크립트 등) 음소거 해제</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3255"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>게임 소리(MCMP, MSP) 음소거 해제</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3294"/>
@@ -12039,7 +12059,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="536"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation type="unfinished"/>
+      <translation>Windows 줄 바꿈을 올바르게 처리하지 못하는 구형 UNIX 서버를 위해 명령어에 엄격한 UNIX 줄 바꿈 사용</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="539"/>
@@ -12059,7 +12079,10 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="202"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;비영어권 게임을 플레이할 때 텍스트 대신 � 문자가 표시되거나 &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; 같은 특수 문자가 올바르게 나타나지 않는다면, 인코딩을 UTF-8 또는 게임에서 권장하는 인코딩으로 변경해 보십시오.&lt;/p&gt;
+
+&lt;p&gt;일부 운영체제와 인코딩의 경우 Mudlet이 필요한 코덱을 자체적으로 제공해야 합니다.  
+이 경우 해당 인코딩 이름 앞에 &lt;tt&gt;m&lt;/tt&gt; 접두사가 붙게 되며, 인코딩 오류 발생 시 원인을 정확히 추적할 수 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="344"/>
@@ -12332,7 +12355,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="573"/>
       <source>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;모든 키 바인딩을 키 입력과 비교하여 확인합니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;i&gt;Mudlet 3.9.0 이전 버전에서는 &lt;b&gt;KeyCode&lt;/b&gt;와 &lt;b&gt;KeyModifier&lt;/b&gt;의 첫 번째 일치 항목을 찾으면 확인을 중단하고  
+해당 키 바인딩의 명령어를 전송하거나 스크립트를 실행했습니다.  
+이 &lt;/i&gt;프로필별&lt;i&gt; 옵션은 Mudlet이 나머지 일치 항목도 확인하고 실행하도록 지시합니다.  
+다만 이전 버전과의 호환성을 유지하기 위해 기본적으로 비활성화되어 있습니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="649"/>
@@ -12382,7 +12410,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="801"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>선택한 글꼴은 Mudlet에서 작동하지 않습니다. 다른 글꼴을 선택하십시오</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="858"/>
@@ -12411,7 +12439,21 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1203"/>
       <source>&lt;p&gt;Enter the characters you&apos;d like double-clicking to stop selecting text on here. If you don&apos;t enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on &apos; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;여기에 더블 클릭 시 텍스트 선택을 중지할 문자를 입력하십시오.  
+아무 것도 입력하지 않으면 단어를 더블 클릭할 때 공백에서만 선택이 중지되며,  
+따옴표 같은 문자는 포함됩니다.  
+
+예를 들어, 아래와 같은 경우에서 단어 &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;를 더블 클릭하면  
+&lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;가 선택됩니다.&lt;/p&gt;
+
+&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;이 필드에 &lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;!&lt;/span&gt;을 입력하면  
+문자 &apos; &lt;span style=&quot; font-style:italic;&quot;&gt;또는&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;또는&lt;/span&gt; ! 에서 선택이 중지됩니다.  
+따라서 단어 &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;를 더블 클릭하면  
+&lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;만 선택됩니다.&lt;/p&gt;
+
+&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1209"/>
