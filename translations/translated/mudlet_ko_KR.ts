@@ -19,7 +19,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation>No data received from server</translation>
+      <translation>서버에서 데이터를 받지 못했습니다.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
@@ -159,7 +159,7 @@ please wait...</source>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation>InvisibleNotification</translation>
+      <translation>보이지 않는 알림</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
@@ -280,7 +280,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 has changed nick to %2</source>
-      <translation>! %1 닉네임을 %2(으)로 변경했습니다.</translation>
+      <translation>! %1 대화명을 %2(으)로 변경했습니다.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="230"/>
@@ -312,18 +312,18 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="274"/>
       <source>[INFO] %1</source>
-      <translation>[INFO] %1</translation>
+      <translation>[정보] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="301"/>
       <location filename="../src/ircmessageformatter.cpp" line="327"/>
       <source>[ERROR] %1</source>
-      <translation>[ERROR] %1</translation>
+      <translation>[오류] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="311"/>
       <source>[Channel URL] %1</source>
-      <translation>[Channel URL] %1</translation>
+      <translation>[채널 URL] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
@@ -333,12 +333,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="334"/>
       <source>! %1 has left %2</source>
-      <translation>! %1 has left %2</translation>
+      <translation>! %1이(가) %2(을)를 떠났습니다.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="336"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation>! %1 has left %2 (%3)</translation>
+      <translation>! %1이(가) %2(%3)을(를) 떠났습니다.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="345"/>
@@ -358,22 +358,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="374"/>
       <source>! %1 has quit</source>
-      <translation>! %1 has quit</translation>
+      <translation>! %1이(가) 종료되었습니다</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="376"/>
       <source>! %1 has quit (%2)</source>
-      <translation>! %1 has quit (%2)</translation>
+      <translation>! %1이(가) 종료되었습니다(%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="384"/>
       <source>! no topic</source>
-      <translation>! no topic</translation>
+      <translation>! 주제 없음</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[TOPIC] %1</source>
-      <translation>[TOPIC] %1</translation>
+      <translation>[주제] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="397"/>
@@ -514,15 +514,13 @@ please wait...</source>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation>키맵
-에서 객체를 기대했습니다</translation>
+      <translation>키맵에서 예상되는 객체</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation>유효하지 않은 키 시퀀스 사용 %1
-</translation>
+      <translation>유효하지 않은 키 시퀀스 사용 %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
@@ -542,7 +540,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation>라인 %1, 열 %2</translation>
+      <translation>%1 행, %2 열</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
@@ -685,7 +683,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation>방&apos;의 이름과 아이콘 색상, 가중치 및 잠금 설정, 빠른 이동을 위한 기호 설정</translation>
+      <translation>방의 이름과 아이콘 색상, 가중치 및 잠금 설정, 빠른 이동을 위한 기호 설정</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2802"/>
@@ -715,7 +713,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2826"/>
       <source>Spread...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation>확...</translation>
+      <translation>펼치기...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2828"/>
@@ -6135,17 +6133,17 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgPackageExporter.cpp" line="365"/>
       <source>package name</source>
       <extracomment>package name will be added to other fields in the &apos;required fields missing: ...&apos; tooltip when it&apos;s missing</extracomment>
-      <translation type="unfinished"/>
+      <translation>패키지 이름</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="387"/>
       <source>Required field missing: %1</source>
-      <translation type="unfinished"/>
+      <translation>필수 필드가 없습니다: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="390"/>
       <source>Export package</source>
-      <translation type="unfinished"/>
+      <translation>패키지 내보내기</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="951"/>
@@ -6163,7 +6161,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgPackageExporter.cpp" line="1538"/>
       <source>Why not &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>다른 Mudlet 사용자들을 위해 당신의 패키지를 &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;업로드&lt;/a&gt; 패키지를 사용하지 않으시겠습니까?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageExporter.cpp" line="1556"/>
@@ -6235,7 +6233,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="914"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1이 더 이상 존재하지 않는 것 같습니다 - 다시 한 번 확인해 주시겠어요?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1034"/>
@@ -6268,7 +6266,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="47"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>패키지 관리자 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="103"/>
@@ -6357,7 +6355,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="210"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>2D 매퍼 룸 심볼을 생성하려면 사용되는 유일한 글꼴이나 기본 글꼴을 선택합니다(&lt;i&gt;설정에서 기호(글리프)만 사용&lt;/i&gt; 설정에 따라 다름).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="212"/>
@@ -9435,7 +9433,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="427"/>
       <source>Time Stamps</source>
-      <translation type="unfinished"/>
+      <translation>시간 표시</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="430"/>
@@ -13351,27 +13349,27 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2537"/>
       <source>Lower level color:</source>
-      <translation type="unfinished"/>
+      <translation>하위 레벨 색상:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2557"/>
       <source>Upper level color:</source>
-      <translation type="unfinished"/>
+      <translation>상위 레벨 색상:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2577"/>
       <source>Overlapping rooms border:</source>
-      <translation type="unfinished"/>
+      <translation>겹치는 방의 경계:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3859"/>
       <source>Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer</source>
-      <translation type="unfinished"/>
+      <translation>버퍼에서 위아래로 검색할 수 있도록 F3 및 Shift+F3 바로 가기 활성화</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3862"/>
       <source>Enable F3 search shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>F3 검색 바로 가기 활성화</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3889"/>
@@ -13413,7 +13411,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3100"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>작은 아이콘이나 도구 설명 숨기기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3105"/>
@@ -13446,7 +13444,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3074"/>
       <source>Don&apos;t hide large icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>큰 아이콘이나 도구 설명 숨기기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3079"/>
@@ -14244,7 +14242,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="90"/>
       <source>Registered Events:</source>
-      <translation type="unfinished"/>
+      <translation>등록된 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="137"/>
@@ -14254,7 +14252,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="147"/>
       <source>Add User Event:</source>
-      <translation type="unfinished"/>
+      <translation>사용자 이벤트 추가:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="181"/>
@@ -14490,7 +14488,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
       <source>OR / Multi-item</source>
       <extracomment>This text represents what is shown in the spinBox_lineMargin control when it is at it minimum value and replaces the normal value and the normal prefix and suffix that would otherwise surround it before this or those elements are inserted in the middle of the groupBox_multiLineTrigger and the label_multiLineTrigger text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>또는 / 다중 항목</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="449"/>
