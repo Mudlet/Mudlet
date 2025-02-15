@@ -34,7 +34,9 @@
 #include <QSharedPointer>
 #include "post_guard.h"
 
-#include <pcre.h>
+
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 #include <map>
 #include <string>
@@ -178,7 +180,7 @@ private:
     void filter(std::string&, int&);
     void processExactMatch(const QString& line, int patternNumber, int posOffset);
     void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                           const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector);
+                           const QSharedPointer<pcre2_code>& re, int haystackCLength, int rc, int* ovector);
     void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
@@ -186,7 +188,7 @@ private:
 
 
     QList<int> mPatternKinds;
-    QMap<int, QSharedPointer<pcre>> mRegexMap;
+    QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
 
     // Lua code as a string to run
     QString mScript;

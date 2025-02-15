@@ -154,9 +154,9 @@ void TTrigger::setName(const QString& name)
     mpHost->getTriggerUnit()->mLookupTable.insert(name, this);
 }
 
-static void pcre_deleter(pcre* pointer)
+static void pcre2_deleter(pcre2_code* pointer)
 {
-    pcre_free(pointer);
+    pcre2_code_free(pointer);
 }
 
 //FIXME: lock if code *OR* regex doesn't compile
@@ -215,7 +215,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
                 // PCRE_UTF8 needed to run compile in UTF-8 mode
                 // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
-                QSharedPointer<pcre> const re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+                QSharedPointer<pcre2_code> const re(pcre2_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre2_deleter);
 
                 if (!re) {
                     if (mudlet::smDebugMode) {
@@ -291,7 +291,9 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 {
     assert(mRegexMap.contains(patternNumber));
 
-    QSharedPointer<pcre> const re = mRegexMap[patternNumber];
+    QSharedPointer<pcre2_code> const re = mRegexMap[patternNumber];
+    pcre2_match_data *match_data;
+    match_data = pcre2_match_data_create_from_pattern(re, NULL);
 
     if (!re) {
         if (mudlet::smDebugMode) {
@@ -305,12 +307,14 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 
     const int haystackCLength = strlen(haystackC);
     int rc = -1;
-    int ovector[MAX_CAPTURE_GROUPS * 3];
 
-    rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
+    //rc = pcre2_match(re.data(), nullptr, haystackC, haystackCLength, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
+    rc = pcre2_match(re.data(), (PCRE2_SPTR) haystackC, (PCRE2_SIZE) haystackCLength, 0, 0, match_data, NULL);
 
     if (rc < 0) {
         return false;
+        pcre2_match_data_free(match_data)
+        pcre2_code_free(re.data())
     }
 
     processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, rc, ovector);
@@ -319,7 +323,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 }
 
 void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                                 const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector)
+                                 const QSharedPointer<pcre2_code>& re, int haystackCLength, int rc, pcre2_match_data* match_data)
 {
     if (rc == 0) {
         if (mpHost->mpEditorDialog) {
@@ -334,6 +338,9 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
     if (mudlet::smDebugMode) {
         TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
+
+    int ovector[MAX_CAPTURE_GROUPS * 3];
+
 
     int i = 0;
     int numberOfCaptureGroups = 0;

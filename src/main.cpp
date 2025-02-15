@@ -49,12 +49,12 @@
 
 using namespace std::chrono_literals;
 
-
+#define PCRE2_CODE_UNIT_WIDTH 8
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
 // leak detection does not work when it is not defined.
 #include <Windows.h>
-#include <pcre.h>
+#include <pcre2.h>
 #endif // _MSC_VER && _DEBUG
 
 #if defined(Q_OS_WINDOWS)
@@ -482,7 +482,7 @@ int main(int argc, char* argv[])
 
     QStringList cliProfiles = parser.values(profileToOpen);
     qDebug() << "Got CLI profiles:" << cliProfiles;
-    
+
     if (cliProfiles.isEmpty()) {
         qDebug() << "No CLI profiles specified, checking environment variable";
         const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
@@ -762,7 +762,7 @@ int main(int argc, char* argv[])
 // Small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done.
-// 
+//
 // Return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {

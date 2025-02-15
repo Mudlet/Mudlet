@@ -455,7 +455,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(PCRE REQUIRED)
+find_package(PCRE2 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
@@ -596,7 +596,7 @@ target_link_libraries(
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
-        PCRE::PCRE
+        PCRE2
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
