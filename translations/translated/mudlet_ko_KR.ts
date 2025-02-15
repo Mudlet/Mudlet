@@ -782,7 +782,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2876"/>
       <source>Set the player&apos;s current location to here</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
-      <translation>플레이어&apos;초의 현재 위치를 여기로 설정</translation>
+      <translation>플레이어의 현재 위치를 여기로 설정</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2885"/>
@@ -848,7 +848,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2949"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
-      <translation>&quot;삭제 선&quot; 사용하여 편집 가능한 지점에서 끝나는 유일한 세그먼트를 제거하세요</translation>
+      <translation>&quot;선 삭제&quot;를 사용하여 편집 가능한 지점에서 끝나는 유일한 세그먼트를 제거하세요</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -859,7 +859,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2963"/>
       <source>Change the properties of this custom line</source>
-      <translation>이 사용자 정의 라인의 속성 변경</translation>
+      <translation>이 사용자 정의 선의 속성 변경</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2967"/>
@@ -947,13 +947,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="5208"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation>왼쪽 클릭하여 지점 추가, 오른쪽 클릭하여 취소/변경/완료...</translation>
+      <translation>점을 추가하려면 왼쪽 클릭을 하고, 취소/변경/완료하려면 오른쪽 클릭을 합니다...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5219"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation>왼쪽 클릭하고 사각형을 드래그하여 라벨의 크기와 위치를 설정하세요</translation>
+      <translation>레이블의 크기와 위치에 맞게 사각형을 마우스 왼쪽 버튼으로 클릭하고 드래그합니다</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="579"/>
@@ -1008,7 +1008,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4049"/>
       <source>Spread out rooms</source>
-      <translation>방들을 펼치기</translation>
+      <translation>방 펼치기</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4050"/>
@@ -1017,16 +1017,14 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation>선택한 방들의 간격을 넓힙니다.
-,
-을 중심으로
-을 강조한 방들의 간격을
-배로 늘립니다.</translation>
+      <translation>강조 표시된 방을 중심으로
+선택한 방의 간격을
+인수 만큼 늘립니다:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4121"/>
       <source>Shrink in rooms</source>
-      <translation>방들을 줄이기</translation>
+      <translation>방 축소</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4122"/>
@@ -1035,11 +1033,9 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation>선택한 방들의 간격을 좁힙니다.
-,
-을 중심으로
-을 강조한 방들의 간격을
-배로 줄입니다.</translation>
+      <translation>강조 표시된 방을 중심으로
+선택한 방의 간격을
+다음의 배율로 줄입니다:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4207"/>
@@ -1078,7 +1074,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TAlias.cpp" line="128"/>
       <location filename="../src/TAlias.cpp" line="201"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation>[줄임말 오류:] %1 캡처 그룹 제한을 초과하여, 그룹을 더 적게 캡처하세요.</translation>
+      <translation>[줄임말 오류:] %1 캡처 그룹 제한을 초과하여, 캡처할 그룹 수를 줄이세요.</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="273"/>
@@ -1146,7 +1142,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="1384"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</extracomment>
-      <translation>&quot;%1&quot; 프로필에 대한 입력 라인입니다.</translation>
+      <translation>&quot;%1&quot; 프로필에 대한 입력 줄입니다.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1391"/>
@@ -1158,7 +1154,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
 Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</extracomment>
-      <translation>&quot;%1&quot; 프로필에 대해 게임 서버로 보낼 텍스트를 입력하거나 줄임말을 입력하여 로컬에서 명령을 실행합니다.</translation>
+      <translation>&quot;%1&quot; 프로필에 대한 게임 서버로 보낼 텍스트를 입력하거나, 로컬에서 명령을 실행하기 위한 줄임말을 입력하세요.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1399"/>
@@ -1176,7 +1172,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
 Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</extracomment>
-      <translation>게임 서버로 보낼 텍스트를 입력하거나 로컬에서 명령어를 실행하려면 줄임말을 입력하세요.</translation>
+      <translation>게임 서버로 보낼 텍스트를 입력하거나, 줄임말을 입력하여 로컬에서 명령을 실행하세요.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1417"/>
@@ -1235,7 +1231,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1049"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation>[ 정보 ] - 화면이동 롤백이 활성화되었습니다. 취소하려면 &lt;⌘&gt;+&lt;ENTER&gt;를 누르십시오.</translation>
+      <translation>[ 정보 ] - 분할 화면 스크롤백이 활성화되었습니다. 취소하려면 &lt;⌘&gt;+&lt;ENTER&gt;를 누르십시오.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1051"/>
@@ -1275,7 +1271,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2115"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>프로필 &quot;의 에디터 오류 창&apos;%1&quot;, 실시간 콘텐츠.</translation>
+      <translation>&apos;%1&quot;,  프로필에 대한 편집기 오류 창, 실시간 콘텐츠.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2118"/>
@@ -1479,7 +1475,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2109"/>
       <source>Error Console in editor.</source>
-      <translation>에디터의 오류 콘솔.</translation>
+      <translation>편집기의 오류 콘솔.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="310"/>
@@ -1529,7 +1525,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2169"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation>임베디드 창 &quot;%1&quot;.</translation>
+      <translation>내장된 창 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2171"/>
@@ -1663,12 +1659,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="5896"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation>%1 (couldn&apos;t read file)</translation>
+      <translation>%1 (파일을 읽을 수 없음)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5902"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</translation>
+      <translation>[ 확인 ] - Mudlet-lua API 및 Geyser 레이아웃 관리자가 로드되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5909"/>
@@ -1782,7 +1778,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1367"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>[ ERROR ] - 맵 파일을 찾을 수 없습니다. 사용된 경로와 파일 이름:
+      <translation>[ 오류 ] - 맵 파일을 찾을 수 없습니다. 사용된 경로와 파일 이름:
 %1.</translation>
     </message>
     <message>
@@ -1822,7 +1818,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1424"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[ 경고 ] - ... 시스템 맵 다시 불러오기 요청이 완료되었습니다.</translation>
+      <translation>[ 확인 ] - ... 시스템 맵 다시 불러오기 요청이 완료되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1426"/>
@@ -1836,62 +1832,62 @@ Tried these locations:
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
       <translation>+--------------------------------------------------------------+
-|                      system statistics                       |
+|                        시스템 통계                           |
 +--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1464"/>
       <source>GMCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>GMCP events:</translation>
+      <translation>GMCP 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1469"/>
       <source>ATCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>ATCP events:</translation>
+      <translation>ATCP 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1474"/>
       <source>Channel102 events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Channel102 events:</translation>
+      <translation>Channel102 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1479"/>
       <source>MSSP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>MSSP events:</translation>
+      <translation>MSSP 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1485"/>
       <source>MSDP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>MSDP events:</translation>
+      <translation>MSDP 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1497"/>
       <source>Trigger Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Trigger Report:</translation>
+      <translation>트리거 보고서:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1502"/>
       <source>Timer Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Timer Report:</translation>
+      <translation>타이머 보고서:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1507"/>
       <source>Alias Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Alias Report:</translation>
+      <translation>줄임말 보고서:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1512"/>
       <source>Keybinding Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Keybinding Report:</translation>
+      <translation>키 바인딩 보고서:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1517"/>
@@ -1961,12 +1957,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="593"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[  OK  ] - 맵 감사가 완료되었습니다 (%1s). 게임을 즐기세요...</translation>
+      <translation>[  확인 ] - 맵 감사가 완료되었습니다 (%1s). 게임을 즐기세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="600"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[  OK  ] - 맵이 성공적으로 로드되었습니다 (%1s).</translation>
+      <translation>[  확인 ] - 맵이 성공적으로 로드되었습니다 (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="48"/>
@@ -1981,7 +1977,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="113"/>
       <source>[MAP ERROR:]%1</source>
-      <translation>[MAP ERROR:]%1</translation>
+      <translation>[맵 오류:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="525"/>
@@ -2102,7 +2098,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[정보 ] - 마지막 지도 작업에 대한 위의 정보에 해당하는 내용이 파일에 가장 최근 보고서로 저장되어 검토할 수 있습니다:
+      <translation>[ 정보 ] - 마지막 지도 작업에 대한 위의 정보에 해당하는 내용이 파일에 가장 최근 보고서로 저장되어 검토할 수 있습니다:
 &quot;%1&quot;
 - 제목이 있는 (마지막) 보고서를 찾습니다:
 &quot;%2&quot;.</translation>
@@ -2127,7 +2123,7 @@ and the error message (may contain technical details) was:&quot;%2&quot;.</sourc
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation>[오류] - 맵을 저장할 디렉터리를 사용하거나 생성할 수 없습니다.
+      <translation>[ 오류 ] - 맵을 저장할 디렉터리를 사용하거나 생성할 수 없습니다.
 권한/접근 권한이 있는지,
 &quot;%1&quot;
 에 충분한 공간이 있는지 확인해주세요. 다운로드 작업이 실패했습니다.</translation>
@@ -2141,7 +2137,7 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2684"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1</source>
-      <translation>[ ERROR ] - 지도 다운로드 중 오류가 발생했습니다:
+      <translation>[ 오류 ] - 지도 다운로드 중 오류가 발생했습니다:
 %1</translation>
     </message>
     <message>
@@ -2243,7 +2239,7 @@ recommended map version %2 for this version of Mudlet.</source>
       <location filename="../src/TMap.cpp" line="1496"/>
       <location filename="../src/TMap.cpp" line="1933"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation>[ ERROR ] - 지도 파일을 읽을 수 없습니다: &quot;%1&quot;!</translation>
+      <translation>[ 오류 ] - 지도 파일을 읽을 수 없습니다: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1518"/>
@@ -2269,7 +2265,7 @@ Mudlet can handle (%2)! The file is:
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation>[경고 ] - 지도 파일이 정말 오래되었습니다. 형식 버전인 &quot;%1&quot; 이 너무 오래되어 이 버전의 Mudlet에서 충분한 정보를 얻지 못할 수도 있지만 시도해 보겠습니다!
+      <translation>[ 경고 ] - 지도 파일이 정말 오래되었습니다. 형식 버전인 &quot;%1&quot; 이 너무 오래되어 이 버전의 Mudlet에서 충분한 정보를 얻지 못할 수도 있지만 시도해 보겠습니다!
 파일: &quot;%2&quot;.</translation>
     </message>
     <message>
@@ -2338,8 +2334,7 @@ imported at user request.</source>
       <location filename="../src/TMap.cpp" line="2628"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation>loadMap: XML 맵 파일 가져오기 실패, 자세한 정보는 주요 콘솔에서 확인할 수 있습니다.
-</translation>
+      <translation>loadMap: XML 맵 파일 가져오기 실패, 자세한 정보는 주요 콘솔에서 확인할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2665"/>
@@ -2453,12 +2448,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="98"/>
       <source>Other</source>
-      <translation>다른</translation>
+      <translation>기타</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="99"/>
       <source>Unknown</source>
-      <translation>알 수 없는</translation>
+      <translation>알수없음</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="310"/>
@@ -3989,7 +3984,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ ERROR ] - 호스트 이름 조회 실패!
+      <translation>[ 오류 ] - 호스트 이름 조회 실패!
 연결을 설정할 수 없습니다.
 서버 이름이 올바르지 않거나 제대로 작동하지 않습니다.
 또는 네임서버가 제대로 작동하지 않습니다.</translation>
@@ -3997,18 +3992,18 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="463"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation>[ INFO ]  - A secure connection has been established successfully.</translation>
+      <translation>[ 정보 ] - 보안 연결이 성공적으로 설정되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="465"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation>[ INFO ]  - A connection has been established successfully.</translation>
+      <translation>[ 정보 ] - 연결이 성공적으로 설정되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="501"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation>[ INFO ]  - Connection time: %1
+      <translation>[ 정보 ] - 연결 시간: %1
     </translation>
     </message>
     <message>
@@ -4019,12 +4014,12 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="545"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</translation>
+      <translation>이 게임은 이 포트에서 보안 연결을 지원하지 않습니다. 옵션을 꺼보세요.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="404"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</translation>
+      <translation>[정보] - 서버의 IP 주소를 조회합니다: %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="535"/>
@@ -4368,12 +4363,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="486"/>
       <source>Connect to</source>
-      <translation>연결하기</translation>
+      <translation>연결</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="581"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation>게임 서버에 연결하기 위해 서버 이름과 함께 사용되는 포트입니다. 지정되지 않은 경우 &quot;Telnet&quot; 연결에 대해 기본값으로 23이 사용됩니다. 안전한 연결은 다른 포트 번호가 필요할 수 있습니다.</translation>
+      <translation>게임 서버에 연결하기 위해 서버 이름과 함께 사용되는 포트입니다. 지정되지 않은 경우 &quot;텔넷&quot; 연결에 대해 기본값으로 23이 사용됩니다. 안전한 연결은 다른 포트 번호가 필요할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="600"/>
@@ -5808,7 +5803,7 @@ Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설
     <message>
       <location filename="../src/dlgIRC.cpp" line="489"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation>[오류] 알 수 없는 명령어: %1</translation>
+      <translation>[ 오류 ] 알 수 없는 명령어: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="635"/>
@@ -5997,7 +5992,31 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>(권장)
+
+이 패키지 설명은 패키지 관리자에 표시됩니다. 편집기는 Commonmark 마크다운을 지원합니다. 아래 설명을 참고하여 패키지 설명에 포함할 내용을 정확히 확인하십시오.
+
+### 설명
+
+이 패키지가 무엇을 달성하는지에 대한 전체 설명입니다. 패키지가 특정 게임에 관한 것이라면 여기에 언급하십시오. 패키지가 자동 업데이트 기능을 제공하는지 여부를 명시하거나, 그렇지 않으면 아래 '참고 항목' 섹션에 코드 저장소 링크를 추가하십시오.
+
+### 사용법
+
+이 패키지가 별칭을 사용하는 경우, 몇 가지 예시와 예상 출력 결과를 보여주십시오.
+
+`&gt; alias_1`
+
+    alias_1의 출력  -- 네 칸 들여쓰기
+    추가 출력        -- 코드 블록을 위한 들여쓰기
+
+이 패키지가 GUI 구현이라면, 이미지를 직접 드래그 앤 드롭하여 이 편집기에 스크린샷을 추가할 수 있습니다.
+
+### 참고 항목
+
+추가 읽을 거리. 예: Mudlet 위키, 포럼, Github 패키지 저장소 또는 웹페이지 링크.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [링크 2는 웹페이지일 수 있음](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="330"/>
@@ -6253,7 +6272,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1106"/>
       <source>Export cancelled.</source>
-      <translation>내보내기 취소됨.</translation>
+      <translation>내보내기를 취소했습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1177"/>
@@ -6360,7 +6379,8 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="212"/>
       <source>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</source>
-      <translation type="unfinished"/>
+      <translation>단일 글꼴을 사용하는 것이 더 일관된 스타일을 생성할 수 있지만, 해당 글꼴에 필요한 글리프(문자/기호)가 없으면 &lt;i&gt;글꼴 교체 문자&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos;가 표시될 수 있습니다.  
+이 체크박스를 해제하면 다른 글꼴에서 가장 적합한 대체 글리프를 사용하여 해당 그래프를 그릴 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="308"/>
@@ -6381,7 +6401,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="722"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>사전 파일 &lt;tt&gt;%1.dic&lt;/tt&gt; (및 그에 해당하는 접미사 &lt;tt&gt;.aff&lt;/tt&gt; 파일)에서.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="891"/>
@@ -6810,22 +6830,44 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
       <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;짧은 간격의 타이머는 &lt;i&gt;중앙 디버그 콘솔&lt;/i&gt; 창을 빠르게 채우며, 타이머가 호출될 때마다 올바르게 실행되었다는 메시지를 표시합니다.  
+이 (프로필별) 제어는 타이머의 간격이 이 설정보다 짧을 때, 타이머가 &lt;b&gt;올바르게&lt;/b&gt; 실행되는 경우 그 창에서 해당 메시지를 숨기도록 조정하는 임계값을 설정합니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;u&gt;오류가 있는 타이머 스크립트는 설정에 관계없이 여전히 오류 메시지가 보고됩니다.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="217"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;체크하지 않으면, Mudlet은 활성화된 키바인딩이 여러 개 설정되어 있더라도 첫 번째로 일치하는 키바인딩(키와 수정자의 조합)에만 반응합니다.  
+이는 스크립트나 패키지에서 생성된 임시 키바인딩(편집기에서 보이지 않음)이 표시되고 활성화된 영구적인 키바인딩보다 우선 사용될 수 있음을 의미합니다.  
+체크하면 모든 일치하는 키바인딩이 실행됩니다.&lt;/p&gt;
+
+&lt;p&gt;&lt;i&gt;Mudlet 3.9.0 이전 버전의 스크립트나 패키지와의 호환성을 유지해야 하는 경우, 이 옵션을 활성화하지 않는 것이 좋습니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="225"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; or &lt;b&gt;EUC-KR&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;일부 동아시아 MUD에서는 유니코드가 &lt;i&gt;모호한&lt;/i&gt; 너비로 분류하는 글리프(문자)를 사용할 수 있으며,  
+이 문자는 고정 폭 글꼴에서 그려질 때 &lt;i&gt;듀오 스페이스&lt;/i&gt;로 표시됩니다. 실제로 이러한 텍스트는 비례 글꼴을 사용하지 않으면 &lt;i&gt;듀오 스페이스&lt;/i&gt;로 그려집니다.  
+이 기호들은 전체 문자 공간의 절반 또는 전체 공간을 사용하여 그려질 수 있습니다. 기본적으로 Mudlet은 적절한 너비를 자동으로 선택하려고 하지만, 각 프로필에 대해 이 설정을 오버라이드할 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;이 제어에는 세 가지 설정이 있습니다:&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;체크되지 않음&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = 모호한 너비 문자를 단일 &apos;공백&apos;에 그립니다.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;체크됨&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = 모호한 너비 문자를 두 &apos;공백&apos;에 그립니다.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;부분 체크됨&lt;/b&gt; &lt;i&gt;(기본)&apos;auto&apos;&lt;/i&gt; = MUD 서버 인코딩에 대해 &apos;wide&apos; 설정을 사용하고,  
+&lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt;, &lt;b&gt;EUC-KR&lt;/b&gt;에 대해 &apos;narrow&apos;을 사용합니다.&lt;/li&gt;
+&lt;/ul&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;i&gt;이 설정은 임시 조치이며, Mudlet이 영어 외의 언어를 완벽하게 지원하게 되면 아마도 변경될 것입니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="237"/>
       <source>&lt;p&gt;Enable a context (right click) menu action on any console/user window that, when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items that make up each Unicode codepoint on the &lt;b&gt;first&lt;/b&gt; line of any selection.&lt;/p&gt;&lt;p&gt;This utility feature is intended to help the user identify any grapheme (visual equivalent to a &lt;i&gt;character&lt;/i&gt;) that a Game server may send even if it is composed of multiple bytes as any non-ASCII character will be in the Lua sub-system which uses the UTF-8 encoding system.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;마우스 커서를 해당 영역에 올리면, 선택한 텍스트의 첫 번째 줄에 각 유니코드 코드포인트를 구성하는 UTF-16과 UTF-8 항목을 표시하는  
+콘솔/사용자 창에서 오른쪽 클릭 메뉴 동작을 활성화합니다.&lt;/p&gt;
+
+&lt;p&gt;이 유틸리티 기능은 사용자가 게임 서버가 보낼 수 있는 그래프(문자의 시각적 동등물)를 식별하는 데 도움이 되도록 설계되었습니다.  
+비-ASCII 문자는 UTF-8 인코딩 시스템을 사용하는 Lua 하위 시스템에서 처리되므로, 이 문자는 여러 바이트로 구성될 수 있습니다.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="244"/>
@@ -6889,7 +6931,12 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3790"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이것들은 유니코드 컨소시엄에서 기호를 생성하는 데 필요한 그래프를 식별하기 위해 사용하는 16진수 숫자입니다.  
+이 숫자들은 일부 글꼴이 다른 코드포인트나 코드포인트 조합에 대해 동일한 글리프를 사용할지라도 무엇을 그려야 할지를 정확하게 파악하는 데 활용될 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;Windows에서의 &lt;i&gt;charmap.exe&lt;/i&gt;나 많은 Unix 계열 운영 체제에서의 &lt;i&gt;gucharmap&lt;/i&gt;와 같은 문자 입력 유틸리티도  
+이 숫자들을 사용하며, 이는 U+0020 {공백}부터 U+10FFFD까지, &lt;i&gt;Private Use Plane 16&lt;/i&gt;에서 가장 마지막으로 사용 가능한 숫자까지를 포함하며,  
+인류가 만든 대부분의 문자를 아우릅니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3814"/>
@@ -7039,13 +7086,13 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1048"/>
       <location filename="../src/dlgRoomExits.cpp" line="1060"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; 지역으로 종료: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1511"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <extracomment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>이 방의 방 ID 번호입니다; 이 &lt;b&gt;방은 잠겨 있습니다&lt;/b&gt; 따라서 속도 이동에서 전혀 사용되지 않습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1073"/>
@@ -7056,7 +7103,7 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>일부 지도 스크립트는 키워드 &quot;script:&quot;를 접두어로 사용해야 할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
@@ -7173,7 +7220,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1081"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <extracomment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;방이 잠겨 있음&lt;/b&gt;, 이 방으로 연결되는 모든 출구에서는 속도 이동에 사용되지 않습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1063"/>
@@ -7560,7 +7607,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="542"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;프로필을 저장합니다. (Ctrl+Shift+S)&lt;/p&gt;
+
+&lt;p&gt;프로필 전체(트리거, 별칭, 스크립트, 타이머, 버튼 및 키, 맵 또는 스크립트별 설정 제외)를 컴퓨터 디스크에 저장하여 컴퓨터나 프로그램이 크래시 나더라도 모든 변경 사항이 유지됩니다.&lt;/p&gt;
+
+&lt;p&gt;프로필의 백업도 생성되며, 연결 시 이전 버전을 불러올 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;동기화(&quot;&lt;i&gt;synced&lt;/i&gt;&quot;)로 표시된 모듈이 있을 경우, 해당 모듈도 저장되고 활성화된 다른 프로필로 다시 로드됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="562"/>
@@ -7605,7 +7658,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="883"/>
       <source>start of line</source>
-      <translation>start of line</translation>
+      <translation>줄의 시작과 일치</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="932"/>
@@ -7708,7 +7761,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4956"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation type="unfinished"/>
+      <translation>줄임말 &lt;em&gt;%1&lt;/em&gt;에 무한 루프가 있습니다 - 대체가 자신의 패턴과 일치합니다. 이를 수정하십시오. 이 줄임말은 자신을 계속 호출하게 되어 잘못된 설정입니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5325"/>
@@ -7861,13 +7914,15 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="2953"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;을(를) 활성화할 수 없음: %2&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;문제가 해결된 후 이 항목을 다시 활성화해야 합니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3142"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;&quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;을(를) 활성화할 수 없습니다; %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;문제가 해결된 후 이 항목을 다시 활성화해야 합니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3279"/>
@@ -7876,12 +7931,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="3713"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;&quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;을(를) 활성화할 수 없습니다; %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;문제가 해결된 후 이 항목을 다시 활성화해야 합니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4619"/>
       <source>This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications.</source>
-      <translation type="unfinished"/>
+      <translation>이 항목은 패키지의 일부입니다. 변경 사항을 잘 보존하려면 편집 전에 이 항목을 복사하십시오. 패키지 업그레이드가 수정 내용을 덮어쓸 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5840"/>
@@ -8368,7 +8424,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9499"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>죄송합니다. %1 프로필을 다른 이름으로 저장할 수 없습니다. - 다음과 같은 오류가 발생했습니다. : &apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9509"/>
@@ -8642,7 +8698,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="882"/>
       <source>perl regex</source>
-      <translation>perl regex</translation>
+      <translation>Perl 정규식</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="884"/>
@@ -9010,7 +9066,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="100"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;주어진 명령어가 패턴과 일치할 경우 사용할 하나 이상의 명령어를 입력하세요. (선택 사항)&lt;/p&gt;&lt;p&gt;이 명령어는 다른 줄임말이거나 게임으로 직접 전송할 명령어일 수 있습니다. 이 프로필 내 변수의 수정이 필요한 복잡한 명령어의 경우, 아래 편집 영역에 Lua 스크립트를 &lt;i&gt;대신&lt;/i&gt; 사용하세요. 이 필드와 Lua 스크립트를 &lt;i&gt;동시에&lt;/i&gt; 사용하는 것도 가능합니다. 이 경우 이 필드의 내용이 &lt;b&gt;스크립트 실행 전에&lt;/b&gt; 사용됩니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="103"/>
@@ -9038,7 +9094,9 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;아직 &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;지도 스크립트&lt;/a&gt;가 설치되지 않은 것 같습니다. 지도 시스템은 게임에 필요한 스크립트를 요구하며, 이를 통해 위치를 추적하고 자동으로 이동할 수 있습니다. 직접 작성하거나 다른 사람이 만든 기존 스크립트를 가져올 수 있습니다.&lt;/p&gt;
+
+&lt;p&gt;사용 가능한 스크립트가 있는지 확인하시겠습니까?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
@@ -9392,7 +9450,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="387"/>
       <source>Discord</source>
-      <translation>Discord</translation>
+      <translation>디스코드</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="390"/>
@@ -9402,7 +9460,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="398"/>
       <source>Discord help channel</source>
-      <translation>Discord help channel</translation>
+      <translation>디스코드 도움말 채널</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="401"/>
@@ -11593,12 +11651,12 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/mudlet.cpp" line="268"/>
       <location filename="../src/mudlet.cpp" line="661"/>
       <source>Disconnect</source>
-      <translation>Disconnect</translation>
+      <translation>연결 해제</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="364"/>
       <source>Open Discord</source>
-      <translation>Open Discord</translation>
+      <translation>디스코드 열기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="376"/>
@@ -11757,7 +11815,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="444"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation>게임에서 로그아웃하고 다시 연결합니다</translation>
+      <translation>게임에서 연결을 끊고 다시 연결합니다</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="449"/>
@@ -13406,7 +13464,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3067"/>
       <source>Discord privacy</source>
-      <translation>Discord 개인 정보</translation>
+      <translation>디스코드 개인 정보</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3100"/>
@@ -14074,7 +14132,7 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2127"/>
       <source>&amp;Cancel</source>
-      <translation>&amp;취소</translation>
+      <translation>취소(&amp;C)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1921"/>
