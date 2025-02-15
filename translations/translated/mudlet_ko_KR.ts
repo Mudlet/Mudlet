@@ -9339,7 +9339,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="280"/>
       <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;시스템 웹 브라우저에서 IRC 서버(LiberaChat)에 대한 연결을 엽니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="288"/>
@@ -9379,7 +9379,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet의 소리 음소거(트리거, 스크립트 등)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
@@ -9440,37 +9440,37 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="430"/>
       <source>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;주 콘솔의 시간 표시 출력을 켜거나 끔니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="435"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>재생</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="438"/>
       <source>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;리플레이 녹화를 켜거나 끔니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="443"/>
       <source>Logging</source>
-      <translation type="unfinished"/>
+      <translation>로그</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="446"/>
       <source>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;로깅 기능을 켜거나 끔니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="451"/>
       <source>Emergency Stop</source>
-      <translation type="unfinished"/>
+      <translation>비상 정지</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="454"/>
       <source>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;모든 스크립팅을 켜거나 끕니다..&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="176"/>
