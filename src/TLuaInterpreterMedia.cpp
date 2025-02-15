@@ -954,10 +954,10 @@ int TLuaInterpreter::getPlayingMusic(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return getPlayingMusicAsTableArgument(L);
+            return getPlayingMusicAsTableArgument(L, __func__);
         }
 
-        return getPlayingMusicAsOrderedArguments(L);
+        return getPlayingMusicAsOrderedArguments(L, __func__);
     }
 
     // no args
@@ -969,7 +969,7 @@ int TLuaInterpreter::getPlayingMusic(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L)
+int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char* func)
 {
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
@@ -1082,10 +1082,10 @@ int TLuaInterpreter::getPlayingSounds(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return getPlayingSoundsAsTableArgument(L);
+            return getPlayingSoundsAsTableArgument(L, __func__);
         }
 
-        return getPlayingSoundsAsOrderedArguments(L);
+        return getPlayingSoundsAsOrderedArguments(L, __func__);
     }
 
     // no args
@@ -1281,10 +1281,10 @@ int TLuaInterpreter::stopMusic(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return stopMusicAsTableArgument(L);
+            return stopMusicAsTableArgument(L, __func__);
         }
 
-        return stopMusicAsOrderedArguments(L);
+        return stopMusicAsOrderedArguments(L, __func__);
     }
 
     // no args
@@ -1442,10 +1442,10 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return stopSoundsAsTableArgument(L);
+            return stopSoundsAsTableArgument(L, __func__);
         }
 
-        return stopSoundsAsOrderedArguments(L);
+        return stopSoundsAsOrderedArguments(L, __func__);
     }
 
     // no args
