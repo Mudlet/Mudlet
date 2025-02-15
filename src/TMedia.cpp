@@ -470,7 +470,7 @@ void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
     }
 }
 
-QString TMedia::getStreamUrl(TMediaData& mediaData)
+QString TMedia::getStreamUrl(const TMediaData& mediaData)
 {
     return !mediaData.mediaUrl().endsWith(QLatin1Char('/')) ? qsl("%1/%2").arg(mediaData.mediaUrl(), mediaData.mediaFileName()) : qsl("%1%2").arg(mediaData.mediaUrl(), mediaData.mediaFileName());
 }

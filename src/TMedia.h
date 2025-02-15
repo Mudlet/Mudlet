@@ -122,7 +122,7 @@ private:
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
-    QString getStreamUrl(TMediaData& mediaData);
+    QString getStreamUrl(const TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
