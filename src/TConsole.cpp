@@ -641,6 +641,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
+    emit resized(event);
     QWidget::resizeEvent(event);
 
     if (mType & MainConsole) {

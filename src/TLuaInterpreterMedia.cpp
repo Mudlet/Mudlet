@@ -718,8 +718,8 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, func, -2, "table keys");
 
-        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)
-            || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive)
+            || !key.compare(QLatin1String("key"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
             QString value = getVerifiedString(L,
                                               func,
                                               -1,
@@ -738,7 +738,6 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaFileName(value);
             } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
-
             } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
             } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
@@ -779,6 +778,9 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
         } else if (!key.compare(QLatin1String("stream"), Qt::CaseInsensitive)) {
             bool value = getVerifiedBool(L, func, -1, "value for stream must be boolean");
             mediaData.setMediaInput(value ? TMediaData::MediaInputStream : TMediaData::MediaInputNotSet);
+        } else if (!key.compare(QLatin1String("close"), Qt::CaseInsensitive)) {
+            bool value = getVerifiedBool(L, func, -1, "value for close must be boolean");
+            mediaData.setMediaClose(value ? TMediaData::MediaCloseEnabled : TMediaData::MediaCloseDefault);
         }
 
         // removes value, but keeps key for next iteration

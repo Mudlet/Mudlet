@@ -123,7 +123,8 @@ private:
     TMediaPlayer matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
-    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& pPlayer);
+    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& player);
+    bool setupVideo(TMediaPlayer& player);
 
     void play(TMediaData& mediaData);
 
@@ -142,6 +143,7 @@ private:
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
     static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
+    static TMediaData::MediaClose parseJSONByMediaClose(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);

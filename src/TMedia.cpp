@@ -23,6 +23,7 @@
 
 
 #include "TMedia.h"
+#include "TLabel.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -32,6 +33,8 @@
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QStandardPaths>
+#include <QVideoSink>
+#include <QVideoWidget>
 #include "post_guard.h"
 
 // Public
@@ -1060,11 +1063,11 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
     return pPlayer;
 }
 
-void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& pPlayer) {
+void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& player) {
     if (playbackState == QMediaPlayer::StoppedState) {
         TEvent mediaFinished{};
         mediaFinished.mArgumentList.append("sysMediaFinished");
-        const QUrl mediaUrl = pPlayer.mediaPlayer()->source();
+        const QUrl mediaUrl = player.mediaPlayer()->source();
         mediaFinished.mArgumentList.append(mediaUrl.fileName());
         mediaFinished.mArgumentList.append(mediaUrl.path());
         mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1075,6 +1078,20 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
             // The host may have gone away if the sound was a long one
             // and we are multi-playing so we ought to test it...
             mpHost->raiseEvent(mediaFinished);
+        }
+
+        if (player.mediaData().mediaWidget() == TMediaData::MediaWidgetLabel &&
+            player.mediaData().mediaClose() == TMediaData::MediaCloseEnabled &&
+            player.mediaPlayer()->videoOutput() != nullptr) {
+            QVideoWidget* videoOutput = qobject_cast<QVideoWidget*>(player.mediaPlayer()->videoOutput());
+
+            if (videoOutput != nullptr) {
+                QWidget* parent = videoOutput->parentWidget();
+
+                if (parent != nullptr && parent->isVisible()) {
+                    parent->hide();
+                }
+            }
         }
     }
 }
@@ -1161,6 +1178,79 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
             }
         }
     }
+}
+
+bool TMedia::setupVideo(TMediaPlayer& player)
+{
+    auto mpConsole = mpHost->mpConsole;
+
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto target = player.mediaData().mediaKey();
+
+    if (target.isEmpty()) {
+        qWarning() << qsl("TMedia::setupVideo() ERROR - 'key' not specified for video.");
+        return false;
+    }
+
+    QString widgetType = TMediaData::MediaWidgetLabel;
+    QWidget* targetWidget = nullptr;
+
+    // Attempt to retrieve the existing widget, labels first
+    targetWidget = mpConsole->mLabelMap.value(target);
+
+    if (!targetWidget) {
+        targetWidget = mpConsole->mSubConsoleMap.value(target);
+
+        if (targetWidget != nullptr) {
+            widgetType = TMediaData::MediaWidgetWindow;
+        }
+    }
+
+    // Ensure we now have a valid target widget
+    if (!targetWidget) {
+        qWarning() << qsl("TMedia::setupVideo() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
+        return false;
+    }
+
+    player.mediaData().setMediaWidget(widgetType);
+
+    // Assign video widget to the target widget
+    QVideoWidget *myVideoWidget;
+
+    if (widgetType == TMediaData::MediaWidgetLabel) {
+        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
+    } else if (widgetType == TMediaData::MediaWidgetWindow) {
+        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
+    }
+    
+    if (!myVideoWidget) {
+        myVideoWidget = new QVideoWidget();
+        myVideoWidget->setParent(targetWidget);
+        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        if (widgetType == TMediaData::MediaWidgetLabel) {
+            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [=]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        } else if (widgetType == TMediaData::MediaWidgetWindow) {
+            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [=]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        }
+    }
+
+    if (targetWidget->isHidden()) {
+        targetWidget->show();
+    }
+
+    myVideoWidget->resize(targetWidget->size());
+    player.mediaPlayer()->setVideoOutput(myVideoWidget);
+    myVideoWidget->show();
+
+    return true;
 }
 
 void TMedia::play(TMediaData& mediaData)
@@ -1359,8 +1449,8 @@ void TMedia::play(TMediaData& mediaData)
             break;
     }
 
-    if (mediaData.mediaType() == TMediaData::MediaTypeVideo) {
-        // Implement video widget
+    if (mediaData.mediaType() == TMediaData::MediaTypeVideo && !setupVideo(pPlayer)) {
+        return;
     }
 
     pPlayer.mediaPlayer()->play();
@@ -1612,6 +1702,26 @@ TMediaData::MediaFadeAway TMedia::parseJSONByMediaFadeAway(QJsonObject& json)
     return mediaFadeAway;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#close
+TMediaData::MediaClose TMedia::parseJSONByMediaClose(QJsonObject& json)
+{
+    TMediaData::MediaClose mediaClose = TMediaData::MediaCloseDefault;
+
+    auto mediaCloseJSON = json.value(qsl("close"));
+
+    if (mediaCloseJSON != QJsonValue::Undefined && mediaCloseJSON.isString() && !mediaCloseJSON.toString().isEmpty()) {
+        if (mediaCloseJSON.toString() == "false") {
+            mediaClose = TMediaData::MediaCloseEnabled;
+        } else {
+            mediaClose = TMediaData::MediaCloseDefault;
+        }
+    } else if (mediaCloseJSON != QJsonValue::Undefined && !mediaCloseJSON.toBool(true)) {
+        mediaClose = TMediaData::MediaCloseEnabled;
+    }
+
+    return mediaClose;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaDefault(QJsonObject& json)
 {
@@ -1678,6 +1788,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
+    mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
 
     TMedia::playMedia(mediaData);
 }
