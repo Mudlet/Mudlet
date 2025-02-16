@@ -2202,137 +2202,22 @@ void TBuffer::resetColors()
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
-    }
-    int last = buffer.size() - 1;
-    if (last < 0) {
-        // buffer is completely empty
-        std::deque<TChar> newLine;
-        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
-        const TChar c(format.mFgColor,
-                format.mBgColor,
-                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
-                 : (format.mFlags & TChar::TestMask)));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
-        promptBuffer << false;
-        last = 0;
-    }
-    if (text.isEmpty()) {
-        return;
-    }
-    bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
-    // Qt 6 changed the return type of QLIST<T>::size() to qsizetype which is
-    // not directly comparable to a const int& without a cast:
-    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
-    if (sub_end >= length) {
-        sub_end = text.size() - 1;
-    }
-
-    for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
-        if (text.at(i) == QChar::LineFeed) {
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer << csmBlankTimeStamp;
-            promptBuffer << false;
-            firstChar = true;
-            continue;
-        }
-
-        lineBuffer.back().append(text.at(i));
-        const TChar c(format.mFgColor,
-                format.mBgColor,
-                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
-                 : (format.mFlags & TChar::TestMask)),
-                linkID);
-        buffer.back().push_back(c);
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
-            firstChar = false;
-        }
-    }
-
-    // optimization for common case of starting an append action with a newline (skip wrapping previous line) 
-    if (text.at(0) == QChar::LineFeed) {
-        log(last, last);
-        wrap(last+1);
-    } else {
-        wrap(last);
-    }
-    // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
-    // limit to prevent it growing beyond a "reasonable" size we also
-    // want to check - for TConsoles that have been set to be "non-scrollable"
-    // - that the content has not exceeded the number of lines that can be
-    // shown in the upper pane and to raise an event if it has
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
-    }
+    append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end,
+                     const QColor& fgColor, const QColor& bgColor,
+                     TChar::AttributeFlags flags, int linkID)
 {
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
-    }
-    int last = buffer.size() - 1;
-    if (last < 0) {
-        std::deque<TChar> newLine;
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
-        promptBuffer << false;
-        last = 0;
-    }
+    const int lastLine = buffer.size() - 1;
+    appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
     if (text.isEmpty()) {
         return;
     }
-    bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
-    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
-    if (sub_end >= length) {
-        sub_end = text.size() - 1;
-    }
-
-    for (int i = sub_start; i < length; ++i) {
-
-        if (text.at(i) == QChar::LineFeed) {
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer << csmBlankTimeStamp;
-            promptBuffer << false;
-            firstChar = true;
-            continue;
-        }
-
-        lineBuffer.back().append(text.at(i));
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(c);
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
-            firstChar = false;
-        }
-    }
-    // optimization for common case of starting an append action with a newline (skip wrapping previous line) 
     if (text.at(0) == QChar::LineFeed) {
-        log(last, last);
-        wrap(last+1);
+        wrap(lastLine + 1);
     } else {
-        wrap(last);
+        wrap(lastLine);
     }
     // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
     // limit to prevent it growing beyond a "reasonable" size we also
@@ -2348,6 +2233,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
                          const QColor& fgColor, const QColor& bgColor,
                          const TChar::AttributeFlags flags, const int linkID)
 {
+    qDebug() << "appending: " << text;
     if (sub_end < 0) {
         return;
     }
@@ -2357,13 +2243,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     int lastLine = buffer.size() - 1;
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
-        std::deque<TChar> newLine;
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
-        promptBuffer << false;
+        appendEmptyLine();
         lastLine = 0;
     }
 
@@ -2382,6 +2262,11 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     }
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
+        if (text.at(i) == QChar::LineFeed) {
+            appendEmptyLine();
+            firstChar = true;
+            continue;
+        }
         lineBuffer.back().append(text.at(i));
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
@@ -2390,11 +2275,15 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
             firstChar = false;
         }
     }
-    // Check - for "non-scrollable" TConsoles that the content has not exceeded
-    // the number of lines that can be shown and raise an event if it has:
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
-    }
+}
+
+void TBuffer::appendEmptyLine()
+{
+    std::deque<TChar> const newLine;
+    buffer.push_back(newLine);
+    lineBuffer.push_back(QString());
+    timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+    promptBuffer << false;
 }
 
 // This was called "insert" but that is commonly used for built in methods and
