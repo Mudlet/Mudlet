@@ -744,13 +744,14 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaTag(value);
             }
         } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
-                   || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
+            || !key.compare(QLatin1String("finish"), Qt::CaseInsensitive) || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
             int value = getVerifiedInt(L,
                                        func,
                                        -1,
                                        !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)  ? "value for volume"
                                        : !key.compare(QLatin1String("start"), Qt::CaseInsensitive) ? "value for start"
-                                                                                                   : "value for loops");
+                                       : !key.compare(QLatin1String("finish"), Qt::CaseInsensitive) ? "value for finish"
+                                                                                                    : "value for loops");
 
             if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive)) {
                 if (value != TMediaData::MediaVolumePreload) {
@@ -765,6 +766,13 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 }
 
                 mediaData.setMediaStart(value);
+            } else if (!key.compare(QLatin1String("finish"), Qt::CaseInsensitive)) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFinish(value);
             } else if (!key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
