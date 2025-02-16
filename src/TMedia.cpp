@@ -33,7 +33,6 @@
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QStandardPaths>
-#include <QVideoSink>
 #include <QVideoWidget>
 #include "post_guard.h"
 
