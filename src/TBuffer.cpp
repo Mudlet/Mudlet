@@ -2596,17 +2596,17 @@ inline int TBuffer::wrap(int startLine)
     QList<bool> promptList;
     int lineCount = 0;
     const TChar pSpace(mpConsole);
-    int indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
-    int hangingIndent = 0;
+    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
+    const int indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
+    const int hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         lineCount++;
+        bool firstLineOfParagraph = true;       // true: gets mWrapIndent + timestamp, false: mWrapHangingIndent + no timestamp
         const bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = QString();
         const QString time = timeBuffer[i];
         const int length = buffer[i].size();
-        indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
-        hangingIndent = 0;
         int xPos = 0;
         if (length == 0) {
             tempList.append(QString());
@@ -2614,18 +2614,15 @@ inline int TBuffer::wrap(int startLine)
             queue.push(emptyLine);
             timeList.append(time);
             promptList.append(false);
-            indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
-            hangingIndent = 0;
             continue;
         }
         // if the line starts with a space we consider it to already be aligned and prevent the firstline indentation:
         if (lineBuffer[i].at(0) == QChar::Space) {
-            indent = 0;
-            hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
+            firstLineOfParagraph = false;
         }
         for (int i2 = 0; i2 < length; ++i2) {
             const QChar c = lineBuffer[i].at(i2);
-            // line breaks reset everything
+            // line breaks start a new paragraph
             if (c == QChar::LineFeed) {
                 queue.push(newLine);
                 tempList.append(lineText);
@@ -2633,9 +2630,7 @@ inline int TBuffer::wrap(int startLine)
                 promptList.append(isPrompt);
                 newLine.clear();
                 lineText = QString();
-                // after newline, re-enable first indent and disable hanging
-                indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
-                hangingIndent = 0;
+                firstLineOfParagraph = true;
                 xPos = 0;
                 continue;
             }
@@ -2643,13 +2638,13 @@ inline int TBuffer::wrap(int startLine)
             //qDebug() << QString(c) << " width: " << charWidth << " vs. " << widechar_wcwidth(c.unicode()); 
             if (mWrapAt > 0 && xPos + charWidth > mWrapAt) {
                 const TChar indentSpace(mBackGroundColor, mBackGroundColor, TChar::None);
-                const QString qIndent(mWrapIndent, QChar::Space);
-                const QString qHangingIndent(mWrapHangingIndent, QChar::Space);
+                const QString qIndent(indent, QChar::Space);
+                const QString qHangingIndent(hangingIndent, QChar::Space);
 
                 // first backtrack until the width of the IFF we need to prefix an indent in
                 int backTrackFrom = lineText.size() - 1;
                 int tailWidth = 0;
-                if (indent > 0) {
+                if (firstLineOfParagraph && indent > 0) {
                     while (backTrackFrom > 0 && xPos + indent - tailWidth > mWrapAt) {
                         const QChar bc = lineText.at(backTrackFrom);
                         tailWidth += getCharWidth(bc);
@@ -2659,35 +2654,33 @@ inline int TBuffer::wrap(int startLine)
                 
                 // then backtrack to search for linebreak
                 int widthToLineBreak = 0;
-                for (int i3 = backTrackFrom; i3 >= hangingIndent; --i3) {
+                const int backTrackLimit = (firstLineOfParagraph) ? 0 : hangingIndent;
+                for (int i3 = backTrackFrom; i3 >= backTrackLimit; --i3) {
                     const QChar bc = lineText.at(i3);
                     const int bcWidth = getCharWidth(bc);
                     widthToLineBreak += bcWidth;
-                    if (bcWidth > 1 || lineBreaks.indexOf(bc) > -1 || i3 == hangingIndent) {
+                    if (bcWidth > 1 || lineBreaks.indexOf(bc) > -1 || i3 == backTrackLimit) {
                         // linebreak point chosen, wrap and indent current line
-                        if (i3 != hangingIndent) {
+                        if (i3 != backTrackLimit) {
                             tailWidth += widthToLineBreak;
                         }
-                        const int linebreakPos = (i3 != hangingIndent) ? i3 + 1 : backTrackFrom + 1;
+                        const int linebreakPos = (i3 != backTrackLimit) ? i3 + 1 : backTrackFrom + 1;
                         const QString tmp = lineText.mid(0, linebreakPos);
                         const QString lineRest = lineText.mid(linebreakPos);
                         xPos = tailWidth;
 
-                        if (indent > 0) {
+                        if (firstLineOfParagraph) {
+                            firstLineOfParagraph = false;
                             tempList.append(qIndent + tmp);
-                            while (indent > 0) {
+                            timeList.append(time);                  // only first line gets a timestamp
+                            for (int j = 0; j < indent; ++j) {
                                 newLine.push_front(indentSpace);
-                                indent--;
                             }
                         } else {
                             tempList.append(tmp);
+                            timeList.append(csmBlankTimeStamp);
                         }
-                        timeList.append(csmBlankTimeStamp);
                         promptList.append(isPrompt);
-
-                        indent = 0;
-                        hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
-
 
                         // hangingindent wrapped newline & insert tail of wrapped line
                         queue.push(newLine);
@@ -2727,7 +2720,7 @@ inline int TBuffer::wrap(int startLine)
         } else {
             queue.push(newLine);
             tempList.append(lineText);
-            timeList.append(time);
+            timeList.append((firstLineOfParagraph) ? time : csmBlankTimeStamp);
             promptList.append(isPrompt);
         }
         newLine.clear();
@@ -2748,7 +2741,8 @@ inline int TBuffer::wrap(int startLine)
     for (int i = 0, total = tempList.size(); i < total; ++i) {
         if (tempList[i].size() < 1) {
             lineBuffer.append(QString());
-            timeBuffer.append(QString());
+            // leave an empty timebuffer QString IFF we're at a dangling newline
+            timeBuffer.append((i == total-1) ? QString() : csmBlankTimeStamp);
             promptBuffer.push_back(false);
         } else {
             lineBuffer.append(tempList[i]);
