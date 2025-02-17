@@ -57,7 +57,7 @@ void TMedia::playMedia(TMediaData& mediaData)
     }
 
     if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.mediaProtocol() == TMediaData::MediaProtocolAPI) && resume(mediaData)) {
-        return; // Paused media was resumed.  Processing complete.  Exit!
+        return; // Paused media was resumed. Processing complete. Exit!
     }
 
     if (mediaData.mediaInput() == TMediaData::MediaInputNotSet) {
