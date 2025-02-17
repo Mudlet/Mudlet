@@ -56,6 +56,10 @@ void TMedia::playMedia(TMediaData& mediaData)
         return;
     }
 
+    if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.mediaProtocol() == TMediaData::MediaProtocolAPI) && resume(mediaData)) {
+        return; // Paused media was resumed.  Processing complete.  Exit!
+    }
+
     if (mediaData.mediaInput() == TMediaData::MediaInputNotSet) {
         mediaData.setMediaInput(TMediaData::MediaInputFile);
     }
@@ -199,33 +203,247 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
 
-        if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.mediaProtocol() == TMediaData::MediaProtocolAPI) {
-            if (pPlayer.getPlaybackState() != QMediaPlayer::PlayingState && pPlayer.mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
-                continue;
-            }
+        if (pPlayer.getPlaybackState() != QMediaPlayer::PlayingState && pPlayer.mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+            continue;
+        }
 
-            if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-                continue;
-            }
+        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
+            continue;
+        }
 
-            if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-                continue;
-            }
+        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
+            continue;
+        }
 
-            if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
-                continue;
-            }
+        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+            continue;
+        }
 
-            if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
-                && pPlayer.mediaData().mediaPriority() > mediaData.mediaPriority()) {
-                continue;
-            }
-       }
+        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
+            && pPlayer.mediaData().mediaPriority() > mediaData.mediaPriority()) {
+            continue;
+        }
 
         mMatchingTMediaDataList.append(pPlayer.mediaData());
     }
 
     return mMatchingTMediaDataList;
+}
+
+QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
+{
+    QList<TMediaData> mMatchingTMediaDataList;
+
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+        return mMatchingTMediaDataList;
+    }
+
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+        return mMatchingTMediaDataList;
+    }
+
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaData.mediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mMSPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mMSPMusicList;
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mGMCPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mGMCPMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mGMCPVideoList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
+            break;
+        }
+        break;
+
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mAPIVideoList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
+            break;
+        }
+        break;
+
+    default:
+        return mMatchingTMediaDataList;
+    }
+
+    if (!mediaData.mediaFileName().isEmpty()) {
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
+
+        if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+            return mMatchingTMediaDataList; // MSP and MCMP files will not have absolute paths. Something is wrong.
+        }
+
+        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
+        if (!fileRelative) {
+            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+        }
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+
+        if (pPlayer.getPlaybackState() != QMediaPlayer::PausedState) {
+            continue;
+        }
+
+        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
+            continue;
+        }
+
+        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
+            continue;
+        }
+
+        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+            continue;
+        }
+
+        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
+            && pPlayer.mediaData().mediaPriority() > mediaData.mediaPriority()) {
+            continue;
+        }
+
+        mMatchingTMediaDataList.append(pPlayer.mediaData());
+    }
+
+    return mMatchingTMediaDataList;
+}
+
+void TMedia::pauseMedia(TMediaData& mediaData)
+{
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+        return;
+    }
+
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+        return;
+    }
+
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaData.mediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mMSPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mMSPMusicList;
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mGMCPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mGMCPMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mGMCPVideoList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
+            break;
+        }
+        break;
+
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mAPIVideoList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
+            break;
+        }
+        break;
+
+    default:
+        return;
+    }
+
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
+
+        if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+            return; // MSP and MCMP files will not have absolute paths. Something is wrong.
+        }
+
+        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
+        if (!fileRelative) {
+            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
+        }
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+
+        if (pPlayer.getPlaybackState() != QMediaPlayer::PlayingState) {
+            continue;
+        }
+
+        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
+            continue;
+        }
+
+        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
+            continue;
+        }
+
+        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+            continue;
+        }
+
+        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
+            && pPlayer.mediaData().mediaPriority() >= mediaData.mediaPriority()) {
+            continue;
+        }
+
+        pPlayer.mediaPlayer()->pause();
+    }
 }
 
 void TMedia::stopMedia(TMediaData& mediaData)
@@ -309,42 +527,40 @@ void TMedia::stopMedia(TMediaData& mediaData)
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
 
-        if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.mediaProtocol() == TMediaData::MediaProtocolAPI) {
-            if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-                continue;
-            }
+        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
+            continue;
+        }
 
-            if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-                continue;
-            }
+        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
+            continue;
+        }
 
-            if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
-                continue;
-            }
+        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+            continue;
+        }
 
-            if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
-                && pPlayer.mediaData().mediaPriority() >= mediaData.mediaPriority()) {
-                continue;
-            }
+        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
+            && pPlayer.mediaData().mediaPriority() >= mediaData.mediaPriority()) {
+            continue;
+        }
 
-            if ((mediaData.mediaFadeAway() == TMediaData::MediaFadeAwayEnabled || mediaData.mediaFadeOut() != TMediaData::MediaFadeNotSet)
-                && pPlayer.mediaData().mediaEnd() == TMediaData::MediaEndNotSet) {
-                const int finishPosition = pPlayer.mediaData().mediaFinish();
-                const int duration = pPlayer.mediaPlayer()->duration();
-                const int currentPosition = pPlayer.mediaPlayer()->position();
-                const int fadeOut = pPlayer.mediaData().mediaFadeOut() ? pPlayer.mediaData().mediaFadeOut() : mediaData.mediaFadeOut();
-                const int remainingDuration = (finishPosition != TMediaData::MediaFinishNotSet ? finishPosition : duration) - currentPosition;
-                const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
-                const int endPosition = currentPosition + endDuration;
-                TMediaPlayer pUpdatePlayer = pPlayer;
-                TMediaData updateMediaData = pUpdatePlayer.mediaData();
-                updateMediaData.setMediaFadeOut(endDuration);
-                updateMediaData.setMediaEnd(endPosition);
-                pUpdatePlayer.setMediaData(updateMediaData);
-                TMedia::updateMediaPlayerList(pUpdatePlayer);
-                continue;
-            }
-       }
+        if ((mediaData.mediaFadeAway() == TMediaData::MediaFadeAwayEnabled || mediaData.mediaFadeOut() != TMediaData::MediaFadeNotSet)
+            && pPlayer.mediaData().mediaEnd() == TMediaData::MediaEndNotSet) {
+            const int finishPosition = pPlayer.mediaData().mediaFinish();
+            const int duration = pPlayer.mediaPlayer()->duration();
+            const int currentPosition = pPlayer.mediaPlayer()->position();
+            const int fadeOut = pPlayer.mediaData().mediaFadeOut() ? pPlayer.mediaData().mediaFadeOut() : mediaData.mediaFadeOut();
+            const int remainingDuration = (finishPosition != TMediaData::MediaFinishNotSet ? finishPosition : duration) - currentPosition;
+            const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
+            const int endPosition = currentPosition + endDuration;
+            TMediaPlayer pUpdatePlayer = pPlayer;
+            TMediaData updateMediaData = pUpdatePlayer.mediaData();
+            updateMediaData.setMediaFadeOut(endDuration);
+            updateMediaData.setMediaEnd(endPosition);
+            pUpdatePlayer.setMediaData(updateMediaData);
+            TMedia::updateMediaPlayerList(pUpdatePlayer);
+            continue;
+        }
 
         pPlayer.mediaPlayer()->stop();
     }
@@ -414,6 +630,112 @@ void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
 // End Public
 
 // Private
+bool TMedia::resume(TMediaData mediaData)
+{
+    bool resumed = false;
+
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+        return resumed;
+    }
+
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+        return resumed;
+    }
+
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaData.mediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mMSPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mMSPMusicList;
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mGMCPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mGMCPMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mGMCPVideoList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
+            break;
+        }
+        break;
+
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mAPIVideoList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
+            break;
+        }
+        break;
+
+    default:
+        return resumed;
+    }
+
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
+
+        if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+            return resumed; // MSP and MCMP files will not have absolute paths. Something is wrong.
+        }
+
+        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
+        if (!fileRelative) {
+            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
+        }
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+
+        if (pPlayer.getPlaybackState() != QMediaPlayer::PausedState) {
+            continue;
+        }
+
+        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
+            continue;
+        }
+
+        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
+            continue;
+        }
+
+        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+            continue;
+        }
+
+        pPlayer.mediaPlayer()->play();
+        resumed = true;
+    }
+
+    return resumed;
+}
+
 void TMedia::stopAllMediaPlayers()
 {
     QList<TMediaPlayer> const mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mGMCPVideoList + mAPISoundList + mAPIMusicList + mAPIVideoList);

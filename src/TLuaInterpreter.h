@@ -457,9 +457,11 @@ public:
     static int getPlayingMusic(lua_State*);
     static int getPlayingSounds(lua_State*);
     static int getPlayingVideos(lua_State*);
+    static int getPausedVideos(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
     static int stopVideos(lua_State*);
+    static int pauseVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -763,11 +765,14 @@ private:
     static int getPlayingSoundsAsOrderedArguments(lua_State*, const char*);
     static int getPlayingSoundsAsTableArgument(lua_State*, const char*);
     static int getPlayingVideosAsTableArgument(lua_State*, const char*);
+    static void processPausedMediaTable(lua_State*, TMediaData&);
+    static int getPausedVideosAsTableArgument(lua_State*, const char*);
     static int stopMusicAsOrderedArguments(lua_State*, const char*);
     static int stopMusicAsTableArgument(lua_State*, const char*);
     static int stopSoundsAsOrderedArguments(lua_State*, const char*);
     static int stopSoundsAsTableArgument(lua_State*, const char*);
     static int stopVideosAsTableArgument(lua_State*, const char*);
+    static int pauseVideosAsTableArgument(lua_State*, const char*);
     static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
     static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
     static void parseHintsTable(lua_State*, const char*, int&, QStringList&);

@@ -93,6 +93,8 @@ public:
 
     void playMedia(TMediaData& mediaData);
     QList<TMediaData> playingMedia(TMediaData& mediaData);
+    QList<TMediaData> pausedMedia(TMediaData& mediaData);
+    void pauseMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
@@ -103,6 +105,7 @@ private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
+    bool resume(TMediaData mediaData);
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
