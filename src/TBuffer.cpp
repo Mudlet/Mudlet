@@ -2214,11 +2214,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
     if (text.isEmpty()) {
         return;
     }
-    if (text.at(0) == QChar::LineFeed) {
-        wrap(lastLine + 1);
-    } else {
-        wrap(lastLine);
-    }
+    wrap(lastLine);
     // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
     // limit to prevent it growing beyond a "reasonable" size we also
     // want to check - for TConsoles that have been set to be "non-scrollable"
@@ -2233,7 +2229,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
                          const QColor& fgColor, const QColor& bgColor,
                          const TChar::AttributeFlags flags, const int linkID)
 {
-    qDebug() << "appending: " << text;
     if (sub_end < 0) {
         return;
     }
@@ -2262,14 +2257,19 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     }
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        if (text.at(i) == QChar::LineFeed) {
-            appendEmptyLine();
+        const QChar thisChar = text.at(i);
+        if (thisChar == QChar::LineFeed) {
             firstChar = true;
+            // suppress prefixed newline if the current line is already empty
+            if (i == 0 && lineBuffer.back().isEmpty()) {
+                continue;
+            }
+            appendEmptyLine();
             continue;
         }
-        lineBuffer.back().append(text.at(i));
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(c);
+        lineBuffer.back().append(thisChar);
+        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+        buffer.back().push_back(styling);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
             firstChar = false;
