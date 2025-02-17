@@ -1957,7 +1957,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="593"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[ 확인 ] - 맵 감사가 완료되었습니다(%1s). 게임을 즐기세요...</translation>
+      <translation>[ 확인 ] - 맵 검사를 완료했습니다(%1s). 게임을 즐기세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="600"/>
@@ -4019,7 +4019,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="404"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation>[정보] - 서버의 IP 주소를 조회합니다: %1: %2 ...</translation>
+      <translation>[ 정보 ] - 서버의 IP 주소를 조회합니다: %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="535"/>
@@ -4032,22 +4032,22 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="590"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation>[ 정보 ]  - %1에 대한 보안 연결 시도 중: %2 ...</translation>
+      <translation>[ 정보 ] - %1에 대한 보안 연결 시도 중: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="597"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation>[ 정보 ]  - %1 의 IP 주소를 찾았습니다. IP 주소는 다음과 같습니다: %2</translation>
+      <translation>[ 정보 ] - %1 의 IP 주소를 찾았습니다. IP 주소는 다음과 같습니다: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="599"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation>[ 정보 ]  - %1에 연결 시도 중:%2 ...</translation>
+      <translation>[ 정보 ] - %1에 연결 시도 중:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="601"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation>[ 정보 ]  - 프록시를 통해 %1:%2에 연결을 시도 중입니다...</translation>
+      <translation>[ 정보 ] - 프록시를 통해 %1:%2에 연결을 시도 중입니다...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="648"/>
