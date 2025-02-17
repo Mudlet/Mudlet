@@ -1495,7 +1495,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="386"/>
       <source>Emergency stop! Stop all scripts</source>
-      <translation>비상 정지! 모든 스크립트를 중지하세요</translation>
+      <translation>비상 정지! 모든 스크립트를 중지합니다</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2122"/>
@@ -7858,7 +7858,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
 게임에 전송할 명령어를 정의하거나, 해당 동작 시 실행할 스크립트를 작성할 수 있습니다.  
 이와 같은 스크립트 내에서 Lua &apos;getButtonState()&apos; 함수는 버튼이 눌린 상태인지 올라간 상태인지 보고합니다.&lt;/p&gt;
 
-&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.EB.B2.84.ED.8A.BC&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="123"/>
@@ -7882,8 +7882,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="133"/>
       <source>&lt;p&gt;Variables store information. To make a new variable:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables and tables can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;변수는 정보를 저장합니다. 새 변수를 만들려면:&lt;ol&gt;
-&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오. 테이블을 추가하려면 &apos;그룹 추가&apos;를 클릭하십시오.&lt;/li&gt;
-&lt;li&gt;변수 값의 유형을 선택하십시오(문자열, 정수, 불리언 가능).&lt;/li&gt;
+&lt;li&gt;위의 &apos;변수 추가&apos; 아이콘을 클릭하십시오. 테이블을 추가하려면 &apos;그룹 추가&apos;를 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;변수 값의 유형을 선택하십시오(문자열, 정수, 논리값 가능).&lt;/li&gt;
 &lt;li&gt;이 변수에 저장할 값을 입력하십시오.&lt;/li&gt;
 &lt;li&gt;다음 Mudlet 세션에서도 변수를 유지하려면 왼쪽 변수 목록의 체크박스를 선택하십시오.&lt;/li&gt;
 &lt;li&gt;변수를 수동으로 제거하려면 값을 &apos;nil&apos;로 설정하거나 위의 &apos;삭제&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
@@ -9094,7 +9094,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation>&lt;p&gt;아직 &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;지도 스크립트&lt;/a&gt;가 설치되지 않은 것 같습니다. 지도 시스템은 게임에 필요한 스크립트를 요구하며, 이를 통해 위치를 추적하고 자동으로 이동할 수 있습니다. 직접 작성하거나 다른 사람이 만든 기존 스크립트를 가져올 수 있습니다.&lt;/p&gt;
+      <translation>&lt;p&gt;아직 &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;지도 스크립트&lt;/a&gt;가 설치되지 않은 것 같습니다.&lt;br&gt;지도 시스템은 게임에 필요한 스크립트를 요구하며, 이를 통해 위치를 추적하고 자동으로 이동할 수 있습니다.&lt;br&gt;
+직접 작성하거나 다른 사람이 만든 기존 스크립트를 가져올 수 있습니다.&lt;/p&gt;
 
 &lt;p&gt;사용 가능한 스크립트가 있는지 확인하시겠습니까?&lt;/p&gt;</translation>
     </message>
@@ -11685,7 +11686,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="376"/>
       <source>Open IRC</source>
-      <translation>Open IRC</translation>
+      <translation>IRC 열기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="281"/>
@@ -12094,7 +12095,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="417"/>
       <source>Add timestamps at the beginning of log lines</source>
-      <translation>로그 라인의 시작에 타임스탬프 추가</translation>
+      <translation>로그 행의 시작에 시간 출력 추가</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="424"/>
@@ -12144,7 +12145,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="539"/>
       <source>Strict UNIX line endings</source>
-      <translation>엄격한 UNIX 줄 끝</translation>
+      <translation>엄격한 UNIX 줄바꿈</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="556"/>
@@ -12430,7 +12431,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="553"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;입력한 텍스트를 디스플레이 상자에 에코합니다.&lt;/p&gt;&lt;p&gt;&lt;i&gt;게임 서버가 텔넷 ECHO 옵션을 사용하기로 협상하면 이 기능을 비활성화할 수 있습니다.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;입력한 텍스트를 디스플레이 상자에 에코합니다.&lt;/p&gt;&lt;p&gt;&lt;i&gt;게임 서버가 텔넷 ECHO 옵션을 사용하도록 설정하면 이 기능을 비활성화할 수 있습니다.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="573"/>
@@ -12687,7 +12688,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="298"/>
       <source>Allow server to download and play media</source>
-      <translation>서버가 미디어를 다운로드하고 재생할 수 있도록 허용합니다.</translation>
+      <translation>서버가 미디어를 다운로드하고 재생할 수 있도록 허용</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="295"/>
@@ -12712,7 +12713,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="230"/>
       <source>Appearance</source>
-      <translation>외관</translation>
+      <translation>디자인</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="261"/>
@@ -12722,7 +12723,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="347"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation>MSP 활성화 (Mud Sound Protocol)</translation>
+      <translation>MSP 활성화 (Mud 사운드 프로토콜)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="354"/>
@@ -12732,7 +12733,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="357"/>
       <source>Enable MTTS  (Mud Terminal Type Standard)</source>
-      <translation>MTTS 활성화 (Mud Terminal Type Standard)</translation>
+      <translation>MTTS 활성화 (머드 터미널 유형 표준)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="364"/>
@@ -12742,7 +12743,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="367"/>
       <source>Enable MNES  (Mud New-Environ Standard)</source>
-      <translation>MNES 활성화 (Mud New-Environ Standard)</translation>
+      <translation>MNES 활성화 (머드 새로운 환경 표준)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="563"/>
@@ -12786,7 +12787,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1157"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation>감싸인 줄을 들여쓰기할 간격:</translation>
+      <translation>감싸인 줄의 들여쓰기 간격:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1242"/>
