@@ -384,6 +384,15 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
     isEmpty( MINGW_BASE_DIR_TEST ) {
+        # 32-BIT Build systems have been obsolete since 2020/05/15
+        # https://www.msys2.org/news/#2020-05-17-32-bit-msys2-no-longer-actively-supported
+        #
+        # 32-Bit Targets have now been dropped - whilst a temporary reprieve
+        # for some Qt libraries that Mudlet needed was granted they are no
+        # longer available:
+        # https://www.msys2.org/news/#2023-12-13-starting-to-drop-some-32-bit-packages
+        # although it might be possible for dedicated parties to build them
+        # locally for a while:
         error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
         "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
         "application build) typically this is one of:\\n"\
@@ -932,9 +941,9 @@ contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \
         mudlet_fonts_common.qrc
 
-    linux {
+    linux|freebsd {
         RESOURCES += \
-            mudlet_fonts_linux.qrc
+            mudlet_fonts_posix.qrc
     }
 
     !build_pass{

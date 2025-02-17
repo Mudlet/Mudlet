@@ -1260,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.6"
+local version = "2.1.7"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -2259,7 +2259,7 @@ map.save.recall = map.save.recall or {}
 map.save.prompt_pattern = map.save.prompt_pattern or {}
 map.save.ignore_patterns = map.save.ignore_patterns or {}
 map.save.move_methods = map.save.move_methods or {}
-map.silentUpdate = true
+map.silentUpdate = map.silentUpdate or true
 
 local oldstring = string
 local string = utf8

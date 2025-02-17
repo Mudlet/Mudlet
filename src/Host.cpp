@@ -874,6 +874,12 @@ void Host::resetProfile_phase2()
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    // A zero value is how we send a "false" value - which indicates that
+    // this is for a reset profile and NOT a freshly loaded one:
+    event.mArgumentList.append(QString::number(0));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
     raiseEvent(event);
     qDebug() << "resetProfile() DONE";
 }
@@ -1068,7 +1074,7 @@ void Host::setMediaLocationGMCP(const QString& mediaUrl)
     mMediaLocationGMCP = mediaUrl;
 }
 
-QString Host::getMediaLocationGMCP() const
+QString Host::mediaLocationGMCP() const
 {
     return mMediaLocationGMCP;
 }
@@ -1084,7 +1090,7 @@ void Host::setMediaLocationMSP(const QString& mediaUrl)
     mMediaLocationMSP = mediaUrl;
 }
 
-QString Host::getMediaLocationMSP() const
+QString Host::mediaLocationMSP() const
 {
     return mMediaLocationMSP;
 }
