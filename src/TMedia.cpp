@@ -869,6 +869,13 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
 
 void TMedia::connectMediaPlayer(TMediaPlayer& player)
 {
+    disconnect(player.mediaPlayer(), &QMediaPlayer::seekableChanged, nullptr, nullptr);
+    connect(player.mediaPlayer(), &QMediaPlayer::seekableChanged, this, [=](bool seekable) {
+        if (seekable) {
+            player.mediaPlayer()->setPosition(player.mediaData().mediaStart());
+        }
+    });
+
     disconnect(player.mediaPlayer(), &QMediaPlayer::mediaStatusChanged, nullptr, nullptr);
     connect(player.mediaPlayer(), &QMediaPlayer::mediaStatusChanged, this, [=](QMediaPlayer::MediaStatus mediaStatus) {
         if (mediaStatus == QMediaPlayer::EndOfMedia) {
