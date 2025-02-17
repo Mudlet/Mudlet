@@ -5141,10 +5141,14 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getPlayingMusic", TLuaInterpreter::getPlayingMusic);
     lua_register(pGlobalLua, "getPlayingSounds", TLuaInterpreter::getPlayingSounds);
     lua_register(pGlobalLua, "getPlayingVideos", TLuaInterpreter::getPlayingVideos);
+    lua_register(pGlobalLua, "getPausedSounds", TLuaInterpreter::getPausedSounds);
+    lua_register(pGlobalLua, "getPausedMusic", TLuaInterpreter::getPausedMusic);
     lua_register(pGlobalLua, "getPausedVideos", TLuaInterpreter::getPausedVideos);
     lua_register(pGlobalLua, "stopMusic", TLuaInterpreter::stopMusic);
     lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
     lua_register(pGlobalLua, "stopVideos", TLuaInterpreter::stopVideos);
+    lua_register(pGlobalLua, "pauseSounds", TLuaInterpreter::pauseSounds);
+    lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
