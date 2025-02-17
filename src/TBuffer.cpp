@@ -2240,6 +2240,15 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         // There are NO lines in the buffer - so initialize with a new empty line
         appendEmptyLine();
         lastLine = 0;
+        // Harrison-Teeg: Copied this styling push in from the append method...
+        // I think this should cause errors as the buffer will have a value whereas the lineBuffer is empty 
+        // but I've copied it over anyway out of fear of deleting things I don't understand
+
+        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
+        const TChar styling(fgColor, bgColor,
+                (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask))
+                 : (flags & TChar::TestMask)));
+        buffer.back().push_back(styling);
     }
 
     if (text.isEmpty()) {
