@@ -1957,7 +1957,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="593"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[  확인 ] - 맵 감사가 완료되었습니다 (%1s). 게임을 즐기세요...</translation>
+      <translation>[ 확인 ] - 맵 감사가 완료되었습니다(%1s). 게임을 즐기세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="600"/>
@@ -4292,7 +4292,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="25"/>
       <source>Select a profile to connect with</source>
-      <translation>프로필을 선택하여 연결하세요</translation>
+      <translation>접속할 서버의 프로필을 클릭하세요.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="106"/>
@@ -5508,7 +5508,7 @@ Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="957"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation>이 프로필은 현재로드되어 있습니다. 연결 매개 변수를 변경하기 전에 프로필을 닫으십시오.</translation>
+      <translation>현재 이 프로필이 활성화되어 있습니다. 연결 설정을 변경하기 전에 프로필을 닫으십시오.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1274"/>
@@ -7549,20 +7549,20 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="74"/>
       <source>&lt;p&gt;Alias react on user input. To add a new alias:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create aliases from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;줄임말은 사용자 입력에 반응합니다. 새 줄임말을 추가하려면:&lt;ol&gt;&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+      <translation>&lt;p&gt;줄임말은 사용자 입력에 반응합니다. 새 줄임말을 추가하려면:&lt;ol&gt;&lt;li&gt;위의 &apos;줄임말 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
 &lt;li&gt;입력 &lt;strong&gt;패턴&lt;/strong&gt;을 문자 그대로 또는 Perl 정규 표현식을 사용하여 정의하십시오.&lt;/li&gt;
-&lt;li&gt;게임에 명령어를 전달할 &apos;대체&apos; &lt;strong&gt;명령어&lt;/strong&gt;를 입력하여 줄임말 패턴 대신 전달하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
+&lt;li&gt;게임에 명령어를 전달할 &apos;줄임말&apos; &lt;strong&gt;명령어&lt;/strong&gt;를 입력하여 줄임말 패턴 대신 전달하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;줄임말을 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;
 
 &lt;p&gt;이게 전부입니다! 입력 줄에서 줄임말을 생성하고 싶다면, 도움이 되는 몇 가지 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;패키지&lt;/a&gt;와 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;모듈&lt;/a&gt;이 있습니다.&lt;/p&gt;
 
-&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;매뉴얼&lt;/a&gt;을 확인하십시오.&lt;/p&gt;</translation>
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.EC.A4.84.EC.9E.84.EB.A7.90&apos;&gt;매뉴얼&lt;/a&gt;을 확인하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="82"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;트리거는 게임 출력에 반응합니다. 새로운 트리거를 추가하려면:&lt;ol&gt;
-&lt;li&gt;위쪽의 &apos;아이템 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
+&lt;li&gt;위쪽의 &apos;트리거 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
 &lt;li&gt;트리거로 사용할 &lt;strong&gt;패턴&lt;/strong&gt;을 정의하세요.&lt;/li&gt;
 &lt;li&gt;적절한 패턴 &lt;strong&gt;유형&lt;/strong&gt;을 선택하세요.&lt;/li&gt;
 &lt;li&gt;트리거가 게임에서 패턴을 찾으면 실행할 &lt;strong&gt;명령어&lt;/strong&gt;를 정의하거나, 더 복잡한 경우 스크립트를 작성하세요.&lt;/li&gt;
@@ -7571,7 +7571,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
 
 &lt;p&gt;그게 다예요! 입력 줄에서 트리거를 생성하고 싶다면, &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;Command Line Simple Triggers and Aliases Script&lt;/a&gt;과 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Input line alias/trigger scripts&lt;/a&gt;라는 패키지가 도움이 될 수 있어요.&lt;/p&gt;
 
-&lt;p&gt;더 자세한 정보는 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
+&lt;p&gt;더 자세한 정보는 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.ED.8A.B8.EB.A6.AC.EA.B1.B0&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="166"/>
@@ -7809,10 +7809,10 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="91"/>
       <source>&lt;p&gt;Scripts organize code and can react to events. To add a new script:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;If needed, you can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;스크립트는 코드를 정리하고 이벤트에 반응할 수 있습니다. 새로운 스크립트를 추가하려면: &lt;ol&gt;
-&lt;li&gt;위쪽의 &apos;아이템 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
-&lt;li&gt;아래 박스에 스크립트를 입력하세요. 예를 들어, 다른 트리거나 별칭에서 호출할 &lt;strong&gt;함수&lt;/strong&gt;를 정의할 수 있습니다.&lt;/li&gt;
+&lt;li&gt;위쪽의 &apos;스크립트 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
+&lt;li&gt;아래 박스에 스크립트를 입력하세요. 예를 들어, 다른 트리거나 즐임말에서 호출할 &lt;strong&gt;함수&lt;/strong&gt;를 정의할 수 있습니다.&lt;/li&gt;
 &lt;li&gt;함수를 정의하지 않고 lua &lt;strong&gt;명령어&lt;/strong&gt;를 작성하면, Mudlet 시작 시와 스크립트를 편집할 때마다 실행됩니다.&lt;/li&gt;
-&lt;li&gt;필요한 경우, +와 - 기호로 &lt;strong&gt;이벤트&lt;/strong&gt; 목록을 등록할 수 있습니다. 이벤트가 발생하면, 스크립트 항목과 동일한 이름의 함수가 호출됩니다.&lt;/li&gt;
+&lt;li&gt;필요한 경우, +와 - 기호로 &lt;strong&gt;이벤트&lt;/strong&gt; 목록을 등록할 수 있습니다. 이벤트가 발생하면, 스크립트 이름과 동일한 이름의 함수가 호출됩니다.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;스크립트를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
 &lt;/ol&gt;&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 스크립트는 비활성화되어 있어도 열람 시 자동으로 실행됩니다.&lt;/p&gt;
@@ -7825,7 +7825,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <source>&lt;p&gt;Timers react after a timespan once or regularly. To add a new timer:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Timers can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;타이머는 일정 시간이 지난 후 또는 주기적으로 반응합니다. 새 타이머를 추가하려면:&lt;ol&gt;
-&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;위의 &apos;타이머 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
 &lt;li&gt;타이머가 반응할 &lt;strong&gt;시간 간격&lt;/strong&gt;을 다음 형식으로 정의하십시오: 시 : 분 : 초.&lt;/li&gt;
 &lt;li&gt;시간이 지난 후 게임으로 전송할 &lt;strong&gt;명령어&lt;/strong&gt;를 명확한 텍스트로 입력하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;타이머를 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;
@@ -7835,11 +7835,11 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
 
 &lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 타이머는 메인 프로필 창의 명령줄에서도 다음과 같이 정의할 수 있습니다:&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;안녕하세요!&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;이 코드는 생성 후 정확히 3초 후에 "hello!"를 출력합니다.&lt;/p&gt;
+&lt;p&gt;이 코드는 생성 후 정확히 3초 후에 "안녕하세요!"를 출력합니다.&lt;/p&gt;
 
-&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.ED.83.80.EC.9D.B4.EB.A8.B8&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="113"/>
@@ -7903,7 +7903,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="472"/>
       <source>Add Item</source>
-      <translation>항목 추가</translation>
+      <translation>새로 만들기</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="486"/>
@@ -8024,7 +8024,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7843"/>
       <source>Add Trigger</source>
-      <translation>트리거 추가하기</translation>
+      <translation>트리거 추가</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7844"/>
@@ -8147,22 +8147,22 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
       <source>Add Script</source>
-      <translation>스크립트 추가하기</translation>
+      <translation>스크립트 추가</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
       <source>Add new script</source>
-      <translation>새로운 스크립트 추가하기</translation>
+      <translation>새로운 스크립트 추가</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7875"/>
       <source>Add Script Group</source>
-      <translation>스크립트 그룹 추가하기</translation>
+      <translation>스크립트 그룹 추가</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7876"/>
       <source>Add new group of scripts</source>
-      <translation>새로운 스크립트 그룹 추가하기</translation>
+      <translation>새로운 스크립트 그룹 추가</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
