@@ -151,6 +151,7 @@ private:
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
+    void parseJSONForMediaPause(QJsonObject& json);
     void parseJSONForMediaStop(QJsonObject& json);
 
     QPointer<Host> mpHost;

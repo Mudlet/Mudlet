@@ -599,6 +599,8 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         TMedia::parseJSONForMediaLoad(json);
     } else if (package == "client.media.play") {
         TMedia::parseJSONForMediaPlay(json);
+    } else if (package == "client.media.pause") {
+        TMedia::parseJSONForMediaPause(json);
     }
 }
 
@@ -2119,6 +2121,21 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
 
     TMedia::playMedia(mediaData);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Pausing_Media
+void TMedia::parseJSONForMediaPause(QJsonObject& json)
+{
+    TMediaData mediaData{};
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+    mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
+    mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
+    mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
+    mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
+    mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
+
+    TMedia::pauseMedia(mediaData);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Stopping_Media
