@@ -103,8 +103,13 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 #else
     pushButton_3D->hide();
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(checkBox_showRoomIds, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+    connect(checkBox_showRoomNames, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#else
     connect(checkBox_showRoomIds, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     connect(checkBox_showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#endif
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
@@ -379,7 +384,7 @@ void dlgMapper::slot_updateInfoContributors()
     //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
     auto* clearAction = new QAction(tr("None"), pushButton_info);
     pushButton_info->menu()->addAction(clearAction);
-    connect(clearAction, &QAction::triggered, this, [=]() {
+    connect(clearAction, &QAction::triggered, this, [=, this]() {
         for (auto action : pushButton_info->menu()->actions()) {
             action->setChecked(false);
         }
@@ -389,7 +394,7 @@ void dlgMapper::slot_updateInfoContributors()
         auto* action = new QAction(name, pushButton_info);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));
-        connect(action, &QAction::toggled, this, [=](bool isToggled) {
+        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
             if (isToggled) {
                 mpHost->mMapInfoContributors.insert(name);
             } else {

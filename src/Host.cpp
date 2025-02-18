@@ -755,7 +755,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=]() {
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
             reloadModule(syncModuleName);
             obj->deleteLater();
         });
@@ -874,6 +874,12 @@ void Host::resetProfile_phase2()
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    // A zero value is how we send a "false" value - which indicates that
+    // this is for a reset profile and NOT a freshly loaded one:
+    event.mArgumentList.append(QString::number(0));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
     raiseEvent(event);
     qDebug() << "resetProfile() DONE";
 }
@@ -935,12 +941,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     qApp->processEvents();
 
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=]() {
+    mModuleFuture = QtConcurrent::run([=, this]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
@@ -1068,7 +1074,7 @@ void Host::setMediaLocationGMCP(const QString& mediaUrl)
     mMediaLocationGMCP = mediaUrl;
 }
 
-QString Host::getMediaLocationGMCP() const
+QString Host::mediaLocationGMCP() const
 {
     return mMediaLocationGMCP;
 }
@@ -1084,7 +1090,7 @@ void Host::setMediaLocationMSP(const QString& mediaUrl)
     mMediaLocationMSP = mediaUrl;
 }
 
-QString Host::getMediaLocationMSP() const
+QString Host::mediaLocationMSP() const
 {
     return mMediaLocationMSP;
 }
@@ -2983,7 +2989,7 @@ void Host::loadSecuredPassword()
 
     job->setKey(getName());
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
         if (task->error()) {
             const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {

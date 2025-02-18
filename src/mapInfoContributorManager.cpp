@@ -26,10 +26,10 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 : QObject(parent)
 , mpHost(pH)
 {
-    registerContributor(qsl("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    registerContributor(qsl("Short"), [=, this](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
-    registerContributor(qsl("Full"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    registerContributor(qsl("Full"), [=, this](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return fullInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
 }
