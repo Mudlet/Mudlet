@@ -2596,7 +2596,7 @@ inline int TBuffer::wrap(int startLine)
                             lineText.append(lineRest);
                         } else {
                             // skip any leading spaces starting a wrapped line
-                            while(i2 < length && lineBuffer[i].at(i2) == QChar::Space) {
+                            while (i2 < length && lineBuffer[i].at(i2) == QChar::Space) {
                                 i2++;
                             }
                         }
