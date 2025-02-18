@@ -48,11 +48,7 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
 
 void TMedia::playMedia(TMediaData& mediaData)
 {
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
-        return;
-    }
-
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return;
     }
 
@@ -124,64 +120,13 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
 {
     QList<TMediaData> mMatchingTMediaDataList;
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return mMatchingTMediaDataList;
     }
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
-        return mMatchingTMediaDataList;
-    }
+    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
 
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mMSPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mMSPMusicList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mGMCPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mGMCPMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mGMCPVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
-            break;
-        }
-        break;
-
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mAPISoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mAPIMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mAPIVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
-            break;
-        }
-        break;
-
-    default:
+    if (mTMediaPlayerList.isEmpty()) {
         return mMatchingTMediaDataList;
     }
 
@@ -207,15 +152,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-            continue;
-        }
-
-        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-            continue;
-        }
-
-        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+        if (!matchesMediaCriteria(pPlayer, mediaData)) {
             continue;
         }
 
@@ -234,67 +171,15 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
 {
     QList<TMediaData> mMatchingTMediaDataList;
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return mMatchingTMediaDataList;
     }
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+
+    if (mTMediaPlayerList.isEmpty()) {
         return mMatchingTMediaDataList;
     }
-
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mMSPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mMSPMusicList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mGMCPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mGMCPMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mGMCPVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
-            break;
-        }
-        break;
-
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mAPISoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mAPIMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mAPIVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
-            break;
-        }
-        break;
-
-    default:
-        return mMatchingTMediaDataList;
-    }
-
     if (!mediaData.mediaFileName().isEmpty()) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
@@ -317,15 +202,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-            continue;
-        }
-
-        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-            continue;
-        }
-
-        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+        if (!matchesMediaCriteria(pPlayer, mediaData)) {
             continue;
         }
 
@@ -342,64 +219,13 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
 
 void TMedia::pauseMedia(TMediaData& mediaData)
 {
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return;
     }
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
-        return;
-    }
+    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
 
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mMSPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mMSPMusicList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mGMCPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mGMCPMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mGMCPVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
-            break;
-        }
-        break;
-
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mAPISoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mAPIMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mAPIVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
-            break;
-        }
-        break;
-
-    default:
+    if (mTMediaPlayerList.isEmpty()) {
         return;
     }
 
@@ -425,15 +251,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-            continue;
-        }
-
-        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-            continue;
-        }
-
-        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+        if (!matchesMediaCriteria(pPlayer, mediaData)) {
             continue;
         }
 
@@ -448,64 +266,13 @@ void TMedia::pauseMedia(TMediaData& mediaData)
 
 void TMedia::stopMedia(TMediaData& mediaData)
 {
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return;
     }
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
-        return;
-    }
+    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
 
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mMSPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mMSPMusicList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mGMCPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mGMCPMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mGMCPVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
-            break;
-        }
-        break;
-
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mAPISoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mAPIMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mAPIVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
-            break;
-        }
-        break;
-
-    default:
+    if (mTMediaPlayerList.isEmpty()) {
         return;
     }
 
@@ -527,15 +294,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
 
-        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-            continue;
-        }
-
-        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-            continue;
-        }
-
-        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+        if (!matchesMediaCriteria(pPlayer, mediaData)) {
             continue;
         }
 
@@ -632,68 +391,84 @@ void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
 // End Public
 
 // Private
+bool TMedia::isMediaProtocolAllowed(const TMediaData& mediaData) const
+{
+    if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) ||
+        (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia)) {
+        return false;
+    }
+    return true;
+}
+
+QList<TMediaPlayer> TMedia::getMatchingMediaPlayers(const TMediaData& mediaData)
+{
+    QList<TMediaPlayer> mediaPlayerList;
+
+    switch (mediaData.mediaProtocol()) {
+        case TMediaData::MediaProtocolMSP:
+            mediaPlayerList = (mediaData.mediaType() == TMediaData::MediaTypeSound) ? mMSPSoundList : mMSPMusicList;
+            break;
+
+        case TMediaData::MediaProtocolGMCP:
+            mediaPlayerList = (mediaData.mediaType() == TMediaData::MediaTypeNotSet)
+                ? mGMCPSoundList + mGMCPMusicList + mGMCPVideoList
+                : (mediaData.mediaType() == TMediaData::MediaTypeSound ? mGMCPSoundList
+                : mediaData.mediaType() == TMediaData::MediaTypeMusic ? mGMCPMusicList
+                : mGMCPVideoList);
+            break;
+
+        case TMediaData::MediaProtocolAPI:
+            mediaPlayerList = (mediaData.mediaType() == TMediaData::MediaTypeNotSet)
+                ? mAPISoundList + mAPIMusicList + mAPIVideoList
+                : (mediaData.mediaType() == TMediaData::MediaTypeSound ? mAPISoundList
+                : mediaData.mediaType() == TMediaData::MediaTypeMusic ? mAPIMusicList
+                : mAPIVideoList);
+            break;
+
+        case TMediaData::MediaProtocolNotSet:
+            mediaPlayerList = (mediaData.mediaType() == TMediaData::MediaTypeNotSet)
+                ? mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mGMCPVideoList + mAPISoundList + mAPIMusicList + mAPIVideoList
+                : (mediaData.mediaType() == TMediaData::MediaTypeSound ? mMSPSoundList + mGMCPSoundList + mAPISoundList
+                : mediaData.mediaType() == TMediaData::MediaTypeMusic ? mMSPMusicList + mGMCPMusicList + mAPIMusicList
+                : mediaData.mediaType() == TMediaData::MediaTypeVideo ? mGMCPVideoList + mAPIVideoList
+                : QList<TMediaPlayer>());
+            break;
+    }
+
+    return mediaPlayerList;
+}
+
+bool TMedia::matchesMediaCriteria(const TMediaPlayer& player, const TMediaData& mediaData)
+{
+    if (!mediaData.mediaKey().isEmpty() && !player.mediaData().mediaKey().isEmpty() &&
+        player.mediaData().mediaKey() != mediaData.mediaKey()) {
+        return false;
+    }
+
+    if (!mediaData.mediaFileName().isEmpty() && !player.mediaData().mediaFileName().isEmpty() &&
+        player.mediaData().mediaFileName() != mediaData.mediaFileName()) {
+        return false;
+    }
+
+    if (!mediaData.mediaTag().isEmpty() && !player.mediaData().mediaTag().isEmpty() &&
+        player.mediaData().mediaTag() != mediaData.mediaTag()) {
+        return false;
+    }
+
+    return true;
+}
+
 bool TMedia::resume(TMediaData mediaData)
 {
     bool resumed = false;
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return resumed;
     }
 
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
-        return resumed;
-    }
+    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
 
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mMSPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mMSPMusicList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mGMCPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mGMCPMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mGMCPVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
-            break;
-        }
-        break;
-
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mAPISoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mAPIMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mAPIVideoList;
-            break;
-        case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
-            break;
-        }
-        break;
-
-    default:
+    if (mTMediaPlayerList.isEmpty()) {
         return resumed;
     }
 
@@ -719,15 +494,7 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
-        if (!mediaData.mediaKey().isEmpty() && !pPlayer.mediaData().mediaKey().isEmpty() && pPlayer.mediaData().mediaKey() != mediaData.mediaKey()) {
-            continue;
-        }
-
-        if (!mediaData.mediaFileName().isEmpty() && !pPlayer.mediaData().mediaFileName().isEmpty() && pPlayer.mediaData().mediaFileName() != mediaData.mediaFileName()) {
-            continue;
-        }
-
-        if (!mediaData.mediaTag().isEmpty() && !pPlayer.mediaData().mediaTag().isEmpty() && pPlayer.mediaData().mediaTag() != mediaData.mediaTag()) {
+        if (!matchesMediaCriteria(pPlayer, mediaData)) {
             continue;
         }
 
@@ -740,7 +507,12 @@ bool TMedia::resume(TMediaData mediaData)
 
 void TMedia::stopAllMediaPlayers()
 {
-    QList<TMediaPlayer> const mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mGMCPVideoList + mAPISoundList + mAPIMusicList + mAPIVideoList);
+    TMediaData mediaData{};
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
+    mediaData.setMediaType(TMediaData::MediaTypeNotSet);
+
+    QList<TMediaPlayer> const mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -751,22 +523,15 @@ void TMedia::stopAllMediaPlayers()
 
 void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
 {
-    QList<TMediaPlayer> mTMediaPlayerList;
+    TMediaData mediaData{};
 
-    if (mediaProtocol == TMediaData::MediaProtocolMSP) {
-        mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
-    } else if (mediaProtocol == TMediaData::MediaProtocolGMCP) {
-        mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList + mGMCPVideoList;
-    } else if (mediaProtocol == TMediaData::MediaProtocolAPI) {
-        mTMediaPlayerList = mAPISoundList + mAPIMusicList + mAPIVideoList;
-    } else if (mediaProtocol == TMediaData::MediaProtocolNotSet) {
-        mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mGMCPVideoList + mAPISoundList + mAPIMusicList + mAPIVideoList;
-    }
+    mediaData.setMediaProtocol(mediaProtocol);
 
+    QList<TMediaPlayer> const mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
-        const TMediaPlayer player = itTMediaPlayer.next();
+        TMediaPlayer const player = itTMediaPlayer.next();
 
         if (player.mediaPlayer()->audioOutput()) {
             player.mediaPlayer()->audioOutput()->setMuted(state);
@@ -1143,54 +908,6 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
     return absolutePathFileName;
 }
 
-QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
-{
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaData.mediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mMSPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mMSPMusicList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mGMCPSoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mGMCPMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mGMCPVideoList;
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            mTMediaPlayerList = mAPISoundList;
-            break;
-        case TMediaData::MediaTypeMusic:
-            mTMediaPlayerList = mAPIMusicList;
-            break;
-        case TMediaData::MediaTypeVideo:
-            mTMediaPlayerList = mAPIVideoList;
-            break;
-        }
-        break;
-    }
-
-    return mTMediaPlayerList;
-}
-
 void TMedia::connectMediaPlayer(TMediaPlayer& player)
 {
     disconnect(player.mediaPlayer(), &QMediaPlayer::seekableChanged, nullptr, nullptr);
@@ -1275,7 +992,7 @@ void TMedia::updateMediaPlayerList(TMediaPlayer& player)
 {
     int matchedMediaPlayerIndex = -1;
     TMediaData mediaData = player.mediaData();
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
 
     for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
         TMediaPlayer const pTestPlayer = mTMediaPlayerList.at(i);
@@ -1364,7 +1081,7 @@ void TMedia::updateMediaPlayerList(TMediaPlayer& player)
 TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 {
     TMediaPlayer pPlayer{};
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find first available inactive QMediaPlayer
@@ -1429,7 +1146,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
 TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData)
 {
     TMediaPlayer pPlayer{};
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -1459,7 +1176,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 
     int maxMediaPriority = 0;
 
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find the maximum priority of all playing sounds
@@ -1490,7 +1207,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName)
 {
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -1585,11 +1302,7 @@ bool TMedia::setupVideo(TMediaPlayer& player)
 
 void TMedia::play(TMediaData& mediaData)
 {
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
-        return;
-    }
-
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+    if (!isMediaProtocolAllowed(mediaData)) {
         return;
     }
 

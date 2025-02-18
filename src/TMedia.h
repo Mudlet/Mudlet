@@ -105,6 +105,9 @@ private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
+    bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
+    QList<TMediaPlayer> getMatchingMediaPlayers(const TMediaData& mediaData);
+    bool matchesMediaCriteria(const TMediaPlayer& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
@@ -119,7 +122,6 @@ private:
     bool processUrl(TMediaData& mediaData);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
-    QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
     void connectMediaPlayer(TMediaPlayer& player);
     void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
