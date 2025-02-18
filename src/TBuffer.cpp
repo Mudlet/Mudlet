@@ -2209,12 +2209,19 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
                      const QColor& fgColor, const QColor& bgColor,
                      TChar::AttributeFlags flags, int linkID)
 {
-    const int lastLine = buffer.size() - 1;
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
     appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
     if (text.isEmpty()) {
         return;
     }
-    wrap(lastLine);
+    // optimization: if the lastLine length hasn't changed,
+    // skip it and wrap subsequent lines
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        wrap(lastLineBeforeWrap+1);
+    } else {
+        wrap(lastLineBeforeWrap);
+    }
     // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
     // limit to prevent it growing beyond a "reasonable" size we also
     // want to check - for TConsoles that have been set to be "non-scrollable"
@@ -2587,6 +2594,11 @@ inline int TBuffer::wrap(int startLine)
                         lineText = (hangingIndent > 0) ? qHangingIndent : QString();
                         if (restOfLine > 0) {
                             lineText.append(lineRest);
+                        } else {
+                            // skip any leading spaces starting a wrapped line
+                            while(i2 < length && lineBuffer[i].at(i2) == QChar::Space) {
+                                i2++;
+                            }
                         }
                         while (restOfLine > 0) {
                                 newLine.push_front(queue.back().back());
@@ -2599,15 +2611,23 @@ inline int TBuffer::wrap(int startLine)
                         }
 
                         xPos += hangingIndent;
-
                         break;
                     }
                 }
                 
             }
-            xPos += charWidth;
-            newLine.push_back(buffer[i][i2]);
-            lineText.append(lineBuffer[i].at(i2));
+            // finalChar != c if we're trimming leading spaces
+            if (i2 < length) {
+                if (c == QChar::Space) {
+                    const QChar finalChar = lineBuffer[i].at(i2);
+                    xPos += getCharWidth(finalChar);
+                    lineText.append(finalChar);
+                } else {
+                    xPos += charWidth;
+                    lineText.append(c);
+                }
+                newLine.push_back(buffer[i][i2]);
+            }
         }
         if (newLine.empty()) {
             tempList.append(QString());
