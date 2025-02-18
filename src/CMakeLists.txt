@@ -419,10 +419,10 @@ set(USE_SANITIZER
 add_sanitizer_support(${USE_SANITIZER})
 message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
 
-
 find_package(Qt6 6.4.0 REQUIRED
     COMPONENTS Core
                Multimedia
+               MultimediaWidgets
                Network
                OpenGL
                UiTools
@@ -439,6 +439,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Core
               Qt6::Network
               Qt6::Multimedia
+              Qt6::MultimediaWidgets
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets

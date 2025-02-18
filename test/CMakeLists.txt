@@ -14,6 +14,7 @@ ENABLE_TESTING()
 find_package(Qt6 6.4.0 REQUIRED
     COMPONENTS Core
     Multimedia
+    MultimediaWidgets
     Network
     OpenGL
     UiTools
@@ -27,6 +28,7 @@ link_libraries(
     Qt6::Core
     Qt6::Network
     Qt6::Multimedia
+    Qt6::MultimediaWidgets
     Qt6::UiTools
     Qt6::Widgets)
 
