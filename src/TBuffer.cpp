@@ -863,7 +863,7 @@ COMMIT_LINE:
             lineBuffer.push_back(QString());
             timeBuffer.push_back(QString());
             promptBuffer << false;
-            while (static_cast<int>(buffer.size()) > mLinesLimit) {
+            while (mBatchDeleteSize > 0 && static_cast<int>(buffer.size()) > mLinesLimit) {
                 // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
                 // in all other methods where the following is used (because
                 // both need to monitor the number of lines of text in the
@@ -2222,7 +2222,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
     } else {
         wrap(lastLineBeforeWrap);
     }
-    while (static_cast<int>(buffer.size()) > mLinesLimit) {
+    while (mBatchDeleteSize > 0 && static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
     // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
