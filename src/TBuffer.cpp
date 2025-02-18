@@ -863,7 +863,7 @@ COMMIT_LINE:
             lineBuffer.push_back(QString());
             timeBuffer.push_back(QString());
             promptBuffer << false;
-            if (static_cast<int>(buffer.size()) > mLinesLimit) {
+            while (static_cast<int>(buffer.size()) > mLinesLimit) {
                 // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
                 // in all other methods where the following is used (because
                 // both need to monitor the number of lines of text in the
@@ -2222,6 +2222,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
     } else {
         wrap(lastLineBeforeWrap);
     }
+    while (static_cast<int>(buffer.size()) > mLinesLimit) {
+        shrinkBuffer();
+    }
     // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
     // limit to prevent it growing beyond a "reasonable" size we also
     // want to check - for TConsoles that have been set to be "non-scrollable"
@@ -2238,9 +2241,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 {
     if (sub_end < 0) {
         return;
-    }
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
     }
     int lastLine = buffer.size() - 1;
     if (Q_UNLIKELY(lastLine < 0)) {
