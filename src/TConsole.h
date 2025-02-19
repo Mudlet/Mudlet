@@ -252,6 +252,7 @@ public:
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
+    int mHangingIndentCount = 0;
     QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;

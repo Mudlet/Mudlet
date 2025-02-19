@@ -896,7 +896,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         foreach(auto label, contextMenuItems.keys()) {
             auto eventName = contextMenuItems.value(label);
             auto action = new QAction(label, this);
-            connect(action, &QAction::triggered, this, [=]() {
+            connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
                 mudletEvent.mArgumentList << eventName;
                 mudletEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING;

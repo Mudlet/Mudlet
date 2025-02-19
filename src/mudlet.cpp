@@ -545,7 +545,7 @@ void mudlet::init()
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_showHelpDialogIrc);
-    connect(dactionShowErrors, &QAction::triggered, this, [=]() {
+    connect(dactionShowErrors, &QAction::triggered, this, [=, this]() {
         auto host = getActiveHost();
         if (!host) {
             return;
@@ -1745,6 +1745,11 @@ void mudlet::disableToolbarButtons()
     dactionModuleManager->setEnabled(false);
     dactionPackageExporter->setEnabled(false);
 
+    dactionToggleTimeStamp->setEnabled(false);
+    dactionToggleReplay->setEnabled(false);
+    dactionToggleLogging->setEnabled(false);
+    dactionToggleEmergencyStop->setEnabled(false);
+
     mpActionIRC->setEnabled(false);
     dactionIRC->setEnabled(false);
 
@@ -1801,6 +1806,11 @@ void mudlet::enableToolbarButtons()
     dactionPackageManager->setEnabled(true);
     dactionModuleManager->setEnabled(true);
     dactionPackageExporter->setEnabled(true);
+
+    dactionToggleTimeStamp->setEnabled(true);
+    dactionToggleReplay->setEnabled(true);
+    dactionToggleLogging->setEnabled(true);
+    dactionToggleEmergencyStop->setEnabled(true);
 
     mpActionIRC->setEnabled(true);
     dactionIRC->setEnabled(true);
@@ -2261,7 +2271,7 @@ void mudlet::slot_showConnectionDialog()
     QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
-    connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
     mpConnectionDialog->show();
 }
@@ -2413,7 +2423,7 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
+        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=, this]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
@@ -3009,7 +3019,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host *pHost = loadProfile(profile_name, true);
+    loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
@@ -3091,6 +3101,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // A non-zero value is how we send a "true" value - which indicates that
+    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
+    event.mArgumentList.append(QString::number(1));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
 
     // Now load the default (latest stored) map file:
@@ -3961,7 +3975,7 @@ void mudlet::slot_updateInstalled()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=]() {
+    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
@@ -5018,7 +5032,7 @@ void mudlet::setupTrayIcon()
     mTrayIcon.setIcon(windowIcon());
     auto menu = new QMenu(this);
     auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
-    connect(hideTrayAction, &QAction::triggered, this, [=]() {
+    connect(hideTrayAction, &QAction::triggered, this, [=, this]() {
        mTrayIcon.hide();
     });
     menu->addAction(hideTrayAction);
