@@ -336,9 +336,9 @@ public:
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
-    QString getMediaLocationGMCP() const;
+    QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
-    QString getMediaLocationMSP() const;
+    QString mediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
