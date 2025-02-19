@@ -14541,7 +14541,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="481"/>
       <source>only pass matches</source>
-      <translation>일치한 부분만 전달하세요.</translation>
+      <translation>일치하는 항목만 전달</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="254"/>
@@ -14606,7 +14606,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
       <source>AND / Multi-line (delta: </source>
       <extracomment>This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.</extracomment>
-      <translation>AND / 여러 줄 (델타:</translation>
+      <translation>그리고 / 여러 행 (차이값:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="465"/>
