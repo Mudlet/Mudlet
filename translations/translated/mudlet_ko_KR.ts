@@ -14588,7 +14588,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
       <source>handle multiple items as a</source>
       <extracomment>This text preceeds (is above) the content of the spinBox_lineMargin which also contain text with the text in the label_multiLineTrigger suffixed on the end (underneath).</extracomment>
-      <translation>여러 항목을 하나로 처리</translation>
+      <translation>여러 항목을 다음과 같이 처리</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
@@ -14644,7 +14644,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="321"/>
       <source>play sound</source>
-      <translation>사운드 재생</translation>
+      <translation>소리 재생</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="78"/>
