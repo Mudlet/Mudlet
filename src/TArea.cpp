@@ -77,9 +77,12 @@ int TArea::getAreaID()
 QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
 {
     QMap<int, QMap<int, QMultiMap<int, int>>> kS;
-    QList<TRoom*> const roomList = mpRoomDB->getRoomPtrList();
-    for (auto room : roomList) {
-        const int id = room->getId();
+    for (const auto id : std::as_const(rooms)) {
+        const auto room = mpRoomDB->getRoom(id);
+        if (!room) {
+            continue;
+        }
+
         const int x = room->x();
         const int y = room->y();
         const int z = room->z();
