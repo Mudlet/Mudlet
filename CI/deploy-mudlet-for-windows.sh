@@ -19,6 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
+set -x
+
 # Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 
