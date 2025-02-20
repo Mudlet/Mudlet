@@ -246,7 +246,7 @@ else
   fi
 
   # Create NuGet package
-  nuget pack "${NuSpec}" -Version "${VersionAndSha}" -BasePath "${SQUIRRELWIN}" -OutputDirectory "${QUIRRELWIN}"
+  nuget pack "${NuSpec}" -Version "${VersionAndSha}" -BasePath "${SQUIRRELWIN}" -OutputDirectory "${SQUIRRELWIN}"
 
   echo "=== Preparing to create installer ==="
   if [[ "${PublicTestBuild}" == "true" ]]; then
