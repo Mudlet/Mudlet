@@ -848,7 +848,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2949"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
-      <translation>&quot;선 삭제&quot;를 사용하여 편집 가능한 지점에서 끝나는 유일한 세그먼트를 제거하세요</translation>
+      <translation>&quot;선 삭제&quot;를 사용하여 편집 가능한 지점에서 끝나는 유일한 구간을 제거하세요</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -1065,7 +1065,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4327"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation>[  성공  ]  - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
+      <translation>[  확인  ]  - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
     </message>
   </context>
   <context>
@@ -1346,7 +1346,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="858"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation>리플레이 녹화가 중지되었지만 저장할 수 없습니다.</translation>
+      <translation>재생 녹화가 중지되었지만 저장할 수 없습니다.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="860"/>
@@ -1591,7 +1591,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4145"/>
       <source>function</source>
       <extracomment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
-      <translation>function</translation>
+      <translation>함수</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4920"/>
@@ -1637,13 +1637,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5777"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation>[오류] - 코드 포맷터를 로드할 수 없습니다. 들여쓰기 기능을 사용할 수 없습니다.</translation>
+      <translation>[ 오류 ] - 코드 정렬기를 로드할 수 없습니다. 들여쓰기 기능을 사용할 수 없습니다..</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5856"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation>%1 (doesn&apos;t exist)</translation>
+      <translation>%1 (찾을 수 없습니다)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5861"/>
@@ -1962,7 +1962,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="600"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[  확인 ] - 맵이 성공적으로 로드되었습니다 (%1s).</translation>
+      <translation>[ 확인 ] - 맵이 성공적으로 로드되었습니다 (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="48"/>
@@ -2516,7 +2516,7 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[경고 ] - ID가 %1인 방에 %2로 나가는 특수 출구 %3이(가) 있습니다. 방 %2가 존재하지 않습니다.  이 출구는
+      <translation>[ 경고 ] - ID가 %1인 방에 %2로 나가는 특수 출구 %3이(가) 있습니다. 방 %2가 존재하지 않습니다.  이 출구는
 제거됩니다(하지만 대상 방 ID는 사용자 데이터에 키: %4로 저장됩니다).</translation>
     </message>
     <message>
@@ -2809,8 +2809,8 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation>[  OK  ]  - The changes made are:
-(ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</translation>
+      <translation>[ 확인 ]  - 적용된 변경 사항:
+(ID) &quot;이전 이름&quot; ==&gt; &quot;새 이름&quot;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="771"/>
@@ -3022,7 +3022,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1985"/>
       <source>Analyse characters</source>
-      <translation>Analyse characters</translation>
+      <translation>캐릭터 분석</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1994"/>
@@ -3057,7 +3057,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2020"/>
       <source>*** starting new session ***</source>
-      <translation>*** starting new session ***</translation>
+      <translation>*** 새로운 세션 시작 ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2232"/>
@@ -4147,7 +4147,7 @@ Mudlet은 ASCII 인코딩을 사용하여 데이터를 전송하려 시도하겠
     <message>
       <location filename="../src/ctelnet.cpp" line="3446"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation>[경고] - 파일이 손상되어 리플레이가 중단되었습니다.</translation>
+      <translation>[ 경고 ] - 파일이 손상되어 리플레이가 중단되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3455"/>
@@ -4170,13 +4170,13 @@ Try again when it has finished.</source>
       <location filename="../src/ctelnet.cpp" line="3468"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation>[ ERROR ] - 파일 읽기 실패 &quot;%1&quot;,
+      <translation>[ 오류 ] - 파일 읽기 실패 &quot;%1&quot;,
 오류 메시지: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3507"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[  OK  ]  - 재생이 종료되었습니다.</translation>
+      <translation>[ 확인 ] - 재생이 종료되었습니다.</translation>
     </message>
   </context>
   <context>
@@ -4193,10 +4193,10 @@ error message was: &quot;%2&quot;.</source>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation>&lt;small&gt;Choose:&lt;ul&gt;&lt;li&gt;one of the basic 16 colors below&lt;/li&gt;
-&lt;li&gt;click the &lt;i&gt;more&lt;/i&gt; button to get access to other colors in the 256-color set, then follow the instructions to select a color from that part of the 256 colors supported; if such a color is already in use then that part will already be showing&lt;/li&gt;
-&lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
-&lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
+      <translation>&lt;small&gt;선택:&lt;ul&gt;&lt;li&gt;아래 기본 16가지 색상 중 하나&lt;/li&gt;
+&lt;li&gt;&lt;i&gt;더 보기&lt;/i&gt; 버튼을 클릭하여 256색상 세트의 다른 색상에 접근한 후, 해당 색상을 선택하는 방법을 따르세요. 이미 사용 중인 색상이라면 해당 부분이 표시됩니다.&lt;/li&gt;
+&lt;li&gt;하단의 &lt;i&gt;기본값&lt;/i&gt; 또는 &lt;i&gt;무시&lt;/i&gt; 버튼을 클릭하여 특별한 두 가지 경우를 선택하세요.&lt;/li&gt;
+&lt;li&gt;&lt;i&gt;취소&lt;/i&gt;를 클릭하면 변경 없이 이 대화 상자를 닫습니다.&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="59"/>
@@ -4630,7 +4630,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="298"/>
       <source>UP</source>
-      <translation>위로</translation>
+      <translation>위</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="337"/>
@@ -4645,12 +4645,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="357"/>
       <source>IN</source>
-      <translation>안으로</translation>
+      <translation>안</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="383"/>
       <source>OUT</source>
-      <translation>밖으로</translation>
+      <translation>밖</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="393"/>
@@ -4670,7 +4670,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="423"/>
       <source>DOWN</source>
-      <translation>아래로</translation>
+      <translation>밑</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="445"/>
@@ -4797,49 +4797,49 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5622"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>북쪽</translation>
+      <translation>북</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5624"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>n</translation>
+      <translation>북</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5626"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>동쪽</translation>
+      <translation>동</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5628"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>동쪽</translation>
+      <translation>동</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5630"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>남쪽</translation>
+      <translation>남</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5632"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>남쪽</translation>
+      <translation>남</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5634"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>서쪽</translation>
+      <translation>서</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5636"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>서쪽</translation>
+      <translation>서</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5638"/>
@@ -4851,25 +4851,25 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5640"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>북동쪽</translation>
+      <translation>북동</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5642"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>남동쪽</translation>
+      <translation>남동</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5644"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>남동쪽</translation>
+      <translation>남동</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5646"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>남서쪽</translation>
+      <translation>남서</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5648"/>
@@ -4887,31 +4887,31 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5652"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>nw</translation>
+      <translation>북서</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5654"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>안으로</translation>
+      <translation>안</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5656"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>i</translation>
+      <translation>안</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5658"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>밖으로</translation>
+      <translation>밖</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5660"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>o</translation>
+      <translation>밖</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5662"/>
@@ -4923,19 +4923,19 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="5664"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>u</translation>
+      <translation>위</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5666"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>아래로</translation>
+      <translation>밑</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5668"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>d</translation>
+      <translation>밑</translation>
     </message>
   </context>
   <context>
@@ -5763,7 +5763,7 @@ Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설
     <message>
       <location filename="../src/dlgIRC.cpp" line="374"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation>[오류] MSGLIMIT는 &lt;limit&gt; 이 0보다 큰 정수여야 합니다!</translation>
+      <translation>[ 오류 ] MSGLIMIT는 &lt;limit&gt; 이 0보다 큰 정수여야 합니다!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="404"/>
@@ -5798,7 +5798,7 @@ Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설
     <message>
       <location filename="../src/dlgIRC.cpp" line="487"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation>[오류] 구문: %1</translation>
+      <translation>[ 오류 ] 구문: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="489"/>
@@ -5808,12 +5808,12 @@ Mudlet 웹사이트에서 제공하는 64비트 버전을 다운로드하여 설
     <message>
       <location filename="../src/dlgIRC.cpp" line="635"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation>! 닉네임 %1 은(는) 예약되어 있습니다. 닉네임을 자동으로 %2(으)로 변경합니다.</translation>
+      <translation>! %1 대화명은 예약되어 있습니다. 대화명을 자동으로 %2 (으)로 변경합니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="646"/>
       <source>Your nick has changed.</source>
-      <translation>귀하의 닉네임이 변경되었습니다.</translation>
+      <translation>당신의 대화명이 변경되었습니다.</translation>
     </message>
   </context>
   <context>
@@ -6257,17 +6257,17 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1034"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</translation>
+      <translation>패키지에 디렉터리 &quot;%1&quot;을(를) 추가하지 못했습니다. 오류: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1077"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</translation>
+      <translation>필수 파일 &quot;%1&quot;이(가) 스테이징 영역에서 발견되지 않았습니다. 이 영역에는 패키지에 포함하도록 선택한 Mudlet 항목이 들어 있습니다. 이는 해당 디렉터리 &quot;%2&quot;에 문제가 있을 수 있음을 의미합니다. 필요한 권한과 충분한 디스크 공간이 있는지 확인하십시오.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="624"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation>Package &quot;%1&quot; exported to: %2</translation>
+      <translation>패키지 &quot;%1&quot;이(가) 다음 위치로 내보내졌습니다: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1106"/>
@@ -6446,7 +6446,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="991"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation>%1 {Downgraded, for sharing with older version users, NOT recommended}</translation>
+      <translation>%1 {다운그레이드됨, 이전 버전 사용자와 공유하기 위한 용도, 권장되지 않음}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1000"/>
@@ -6636,7 +6636,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation>[ ERROR ] - 다른 프로필을 위해 맵을 저장할 디렉토리를 사용하거나 생성할 수 없습니다. &quot;%1&quot;.
+      <translation>[ 오류 ] - 다른 프로필을 위해 맵을 저장할 디렉토리를 사용하거나 생성할 수 없습니다. &quot;%1&quot;.
 권한/접근 권한을 가지고 있는지,
 &quot;%2&quot;
 에 충분한 공간이 있는지 확인해주세요. 복사 작업이 실패했습니다.</translation>
