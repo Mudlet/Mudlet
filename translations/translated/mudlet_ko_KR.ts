@@ -24,7 +24,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation>Could not verify download integrity.</translation>
+      <translation>다운로드 무결성을 확인할 수 없습니다.</translation>
     </message>
   </context>
   <context>
@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="280"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>맵에 방이 없습니다 - 다른 맵을 로드하거나 처음부터 매핑을 시작하여 시작하십시오.</translation>
+      <translation>지도에 방이 없습니다 - 다른 지도를 불러오거나 처음부터 매핑을 시작하세요.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="285"/>
@@ -94,13 +94,13 @@
       <location filename="../src/Host.cpp" line="1056"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[  OK  ]  - %1 공개 테스트 빌드를 사용해 주셔서 감사합니다!</translation>
+      <translation>[ 확인 ]  - %1 공개 테스트 빌드를 사용해 주셔서 감사합니다!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1057"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[  OK  ]  - %1 문제를 보고하여 Mudlet을 개선할 수 있도록 도와주세요.</translation>
+      <translation>[ 확인 ]  - %1 문제를 보고하여 Mudlet을 개선할 수 있도록 도와주세요.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1858"/>
@@ -265,7 +265,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="199"/>
       <source>[MOTD] %1%2</source>
-      <translation>[MOTD] %1%2</translation>
+      <translation>[ 공지 ] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="211"/>
@@ -312,13 +312,13 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="274"/>
       <source>[INFO] %1</source>
-      <translation>[정보] %1</translation>
+      <translation>[ 정보 ] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="301"/>
       <location filename="../src/ircmessageformatter.cpp" line="327"/>
       <source>[ERROR] %1</source>
-      <translation>[오류] %1</translation>
+      <translation>[ 오류 ] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="311"/>
@@ -343,7 +343,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="345"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation>! %1 replied in %2 seconds</translation>
+      <translation>! %1님이 %2초 만에 응답했습니다.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="359"/>
@@ -358,12 +358,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="374"/>
       <source>! %1 has quit</source>
-      <translation>! %1이(가) 종료되었습니다</translation>
+      <translation>! %1님이 종료되었습니다</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="376"/>
       <source>! %1 has quit (%2)</source>
-      <translation>! %1이(가) 종료되었습니다(%2)</translation>
+      <translation>! %1님이 종료되었습니다(%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="384"/>
@@ -373,17 +373,17 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[TOPIC] %1</source>
-      <translation>[주제] %1</translation>
+      <translation>[ 제 목 ] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="397"/>
       <source>! %2 cleared topic</source>
-      <translation>! %2 cleared topic</translation>
+      <translation>! %2님이 제목를 삭제했습니다.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
       <source>! %2 changed topic</source>
-      <translation>! %2 changed topic</translation>
+      <translation>! %2님이 제목을 변경했습니다.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="406"/>
@@ -11633,7 +11633,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/mudlet.cpp" line="3294"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
-      <translation>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</translation>
+      <translation>[ 정보 ] - 입력 라인을 간략하게 설정했습니다. 오른쪽 아래 버튼을 다시 표시하려면 %1 키를 누르세요.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3375"/>
@@ -14617,7 +14617,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
       <source>&lt;p&gt;Do not pass whole line to children.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;전체 줄을 자식에게 전달하지 않습니다.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;전체 줄을 연결된 트리거에 전달하지 않습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
@@ -14682,13 +14682,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="302"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation>&lt;p&gt;트리거를 발생시킨 줄 이후 몇 개의 줄을 트리거의 자식에게 전달해야 합니까?&lt;/p&gt;</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="371"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
-      <translation>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;트리거가 활성화될 때 재생할 사운드 파일입니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="393"/>
