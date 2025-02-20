@@ -2949,15 +2949,15 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "L") {
                     mediaData.setMediaLoops(mspVAL.toInt());
 
-                    if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+                    if (mediaData.mediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.mediaLoops() == 0) {
                         mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
                     }
                 } else if (mspVAR == "P") {
                     mediaData.setMediaPriority(mspVAL.toInt());
 
-                    if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+                    if (mediaData.mediaPriority() > TMediaData::MediaPriorityMax) {
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-                    } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+                    } else if (mediaData.mediaPriority() < TMediaData::MediaPriorityMin) {
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
                     }
                 } else if (mspVAR == "C") {
