@@ -5497,6 +5497,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfiles", TLuaInterpreter::getProfiles);
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     lua_register(pGlobalLua, "closeProfile", TLuaInterpreter::closeProfile);
+    lua_register(pGlobalLua, "applicationPaths", TLuaInterpreter::applicationPaths);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -7606,4 +7607,27 @@ void TLuaInterpreter::updateEditor()
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mNeedUpdateData = true;
     }
+}
+
+int TLuaInterpreter::applicationPaths(lua_State* L)
+{
+    lua_newtable(L);
+    const QString appPath = qApp->applicationDirPath().append(QLatin1Char('/')).append(APP_TARGET);
+    const QStringList libPaths = qApp->libraryPaths();
+
+    lua_pushstring(L, "applicationPathFile");
+    lua_pushstring(L, appPath.toUtf8().constData());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "libraryPaths");
+    lua_newtable(L);
+    int index = 0;
+    for (const auto& path : std::as_const(libPaths)) {
+        lua_pushnumber(L, ++index);
+        lua_pushstring(L, path.toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    lua_settable(L, -3);
+
+    return 1;
 }
