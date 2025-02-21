@@ -86,12 +86,12 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
         const int x = room->x();
         const int y = room->y();
         const int z = room->z();
-        QMap<int, QMultiMap<int, int>> const yMap;
-        QMultiMap<int, int> const xMap;
         if (!kS.contains(z)) {
+            const QMap<int, QMultiMap<int, int>> yMap;
             kS[z] = yMap;
         }
-        if (!kS[z][y].contains(y)) {
+        if (!kS.value(z).contains(y)) {
+            const QMultiMap<int, int> xMap;
             kS[z][y] = xMap;
         }
         kS[z][y].insert(x, id);
