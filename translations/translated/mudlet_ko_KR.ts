@@ -9450,12 +9450,12 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="337"/>
       <source>Mute all media</source>
-      <translation>모든 미디어 음소거</translation>
+      <translation>소리끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="340"/>
       <source>&lt;p&gt;Mutes all media played.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;모든 재생되는 미디어를 음소거합니다.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;모든 재생되는 미디어의 소리를 끕니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
@@ -10270,7 +10270,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="3216"/>
       <location filename="../src/mudlet.cpp" line="3219"/>
       <source>Mute all media</source>
-      <translation>모든 미디어 음소거</translation>
+      <translation>모든 미디어 소리끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="339"/>
