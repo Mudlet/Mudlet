@@ -124,7 +124,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
         return mMatchingTMediaDataList;
     }
 
-    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return mMatchingTMediaDataList;
@@ -152,7 +152,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!matchesMediaCriteria(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData)) {
             continue;
         }
 
@@ -175,7 +175,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
         return mMatchingTMediaDataList;
     }
 
-    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return mMatchingTMediaDataList;
@@ -202,7 +202,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!matchesMediaCriteria(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData)) {
             continue;
         }
 
@@ -223,7 +223,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         return;
     }
 
-    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return;
@@ -251,7 +251,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!matchesMediaCriteria(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData)) {
             continue;
         }
 
@@ -270,7 +270,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
-    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return;
@@ -294,7 +294,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
 
-        if (!matchesMediaCriteria(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData)) {
             continue;
         }
 
@@ -400,7 +400,7 @@ bool TMedia::isMediaProtocolAllowed(const TMediaData& mediaData) const
     return true;
 }
 
-QList<TMediaPlayer> TMedia::getMatchingMediaPlayers(const TMediaData& mediaData)
+QList<TMediaPlayer> TMedia::findMediaPlayersByCriteria(const TMediaData& mediaData)
 {
     QList<TMediaPlayer> mediaPlayerList;
 
@@ -438,7 +438,7 @@ QList<TMediaPlayer> TMedia::getMatchingMediaPlayers(const TMediaData& mediaData)
     return mediaPlayerList;
 }
 
-bool TMedia::matchesMediaCriteria(const TMediaPlayer& player, const TMediaData& mediaData)
+bool TMedia::isMediaMatch(const TMediaPlayer& player, const TMediaData& mediaData)
 {
     if (!mediaData.mediaKey().isEmpty() && !player.mediaData().mediaKey().isEmpty() &&
         player.mediaData().mediaKey() != mediaData.mediaKey()) {
@@ -466,7 +466,7 @@ bool TMedia::resume(TMediaData mediaData)
         return resumed;
     }
 
-    QList<TMediaPlayer> mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return resumed;
@@ -494,7 +494,7 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
-        if (!matchesMediaCriteria(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData)) {
             continue;
         }
 
@@ -512,7 +512,7 @@ void TMedia::stopAllMediaPlayers()
     mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
     mediaData.setMediaType(TMediaData::MediaTypeNotSet);
 
-    QList<TMediaPlayer> const mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -527,7 +527,7 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 
     mediaData.setMediaProtocol(mediaProtocol);
 
-    QList<TMediaPlayer> const mTMediaPlayerList = getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -992,7 +992,7 @@ void TMedia::updateMediaPlayerList(TMediaPlayer& player)
 {
     int matchedMediaPlayerIndex = -1;
     TMediaData mediaData = player.mediaData();
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
     for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
         TMediaPlayer const pTestPlayer = mTMediaPlayerList.at(i);
@@ -1081,7 +1081,7 @@ void TMedia::updateMediaPlayerList(TMediaPlayer& player)
 TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 {
     TMediaPlayer pPlayer{};
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find first available inactive QMediaPlayer
@@ -1146,7 +1146,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
 TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData)
 {
     TMediaPlayer pPlayer{};
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -1176,7 +1176,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 
     int maxMediaPriority = 0;
 
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find the maximum priority of all playing sounds
@@ -1207,7 +1207,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName)
 {
-    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMatchingMediaPlayers(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
