@@ -837,7 +837,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         }
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
-        mpHost->installPackage(mServerPackage, 0);
+        mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package);
         QString packageName = mServerPackage.section("/", -1);
         packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
         packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
@@ -2395,7 +2395,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
 
                     // Uninstall the old version
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
 
                     // Download and install the new version
                     mpHost->mServerGUI_Package_version = version;
@@ -2700,7 +2700,7 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url) {
     postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     auto request = QNetworkRequest(QUrl(url));
@@ -2753,7 +2753,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
                     .arg(version, mpHost->mServerGUI_Package_version, url));
 
         // Uninstall the old version
-        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
 
         // Download and install the new version
         mpHost->mServerGUI_Package_version = version;
@@ -2795,27 +2795,28 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
 
-        bool rawTelnet = false;
         auto document = QJsonDocument::fromJson(data.toUtf8());
+        bool rawTelnet = false;
 
         if (!document.isObject()) {
-            // This is raw telnet, not JSON
-            QString version = transcodedMsg.section(QChar::LineFeed, 0);
+            // Raw Telnet fallback
+            QStringList lines = transcodedMsg.split(QChar::LineFeed);
+            if (lines.size() < 2) {
+                return;
+            }
 
-            version.remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive);
-            version.replace(QChar::LineFeed, QChar::Space);
-            version = version.section(QChar::Space, 0, 0);
-
-            QString url = transcodedMsg.section(QChar::LineFeed, 1);
+            QString version = lines[0].remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive).trimmed();
+            QString url = lines[1].trimmed();
 
             if (version.isEmpty() || url.isEmpty()) {
-                return;  // Exit if version or URL is missing
+                return;
             }
 
             rawTelnet = true;
-        } else {
-            handleGUIPackageInstallationAndUpgrade(document);
+            document = QJsonDocument(QJsonObject{{"version", version}, {"url", url}});
         }
+
+        handleGUIPackageInstallationAndUpgrade(document);
 
         if (rawTelnet) {
             return; // Do not add to the GMCP table
@@ -2948,15 +2949,15 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "L") {
                     mediaData.setMediaLoops(mspVAL.toInt());
 
-                    if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+                    if (mediaData.mediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.mediaLoops() == 0) {
                         mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
                     }
                 } else if (mspVAR == "P") {
                     mediaData.setMediaPriority(mspVAL.toInt());
 
-                    if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+                    if (mediaData.mediaPriority() > TMediaData::MediaPriorityMax) {
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-                    } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+                    } else if (mediaData.mediaPriority() < TMediaData::MediaPriorityMin) {
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
                     }
                 } else if (mspVAR == "C") {
@@ -3350,9 +3351,6 @@ void cTelnet::postData()
 {
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData, true);
-    }
-    if (mAlertOnNewData) {
-        QApplication::alert(mudlet::self(), 0);
     }
 }
 

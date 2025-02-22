@@ -181,7 +181,7 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
         if (mpConsole->getType() == TConsole::MainConsole) {
-            const auto filePath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+            const auto filePath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
             QSaveFile file(filePath);
             if (state) {
                 file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -2015,7 +2015,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
         if (mpConsole->getType() == TConsole::ErrorConsole) {
             QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
-            connect(clearErrorConsole, &QAction::triggered, this, [=]() {
+            connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
                 mpConsole->buffer.clear();
                 mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
             });

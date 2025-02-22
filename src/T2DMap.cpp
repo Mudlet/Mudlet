@@ -627,7 +627,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         if (showThisRoomName) {
             painter.save();
             painter.setFont(mapNameFont);
-            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
+            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::Alignment(Qt::AlignTop|Qt::AlignCenter) | Qt::TextFlag(Qt::TextSingleLine), pRoom->name);
             painter.restore();
         }
     }
@@ -1403,10 +1403,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
-    if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
-    }
-
     // Draw label sizing or group selection box
     if (mSizeLabel) {
         painter.fillRect(mMultiRect, QColor(250, 190, 0, 190));
@@ -1420,6 +1416,75 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QSet<QPair<int, int>> usedRoomPositions;
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
+
+    if (mudlet::self()->mDrawUpperLowerLevels) {
+        // draw room on lower z-levels
+        while (itRoom.hasNext()) {
+            const int currentAreaRoom = itRoom.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+            if (!room) {
+                continue;
+            }
+
+            if (room->z() == zLevel - 1) {
+                const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+                const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+                if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
+                    painter.save();
+                    painter.setPen(Qt::NoPen);
+                    painter.setBrush(mpHost->mLowerLevelColor);
+                    if (mBubbleMode) {
+                        const float roomRadius = 0.5 * rSize * mRoomWidth;
+                        const QPointF roomCenter = QPointF(rx - (roomRadius * rSize * 0.5), ry + (roomRadius * rSize * 0.5));
+                        QPainterPath diameterPath;
+                        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                        painter.drawPath(diameterPath);
+                    } else {
+                        painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
+                    }
+                painter.restore();
+                }
+            }
+        }
+        itRoom.toFront();
+
+        // draw rooms on upper z-levels
+        while (itRoom.hasNext()) {
+            const int currentAreaRoom = itRoom.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+            if (!room) {
+                continue;
+            }
+
+            if (room->z() == zLevel + 1) {
+                const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+                const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+                if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
+                    painter.save();
+                    painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
+                    painter.setBrush(Qt::transparent);
+                    if (mBubbleMode) {
+                        const float roomRadius = 0.5 * rSize * mRoomWidth;
+                        const QPointF roomCenter = QPointF(rx + (roomRadius * rSize * 0.5), ry - (roomRadius * rSize * 0.5));
+                        QPainterPath diameterPath;
+                        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                        painter.drawPath(diameterPath);
+                    } else {
+                        painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
+                    }
+                    painter.restore();
+                }
+            }
+        }
+        itRoom.toFront();
+    }
+
+    // draw room exits
+    if (!pDrawnArea->gridMode) {
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
+    }
+
+    // now draw rooms on selected z-level
     while (itRoom.hasNext()) {
         const int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
@@ -2429,15 +2494,16 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
 
     const int infoHeight = mFontHeight; // Account for first iteration
     QRect testRect;
+
     // infoRect has a 10 margin on either side and on top to widget frame.
     mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop | Qt::TextIncludeTrailingSpaces, infoText);
+    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), infoText);
     mMapInfoRect.setHeight(testRect.height() + 10);
 
     // Restore Grey translucent background, was useful for debugging!
     painter.fillRect(mMapInfoRect, mpHost->mMapInfoBg);
     painter.setPen(properties.color);
-    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop | Qt::TextIncludeTrailingSpaces, infoText);
+    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), infoText);
     //forget about font size changing and bolding/italicisation:
     painter.restore();
 
@@ -2474,11 +2540,11 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() {
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=, this]() {
         updateMapLabel(labelRectangle, labelId, pArea);
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=]() mutable {
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=, this]() mutable {
         pArea->mMapLabels.remove(labelId);
         update();
     });
@@ -3881,7 +3947,7 @@ void T2DMap::slot_showPropertiesDialog()
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
-    connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+    connect(mpDlgRoomProperties, &QDialog::finished, this, [=, this]() {
         mpDlgRoomProperties = nullptr;
     });
 }
@@ -4133,7 +4199,7 @@ void T2DMap::slot_loadMap() {
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(
@@ -4229,7 +4295,7 @@ void T2DMap::slot_setArea()
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](const QString newText) {
+    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=, this](const QString newText) {
         auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
         buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.trimmed().isEmpty());
         if (!newText.trimmed().isEmpty() && arealist_combobox->findText(newText.trimmed(), Qt::MatchExactly) == -1
@@ -4240,7 +4306,7 @@ void T2DMap::slot_setArea()
         }
     });
 
-    connect(set_room_area_dialog, &QDialog::accepted, [=]() {
+    connect(set_room_area_dialog, &QDialog::accepted, [=, this]() {
         int newAreaId;
         if (arealist_combobox->findText(arealist_combobox->currentText(), Qt::MatchExactly) != -1) {
             newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();

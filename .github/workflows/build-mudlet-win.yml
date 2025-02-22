@@ -24,8 +24,6 @@ jobs:
         include:
           - os: windows-2019
             buildname: 'windows64'
-          - os: windows-2019
-            buildname: 'windows32'
 
     steps:
     - name: Checkout Mudlet source code
@@ -34,18 +32,11 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: (Windows 64) Setup MSYS2
+    - name: (Windows) Setup MSYS2
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
-        update: true
-
-    - name: (Windows 32) Setup MSYS2
-      if: matrix.buildname == 'windows32'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW32
         update: true
 
     - name: (Windows) Build Environment Setup
@@ -73,6 +64,30 @@ jobs:
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
+    - name: (Windows) Run Lua tests
+      timeout-minutes: 5
+      shell: msys2 {0}
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+      run: |
+        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        export LUA_PATH
+        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        export LUA_CPATH
+
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+
+    - name: Passed Lua tests
+      shell: msys2 {0}
+      run: |
+        if [ -e $TEMP/busted-tests-failed ]
+        then
+          echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi
+
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
@@ -86,13 +101,13 @@ jobs:
 
     - name: (Windows) Login to Azure
       uses: azure/login@v2
-      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Get Azure access token for code signing
       shell: pwsh
-      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
       run: |
         $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
         "::add-mask::$token"

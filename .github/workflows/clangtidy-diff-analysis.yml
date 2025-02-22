@@ -100,7 +100,7 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get install libsecret-1-dev pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
 
         echo "Skipping generation of translation stats, so not installing lua-yajl."
 
