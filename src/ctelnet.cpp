@@ -269,11 +269,7 @@ QSslCertificate cTelnet::getPeerCertificate()
 
 QList<QSslError> cTelnet::getSslErrors()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     return socket.sslHandshakeErrors();
-#else
-    return socket.sslErrors();
-#endif
 }
 #endif
 

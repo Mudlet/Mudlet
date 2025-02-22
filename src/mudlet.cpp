@@ -166,11 +166,6 @@ void mudlet::init()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // 'AA_UseHighDpiPixmaps' is deprecated in Qt6: High-DPI pixmaps are always enabled.
-    qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-
     // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
     // ... which is applied here:
@@ -497,10 +492,6 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    #if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Add Apple Color Emoji fallback.
-    QFont::insertSubstitution(mainFont.family(), qsl("Apple Color Emoji"));
-    #endif
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
@@ -825,10 +816,6 @@ void mudlet::setupConfig()
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    mpSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     migrateConfig(*mpSettings);
 }
 
@@ -3774,11 +3761,7 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         // when saving/resyncing packages/modules - ends in a '/'
         return qsl("%1/moduleBackups/").arg(confPath);
     case enums::qtTranslationsPath:
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#else
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-#endif
     case enums::hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
@@ -4416,10 +4399,6 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8 instead
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -4488,10 +4467,6 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -4517,10 +4492,6 @@ int mudlet::getDictionaryWordCount(const QString &dictionaryPath)
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -4568,10 +4539,6 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
     }
 
     QTextStream as(&aff);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    as.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
@@ -4849,11 +4816,8 @@ static QString getShortPathName(const QString& name)
     }
     QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
     GetShortPathNameW(nameC, buffer.data(), length);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
-#else
     const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
-#endif
+
     return rc;
 }
 

@@ -4393,14 +4393,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
                 ++iter;
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -4422,13 +4416,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         case (QEvent::Enter): {
             auto qME = static_cast<const QEnterEvent*>(qE);
             lua_newtable(L);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -5923,10 +5912,6 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     /*
      * FIXME: Qt Documentation for this method reports:

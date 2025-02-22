@@ -140,9 +140,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
-                        READABLE_NAME "own QtKeychain library")
 
 find_package(Qt6 6.4.0 REQUIRED)
 
@@ -156,14 +153,6 @@ include(InitGitSubmodule)
 git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
-
-if(USE_OWN_QTKEYCHAIN)
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
-    SUBMODULE_PATH "3rdparty/qtkeychain"
-    READABLE_NAME "QtKeychain")
-  add_subdirectory(3rdparty/qtkeychain)
-endif()
 
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"

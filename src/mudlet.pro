@@ -36,8 +36,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 14)) {
-    error("Mudlet requires Qt 5.14 or later")
+if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 1)) {
+    error("Mudlet requires Qt 6.0 or later")
 }
 
 # Including IRC Library
@@ -64,13 +64,8 @@ include(../3rdparty/communi/communi.pri)
 }
 
 # enable C++20 for builds.
-if(lessThan(QT_MAJOR_VERSION,6)){
-    # c++2a for Qt 5
-    CONFIG += c++2a
-} else {
     # c++20 for Qt 6
     CONFIG += c++20
-}
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -229,20 +224,6 @@ linux|macx|win32 {
 3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
 isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
-}
-
-######################## System QtKeyChain library #############################
-# To use a system provided QtKeyChain library set the environmental variable
-# WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
-# useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
-# any other value than "NO" then the build process will download and link to a
-# locally built copy of the library. This is designed to help Linux and other
-# distribution package builders integrate Mudlet into their system - if a system
-# provided one is specified and the library is NOT available then the
-# build will fail both at the compilation and the linking stages.
-OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
-isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
-  DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -537,12 +518,6 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-            system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
-        }
-    }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
@@ -551,12 +526,6 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
-    }
-    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-            system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
-        }
     }
 }
 
@@ -586,14 +555,6 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
-}
-
-contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-    exists("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri") {
-        include("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri")
-    } else {
-        error("Cannot locate QtKeychain submodule source code, build abandoned!")
-    }
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
@@ -988,20 +949,8 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     }
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-    !build_pass{
-        message("Including own copy of QtKeyChain library code in this configuration")
-    }
-} else {
-    lessThan(QT_MAJOR_VERSION,6) {
-        LIBS += -lqt5keychain
-    } else {
-        LIBS += -lqt6keychain
-    }
-    !build_pass{
-        message("Linking with system QtKeyChain library code in this configuration")
-    }
-}
+LIBS += -lqt6keychain
+message("Linking with system QtKeyChain library code in this configuration")
 
 TRANSLATIONS = $$files(../translations/translated/*.ts)
 
@@ -1603,7 +1552,7 @@ macx {
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
         OBJECTIVE_SOURCES += sparkleupdater.mm
-        HEADERS += sparkleupdater.h        
+        HEADERS += sparkleupdater.h
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework

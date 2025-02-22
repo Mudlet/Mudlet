@@ -183,11 +183,7 @@ void T2DMap::slot_shiftZdown()
     update();
 }
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
 void T2DMap::switchArea(const QString& newAreaName)
-#else
-void T2DMap::slot_switchArea(const QString& newAreaName)
-#endif
 {
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {
@@ -2519,11 +2515,8 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
     if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
     mPHighlight = event->pos();
-#else
-    mPHighlight = event->position().toPoint();
-#endif
     mPick = true;
     mStartSpeedWalk = true;
     repaint();
@@ -3023,14 +3016,10 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             // slot method did...
             connect(action, &QAction::triggered, mapper, qOverload<>(&QSignalMapper::map));
         }
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         // In relation to above "TODO" in the meantime we can handle things
         // by a change to one of a group of newer signals with a specific
         // signature:
         connect(mapper, &QSignalMapper::mappedString, this, &T2DMap::slot_userAction);
-#else
-        connect(mapper, qOverload<const QString&>(&QSignalMapper::mapped), this, &T2DMap::slot_userAction);
-#endif
 
         // After all has been added, finally have Qt display the context menu as a whole
         mPopupMenu = true;
@@ -4352,11 +4341,7 @@ void T2DMap::slot_setArea()
                 }
                 const auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
                 switchArea(targetAreaName);
-#else
-                slot_switchArea(targetAreaName);
-#endif
             }
         }
         update();
@@ -4372,11 +4357,7 @@ void T2DMap::slot_setArea()
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
     if (mpMap->mLeftDown && !mpMap->m2DPanMode && (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly)) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        mpMap->m2DPanStart = event->localPos();
-#else
         mpMap->m2DPanStart = event->position();
-#endif
         mpMap->m2DPanMode = true;
     }
     if (mpMap->m2DPanMode && (!event->modifiers().testFlag(Qt::AltModifier) && !mMapViewOnly)) {
@@ -4384,11 +4365,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         mpMap->mLeftDown = false;
     }
     if (mpMap->m2DPanMode) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         const QPointF panNewPosition = event->localPos();
-#else
-        QPointF panNewPosition = event->position();
-#endif
         mShiftMode = true;
         const QPointF movement = mpMap->m2DPanStart - panNewPosition;
         mMapCenterX += movement.x() / mRoomWidth;

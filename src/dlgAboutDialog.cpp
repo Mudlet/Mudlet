@@ -915,9 +915,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString DiscordHeader(tr("<h2><u>Discord - Rich Presence - RPC library</u></h2>"
                              "<h3>Copyright © 2017 Discord, Inc.</h3>"));
 
-    QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
-                                 "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
-
     QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>"
                                    "Github: <a href=\"https://github.com/KDAB/KDToolBox\">KDToolBox</a></h2>"
                                    "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
@@ -1011,11 +1008,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                       "%35%36")
                                   .arg(DiscordHeader,                          // 35 - Discord header - translatable
                                        MIT_Body));                             // 36 - Discord body MIT - not translatable
-
-    license_3rdParty_texts.append(qsl("<hr>%37%38")
-                                  .arg(QtKeyChainHeader,                       // 37 - QtKeyChain header - translatable
-                                       BSD2Clause_Body                         // 38 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
-                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
 
     license_3rdParty_texts.append(qsl("<hr>%39%40")
                                   .arg(SingleConnectHeader,                    // 39 - singleshot_connect header - translatable
