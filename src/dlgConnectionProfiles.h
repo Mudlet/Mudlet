@@ -29,7 +29,11 @@
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <../3rdparty/qtkeychain/keychain.h>
+#else
 #include <qt6keychain/keychain.h>
+#endif
 #include "post_guard.h"
 
 class QDir;
