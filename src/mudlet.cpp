@@ -2914,7 +2914,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     if (loadedProfiles == 0) {
         slot_showConnectionDialog();
     } else {
-        qDebug() << "All" << loadedProfiles << "profiles in" << timer.elapsed()/1000.0 << "seconds";
+        qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed()/1000.0 << "seconds";
     }
 }
 
