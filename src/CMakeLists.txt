@@ -471,8 +471,14 @@ if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
   find_library(KVM_LIBRARY NAMES kvm)
 endif()
 
-find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
-message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
+if(NOT USE_OWN_QTKEYCHAIN)
+  # Only use this when we are using a system package and NOT our own local build
+  find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
+
+  # No need to test for it being found as the REQUIRED will make it error out
+  # if it is NOT found!
+  message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
+endif()
 
 if(USE_3DMAPPER)
   if(POLICY CMP0072)
@@ -568,6 +574,10 @@ target_compile_definitions(mudlet
     APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
