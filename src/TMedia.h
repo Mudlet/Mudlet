@@ -32,6 +32,7 @@
 #include "TMediaPlaylist.h"
 
 #include "pre_guard.h"
+#include <memory> // std::shared_ptr
 #include <QAudioOutput>
 #include <QMediaPlayer>
 #include "post_guard.h"
@@ -44,11 +45,11 @@ public:
     : mMediaData()
     {}
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    : mpHost(pHost)
-    , mMediaData(mediaData)
-    , mMediaPlayer(new QMediaPlayer(pHost))
-    , mPlaylist(new TMediaPlaylist())
-    , initialized(true)
+    : mpHost(pHost),
+      mMediaData(mediaData),
+      mMediaPlayer(new QMediaPlayer(pHost)),
+      mPlaylist(new TMediaPlaylist),
+      initialized(true)
     {
         mMediaPlayer->setAudioOutput(new QAudioOutput());
     }
@@ -58,7 +59,11 @@ public:
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
-    QMediaPlayerPlaybackState getPlaybackState() const {
+    QMediaPlayer::PlaybackState getPlaybackState() const {
+        if (!mMediaPlayer) {
+            qWarning() << "TMediaPlayer::getPlaybackState() - mMediaPlayer is nullptr!";
+            return QMediaPlayer::StoppedState; // Safe default state
+        }
         return mMediaPlayer->playbackState();
     }
     void setVolume(int volume) const {
@@ -69,7 +74,7 @@ public:
     }
     void setPlaylist(TMediaPlaylist* playlist) {
         if (mPlaylist != playlist) {
-            delete mPlaylist;
+            if (mPlaylist) delete mPlaylist;
             mPlaylist = playlist;
         }
     }
@@ -77,8 +82,8 @@ public:
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer = nullptr;
-    TMediaPlaylist* mPlaylist = nullptr;
+    QMediaPlayer* mMediaPlayer;
+    TMediaPlaylist* mPlaylist;
     bool initialized = false;
 };
 
@@ -106,8 +111,8 @@ private slots:
 
 private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
-    QList<TMediaPlayer> findMediaPlayersByCriteria(const TMediaData& mediaData);
-    bool isMediaMatch(const TMediaPlayer& player, const TMediaData& mediaData);
+    QList<std::shared_ptr<TMediaPlayer>>& findMediaPlayersByCriteria(const TMediaData& mediaData);
+    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
@@ -122,14 +127,14 @@ private:
     bool processUrl(TMediaData& mediaData);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
-    void connectMediaPlayer(TMediaPlayer& player);
-    void updateMediaPlayerList(TMediaPlayer& player);
-    TMediaPlayer getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer matchMediaPlayer(TMediaData& mediaData);
+    void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
+    void updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player);
+    std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
+    std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
-    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& player);
-    bool setupVideo(TMediaPlayer& player);
+    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
+    bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);
 
     void play(TMediaData& mediaData);
 
@@ -159,14 +164,14 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
 
-    QList<TMediaPlayer> mMSPSoundList;
-    QList<TMediaPlayer> mMSPMusicList;
-    QList<TMediaPlayer> mGMCPSoundList;
-    QList<TMediaPlayer> mGMCPMusicList;
-    QList<TMediaPlayer> mGMCPVideoList;
-    QList<TMediaPlayer> mAPISoundList;
-    QList<TMediaPlayer> mAPIMusicList;
-    QList<TMediaPlayer> mAPIVideoList;
+    QList<std::shared_ptr<TMediaPlayer>> mMSPSoundList;
+    QList<std::shared_ptr<TMediaPlayer>> mMSPMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mGMCPSoundList;
+    QList<std::shared_ptr<TMediaPlayer>> mGMCPMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mGMCPVideoList;
+    QList<std::shared_ptr<TMediaPlayer>> mAPISoundList;
+    QList<std::shared_ptr<TMediaPlayer>> mAPIMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mAPIVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
