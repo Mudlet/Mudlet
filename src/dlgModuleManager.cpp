@@ -163,7 +163,7 @@ void dlgModuleManager::slot_uninstallModule()
     const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
-        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::Package);
+        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI);
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
