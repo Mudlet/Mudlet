@@ -1061,8 +1061,6 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
     int matchedMediaPlayerIndex = -1;
     TMediaData mediaData = player->mediaData();
 
-    qDebug() << "3: mediaClose =" << mediaData.mediaClose();
-
     QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
@@ -1072,8 +1070,6 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
             break;
         }
     }
-
-    qDebug() << "4: mediaClose =" << mediaData.mediaClose();
 
     switch (mediaData.mediaProtocol()) {
     case TMediaData::MediaProtocolMSP:
@@ -1391,8 +1387,6 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    qDebug() << "1: mediaClose =" << mediaData.mediaClose();
-
     if (mediaData.mediaInput() == TMediaData::MediaInputNotSet) {
         return;
     }
@@ -1577,8 +1571,6 @@ void TMedia::play(TMediaData& mediaData)
     if (mediaData.mediaType() == TMediaData::MediaTypeVideo && !setupVideo(pPlayer)) {
         return;
     }
-
-    qDebug() << "2: mediaClose =" << mediaData.mediaClose();
 
     pPlayer->mediaPlayer()->play();
     updateMediaPlayerList(std::move(pPlayer));
