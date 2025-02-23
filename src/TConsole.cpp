@@ -1069,7 +1069,7 @@ void TConsole::showEvent(QShowEvent* event)
 {
     if (mType & (MainConsole|Buffer)) {
         if (mpHost) {
-            mpHost->mTelnet.mAlertOnNewData = false;
+            mAlertOnNewData = false;
         }
     }
     QWidget::showEvent(event); //FIXME-refac: might cause problems
@@ -1081,7 +1081,7 @@ void TConsole::hideEvent(QHideEvent* event)
         if (mpHost) {
             if (mudlet::self()->mWindowMinimized) {
                 if (mpHost->mAlertOnNewData) {
-                    mpHost->mTelnet.mAlertOnNewData = true;
+                    mAlertOnNewData = true;
                 }
             }
         }
