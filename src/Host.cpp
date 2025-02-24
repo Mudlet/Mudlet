@@ -849,6 +849,7 @@ void Host::resetProfile_phase2()
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
+    qDebug() << "Host::resetProfile_phase2() INFO - about to rerun initLuaGlobals(), the application's current directory is: '" << QApplication::applicationDirPath() << "'";
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
     mBlockScriptCompile = false;

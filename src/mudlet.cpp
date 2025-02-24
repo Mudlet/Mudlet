@@ -3053,6 +3053,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // This uses the external LuaGlobal.lua file to load all the other external
     // lua files, including the condenseMapLoad() function needed by the
     // TMap::audit() method:
+    qDebug() << "mudlet::slot_connectionDialogueFinished(...) INFO - about to run initLuaGlobals(), the application's current directory is: '" << QApplication::applicationDirPath() << "'";
     pHost->mLuaInterpreter.loadGlobal();
     pHost->hideMudletsVariables();
 
