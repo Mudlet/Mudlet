@@ -391,12 +391,13 @@ void dlgProfilePreferences::disableHostDetails()
     mFORCE_SAVE_ON_EXIT->setEnabled(false);
     acceptServerMedia->setEnabled(false);
 
-    groupBox_protocols->setEnabled(false);
     // ----- groupBox_protocols -----
+    groupBox_protocols->setEnabled(false);
+    pushButton_chooseProtocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
-    groupBox_logOptions->setEnabled(false);
     // ----- groupBox_logOptions -----
+    groupBox_logOptions->setEnabled(false);
     lineEdit_logFileName->setVisible(false);
     label_logFileName->setVisible(false);
     label_logFileNameExtension->setVisible(false);
@@ -525,6 +526,7 @@ void dlgProfilePreferences::enableHostDetails()
     acceptServerMedia->setEnabled(true);
 
     groupBox_protocols->setEnabled(true);
+    pushButton_chooseProtocols->setEnabled(true);
 
     groupBox_logOptions->setEnabled(true);
 
@@ -905,12 +907,43 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
+
+    if (!protocolMenu) {
+        protocolMenu = new QMenu(tr("Protocols"), this);
+    }
+    protocolMenu->clear();
+
+    mEnableGMCP = new QAction("GMCP: Generic Mud Communication Protocol", nullptr);
+    mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
+    protocolMenu->addAction(mEnableGMCP);
+
+    mEnableMSDP = new QAction("MSDP: Mud Server Data Protocol", nullptr);
+    mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
+    protocolMenu->addAction(mEnableMSDP);
+
+    mEnableMSSP = new QAction("MSSP: Mud Server Status Protocol", nullptr);
+    mEnableMSSP->setCheckable(true);
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
+    protocolMenu->addAction(mEnableMSSP);
+
+    mEnableMSP = new QAction("MSP: Mud Sound Protocol", nullptr);
+    mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
+    protocolMenu->addAction(mEnableMSP);
+
+    mEnableMTTS = new QAction("MTTS: Mud Terminal Type Standard", nullptr);
+    mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
+    protocolMenu->addAction(mEnableMTTS);
+
+    mEnableMNES = new QAction("MNES: Mud New-Environ Standard", nullptr);
+    mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
+    protocolMenu->addAction(mEnableMNES);
+
+    pushButton_chooseProtocols->setMenu(protocolMenu);
 
     groupBox_purgeMediaCache->setVisible(true);
     connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
@@ -1233,12 +1266,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor);
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
 
-    connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMSSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMTTS, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMNES, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1353,12 +1386,12 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(mEnableMSP, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(mEnableMTTS, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(mEnableMNES, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableGMCP, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMSDP, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMSP, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
