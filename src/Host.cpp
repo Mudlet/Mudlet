@@ -354,10 +354,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * otherwise - note that this must be done AFTER setDevice(...):
      */
     mErrorLogStream.setDevice(&mErrorLogFile);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
@@ -2193,15 +2189,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
-        /*
-         * We also have to explicit set the codec to use whilst reading the file
-         * as otherwise QTextCodec::codecForLocale() is used which for Qt5
-         * might be a local8Bit codec that thus will not handle all the
-         * characters contained in Unicode. In Qt6 the default is UTF-8.
-         */
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
+
         while (!in.atEnd()) {
             strings += in.readLine();
         }
@@ -2286,10 +2274,6 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 bool Host::writeProfileIniData(const QString& item, const QString& what)
 {
     QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     settings.setValue(item, what);
     settings.sync();
     switch (settings.status()) {
@@ -2308,10 +2292,6 @@ bool Host::writeProfileIniData(const QString& item, const QString& what)
 QString Host::readProfileIniData(const QString& item)
 {
     QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     return settings.value(item).toString();
 }
 
