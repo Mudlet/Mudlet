@@ -913,32 +913,32 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     protocolMenu->clear();
 
-    mEnableGMCP = new QAction("GMCP: Generic Mud Communication Protocol", nullptr);
+    mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), nullptr);
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
 
-    mEnableMSDP = new QAction("MSDP: Mud Server Data Protocol", nullptr);
+    mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
     mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     protocolMenu->addAction(mEnableMSDP);
 
-    mEnableMSSP = new QAction("MSSP: Mud Server Status Protocol", nullptr);
+    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
     mEnableMSSP->setCheckable(true);
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
     protocolMenu->addAction(mEnableMSSP);
 
-    mEnableMSP = new QAction("MSP: Mud Sound Protocol", nullptr);
+    mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), nullptr);
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
 
-    mEnableMTTS = new QAction("MTTS: Mud Terminal Type Standard", nullptr);
+    mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
     mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
     protocolMenu->addAction(mEnableMTTS);
 
-    mEnableMNES = new QAction("MNES: Mud New-Environ Standard", nullptr);
+    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
     protocolMenu->addAction(mEnableMNES);
