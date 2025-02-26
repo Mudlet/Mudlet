@@ -123,15 +123,6 @@ echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
 
-#### Qt Creator note ####
-# The following WITH_XXXXs can usefully be used in the Qt Creator's "Project"
-# tab for the "Kit" concerned in the "Build Environment" section:
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-  # The MINGW64 case already has the Qt5 keychain package pre-built so no need
-  # to build our bundled copy:
-  export WITH_OWN_QTKEYCHAIN="NO"
-fi
-
 if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
     # The updater is not helpful in this environment (PR testing build)
     export WITH_UPDATER="NO"

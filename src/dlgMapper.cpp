@@ -93,11 +93,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_exitSize);
     connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
-#else
-    connect(comboBox_showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
-#endif
 #if defined(INCLUDE_3DMAPPER)
     connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
 #else
@@ -368,15 +364,11 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
     }
 }
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-// Only needed in newer Qt versions as the old SIGNAL overload that returned the
-// QString of the activated QComboBox entry has been obsoleted:
 void dlgMapper::slot_switchArea(const int index)
 {
     const QString areaName{comboBox_showArea->itemText(index)};
     mp2dMap->switchArea(areaName);
 }
-#endif
 
 void dlgMapper::slot_updateInfoContributors()
 {

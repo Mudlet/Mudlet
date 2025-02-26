@@ -576,7 +576,7 @@ target_compile_definitions(mudlet
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h

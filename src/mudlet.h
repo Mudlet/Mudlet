@@ -57,15 +57,11 @@
 #include <QVersionNumber>
 #include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
-#if defined(INCLUDE_OWN_QT5_KEYCHAIN)
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
 #else
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <qt5keychain/keychain.h>
-#else
 #include <qt6keychain/keychain.h>
-#endif // QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#endif // defined(INCLUDE_OWN_QT5_KEYCHAIN)
+#endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>

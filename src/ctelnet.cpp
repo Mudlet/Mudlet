@@ -269,11 +269,7 @@ QSslCertificate cTelnet::getPeerCertificate()
 
 QList<QSslError> cTelnet::getSslErrors()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     return socket.sslHandshakeErrors();
-#else
-    return socket.sslErrors();
-#endif
 }
 #endif
 
@@ -3351,9 +3347,6 @@ void cTelnet::postData()
 {
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData, true);
-    }
-    if (mAlertOnNewData) {
-        QApplication::alert(mudlet::self(), 0);
     }
 }
 

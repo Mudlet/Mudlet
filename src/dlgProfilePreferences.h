@@ -209,7 +209,6 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
 
-
     int mFontSize = 10;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
@@ -219,6 +218,13 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence*> currentShortcuts;
+    QPointer<QMenu> protocolMenu;
+    QPointer<QAction> mEnableGMCP;
+    QPointer<QAction> mEnableMSDP;
+    QPointer<QAction> mEnableMSSP;
+    QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMTTS;
+    QPointer<QAction> mEnableMNES;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

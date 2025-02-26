@@ -2226,13 +2226,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
-    // Qt 6 changed the return type of QLIST<T>::size() to qsizetype which is
-    // not directly comparable to a const int& without a cast:
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2333,11 +2327,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2434,11 +2424,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     int lineEndPos = sub_end;
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;
