@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -466,7 +466,7 @@
       <attribute name="title">
        <string>Input line</string>
       </attribute>
-      <layout class="QVBoxLayout" name="vBoxLayout_tab_inputline" stretch="0,1,0">
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_inputline" stretch="0,0,0">
        <item>
         <widget class="QGroupBox" name="groupBox_input">
          <property name="enabled">
@@ -475,26 +475,15 @@
          <property name="title">
           <string>Input</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_input" columnstretch="1,1">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="USE_UNIX_EOL">
-            <property name="toolTip">
-             <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
-            </property>
-            <property name="text">
-             <string>Strict UNIX line endings</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
-            <property name="text">
-             <string>Auto clear the input line after you sent text</string>
-            </property>
-           </widget>
-          </item>
+         <layout class="QGridLayout" name="gridLayout_2">
           <item row="1" column="0">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</string>
             </property>
@@ -503,27 +492,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_highlightHistory">
-            <property name="toolTip">
-             <string>Highlights your input line text when scrolling through your history for easy cancellation</string>
-            </property>
-            <property name="text">
-             <string>Highlight history</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
-            <property name="toolTip">
-             <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>React to all keybindings on the same key</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" alignment="Qt::AlignRight">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_commandSeparator">
             <property name="toolTip">
              <string/>
@@ -536,14 +505,65 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="command_separator_lineedit">
-            <property name="placeholderText">
-             <string>Enter text to separate commands with or leave blank to disable</string>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="USE_UNIX_EOL">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
+            </property>
+            <property name="text">
+             <string>Strict UNIX line endings</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" alignment="Qt::AlignRight">
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="command_separator_lineedit">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="placeholderText">
+             <string>Text to separate commands or blank to disable</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Auto clear the input line after you sent text</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>React to all keybindings on the same key</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
@@ -553,8 +573,14 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1" alignment="Qt::AlignLeft">
+          <item row="4" column="1">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
@@ -563,23 +589,19 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="label_commandLineHistorySaveSize">
-            <property name="text">
-             <string>Number of lines of command line history to save:</string>
+          <item row="0" column="3">
+           <widget class="QCheckBox" name="checkBox_highlightHistory">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_commandLineHistorySaveSize</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1" alignment="Qt::AlignLeft">
-           <widget class="QComboBox" name="comboBox_commandLineHistorySaveSize">
             <property name="toolTip">
-             <string>&lt;p&gt;Sets the maximum number of the most recent entries used in each separate command line that are now stored between sessions.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This limit is only applied when the data is stored at the end of a session; whilst a profile is active the command history is unlimited with any reused entries returned to the front of the list.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>Highlights your input line text when scrolling through your history for easy cancellation</string>
+            </property>
+            <property name="text">
+             <string>Highlight history</string>
             </property>
            </widget>
           </item>
@@ -594,8 +616,21 @@
          <property name="title">
           <string>Spell checking</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_groupBox_spellCheck">
-          <item>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="2" column="4">
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_spellCheck">
             <property name="toolTip">
              <string>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</string>
@@ -605,61 +640,47 @@
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QListWidget" name="dictList">
+          <item row="2" column="2">
+           <widget class="QRadioButton" name="radioButton_userDictionary_common">
             <property name="toolTip">
-             <string>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</string>
+             <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
             </property>
-            <property name="sizeAdjustPolicy">
-             <enum>QAbstractScrollArea::AdjustToContents</enum>
-            </property>
-            <property name="dragDropMode">
-             <enum>QAbstractItemView::DragDrop</enum>
-            </property>
-            <property name="movement">
-             <enum>QListView::Snap</enum>
-            </property>
-            <property name="flow">
-             <enum>QListView::TopToBottom</enum>
-            </property>
-            <property name="resizeMode">
-             <enum>QListView::Adjust</enum>
-            </property>
-            <property name="viewMode">
-             <enum>QListView::IconMode</enum>
-            </property>
-            <property name="sortingEnabled">
-             <bool>true</bool>
+            <property name="text">
+             <string>Shared</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_userDictionary">
-            <property name="title">
-             <string>User dictionary:</string>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_userDictionary">
-             <item>
-              <widget class="QRadioButton" name="radioButton_userDictionary_profile">
-               <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
-               </property>
-               <property name="text">
-                <string>Profile</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_userDictionary_common">
-               <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
-               </property>
-               <property name="text">
-                <string>Shared</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <property name="text">
+             <string>User dictionary: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QRadioButton" name="radioButton_userDictionary_profile">
+            <property name="toolTip">
+             <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Profile</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="4">
+           <widget class="QComboBox" name="comboBox_dictionary">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
            </widget>
           </item>
          </layout>
@@ -4253,7 +4274,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>commandLineMinimumHeight</tabstop>
   <tabstop>comboBox_commandLineHistorySaveSize</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
-  <tabstop>dictList</tabstop>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
   <tabstop>fontComboBox</tabstop>
