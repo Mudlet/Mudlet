@@ -346,11 +346,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    // Currently tracks the "mudlet_option_use_smallscreen" file's existence but
-    // may eventually migrate solely to the "EnableFullScreenMode" in the main
-    // QSetting file - it is only stored as a file now to maintain backwards
-    // compatibility...
-    bool mEnableFullScreenMode = false;
     FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
@@ -461,7 +456,6 @@ signals:
     void signal_adjustAccessibleNames();
     void signal_appearanceChanged(enums::Appearance);
     void signal_editorTextOptionsChanged(QTextOption::Flags);
-    void signal_enableFulScreenModeChanged(bool);
     void signal_guiLanguageChanged(const QString&);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);

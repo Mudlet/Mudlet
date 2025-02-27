@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -1182,16 +1182,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
-            <property name="toolTip">
-             <string>&lt;p&gt;Select this option for better compatibility if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use Mudlet on a netbook with a small screen</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
             <property name="text">
@@ -1199,16 +1189,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="tristate">
              <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_echoLuaErrors">
-            <property name="toolTip">
-             <string>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Echo Lua errors to the main console</string>
             </property>
            </widget>
           </item>
@@ -1242,6 +1222,16 @@ you can use it but there could be issues with aligning columns of text</string>
               <string>CP437 (OEM Font)- like</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_echoLuaErrors">
+            <property name="toolTip">
+             <string>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Echo Lua errors to the main console</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -4268,7 +4258,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>hanging_indent_wrapped_spinBox</tabstop>
   <tabstop>doubleclick_ignore_lineedit</tabstop>
   <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
-  <tabstop>checkBox_USE_SMALL_SCREEN</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
