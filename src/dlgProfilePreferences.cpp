@@ -388,7 +388,6 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_miscellaneous -----
     mAlertOnNewData->setEnabled(false);
     acceptServerGUI->setEnabled(false);
-    mFORCE_SAVE_ON_EXIT->setEnabled(false);
     acceptServerMedia->setEnabled(false);
 
     // ----- groupBox_protocols -----
@@ -522,7 +521,6 @@ void dlgProfilePreferences::enableHostDetails()
     // ----- groupBox_miscellaneous -----
     mAlertOnNewData->setEnabled(true);
     acceptServerGUI->setEnabled(true);
-    mFORCE_SAVE_ON_EXIT->setEnabled(true);
     acceptServerMedia->setEnabled(true);
 
     groupBox_protocols->setEnabled(true);
@@ -906,7 +904,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
     //encoding->setCurrentIndex( pHost->mEncoding );
-    mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
     if (!protocolMenu) {
         protocolMenu = new QMenu(tr("Protocols"), this);
@@ -1479,7 +1476,6 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
-    mFORCE_SAVE_ON_EXIT->setChecked(false);
     mEnableGMCP->setChecked(false);
     mEnableMSSP->setChecked(false);
     mEnableMSDP->setChecked(false);
@@ -2928,7 +2924,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
         pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
-        pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();

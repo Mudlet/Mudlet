@@ -223,16 +223,6 @@
           <string>Miscellaneous</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_miscellaneous">
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="toolTip">
-             <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Notify on new data</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_darkEditorPrompt">
             <property name="font">
@@ -275,9 +265,12 @@
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
+           <widget class="QCheckBox" name="mAlertOnNewData">
+            <property name="toolTip">
+             <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string>Auto save on exit</string>
+             <string>Notify on new data</string>
             </property>
            </widget>
           </item>
