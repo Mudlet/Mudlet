@@ -31,7 +31,7 @@ jobs:
         luaVersion: "5.1.5"
 
     - name: Install Luarocks
-      uses: leafo/gh-actions-luarocks@v4
+      uses: leafo/gh-actions-luarocks@v5
 
     - name: Install Lua dependencies
       run: |

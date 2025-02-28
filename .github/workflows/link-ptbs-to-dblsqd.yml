@@ -16,7 +16,7 @@ jobs:
       with:
         luaVersion: "5.1.5"
     - uses: actions/setup-node@v4
-    - uses: leafo/gh-actions-luarocks@v4
+    - uses: leafo/gh-actions-luarocks@v5
 
     - name: Retrieve latest PTB version
       run: |
