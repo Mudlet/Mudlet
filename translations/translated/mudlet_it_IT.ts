@@ -6662,37 +6662,37 @@ Inserisci altro materiale utile, per esempio un link alla wiki di mudlet, al for
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="912"/>
       <source>Protocols</source>
-      <translation type="unfinished"/>
+      <translation>Protocolli</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="916"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP: Generic Mud Communication Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="921"/>
       <source>MSDP: Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP: Mud Server Data Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="926"/>
       <source>MSSP: Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP: Mud Server Status Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="931"/>
       <source>MSP: Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP: Mud Sound Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="936"/>
       <source>MTTS: Mud Terminal Type Standard</source>
-      <translation type="unfinished"/>
+      <translation>MTTS: Mud Terminal Type Standard</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="941"/>
       <source>MNES: Mud New-Environ Standard</source>
-      <translation type="unfinished"/>
+      <translation>MNES: Mud New-Environ Standard</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1823"/>
@@ -12999,12 +12999,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="303"/>
       <source>Choose protocols</source>
-      <translation type="unfinished"/>
+      <translation>Scegli protocollo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="310"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Richiede che il protocollo GMCP sia abilitato.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1968"/>
