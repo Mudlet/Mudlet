@@ -645,6 +645,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     comboBox_dictionary->clear();
+    comboBox_dictionary->setInsertPolicy(QComboBox::InsertAlphabetically);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
