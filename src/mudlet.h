@@ -531,6 +531,8 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+    // Handles adding or removing the full-screen mode from a running Mudlet:
+    void initiateOrTerminateFullScreenEnablement();
 
     inline static QPointer<mudlet> smpSelf = nullptr;
 
