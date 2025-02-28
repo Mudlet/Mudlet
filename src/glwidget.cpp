@@ -2047,11 +2047,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
     if (event->buttons() & Qt::LeftButton) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        auto eventPos = event->pos();
-#else
         auto eventPos = event->position().toPoint();
-#endif
         const int x = eventPos.x();
         const int y = height() - eventPos.y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
@@ -2129,11 +2125,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
         return;
     }
     if (mPanMode) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        auto eventPos = event->localPos();
-#else
         auto eventPos = event->position();
-#endif
         auto x = static_cast<float>(eventPos.x());
         auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
         if ((mPanXStart - x) > 1.0f) {

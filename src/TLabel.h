@@ -34,6 +34,7 @@
 #include <QMovie>
 #include <QPointer>
 #include <QString>
+#include <QVideoWidget>
 #include "post_guard.h"
 
 class Host;
@@ -75,6 +76,7 @@ public:
     int mEnterFunction = 0;
     int mLeaveFunction = 0;
     QMovie* mpMovie = nullptr;
+    QVideoWidget* mpVideoWidget = nullptr;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
