@@ -1088,7 +1088,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</translation>
     <message>
       <location filename="../src/TAlias.cpp" line="273"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1549,12 +1549,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2180"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>User window &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2182"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</translation>
     </message>
   </context>
   <context>
@@ -1616,7 +1616,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5604"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Probably will not be able to access Mudlet Lua code.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5622"/>
@@ -2020,7 +2020,8 @@ better off starting again...</translation>
       <location filename="../src/TMap.cpp" line="1795"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
+area) not found, adding reserved -1 id.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1874"/>
@@ -2115,7 +2116,9 @@ operation to complete (if it cannot be canceled) before retrying!</source>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
+%1
+and the error message (may contain technical details) was:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2491"/>
@@ -2607,7 +2610,7 @@ were removed: %2.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1440"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1463"/>
@@ -2632,7 +2635,7 @@ and the exit will be turned into a stub.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1496"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1540"/>
@@ -6583,32 +6586,32 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="912"/>
       <source>Protocols</source>
-      <translation type="unfinished"/>
+      <translation>Protocols</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="916"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP: Generic Mud Communication Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="921"/>
       <source>MSDP: Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP: Mud Server Data Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="926"/>
       <source>MSSP: Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP: Mud Server Status Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="931"/>
       <source>MSP: Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP: Mud Sound Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="936"/>
       <source>MTTS: Mud Terminal Type Standard</source>
-      <translation type="unfinished"/>
+      <translation>MTTS: Mud Terminal Type Standard</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="941"/>
@@ -12893,12 +12896,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="303"/>
       <source>Choose protocols</source>
-      <translation type="unfinished"/>
+      <translation>Choose protocols</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="310"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1968"/>
