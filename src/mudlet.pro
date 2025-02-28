@@ -36,8 +36,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 14)) {
-    error("Mudlet requires Qt 5.14 or later")
+if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 1)) {
+    error("Mudlet requires Qt 6.0 or later")
 }
 
 # Including IRC Library
@@ -63,14 +63,8 @@ include(../3rdparty/communi/communi.pri)
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++20 for builds.
-if(lessThan(QT_MAJOR_VERSION,6)){
-    # c++2a for Qt 5
-    CONFIG += c++2a
-} else {
-    # c++20 for Qt 6
-    CONFIG += c++20
-}
+# c++20 for Qt 6
+CONFIG += c++20
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -86,7 +80,7 @@ win32 {
     DEFINES += INCLUDE_WINSOCK2
 }
 
-QT += network uitools multimedia gui concurrent
+QT += network uitools multimedia multimediawidgets gui concurrent
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
@@ -242,7 +236,7 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 # build will fail both at the compilation and the linking stages.
 OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
 isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
-  DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
+  DEFINES += INCLUDE_OWN_QT6_KEYCHAIN
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -545,7 +539,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+    contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
@@ -560,7 +554,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+    contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
@@ -596,7 +590,7 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri")
     } else {
@@ -996,16 +990,12 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     }
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
     !build_pass{
         message("Including own copy of QtKeyChain library code in this configuration")
     }
 } else {
-    lessThan(QT_MAJOR_VERSION,6) {
-        LIBS += -lqt5keychain
-    } else {
-        LIBS += -lqt6keychain
-    }
+    LIBS += -lqt6keychain
     !build_pass{
         message("Linking with system QtKeyChain library code in this configuration")
     }

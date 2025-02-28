@@ -3855,3 +3855,43 @@ int TLuaInterpreter::updateMap(lua_State* L)
     }
     return 0;
 }
+
+int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(area)));
+    }
+
+    lua_newtable(L);
+    int i = 0;
+    for (const auto& coordinateSet : pA->getCollisionNodes()) {
+        lua_pushnumber(L, ++i);
+        {
+            lua_newtable(L);
+
+            // x:
+            lua_pushnumber(L, 1);
+            lua_pushnumber(L, std::get<0>(coordinateSet));
+            lua_settable(L, -3);
+
+            // y:
+            lua_pushnumber(L, 2);
+            lua_pushnumber(L, std::get<1>(coordinateSet));
+            lua_settable(L, -3);
+
+            // z:
+            lua_pushnumber(L, 3);
+            lua_pushnumber(L, std::get<2>(coordinateSet));
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+    }
+    return 1;
+
+}

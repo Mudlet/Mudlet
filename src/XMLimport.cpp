@@ -1166,10 +1166,6 @@ void XMLimport::readHost(Host* pHost)
                 // colour even if this font doesn't support it:
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
 #endif
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                // Add Apple Color Emoji fallback.
-                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
-#endif
                 pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {
                 pHost->mCommandLineFont.fromString(readElementText());

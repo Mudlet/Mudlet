@@ -58,8 +58,15 @@ public:
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
     void removeRoom(int, bool deferAreaRecalculations = false);
-    QList<int> getCollisionNodes();
+    // List of coordinate triples (x,y,z) where there are multiple rooms
+    QList<std::tuple<int, int, int>> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
+    /*
+     * Outer key: z coordinate,
+     * Middle key: y coordinate
+     * Inner key: x coordinate
+     * Inner value: is roomId:
+     */
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
     int createLabelId() const;
     void writeJsonArea(QJsonArray&, const double);
