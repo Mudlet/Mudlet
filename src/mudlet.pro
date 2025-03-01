@@ -647,6 +647,9 @@ SOURCES += \
     LuaInterface.cpp \
     main.cpp \
     mapInfoContributorManager.cpp \
+    MMCPServer.cpp \
+	MMCPClient.cpp \
+    TLuaInterpreterMMCP.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
@@ -776,6 +779,9 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
+    MMCP.h \
+	MMCPServer.h \
+	MMCPClient.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \

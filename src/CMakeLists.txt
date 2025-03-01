@@ -133,6 +133,7 @@ set(mudlet_SRCS
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
     TLuaInterpreterUI.cpp
+    TLuaInterpreterMMCP.cpp
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
@@ -281,6 +282,9 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MMCP.h
+    MMCPClient.h
+    MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
