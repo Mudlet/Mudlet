@@ -21,9 +21,7 @@
 #include "dlgMapLabel.h"
 #include "mudlet.h"
 #include "utils.h"
-#include "pre_guard.h"
 #include <QSettings>
-#include "post_guard.h"
 
 static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
@@ -39,13 +37,9 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::slot_updateControlsVisibility);
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
     connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::slot_pickFile);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(checkBox_stretchImage, &QCheckBox::checkStateChanged, this, &dlgMapLabel::updated);
-#else
     connect(checkBox_stretchImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
-#endif
-    connect(plainTextEdit_labelText, &QPlainTextEdit::textChanged, this, [&]() {
-        text = plainTextEdit_labelText->toPlainText();
+    connect(lineEdit_text, &QLineEdit::textChanged, this, [&](const QString& pText) {
+        text = pText;
         emit updated();
     });
     connect(pushButton_bgColor, &QPushButton::released, this, &dlgMapLabel::slot_pickBgColor);
@@ -54,17 +48,13 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     connect(toolButton_fontPick, &QToolButton::released, this, &dlgMapLabel::slot_pickFont);
     connect(pushButton_save, &QPushButton::released, this, &dlgMapLabel::slot_save);
     connect(pushButton_cancel, &QPushButton::released, this, &dlgMapLabel::close);
-    connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(checkBox_scaling, &QCheckBox::checkStateChanged, this, &dlgMapLabel::updated);
-#else
-    connect(checkBox_scaling, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
-#endif
+    connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() { emit updated(); });
+    connect(checkBox_scaling, &QCheckBox::stateChanged, this, [this]() { emit updated(); });
     connect(this, &dlgMapLabel::updated, this, &dlgMapLabel::slot_updateControls);
 
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
-    text = plainTextEdit_labelText->placeholderText();
+    text = lineEdit_text->placeholderText();
 
     QSettings& settings = *mudlet::getQSettings();
     fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
@@ -254,7 +244,7 @@ void dlgMapLabel::slot_updateControlsVisibility()
     checkBox_stretchImage->setVisible(!isText);
     toolButton_imagePick->setVisible(!isText);
     label_text->setVisible(isText);
-    plainTextEdit_labelText->setVisible(isText);
+    lineEdit_text->setVisible(isText);
     label_font->setVisible(isText);
     lineEdit_font->setVisible(isText);
     toolButton_fontPick->setVisible(isText);

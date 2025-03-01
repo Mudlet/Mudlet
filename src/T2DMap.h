@@ -85,7 +85,10 @@ public:
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
     void setPlayerRoomStyle(const int style);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // This is NOT used as a slot in newer versions
     void switchArea(const QString& newAreaName);
+#endif
     void clearSelection();
 
 
@@ -205,6 +208,11 @@ public slots:
     void slot_customLineColor();
     void slot_shiftZup();
     void slot_shiftZdown();
+#if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
+    // This is ONLY used as a slot in older versions
+    void slot_switchArea(const QString& newAreaName);
+#endif
+// Not used: void slot_toggleShiftMode();
     void slot_shiftUp();
     void slot_shiftDown();
     void slot_shiftLeft();

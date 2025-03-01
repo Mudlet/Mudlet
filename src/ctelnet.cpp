@@ -46,6 +46,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <QTextCodec>
@@ -269,7 +270,11 @@ QSslCertificate cTelnet::getPeerCertificate()
 
 QList<QSslError> cTelnet::getSslErrors()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     return socket.sslHandshakeErrors();
+#else
+    return socket.sslErrors();
+#endif
 }
 #endif
 
@@ -2791,28 +2796,27 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
 
-        auto document = QJsonDocument::fromJson(data.toUtf8());
         bool rawTelnet = false;
+        auto document = QJsonDocument::fromJson(data.toUtf8());
 
         if (!document.isObject()) {
-            // Raw Telnet fallback
-            QStringList lines = transcodedMsg.split(QChar::LineFeed);
-            if (lines.size() < 2) {
-                return;
-            }
+            // This is raw telnet, not JSON
+            QString version = transcodedMsg.section(QChar::LineFeed, 0);
 
-            QString version = lines[0].remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive).trimmed();
-            QString url = lines[1].trimmed();
+            version.remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive);
+            version.replace(QChar::LineFeed, QChar::Space);
+            version = version.section(QChar::Space, 0, 0);
+
+            QString url = transcodedMsg.section(QChar::LineFeed, 1);
 
             if (version.isEmpty() || url.isEmpty()) {
-                return;
+                return;  // Exit if version or URL is missing
             }
 
             rawTelnet = true;
-            document = QJsonDocument(QJsonObject{{"version", version}, {"url", url}});
+        } else {
+            handleGUIPackageInstallationAndUpgrade(document);
         }
-
-        handleGUIPackageInstallationAndUpgrade(document);
 
         if (rawTelnet) {
             return; // Do not add to the GMCP table
@@ -2945,15 +2949,15 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "L") {
                     mediaData.setMediaLoops(mspVAL.toInt());
 
-                    if (mediaData.mediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.mediaLoops() == 0) {
+                    if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
                         mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
                     }
                 } else if (mspVAR == "P") {
                     mediaData.setMediaPriority(mspVAL.toInt());
 
-                    if (mediaData.mediaPriority() > TMediaData::MediaPriorityMax) {
+                    if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-                    } else if (mediaData.mediaPriority() < TMediaData::MediaPriorityMin) {
+                    } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
                     }
                 } else if (mspVAR == "C") {
@@ -3226,6 +3230,17 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
+            } else if (prefix.contains(tr("CHAT")) || prefix.contains(QLatin1String("CHAT"))) {
+                mpHost->mpConsole->print(prefix, QColor(255, 255, 50), mpHost->mBgColor);                   // Bright yellow
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor);  // Light Green
+                for (int _i = 0; _i < body.size(); ++_i) {
+                    QString temp = body.at(_i);
+                    temp.replace('\t', QLatin1String("        "));
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                }
+                if (!body.empty()) {
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 500, 50), mpHost->mBgColor); // Red-ish
+                }
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
@@ -3347,6 +3362,12 @@ void cTelnet::postData()
 {
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData, true);
+    }
+    if (mpHost->mmcpServer && !mpHost->mIsRemoteEchoingActive) {
+        mpHost->mmcpServer->receiveFromPlayer(mMudData);
+    }
+    if (mAlertOnNewData) {
+        QApplication::alert(mudlet::self(), 0);
     }
 }
 

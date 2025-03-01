@@ -411,10 +411,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchBox->setToolTip(utils::richText(tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
-    // Create F3/Shift+F3 shortcuts for search navigation
-    searchNextShortcut = new QShortcut(QKeySequence(Qt::Key_F3), this);
-    searchPrevShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), this);
-
     mpAction_searchOptions = new QAction(tr("Search Options"), this);
     mpAction_searchOptions->setObjectName(qsl("mpAction_searchOptions"));
 
@@ -550,15 +546,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpCommandLine->adjustHeight();
     }
 
-
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TConsole::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
     // Need to delay doing this because it uses elements that may not have
     // been constructed yet:
     if (mType == MainConsole) {
-        QTimer::singleShot(0, this, [this]() {
-            setProxyForFocus(mpCommandLine);
-        });
+        QTimer::singleShot(0, this, [this]() { setProxyForFocus(mpCommandLine); });
     }
 }
 
@@ -641,7 +634,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
-    emit resized(event);
     QWidget::resizeEvent(event);
 
     if (mType & MainConsole) {
@@ -936,7 +928,6 @@ void TConsole::changeColors()
     if (mType & (MainConsole|Buffer)) {
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;
-        buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
     }
 }
 
@@ -1069,7 +1060,7 @@ void TConsole::showEvent(QShowEvent* event)
 {
     if (mType & (MainConsole|Buffer)) {
         if (mpHost) {
-            mAlertOnNewData = false;
+            mpHost->mTelnet.mAlertOnNewData = false;
         }
     }
     QWidget::showEvent(event); //FIXME-refac: might cause problems
@@ -1081,7 +1072,7 @@ void TConsole::hideEvent(QHideEvent* event)
         if (mpHost) {
             if (mudlet::self()->mWindowMinimized) {
                 if (mpHost->mAlertOnNewData) {
-                    mAlertOnNewData = true;
+                    mpHost->mTelnet.mAlertOnNewData = true;
                 }
             }
         }
@@ -1817,21 +1808,8 @@ void TConsole::slot_stopAllItems(bool b)
     }
 }
 
-void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY) {
-    mpHost->setCaretEnabled(true);
-    mUpperPane->initializeCaret();
-    moveCursor(searchX, searchY);
-    mUpperPane->setCaretPosition(searchY, searchX);
-    mUpperPane->updateCaret();
-    mUpperPane->setFocusPolicy(Qt::StrongFocus);
-    mUpperPane->setFocusProxy(nullptr);
-    mUpperPane->setFocus();
-    mudlet::self()->announce(buffer.lineBuffer[searchY]);
-}
-
 void TConsole::slot_searchBufferUp()
 {
-    if (mpHost->getF3SearchEnabled()) buffer.clearSearchHighlights();
     // The search term entry box is one widget that does not pass a mouse press
     // event up to the main TConsole and thus does not cause the focus to shift
     // to the profile's tab when in multi-view mode - so add a call to make that
@@ -1857,14 +1835,11 @@ void TConsole::slot_searchBufferUp()
             searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
-                if (mpHost->getF3SearchEnabled()) focusOnSearchResultAndAnnounce(searchX, searchY);
                 found = true;
             }
         } while (searchX > -1);
 
         if (found) {
-
-            // Scroll to show the match
             scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
             mCurrentSearchResult = searchY;
@@ -1876,7 +1851,6 @@ void TConsole::slot_searchBufferUp()
 
 void TConsole::slot_searchBufferDown()
 {
-    if (mpHost->getF3SearchEnabled()) buffer.clearSearchHighlights();
     if (mSearchQuery != mpBufferSearchBox->text()) {
         mSearchQuery = mpBufferSearchBox->text();
         buffer.clearSearchHighlights();
@@ -1896,14 +1870,11 @@ void TConsole::slot_searchBufferDown()
             searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
-                if (mpHost->getF3SearchEnabled()) focusOnSearchResultAndAnnounce(searchX, searchY);
                 found = true;
             }
         } while (searchX > -1);
 
         if (found) {
-
-            // Scroll to show the match
             scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
             mCurrentSearchResult = searchY;
@@ -1937,7 +1908,11 @@ void TConsole::dragEnterEvent(QDragEnterEvent* e)
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+#else
         Qt::KeyboardModifiers modifiers = e->modifiers();
+#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -1953,7 +1928,11 @@ void TConsole::dragMoveEvent(QDragMoveEvent* e)
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+#else
         Qt::KeyboardModifiers modifiers = e->modifiers();
+#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -1970,7 +1949,11 @@ void TConsole::dropEvent(QDropEvent* e)
         const QString fname = url.toLocalFile();
         const QFileInfo info(fname);
         if (info.exists()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            const QPoint pos = e->pos();
+#else
             QPoint pos = e->position().toPoint();
+#endif
             TEvent mudletEvent{};
             mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
             mudletEvent.mArgumentList.append(fname);
@@ -1989,7 +1972,11 @@ void TConsole::dropEvent(QDropEvent* e)
     }
     if (e->mimeData()->hasText()) {
         if (const QUrl url(e->mimeData()->text()); url.isValid()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            const QPoint pos = e->pos();
+#else
             QPoint pos = e->position().toPoint();
+#endif
             TEvent mudletEvent{};
             mudletEvent.mArgumentList.append(QLatin1String("sysDropUrlEvent"));
             mudletEvent.mArgumentList.append(url.toString());
@@ -2049,7 +2036,11 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     case Qt::ExtraButton24: mudletEvent.mArgumentList.append(QString::number(27));  break;
     default:                mudletEvent.mArgumentList.append(QString::number(0));
     }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const QPoint pos = event->pos();
+#else
     QPoint pos = event->position().toPoint();
+#endif
     mudletEvent.mArgumentList.append(QString::number(pos.x()));
     mudletEvent.mArgumentList.append(QString::number(pos.y()));
     mudletEvent.mArgumentList.append(mConsoleName);
@@ -2344,21 +2335,6 @@ void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
         mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
         createSearchOptionIcon();
         mpHost->mBufferSearchOptions = mSearchOptions;
-    }
-}
-
-void TConsole::setF3SearchEnabled(const bool enabled)
-{
-    if (!searchNextShortcut || !searchPrevShortcut) {
-        return;
-    }
-
-    if (enabled) {
-        connect(searchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
-        connect(searchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
-    } else {
-        disconnect(searchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
-        disconnect(searchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
     }
 }
 

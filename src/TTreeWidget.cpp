@@ -330,7 +330,11 @@ void TTreeWidget::dragEnterEvent(QDragEnterEvent* event)
 
 void TTreeWidget::dropEvent(QDropEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QTreeWidgetItem* pItem = itemAt(event->pos());
+#else
     QTreeWidgetItem* pItem = itemAt(event->position().toPoint());
+#endif
 
     if (!pItem) {
         event->setDropAction(Qt::IgnoreAction);

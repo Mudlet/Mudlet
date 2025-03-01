@@ -90,8 +90,7 @@ bool TAlias::match(const QString& haystack)
     }
 
 #if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available in the
-    // original Mingw or the replacement Mingw-w64 environment we use:
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
     char* haystackC = static_cast<char*>(malloc(strlen(haystack.toUtf8().constData()) + 1));
     strcpy(haystackC, haystack.toUtf8().constData());
 #else

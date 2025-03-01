@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>fonts/noto-color-emoji-2023-11-30-v2.042/LICENSE</file>
+        <file>fonts/noto-color-emoji-2023-11-30-v2.042/NotoColorEmoji.ttf</file>
+    </qresource>
+</RCC>

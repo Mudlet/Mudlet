@@ -57,7 +57,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -72,7 +72,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -83,14 +83,14 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            stringValue = getVerifiedString(L, func, i, "url");
+            stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
         }
     }
 
-    if (mediaData.mediaFileName().isEmpty()) {
-        return warnArgumentValue(L, func, QLatin1String("missing argument 1 (file to play)"));
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
     }
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
@@ -102,7 +102,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -110,11 +110,11 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : "value for url");
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -133,7 +133,7 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
         lua_pop(L, 1);
     }
 
-    if (mediaData.mediaFileName().isEmpty()) {
+    if (mediaData.getMediaFileName().isEmpty()) {
         lua_pushstring(L, R"(loadMusicFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
@@ -155,10 +155,10 @@ int TLuaInterpreter::loadMusicFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadSoundFile
@@ -170,30 +170,14 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadVideoFile
-int TLuaInterpreter::loadVideoFile(lua_State* L)
-{
-    if (!lua_gettop(L)) {
-        lua_pushfstring(L, "%s: need at least one argument", __func__);
-        return lua_error(L);
-    }
-
-    if (!lua_istable(L, 1)) {
-        lua_pushfstring(L, "%s: needs to be a table", __func__);
-        return lua_error(L);
-    }
-
-    return loadMediaFileAsTableArgument(L, __func__);
+    return loadMediaFileAsOrderedArguments(L);
 }
 
 // Private
-int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -210,7 +194,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -221,7 +205,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            intValue = getVerifiedInt(L, func, i, "volume");
+            intValue = getVerifiedInt(L, __func__, i, "volume");
 
             if (intValue == TMediaData::MediaVolumePreload) {
                 {
@@ -235,7 +219,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaVolume(intValue);
             break;
         case 3:
-            intValue = getVerifiedInt(L, func, i, "fadein");
+            intValue = getVerifiedInt(L, __func__, i, "fadein");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", intValue);
@@ -245,7 +229,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFadeIn(intValue);
             break;
         case 4:
-            intValue = getVerifiedInt(L, func, i, "fadeout");
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
@@ -255,7 +239,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFadeOut(intValue);
             break;
         case 5:
-            intValue = getVerifiedInt(L, func, i, "start");
+            intValue = getVerifiedInt(L, __func__, i, "start");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", intValue);
@@ -265,7 +249,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaStart(intValue);
             break;
         case 6:
-            intValue = getVerifiedInt(L, func, i, "loops");
+            intValue = getVerifiedInt(L, __func__, i, "loops");
 
             if (intValue < TMediaData::MediaLoopsRepeat || intValue == 0) {
                 intValue = TMediaData::MediaLoopsDefault;
@@ -274,23 +258,23 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaLoops(intValue);
             break;
         case 7:
-            stringValue = getVerifiedString(L, func, i, "key");
+            stringValue = getVerifiedString(L, __func__, i, "key");
             mediaData.setMediaKey(stringValue);
             break;
         case 8:
-            stringValue = getVerifiedString(L, func, i, "tag");
+            stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
             break;
         case 9:
-            boolValue = getVerifiedBool(L, func, i, "continue");
+            boolValue = getVerifiedBool(L, __func__, i, "continue");
             mediaData.setMediaContinue(boolValue);
             break;
         case 10:
-            stringValue = getVerifiedString(L, func, i, "url");
+            stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
         case 11:
-            intValue = getVerifiedInt(L, func, i, "finish");
+            intValue = getVerifiedInt(L, __func__, i, "finish");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
@@ -302,8 +286,8 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
         }
     }
 
-    if (mediaData.mediaFileName().isEmpty()) {
-        return warnArgumentValue(L, func, QLatin1String("missing argument 1 (file to play)"));
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
     }
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
@@ -314,7 +298,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
 }
 
 // Private
-int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -322,12 +306,12 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
             QString value = getVerifiedString(L,
-                                              func,
+                                              __func__,
                                               -1,
                                               key == QLatin1String("name")  ? "value for name"
                                               : key == QLatin1String("key") ? "value for key"
@@ -351,7 +335,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
             }
         } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")) {
             int value = getVerifiedInt(L,
-                                       func,
+                                       __func__,
                                        -1,
                                        key == QLatin1String("volume")    ? "value for volume"
                                        : key == QLatin1String("fadein")  ? "value for fadein"
@@ -407,7 +391,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaLoops(value);
             }
         } else if (key == QLatin1String("continue")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for continue must be boolean");
+            const bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
             mediaData.setMediaContinue(value);
         }
 
@@ -415,7 +399,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
         lua_pop(L, 1);
     }
 
-    if (mediaData.mediaFileName().isEmpty()) {
+    if (mediaData.getMediaFileName().isEmpty()) {
         lua_pushstring(L, R"(playMusicFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
@@ -436,14 +420,14 @@ int TLuaInterpreter::playMusicFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return playMusicFileAsTableArgument(L, __func__);
+        return playMusicFileAsTableArgument(L);
     }
 
-    return playMusicFileAsOrderedArguments(L, __func__);
+    return playMusicFileAsOrderedArguments(L);
 }
 
 // Private
-int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -459,7 +443,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -470,7 +454,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            intValue = getVerifiedInt(L, func, i, "volume");
+            intValue = getVerifiedInt(L, __func__, i, "volume");
 
             if (intValue == TMediaData::MediaVolumePreload) {
                 {
@@ -484,7 +468,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaVolume(intValue);
             break;
         case 3:
-            intValue = getVerifiedInt(L, func, i, "fadein");
+            intValue = getVerifiedInt(L, __func__, i, "fadein");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "fadein", intValue);
@@ -494,7 +478,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFadeIn(intValue);
             break;
         case 4:
-            intValue = getVerifiedInt(L, func, i, "fadeout");
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "fadeout", intValue);
@@ -504,7 +488,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaFadeOut(intValue);
             break;
         case 5:
-            intValue = getVerifiedInt(L, func, i, "start");
+            intValue = getVerifiedInt(L, __func__, i, "start");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "start", intValue);
@@ -514,7 +498,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaStart(intValue);
             break;
         case 6:
-            intValue = getVerifiedInt(L, func, i, "loops");
+            intValue = getVerifiedInt(L, __func__, i, "loops");
 
             if (intValue < TMediaData::MediaLoopsRepeat || intValue == 0) {
                 intValue = TMediaData::MediaLoopsDefault;
@@ -523,15 +507,15 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaLoops(intValue);
             break;
         case 7:
-            stringValue = getVerifiedString(L, func, i, "key");
+            stringValue = getVerifiedString(L, __func__, i, "key");
             mediaData.setMediaKey(stringValue);
             break;
         case 8:
-            stringValue = getVerifiedString(L, func, i, "tag");
+            stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
             break;
         case 9:
-            intValue = getVerifiedInt(L, func, i, "priority");
+            intValue = getVerifiedInt(L, __func__, i, "priority");
 
             if (intValue > TMediaData::MediaPriorityMax) {
                 intValue = TMediaData::MediaPriorityMax;
@@ -542,11 +526,11 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
             mediaData.setMediaPriority(intValue);
             break;
         case 10:
-            stringValue = getVerifiedString(L, func, i, "url");
+            stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
         case 11:
-            intValue = getVerifiedInt(L, func, i, "finish");
+            intValue = getVerifiedInt(L, __func__, i, "finish");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "finish", intValue);
@@ -558,8 +542,8 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
         }
     }
 
-    if (mediaData.mediaFileName().isEmpty()) {
-        return warnArgumentValue(L, func, QLatin1String("missing argument 1 (file to play)"));
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
     }
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
@@ -571,7 +555,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L, const char* f
 }
 
 // Private
-int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -579,12 +563,12 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
             QString value = getVerifiedString(L,
-                                              func,
+                                              __func__,
                                               -1,
                                               key == QLatin1String("name")  ? "value for name"
                                               : key == QLatin1String("key") ? "value for key"
@@ -609,7 +593,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
         } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")
                    || key == QLatin1String("priority")) {
             int value = getVerifiedInt(L,
-                                       func,
+                                       __func__,
                                        -1,
                                        key == QLatin1String("volume")    ? "value for volume"
                                        : key == QLatin1String("fadein")  ? "value for fadein"
@@ -679,7 +663,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
         lua_pop(L, 1);
     }
 
-    if (mediaData.mediaFileName().isEmpty()) {
+    if (mediaData.getMediaFileName().isEmpty()) {
         lua_pushstring(L, R"(playSoundFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
@@ -701,126 +685,10 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return playSoundFileAsTableArgument(L, __func__);
+        return playSoundFileAsTableArgument(L);
     }
 
-    return playSoundFileAsOrderedArguments(L, __func__);
-}
-
-// Private
-int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func)
-{
-    Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-
-        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive)
-            || !key.compare(QLatin1String("key"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
-            QString value = getVerifiedString(L,
-                                              func,
-                                              -1,
-                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
-                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
-                                              : !key.compare(QLatin1String("tag"), Qt::CaseInsensitive) ? "value for tag"
-                                                                                                        : "value for url");
-
-            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
-                mediaData.setMediaUrl(value);
-            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
-            || !key.compare(QLatin1String("finish"), Qt::CaseInsensitive) || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
-            int value = getVerifiedInt(L,
-                                       func,
-                                       -1,
-                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)  ? "value for volume"
-                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive) ? "value for start"
-                                       : !key.compare(QLatin1String("finish"), Qt::CaseInsensitive) ? "value for finish"
-                                                                                                    : "value for loops");
-
-            if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive)) {
-                if (value != TMediaData::MediaVolumePreload) {
-                    value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
-                }
-
-                mediaData.setMediaVolume(value);
-            } else if (!key.compare(QLatin1String("start"), Qt::CaseInsensitive)) {
-                if (value < 0) {
-                    lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
-                    return lua_error(L);
-                }
-
-                mediaData.setMediaStart(value);
-            } else if (!key.compare(QLatin1String("finish"), Qt::CaseInsensitive)) {
-                if (value < 0) {
-                    lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
-                    return lua_error(L);
-                }
-
-                mediaData.setMediaFinish(value);
-            } else if (!key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
-                if (value < TMediaData::MediaLoopsRepeat || value == 0) {
-                    value = TMediaData::MediaLoopsDefault;
-                }
-
-                mediaData.setMediaLoops(value);
-            }
-        } else if (!key.compare(QLatin1String("continue"), Qt::CaseInsensitive)) {
-            bool value = getVerifiedBool(L, func, -1, "value for continue must be boolean");
-            mediaData.setMediaContinue(value);
-        } else if (!key.compare(QLatin1String("stream"), Qt::CaseInsensitive)) {
-            bool value = getVerifiedBool(L, func, -1, "value for stream must be boolean");
-            mediaData.setMediaInput(value ? TMediaData::MediaInputStream : TMediaData::MediaInputNotSet);
-        } else if (!key.compare(QLatin1String("close"), Qt::CaseInsensitive)) {
-            bool value = getVerifiedBool(L, func, -1, "value for close must be boolean");
-            mediaData.setMediaClose(value ? TMediaData::MediaCloseEnabled : TMediaData::MediaCloseDefault);
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    if (mediaData.mediaFileName().isEmpty()) {
-        lua_pushstring(L, R"(playVideoFile: missing name (add name = "file to play"))");
-        return lua_error(L);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-    host.mpMedia->playMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playVideoFile
-int TLuaInterpreter::playVideoFile(lua_State* L)
-{
-    if (!lua_gettop(L)) {
-        lua_pushfstring(L, "%s: need at least one argument", __func__);
-        return lua_error(L);
-    }
-
-    if (!lua_istable(L, 1)) {
-        lua_pushfstring(L, "%s: needs to be a table", __func__);
-        return lua_error(L);
-    }
-
-    return playVideoFileAsTableArgument(L, __func__);
+    return playSoundFileAsOrderedArguments(L);
 }
 
 // Private
@@ -839,33 +707,33 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
         lua_pushinteger(L, index++);
         lua_newtable(L);
 
-        if (!matchedMediaData.mediaFileName().isEmpty()) {
+        if (!matchedMediaData.getMediaFileName().isEmpty()) {
             lua_pushstring(L, "name");
-            lua_pushstring(L, matchedMediaData.mediaFileName().toUtf8().constData());
+            lua_pushstring(L, matchedMediaData.getMediaFileName().toUtf8().constData());
             lua_settable(L, -3);
         }
 
-        if (matchedMediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
+        if (matchedMediaData.getMediaVolume() != TMediaData::MediaVolumePreload) {
             lua_pushstring(L, "volume");
-            lua_pushinteger(L, matchedMediaData.mediaVolume());
+            lua_pushinteger(L, matchedMediaData.getMediaVolume());
             lua_settable(L, -3);
         }
 
-        if (matchedMediaData.mediaPriority() != TMediaData::MediaPriorityNotSet) {
+        if (matchedMediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet) {
             lua_pushstring(L, "priority");
-            lua_pushinteger(L, matchedMediaData.mediaPriority());
+            lua_pushinteger(L, matchedMediaData.getMediaPriority());
             lua_settable(L, -3);
         }
 
-        if (!matchedMediaData.mediaTag().isEmpty()) {
+        if (!matchedMediaData.getMediaTag().isEmpty()) {
             lua_pushstring(L, "tag");
-            lua_pushstring(L, matchedMediaData.mediaTag().toUtf8().constData());
+            lua_pushstring(L, matchedMediaData.getMediaTag().toUtf8().constData());
             lua_settable(L, -3);
         }
 
-        if (!matchedMediaData.mediaKey().isEmpty()) {
+        if (!matchedMediaData.getMediaKey().isEmpty()) {
             lua_pushstring(L, "key");
-            lua_pushstring(L, matchedMediaData.mediaKey().toUtf8().constData());
+            lua_pushstring(L, matchedMediaData.getMediaKey().toUtf8().constData());
             lua_settable(L, -3);
         }
 
@@ -874,7 +742,7 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
 }
 
 // Private
-int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L)
 {
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
@@ -888,7 +756,7 @@ int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L, const char*
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -899,11 +767,11 @@ int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L, const char*
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            stringValue = getVerifiedString(L, func, i, "key");
+            stringValue = getVerifiedString(L, __func__, i, "key");
             mediaData.setMediaKey(stringValue);
             break;
         case 3:
-            stringValue = getVerifiedString(L, func, i, "tag");
+            stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
             break;
         }
@@ -917,18 +785,18 @@ int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L, const char*
 }
 
 // Private
-int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L)
 {
     TMediaData mediaData{};
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -964,10 +832,10 @@ int TLuaInterpreter::getPlayingMusic(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return getPlayingMusicAsTableArgument(L, __func__);
+            return getPlayingMusicAsTableArgument(L);
         }
 
-        return getPlayingMusicAsOrderedArguments(L, __func__);
+        return getPlayingMusicAsOrderedArguments(L);
     }
 
     // no args
@@ -979,7 +847,7 @@ int TLuaInterpreter::getPlayingMusic(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L)
 {
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
@@ -994,7 +862,7 @@ int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -1005,15 +873,15 @@ int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            stringValue = getVerifiedString(L, func, i, "key");
+            stringValue = getVerifiedString(L, __func__, i, "key");
             mediaData.setMediaKey(stringValue);
             break;
         case 3:
-            stringValue = getVerifiedString(L, func, i, "tag");
+            stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
             break;
         case 4:
-            intValue = getVerifiedInt(L, func, i, "priority");
+            intValue = getVerifiedInt(L, __func__, i, "priority");
 
             if (intValue > TMediaData::MediaPriorityMax) {
                 intValue = TMediaData::MediaPriorityMax;
@@ -1034,18 +902,18 @@ int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L, const char
 }
 
 // Private
-int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L)
 {
     TMediaData mediaData{};
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -1061,7 +929,7 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("priority")) {
-            int value = getVerifiedInt(L, func, -1, "value for priority must be integer");
+            int value = getVerifiedInt(L, __func__, -1, "value for priority must be integer");
 
             if (key == QLatin1String("priority")) {
                 if (value > TMediaData::MediaPriorityMax) {
@@ -1092,10 +960,10 @@ int TLuaInterpreter::getPlayingSounds(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return getPlayingSoundsAsTableArgument(L, __func__);
+            return getPlayingSoundsAsTableArgument(L);
         }
 
-        return getPlayingSoundsAsOrderedArguments(L, __func__);
+        return getPlayingSoundsAsOrderedArguments(L);
     }
 
     // no args
@@ -1107,305 +975,7 @@ int TLuaInterpreter::getPlayingSounds(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L, const char* func)
-{
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    processPlayingMediaTable(L, mediaData);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayingVideos
-int TLuaInterpreter::getPlayingVideos(lua_State* L)
-{
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return getPlayingVideosAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    processPlayingMediaTable(L, mediaData);
-    return 1;
-}
-
-// Private
-void TLuaInterpreter::processPausedMediaTable(lua_State* L, TMediaData& mediaData)
-{
-    const Host& host = getHostFromLua(L);
-    QList<TMediaData> const matchingMediaDataList = host.mpMedia->pausedMedia(mediaData);
-
-    int index = 1;
-    lua_newtable(L);
-
-    QListIterator<TMediaData> itTMediaData(matchingMediaDataList);
-
-    while (itTMediaData.hasNext()) {
-        TMediaData const matchedMediaData = itTMediaData.next();
-        lua_pushinteger(L, index++);
-        lua_newtable(L);
-
-        if (!matchedMediaData.mediaFileName().isEmpty()) {
-            lua_pushstring(L, "name");
-            lua_pushstring(L, matchedMediaData.mediaFileName().toUtf8().constData());
-            lua_settable(L, -3);
-        }
-
-        if (matchedMediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
-            lua_pushstring(L, "volume");
-            lua_pushinteger(L, matchedMediaData.mediaVolume());
-            lua_settable(L, -3);
-        }
-
-        if (matchedMediaData.mediaPriority() != TMediaData::MediaPriorityNotSet) {
-            lua_pushstring(L, "priority");
-            lua_pushinteger(L, matchedMediaData.mediaPriority());
-            lua_settable(L, -3);
-        }
-
-        if (!matchedMediaData.mediaTag().isEmpty()) {
-            lua_pushstring(L, "tag");
-            lua_pushstring(L, matchedMediaData.mediaTag().toUtf8().constData());
-            lua_settable(L, -3);
-        }
-
-        if (!matchedMediaData.mediaKey().isEmpty()) {
-            lua_pushstring(L, "key");
-            lua_pushstring(L, matchedMediaData.mediaKey().toUtf8().constData());
-            lua_settable(L, -3);
-        }
-
-        lua_settable(L, -3);
-    }
-}
-
-// Private
-int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* func)
-{
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-
-    processPausedMediaTable(L, mediaData);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPausedSounds
-int TLuaInterpreter::getPausedSounds(lua_State* L)
-{
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return getPausedSoundsAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-
-    processPausedMediaTable(L, mediaData);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::getPausedMusicAsTableArgument(lua_State* L, const char* func)
-{
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeMusic);
-
-    processPausedMediaTable(L, mediaData);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPausedMusic
-int TLuaInterpreter::getPausedMusic(lua_State* L)
-{
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return getPausedMusicAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeMusic);
-
-    processPausedMediaTable(L, mediaData);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::getPausedVideosAsTableArgument(lua_State* L, const char* func)
-{
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    processPausedMediaTable(L, mediaData);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPausedVideos
-int TLuaInterpreter::getPausedVideos(lua_State* L)
-{
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return getPausedVideosAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    processPausedMediaTable(L, mediaData);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -1422,7 +992,7 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L, const char* func)
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -1433,19 +1003,19 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L, const char* func)
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            stringValue = getVerifiedString(L, func, i, "key");
+            stringValue = getVerifiedString(L, __func__, i, "key");
             mediaData.setMediaKey(stringValue);
             break;
         case 3:
-            stringValue = getVerifiedString(L, func, i, "tag");
+            stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
             break;
         case 4:
-            boolValue = getVerifiedBool(L, func, i, "fadeaway");
+            boolValue = getVerifiedBool(L, __func__, i, "fadeaway");
             mediaData.setMediaFadeAway(boolValue);
             break;
         case 5:
-            intValue = getVerifiedInt(L, func, i, "fadeout");
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "stopMusic: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
@@ -1466,7 +1036,7 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L, const char* func)
 }
 
 // Private
-int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -1474,11 +1044,11 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -1494,10 +1064,10 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("fadeaway")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway must be boolean");
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
             mediaData.setMediaFadeAway(value);
         } else if (key == QLatin1String("fadeout")) {
-            int value = getVerifiedInt(L, func, -1, "value for fadeout");
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
 
             if (value < 0) {
                 lua_pushfstring(L, "stopMusic: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
@@ -1527,10 +1097,10 @@ int TLuaInterpreter::stopMusic(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return stopMusicAsTableArgument(L, __func__);
+            return stopMusicAsTableArgument(L);
         }
 
-        return stopMusicAsOrderedArguments(L, __func__);
+        return stopMusicAsOrderedArguments(L);
     }
 
     // no args
@@ -1543,7 +1113,7 @@ int TLuaInterpreter::stopMusic(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -1560,7 +1130,7 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L, const char* func
 
         switch (i) {
         case 1:
-            stringValue = getVerifiedString(L, func, i, "name");
+            stringValue = getVerifiedString(L, __func__, i, "name");
 
             if (QDir::homePath().contains('\\')) {
                 stringValue.replace('/', R"(\)");
@@ -1571,15 +1141,15 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L, const char* func
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
-            stringValue = getVerifiedString(L, func, i, "key");
+            stringValue = getVerifiedString(L, __func__, i, "key");
             mediaData.setMediaKey(stringValue);
             break;
         case 3:
-            stringValue = getVerifiedString(L, func, i, "tag");
+            stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
             break;
         case 4:
-            intValue = getVerifiedInt(L, func, i, "priority");
+            intValue = getVerifiedInt(L, __func__, i, "priority");
 
             if (intValue > TMediaData::MediaPriorityMax) {
                 intValue = TMediaData::MediaPriorityMax;
@@ -1590,11 +1160,11 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L, const char* func
             mediaData.setMediaPriority(intValue);
             break;
         case 5:
-            boolValue = getVerifiedBool(L, func, i, "fadeaway");
+            boolValue = getVerifiedBool(L, __func__, i, "fadeaway");
             mediaData.setMediaFadeAway(boolValue);
             break;
         case 6:
-            intValue = getVerifiedInt(L, func, i, "fadeout");
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
 
             if (intValue < 0) {
                 lua_pushfstring(L, "stopSounds: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
@@ -1615,7 +1185,7 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L, const char* func
 }
 
 // Private
-int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
@@ -1623,11 +1193,11 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
@@ -1643,7 +1213,7 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaTag(value);
             }
         } else if (key == QLatin1String("priority")) {
-            int value = getVerifiedInt(L, func, -1, "value for priority must be integer");
+            int value = getVerifiedInt(L, __func__, -1, "value for priority must be integer");
 
             if (key == QLatin1String("priority")) {
                 if (value > TMediaData::MediaPriorityMax) {
@@ -1655,10 +1225,10 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 mediaData.setMediaPriority(value);
             }
         } else if (key == QLatin1String("fadeaway")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway must be boolean");
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
             mediaData.setMediaFadeAway(value);
         } else if (key == QLatin1String("fadeout")) {
-            int value = getVerifiedInt(L, func, -1, "value for fadeout");
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
 
             if (value < 0) {
                 lua_pushfstring(L, "stopSounds: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
@@ -1688,10 +1258,10 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 
     if (lua_gettop(L)) {
         if (lua_istable(L, 1)) {
-            return stopSoundsAsTableArgument(L, __func__);
+            return stopSoundsAsTableArgument(L);
         }
 
-        return stopSoundsAsOrderedArguments(L, __func__);
+        return stopSoundsAsOrderedArguments(L);
     }
 
     // no args
@@ -1699,282 +1269,6 @@ int TLuaInterpreter::stopSounds(lua_State* L)
     mediaData.setMediaType(TMediaData::MediaTypeSound);
 
     host.mpMedia->stopMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        } else if (key == QLatin1String("fadeaway")) {
-            const bool value = getVerifiedBool(L, func, -1, "value for fadeaway must be boolean");
-            mediaData.setMediaFadeAway(value);
-        } else if (key == QLatin1String("fadeout")) {
-            int value = getVerifiedInt(L, func, -1, "value for fadeout");
-
-            if (value < 0) {
-                lua_pushfstring(L, "stopVideos: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
-                return lua_error(L);
-            }
-
-            mediaData.setMediaFadeOut(value);
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    host.mpMedia->stopMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopVideos
-int TLuaInterpreter::stopVideos(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return stopVideosAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    host.mpMedia->stopMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::pauseSoundsAsTableArgument(lua_State* L, const char* func)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-
-    host.mpMedia->pauseMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseSounds
-int TLuaInterpreter::pauseSounds(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return pauseSoundsAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-
-    host.mpMedia->pauseMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::pauseMusicAsTableArgument(lua_State* L, const char* func)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeMusic);
-
-    host.mpMedia->pauseMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseMusic
-int TLuaInterpreter::pauseMusic(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return pauseMusicAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeMusic);
-
-    host.mpMedia->pauseMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Private
-int TLuaInterpreter::pauseVideosAsTableArgument(lua_State* L, const char* func)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    lua_pushnil(L);
-    while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
-        QString key = getVerifiedString(L, func, -2, "table keys");
-        key = key.toLower();
-
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
-
-            if (key == QLatin1String("name") && !value.isEmpty()) {
-                if (QDir::homePath().contains('\\')) {
-                    value.replace('/', R"(\)");
-                } else {
-                    value.replace('\\', "/");
-                }
-
-                mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
-                mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
-                mediaData.setMediaTag(value);
-            }
-        }
-
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    host.mpMedia->pauseMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseVideos
-int TLuaInterpreter::pauseVideos(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    if (lua_gettop(L)) {
-        if (!lua_istable(L, 1)) {
-            lua_pushfstring(L, "%s: needs to be a table", __func__);
-            return lua_error(L);
-        }
-
-        return pauseVideosAsTableArgument(L, __func__);
-    }
-
-    // no args
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeVideo);
-
-    host.mpMedia->pauseMedia(mediaData);
     lua_pushboolean(L, true);
     return 1;
 }
