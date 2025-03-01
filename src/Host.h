@@ -70,7 +70,7 @@ class TConsole;
 class TMainConsole;
 class dlgNotepad;
 class TMap;
-class MCPServer;
+class MMCPServer;
 class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
