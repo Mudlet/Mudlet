@@ -4091,7 +4091,7 @@ void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
  * 
  */
 void dlgProfilePreferences::slot_mmcpChatNameChanged() {
-    const QString& chatName = lineEdit_mmcpChatName->getText();
+    const QString& chatName = lineEdit_mmcpChatName->text();
 
     if (mpHost) {
         mpHost->setMMCPChatName(chatName, false);
