@@ -2844,9 +2844,11 @@ QString Host::getMMCPChatName() {
     return mMMCPChatName;
 }
 
-void Host::setMMCPChatName(const QString& name) {
+void Host::setMMCPChatName(const QString& name, bool shouldSignal) {
     mMMCPChatName = name;
-    emit mmcpChatNameChanged(name);
+    if (shouldSignal) {
+        emit mmcpChatNameChanged(name);
+    }
 }
 
 quint16 Host::getMMCPPort() {

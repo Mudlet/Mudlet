@@ -439,7 +439,7 @@ public:
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
     void initMMCPServer();
-    void setMMCPChatName(const QString&);
+    void setMMCPChatName(const QString&, bool shouldSignal = true);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled) { 
         mF3SearchEnabled = enabled;
@@ -703,7 +703,7 @@ public:
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
-    MMCPServer *mmcpServer;
+    QPointer<MMCPServer> mmcpServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<QPointer<TToolBar>> mToolbarLayoutChanges;

@@ -241,6 +241,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                              "propagate everywhere until Mudlet is restarted.</i></p>"));
     lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
     lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
+    connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
     lineEdit_mmcpChatMessagePrefix->setPlaceholderText(csDefaultChatPrefix);
 
 
@@ -4083,6 +4084,18 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
  */
 void dlgProfilePreferences::slot_setMMCPChatName(const QString& name) {
     lineEdit_mmcpChatName->setText(name);
+}
+
+/**
+ * Notify connected clients that our chatname has been changed (via GUI)
+ * 
+ */
+void dlgProfilePreferences::slot_mmcpChatNameChanged() {
+    const QString& chatName = lineEdit_mmcpChatName->getText();
+
+    if (mpHost) {
+        mpHost->setMMCPChatName(chatName, false);
+    }
 }
 
 void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)

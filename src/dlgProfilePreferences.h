@@ -130,6 +130,7 @@ public slots:
 
     // Chat
     void slot_setMMCPChatName(const QString&);
+    void slot_mmcpChatNameChanged();
 
     // Save.
     void slot_saveAndClose();
