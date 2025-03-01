@@ -641,10 +641,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
     ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
-    dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    dictList->clear();
-    // Disable sorting while populating the widget:
-    dictList->setSortingEnabled(false);
+    comboBox_dictionary->clear();
+    comboBox_dictionary->setInsertPolicy(QComboBox::InsertAlphabetically);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
@@ -667,16 +665,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
     const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
-
-    // Tweak the label for the provided spelling dictionaries depending on where
-    // they come from:
-    if (mudlet::self()->mUsingMudletDictionaries) {
-        //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
-        checkBox_spellCheck->setText(tr("Mudlet dictionaries:"));
-    } else {
-        //: On *nix systems where we find the system ones we use them
-        checkBox_spellCheck->setText(tr("System dictionaries:"));
-    }
+    checkBox_spellCheck->setText(tr("Enable spell check using dictionary:"));
 
     const QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
@@ -687,56 +676,46 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
     // while populating the widget, it reduces noise about:
     // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
-    dictList->blockSignals(true);
+    comboBox_dictionary->blockSignals(true);
     if (!entries.isEmpty()) {
-        QListWidgetItem* scrollToItem = nullptr;
+        int currentIndex = -1;
         for (int i = 0, total = entries.size(); i < total; ++i) {
-            // This is a file name and to support macOs platforms should not be case sensitive:
             entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
             if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
-                // Skip medical dictionaries - there may be others  we also want to hide:
                 continue;
             }
 
-            auto item = new QListWidgetItem();
-            item->setTextAlignment(Qt::AlignCenter);
             auto key = entries.at(i).toLower();
-            // In some cases '-' will be used as a separator and in others '_' so convert all to one form:
             key.replace(QLatin1String("-"), QLatin1String("_"));
+
+            QString displayText;
+            QString toolTip;
             if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
-                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
-                item->setToolTip(utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i)))));
+                displayText = mudlet::self()->mDictionaryLanguageCodeMap.value(key);
+                toolTip = utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i))));
             } else {
-                item->setText(tr("%1 - not recognised").arg(entries.at(i)));
-                item->setToolTip(tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
-                                    "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i))));
+                displayText = tr("%1 - not recognised").arg(entries.at(i));
+                toolTip = tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
+                            "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i)));
             }
-            item->setData(Qt::UserRole, entries.at(i));
-            dictList->addItem(item);
+
+            comboBox_dictionary->addItem(displayText, entries.at(i));
+            comboBox_dictionary->setItemData(comboBox_dictionary->count() - 1, toolTip, Qt::ToolTipRole);
+
             if (entries.at(i) == currentDictionary) {
-                scrollToItem = item;
+                currentIndex = comboBox_dictionary->count() - 1;
             }
         }
 
-        // Re-enable sorting now we have populated the widget:
-        dictList->setSortingEnabled(true);
-        // Actually do the sort:
-        dictList->sortItems();
-
-        if (scrollToItem) {
-            // As the selection mode is set to
-            // QAbstractItemView::SingleSelection this also selects this item:
-            dictList->setCurrentItem(scrollToItem);
-            // And scroll to it:
-            dictList->scrollToItem(scrollToItem);
+        if (currentIndex >= 0) {
+            comboBox_dictionary->setCurrentIndex(currentIndex);
         }
-
     } else {
-        dictList->setEnabled(false);
-        dictList->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
+        comboBox_dictionary->setEnabled(false);
+        comboBox_dictionary->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
     }
-    dictList->blockSignals(false);
+    comboBox_dictionary->blockSignals(false);
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -803,24 +782,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
-    comboBox_commandLineHistorySaveSize->insertItem(0, tr("None", "Special value for number of command line history size to save that does not save any at all!"), 0);
-    comboBox_commandLineHistorySaveSize->insertItem(1, tr("10", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 10);
-    comboBox_commandLineHistorySaveSize->insertItem(2, tr("20", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 20);
-    comboBox_commandLineHistorySaveSize->insertItem(3, tr("50", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 50);
-    comboBox_commandLineHistorySaveSize->insertItem(4, tr("100", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 100);
-    comboBox_commandLineHistorySaveSize->insertItem(5, tr("200", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 200);
-    comboBox_commandLineHistorySaveSize->insertItem(6, tr("500", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 500);
-    comboBox_commandLineHistorySaveSize->insertItem(7, tr("1,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 1000);
-    comboBox_commandLineHistorySaveSize->insertItem(8, tr("2,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 2000);
-    comboBox_commandLineHistorySaveSize->insertItem(9, tr("5,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 5000);
-    comboBox_commandLineHistorySaveSize->insertItem(10, tr("10,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 10000);
-    int commandLineHistorySaveSize_index = comboBox_commandLineHistorySaveSize->findData(QVariant(pHost->getCommandLineHistorySaveSize()).toInt(), Qt::UserRole, Qt::MatchExactly);
-    if (commandLineHistorySaveSize_index >= 0) {
-        comboBox_commandLineHistorySaveSize->setCurrentIndex(commandLineHistorySaveSize_index);
-    } else {
-        // Choose a default value (of 500) should the stored value not be found:
-        comboBox_commandLineHistorySaveSize->setCurrentIndex(6);
-    }
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
@@ -1435,7 +1396,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircNick->clear();
     ircPassword->clear();
 
-    dictList->clear();
+    comboBox_dictionary->clear();
     checkBox_spellCheck->setChecked(false);
     checkBox_echoLuaErrors->setChecked(false);
 
@@ -1477,12 +1438,6 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
     mFORCE_SAVE_ON_EXIT->setChecked(false);
-    mEnableGMCP->setChecked(false);
-    mEnableMSSP->setChecked(false);
-    mEnableMSDP->setChecked(false);
-    mEnableMSP->setChecked(false);
-    mEnableMTTS->setChecked(false);
-    mEnableMNES->setChecked(false);
 
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
@@ -2890,8 +2845,8 @@ void dlgProfilePreferences::slot_saveAndClose()
     Host* pHost = mpHost;
     if (pHost) {
         auto console = pHost->mpConsole;
-        if (dictList->isEnabled() && dictList->currentItem()) {
-            pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
+        if (comboBox_dictionary->isEnabled() && comboBox_dictionary->currentIndex() >= 0) {
+            pHost->setSpellDic(comboBox_dictionary->currentData().toString());
         }
 
         pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
@@ -2915,7 +2870,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
-        pHost->setCommandLineHistorySaveSize(comboBox_commandLineHistorySaveSize->currentData().toInt());
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());

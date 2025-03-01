@@ -26,12 +26,12 @@ jobs:
         fetch-depth: 0
 
     - name: Install Lua 5.1.5
-      uses: leafo/gh-actions-lua@v10
+      uses: leafo/gh-actions-lua@v11
       with:
         luaVersion: "5.1.5"
 
     - name: Install Luarocks
-      uses: leafo/gh-actions-luarocks@v4
+      uses: leafo/gh-actions-luarocks@v5
 
     - name: Install Lua dependencies
       run: |
