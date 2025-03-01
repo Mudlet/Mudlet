@@ -71,8 +71,8 @@ void MMCPServer::receiveFromPlayer(std::string& str)
 void MMCPServer::sendSnoopData(std::string& line)
 {
     //Note: Fore and Back colors use MudMaster color indices which are NOT the same as
-    //		ANSI color indices.  Don't ask me why. So I'll just use background BLACK
-    //		foreground WHITE, defined in MudMaster Colors.h
+    //      ANSI color indices.  Don't ask me why. So I'll just use background BLACK
+    //      foreground WHITE, defined in MudMaster Colors.h
 
     const QString outData = qsl("%1%2%3\n%4%5")
                                     .arg(static_cast<char>(SnoopData))
@@ -874,10 +874,13 @@ void MMCPServer::sendPublicConnections(MMCPClient* pClient)
                                        .prepend(static_cast<char>(ConnectionList))
                                        .append(static_cast<char>(End));
         pClient->writeData(cmdStr);
-    } /* else {
+    }
+    /*
+    else {
         // Not sure about this, but how else would a peer know that there aren't any connections?
         pClient->writeData(qsl("%1%2").arg(static_cast<char>(ConnectionList), static_cast<char>(End)));
-    } */
+    }
+    */
 }
 
 /**
