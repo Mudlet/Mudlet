@@ -1437,7 +1437,6 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
-    mFORCE_SAVE_ON_EXIT->setChecked(false);
 
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
