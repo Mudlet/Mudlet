@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024 by Stephen Lyons            #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -107,8 +107,19 @@ set(APP_VERSION 4.19.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
     set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
 else()
-    set(BUILD_VALUE "-dev-${GIT_SHA1}")
+  set(BUILD_VALUE "-MMCP-${GIT_SHA1}")
 endif()
+
+  # PLACEMARKER: revert "MMCP" back to "dev" in the next three lines before merging this code into the main development branch:
+  #file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-MMCP-${GIT_SHA1}")
+  #message(STATUS "Value written to app-build.txt file: -MMCP-${GIT_SHA1}")
+  #set(APP_BUILD "-MMCP" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+  # Core dev team setting things up for a release should comment out the above
+  # three lines and uncomment these below - note that the app-build.txt must not
+  # contain anything (other than whitespace) for a RELEASE build:
+  # file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+  # message(STATUS "Value written to app-build.txt file: {nothing}")
+  # set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 
 # Write to app-build.txt and set APP_BUILD
 file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
@@ -143,13 +154,29 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
+                        OPTION_VARIABLE USE_QT6
+                        READABLE_NAME "build with Qt6 (if installed)")
 
-find_package(Qt6 6.4.0 REQUIRED)
+if(USE_QT6)
+  find_package(
+          Qt6 6.2.0
+          QUIET)
+  if(NOT Qt6_FOUND)
+    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
+  endif()
+endif()
 
+# Set Qt version for src, test, translations and communi
+set(WITH_QT6 ${Qt6_FOUND} CACHE BOOL "Whether to build with Qt6 or Qt5.")
 # Set Qt version for edbee-lib and dblsqd
-option(BUILD_WITH_QT5 "" OFF)
+if(WITH_QT6)
+  option(BUILD_WITH_QT5 "" OFF)
+else()
+  option(BUILD_WITH_QT5 "" ON)
+endif()
 # Set Qt version for qtkeychain
-option(BUILD_WITH_QT6 "" ON)
+option(BUILD_WITH_QT6 "" ${WITH_QT6})
 
 include(InitGitSubmodule)
 

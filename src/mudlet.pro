@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2025 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2024 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -36,8 +36,8 @@
 #                                                                          #
 ############################################################################
 
-if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 1)) {
-    error("Mudlet requires Qt 6.0 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 14)) {
+    error("Mudlet requires Qt 5.14 or later")
 }
 
 # Including IRC Library
@@ -63,8 +63,13 @@ include(../3rdparty/communi/communi.pri)
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# c++20 for Qt 6
-CONFIG += c++20
+# enable C++20 for builds.
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
+    QMAKE_CXXFLAGS += -std=c++20
+} else {
+    # c++2a for Qt 5 and c++20 for Qt 6
+    CONFIG += c++2a
+}
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -80,7 +85,7 @@ win32 {
     DEFINES += INCLUDE_WINSOCK2
 }
 
-QT += network uitools multimedia multimediawidgets gui concurrent
+QT += network uitools multimedia gui concurrent
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
@@ -123,7 +128,8 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
     BUILD = $${BUILD}-$${GIT_SHA1}
 } else {
-    BUILD = "-dev-"$${GIT_SHA1}
+# PLACEMARKER: revert "MMCP" back to "dev" before merging this code into the main development branch:
+    BUILD = "-MMCP-"$${GIT_SHA1}
 }
 
 # Write BUILD to app-build.txt, note that this adds a newline to the file
@@ -171,7 +177,9 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
+
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
@@ -236,7 +244,7 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 # build will fail both at the compilation and the linking stages.
 OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
 isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
-  DEFINES += INCLUDE_OWN_QT6_KEYCHAIN
+  DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -370,15 +378,6 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
     isEmpty( MINGW_BASE_DIR_TEST ) {
-        # 32-BIT Build systems have been obsolete since 2020/05/15
-        # https://www.msys2.org/news/#2020-05-17-32-bit-msys2-no-longer-actively-supported
-        #
-        # 32-Bit Targets have now been dropped - whilst a temporary reprieve
-        # for some Qt libraries that Mudlet needed was granted they are no
-        # longer available:
-        # https://www.msys2.org/news/#2023-12-13-starting-to-drop-some-32-bit-packages
-        # although it might be possible for dedicated parties to build them
-        # locally for a while:
         error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
         "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
         "application build) typically this is one of:\\n"\
@@ -531,7 +530,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
@@ -546,7 +545,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
@@ -582,7 +581,7 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri")
     } else {
@@ -647,6 +646,9 @@ SOURCES += \
     LuaInterface.cpp \
     main.cpp \
     mapInfoContributorManager.cpp \
+	MMCPServer.cpp \
+	MMCPClient.cpp \
+    TLuaInterpreterMMCP.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
@@ -776,6 +778,9 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
+	MMCP.h \
+	MMCPServer.h \
+	MMCPClient.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
@@ -927,9 +932,9 @@ contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \
         mudlet_fonts_common.qrc
 
-    linux|freebsd {
+    linux {
         RESOURCES += \
-            mudlet_fonts_posix.qrc
+            mudlet_fonts_linux.qrc
     }
 
     !build_pass{
@@ -982,12 +987,16 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     }
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     !build_pass{
         message("Including own copy of QtKeyChain library code in this configuration")
     }
 } else {
-    LIBS += -lqt6keychain
+    lessThan(QT_MAJOR_VERSION,6) {
+        LIBS += -lqt5keychain
+    } else {
+        LIBS += -lqt6keychain
+    }
     !build_pass{
         message("Linking with system QtKeyChain library code in this configuration")
     }

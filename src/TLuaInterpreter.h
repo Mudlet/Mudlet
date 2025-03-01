@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2023, 2025 by Stephen Lyons             *
+ *   Copyright (C) 2013-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -201,6 +201,28 @@ public:
     static int deleteMapLabel(lua_State*);
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
+    static int chat(lua_State*);
+    static int chatAll(lua_State*);
+    static int chatAllowSnoop(lua_State*);
+    static int chatAccept(lua_State*);
+    static int chatCall(lua_State*);
+    static int chatDeny(lua_State*);
+    static int chatDoNotDisturb(lua_State*);
+    static int chatEmoteAll(lua_State*);
+    static int chatGroup(lua_State*);
+    static int chatIgnore(lua_State*);
+    static int chatList(lua_State*);
+    static int chatName(lua_State*);
+    static int chatPing(lua_State*);
+    static int chatPeek(lua_State*);
+    static int chatPrivate(lua_State*);
+    static int chatServe(lua_State*);
+    static int chatSetGroup(lua_State*);
+    static int chatSideChannel(lua_State* L);
+    static int chatSnoop(lua_State*);
+    static int chatStartServer(lua_State*);
+    static int chatStopServer(lua_State*);
+    static int chatUnChat(lua_State*);
     static int sendIrc(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);
@@ -450,22 +472,12 @@ public:
     static int receiveMSP(lua_State*);
     static int loadMusicFile(lua_State*);
     static int loadSoundFile(lua_State*);
-    static int loadVideoFile(lua_State*);
     static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
-    static int playVideoFile(lua_State*);
     static int getPlayingMusic(lua_State*);
     static int getPlayingSounds(lua_State*);
-    static int getPlayingVideos(lua_State*);
-    static int getPausedSounds(lua_State*);
-    static int getPausedMusic(lua_State*);
-    static int getPausedVideos(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
-    static int stopVideos(lua_State*);
-    static int pauseSounds(lua_State*);
-    static int pauseMusic(lua_State*);
-    static int pauseVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -682,7 +694,6 @@ public:
     static int getProfiles(lua_State*);
     static int loadProfile(lua_State*);
     static int closeProfile(lua_State*);
-    static int getCollisionLocationsInArea(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -757,31 +768,21 @@ private:
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     static void pushMapLabelPropertiesToLua(lua_State*, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
-    static int loadMediaFileAsOrderedArguments(lua_State*, const char*);
-    static int loadMediaFileAsTableArgument(lua_State*, const char*);
-    static int playMusicFileAsOrderedArguments(lua_State*, const char*);
-    static int playMusicFileAsTableArgument(lua_State*, const char*);
-    static int playSoundFileAsOrderedArguments(lua_State*, const char*);
-    static int playSoundFileAsTableArgument(lua_State*, const char*);
-    static int playVideoFileAsTableArgument(lua_State*, const char*);
+    static int loadMediaFileAsOrderedArguments(lua_State*);
+    static int loadMediaFileAsTableArgument(lua_State*);
+    static int playMusicFileAsOrderedArguments(lua_State*);
+    static int playMusicFileAsTableArgument(lua_State*);
+    static int playSoundFileAsOrderedArguments(lua_State*);
+    static int playSoundFileAsTableArgument(lua_State*);
     static void processPlayingMediaTable(lua_State*, TMediaData&);
-    static int getPlayingMusicAsOrderedArguments(lua_State*, const char*);
-    static int getPlayingMusicAsTableArgument(lua_State*, const char*);
-    static int getPlayingSoundsAsOrderedArguments(lua_State*, const char*);
-    static int getPlayingSoundsAsTableArgument(lua_State*, const char*);
-    static int getPlayingVideosAsTableArgument(lua_State*, const char*);
-    static void processPausedMediaTable(lua_State*, TMediaData&);
-    static int getPausedSoundsAsTableArgument(lua_State*, const char*);
-    static int getPausedMusicAsTableArgument(lua_State*, const char*);
-    static int getPausedVideosAsTableArgument(lua_State*, const char*);
-    static int stopMusicAsOrderedArguments(lua_State*, const char*);
-    static int stopMusicAsTableArgument(lua_State*, const char*);
-    static int stopSoundsAsOrderedArguments(lua_State*, const char*);
-    static int stopSoundsAsTableArgument(lua_State*, const char*);
-    static int stopVideosAsTableArgument(lua_State*, const char*);
-    static int pauseSoundsAsTableArgument(lua_State*, const char*);
-    static int pauseMusicAsTableArgument(lua_State*, const char*);
-    static int pauseVideosAsTableArgument(lua_State*, const char*);
+    static int getPlayingMusicAsOrderedArguments(lua_State*);
+    static int getPlayingMusicAsTableArgument(lua_State*);
+    static int getPlayingSoundsAsOrderedArguments(lua_State*);
+    static int getPlayingSoundsAsTableArgument(lua_State*);
+    static int stopMusicAsOrderedArguments(lua_State*);
+    static int stopMusicAsTableArgument(lua_State*);
+    static int stopSoundsAsOrderedArguments(lua_State*);
+    static int stopSoundsAsTableArgument(lua_State*);
     static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
     static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
     static void parseHintsTable(lua_State*, const char*, int&, QStringList&);

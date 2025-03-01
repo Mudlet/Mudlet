@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020, 2023, 2025 by Stephen Lyons            #
+#    Copyright (C) 2015-2018, 2020, 2023 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -31,17 +31,17 @@ endif()
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
-  if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-    list(APPEND mudlet_RCCS mudlet_fonts_posix.qrc)
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
   endif()
 endif()
 
 if(WIN32)
   # APP_BUILD should now be be available
 
-  if(APP_BUILD matches "-ptb.+")
+  if("${APP_BUILD}" MATCHES "-ptb.+")
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  elseif(("${APP_BUILD}" MATCHES "-dev.+") OR ("${APP_BUILD}" MATCHES "-test.+"))
     # The above test may not be correct as it won't pick up builds where
     # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
     # "Packagers" they will likely want the original icon anyhow for their
@@ -98,6 +98,9 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
+    MMCPServer.cpp
+    MMCPClient.cpp
+    TLuaInterpreterMMCP.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
@@ -124,11 +127,11 @@ set(mudlet_SRCS
     TKey.cpp
     TLabel.cpp
     TLinkStore.cpp
-
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
+    TLuaInterpreterMMCP.cpp
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
@@ -187,17 +190,15 @@ set(mudlet_SRCS
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
   # Sparkle updater for macOS
-  if(USE_UPDATER)
-    list(APPEND mudlet_SRCS sparkleupdater.mm)
-    list(APPEND mudlet_HDRS sparkleupdater.h)
-    set_source_files_properties(
-      src/sparkleupdater.mm
-      src/sparkleupdater.h
-      PROPERTIES
-      LANGUAGE OBJCXX
-      COMPILE_OPTIONS "-fobjc-arc"
-  )
-  endif()
+  list(APPEND mudlet_SRCS sparkleupdater.mm)
+  list(APPEND mudlet_HDRS sparkleupdater.h)
+  set_source_files_properties(
+    src/sparkleupdater.mm
+    src/sparkleupdater.h
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
@@ -281,6 +282,9 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MMCP.h
+    MMCPServer.h
+    MMCPClient.h
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
@@ -419,36 +423,65 @@ set(USE_SANITIZER
 add_sanitizer_support(${USE_SANITIZER})
 message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
 
-find_package(Qt6 6.4.0 REQUIRED
-    COMPONENTS Core
-               Multimedia
-               MultimediaWidgets
-               Network
-               OpenGL
-               UiTools
-               Widgets
-               Concurrent
-               Core5Compat)
 
-find_package(Qt6 COMPONENTS TextToSpeech QUIET)
+if(WITH_QT6)
+find_package(
+  Qt6 6.2.0 REQUIRED
+  COMPONENTS Core
+             Multimedia
+             Network
+             OpenGL
+             UiTools
+             Widgets
+             Concurrent
+             Core5Compat)
+  find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
-message(STATUS "Qt version: ${Qt6Core_VERSION}")
+  message(STATUS "Qt version: ${Qt6Core_VERSION}")
 
-set(QT_MAJOR_VERSION 6)
-set(QT_LIBS Qt6::Concurrent
+  set(QT_MAJOR_VERSION 6)
+  set(QT_LIBS Qt6::Concurrent
               Qt6::Core
               Qt6::Network
               Qt6::Multimedia
-              Qt6::MultimediaWidgets
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
               Qt6::Core5Compat
               qt6keychain)
 
-if(Qt6TextToSpeech_FOUND)
-  list(APPEND QT_LIBS Qt6::TextToSpeech)
-  message(STATUS "Using TextToSpeech module")
+  if(Qt6TextToSpeech_FOUND)
+    list(APPEND QT_LIBS Qt6::TextToSpeech)
+    message(STATUS "Using TextToSpeech module")
+  endif()
+else()
+  find_package(
+          Qt5 5.14 REQUIRED
+          COMPONENTS Core
+          Multimedia
+          Network
+          OpenGL
+          UiTools
+          Widgets
+          Concurrent)
+  find_package(Qt5 COMPONENTS TextToSpeech QUIET)
+
+  message(STATUS "Qt version: ${Qt5Core_VERSION}")
+
+  set(QT_MAJOR_VERSION 5)
+  set(QT_LIBS Qt5::Concurrent
+              Qt5::Core
+              Qt5::Network
+              Qt5::Multimedia
+              Qt5::OpenGL
+              Qt5::UiTools
+              Qt5::Widgets
+              qt5keychain)
+
+  if(Qt5TextToSpeech_FOUND)
+    list(APPEND QT_LIBS Qt5::TextToSpeech)
+    message(STATUS "Using TextToSpeech module")
+  endif()
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -576,7 +609,7 @@ target_compile_definitions(mudlet
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h

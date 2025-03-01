@@ -1065,8 +1065,6 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWrapAt = readElementText().toInt();
             } else if (name() == qsl("wrapIndentCount")) {
                 pHost->mWrapIndentCount = readElementText().toInt();
-            } else if (name() == qsl("wrapHangingIndentCount")) {
-                pHost->mWrapHangingIndentCount = readElementText().toInt();
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
@@ -1161,10 +1159,14 @@ void XMLimport::readHost(Host* pHost)
 #endif
             } else if (name() == qsl("mDisplayFont")) {
                 pHost->setDisplayFontFromString(readElementText());
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-                // On GNU/Linux and FreeBSD ensure that emojis are displayed in
-                // colour even if this font doesn't support it:
+#if defined(Q_OS_LINUX)
+                // On Linux ensure that emojis are displayed in colour even if
+                // this font doesn't support it:
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+#endif
+#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                // Add Apple Color Emoji fallback.
+                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
 #endif
                 pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {
@@ -1290,6 +1292,8 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("MMCP")) {
+                readMMCPOptions();
             } else {
                 readUnknownElement(qsl("Host"));
             }
@@ -2072,6 +2076,22 @@ void XMLimport::readStopWatchMap()
         }
     }
 
+}
+
+void XMLimport::readMMCPOptions() {
+
+    mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
+    mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
+    mpHost->mMMCPChatPrefix = attributes().value(qsl("chatPrefix")).toString();
+    mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
+    mpHost->mMMCPAllowConnectionRequests = attributes().value(qsl("allowConnectionRequests")) == YES;
+    mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
+    mpHost->mMMCPPrefixEmotes = attributes().value(qsl("prefixEmotes")) == YES;
+    mpHost->mMMCPAddChatMessageNewline = attributes().value(qsl("chatMessageNewline")) == YES;
+    mpHost->mMMCPAutoAcceptCalls = attributes().value(qsl("autoAcceptCalls")) == YES;
+
+    // MMCP is a self-closing tag, need to call readNext to move along..
+    readNext();
 }
 
 void XMLimport::readMapInfoContributor()

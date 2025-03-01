@@ -70,6 +70,7 @@ class TConsole;
 class TMainConsole;
 class dlgNotepad;
 class TMap;
+class MMCPServer;
 class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
@@ -249,6 +250,8 @@ public:
 
     void incomingStreamProcessor(const QString& paragraph, int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
+    void postMMCPMessage(const QString&);
+    void postChatChannelMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
     void enableTrigger(const QString&);
@@ -333,12 +336,21 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    QString getMMCPChatName();
+    quint16 getMMCPPort();
+    QString getMMCPChatPrefix();
+    bool getMMCPAutoStartServer();
+    bool getMMCPAllowConnectionRequests();
+    bool getMMCPAllowPeekRequests();
+    bool getMMCPPrefixEmotes();
+    bool getMMCPAddChatMessageNewline();
+    bool getMMCPAutoAcceptCalls();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
-    QString mediaLocationGMCP() const;
+    QString getMediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
-    QString mediaLocationMSP() const;
+    QString getMediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
@@ -426,13 +438,9 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
-    bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled) { 
-        mF3SearchEnabled = enabled;
-        if (mpConsole) {
-            mpConsole->setF3SearchEnabled(enabled);
-        }
-    }
+
+    void initMMCPServer();
+    void setMMCPChatName(const QString&);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -456,7 +464,7 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
-    bool mEnableMSDP = false;
+    bool mEnableMSDP = true;
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
@@ -563,7 +571,6 @@ public:
     bool mUSE_UNIX_EOL;
     int mWrapAt;
     int mWrapIndentCount;
-    int mWrapHangingIndentCount;
 
     bool mEditorAutoComplete;
 
@@ -689,6 +696,7 @@ public:
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
+    MMCPServer *mmcpServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<QPointer<TToolBar>> mToolbarLayoutChanges;
@@ -736,7 +744,9 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
+
 
 private slots:
     void slot_purgeTemps();
@@ -840,6 +850,16 @@ private:
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
 
+    QString mMMCPChatName;
+    QString mMMCPChatPrefix;
+    quint16 mMMCPChatPort;
+    bool mMMCPAutostartServer;
+    bool mMMCPAllowConnectionRequests;
+    bool mMMCPAllowPeekRequests;
+    bool mMMCPPrefixEmotes;
+    bool mMMCPAddChatMessageNewline;
+    bool mMMCPAutoAcceptCalls;
+
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter
     // (true) or not (false):
@@ -928,9 +948,6 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
-
-    // Whether F3 search functionality is enabled
-    bool mF3SearchEnabled = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
