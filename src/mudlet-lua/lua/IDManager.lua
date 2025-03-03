@@ -12,7 +12,8 @@ end
 function IDMgr:register(name, typ, object)
   local reg = {
     timers = tempTimer,
-    events = registerAnonymousEventHandler
+    events = registerAnonymousEventHandler,
+    triggers = tempTrigger
   }
   self:stop(name, typ)
   local trigger, func, oneShot = object.trigger, object.func, object.oneShot
@@ -30,7 +31,8 @@ end
 function IDMgr:stop(name, typ)
   local killfuncs = {
     timers = killTimer,
-    events = killAnonymousEventHandler
+    events = killAnonymousEventHandler,
+    triggers = killTrigger
   }
   local object = self[typ][name]
   if not object then
@@ -86,12 +88,20 @@ function IDMgr:stopAllTimers()
   return self:stopAll("timers")
 end
 
+function IDMgr:stopAllTriggers()
+  return self:stopAll("triggers")
+end
+
 function IDMgr:deleteAllEvents()
   return self:deleteAll("events")
 end
 
 function IDMgr:deleteAllTimers()
   return self:deleteAll("timers")
+end
+
+function IDMgr:deleteAllTriggers()
+  return self:deleteAll("triggers")
 end
 
 function IDMgr:registerTimer(name, time, func, oneShot)
@@ -104,6 +114,11 @@ function IDMgr:registerEvent(name, event, func, oneShot)
   return self:register(name, "events", object)
 end
 
+function IDMgr:registerTrigger(name, substring, func, expireAfter)
+  local object = makeObject(substring, func, expireAfter or nil)
+  return self:register(name, "triggers", object)
+end
+
 function IDMgr:stopTimer(name)
   return self:stop(name, "timers")
 end
@@ -112,8 +127,16 @@ function IDMgr:stopEvent(name)
   return self:stop(name, "events")
 end
 
+function IDMgr:stopTrigger(name)
+  return self:stop(name, "triggers")
+end
+
 function IDMgr:resumeTimer(name)
   return self:resume(name, "timers")
+end
+
+function IDMgr:resumeTrigger(name)
+  return self:resume(name, "triggers")
 end
 
 function IDMgr:resumeEvent(name)
@@ -128,9 +151,14 @@ function IDMgr:deleteEvent(name)
   return self:delete(name, "events")
 end
 
+function IDMgr:deleteTrigger(name)
+  return self:delete(name, "triggers")
+end
+
 function IDMgr:emergencyStop()
   self:stopAll("events")
   self:stopAll("timers")
+  self:stopAll("triggers")
   return true
 end
 
@@ -146,10 +174,17 @@ function IDMgr:getTimers()
   return timerNames
 end
 
+function IDMgr:getTriggers()
+  local triggerNames = table.keys(self.triggers)
+  table.sort(triggerNames)
+  return triggerNames
+end
+
 function IDMgr:new()
   local mgr = {
     events = {},
-    timers = {}
+    timers = {},
+    triggers = {}
   }
   setmetatable(mgr, self)
   self.__index = self
@@ -396,4 +431,105 @@ function deleteAllNamedTimers(user)
   end
   local mgr = getManager(user)
   return mgr:deleteAllTimers()
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedTrigger
+function registerNamedTrigger(user, name, substring, handler, expireAfter)
+  local funcName = "registerNamedTrigger"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
+  local ok, err = mgr:registerTrigger(name, substring, handler, expireAfter)
+  if ok then
+    return true
+  end
+  -- extract the error info from tempTrigger's error
+  -- increment argument number by 1 (to account for the leading 'name' parameter)
+  -- and then display it as our own error
+  local errMsg = extractUpstreamError("tempTrigger", err)
+  printError("registerNamedTrigger: " .. errMsg, true, true)
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopNamedTrigger
+function stopNamedTrigger(user, name)
+  local funcName = "stopNamedTrigger"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:stopTrigger(name)
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resumeNamedTrigger
+function resumeNamedTrigger(user, name)
+  local funcName = "resumeNamedTrigger"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:resumeTrigger(name)
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteNamedTrigger
+function deleteNamedTrigger(user, name)
+  local funcName = "deleteNamedTrigger"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:deleteTrigger(name)
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNamedTriggers
+function getNamedTriggers(user)
+  local funcName = "getNamedTriggers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:getTriggers()
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllNamedTriggers
+function stopAllNamedTriggers(user)
+  local funcName = "stopAllNamedTriggers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:stopAllTriggers()
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteAllNamedTriggers
+function deleteAllNamedTriggers(user)
+  local funcName = "deleteAllNamedTriggers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:deleteAllTriggers()
 end
