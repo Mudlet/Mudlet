@@ -41,6 +41,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QSaveFile>
+#include <QVideoWidget>
 #include <QWidget>
 #include "post_guard.h"
 
@@ -252,6 +253,7 @@ public:
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
+    int mHangingIndentCount = 0;
     QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
@@ -307,7 +309,7 @@ public:
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
-
+    QVideoWidget* mpVideoWidget = nullptr;
 
 public slots:
     void slot_searchBufferUp();
@@ -318,6 +320,8 @@ public slots:
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
     void slot_toggleSearchCaseSensitivity(bool);
 
+signals:
+    void resized(QResizeEvent* event);
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
@@ -326,6 +330,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
 
+    bool mAlertOnNewData = true;
 
 private slots:
     void slot_adjustAccessibleNames();

@@ -6,6 +6,7 @@
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2019, 2022. 2024 by Stephen Lyons                  *
  *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,17 +32,12 @@
 #include "TMediaPlaylist.h"
 
 #include "pre_guard.h"
+#include <memory> // std::shared_ptr
 #include <QAudioOutput>
 #include <QMediaPlayer>
 #include "post_guard.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-using QMediaPlayerPlaybackState = QMediaPlayer::State;
-#else
 using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
-#endif
-
-
 class TMediaPlayer
 {
 public:
@@ -49,42 +45,36 @@ public:
     : mMediaData()
     {}
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    : mpHost(pHost)
-    , mMediaData(mediaData)
-    , mMediaPlayer(new QMediaPlayer(pHost))
-    , mPlaylist(new TMediaPlaylist())
-    , initialized(true)
+    : mpHost(pHost),
+      mMediaData(mediaData),
+      mMediaPlayer(new QMediaPlayer(pHost)),
+      mPlaylist(new TMediaPlaylist),
+      initialized(true)
     {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         mMediaPlayer->setAudioOutput(new QAudioOutput());
-#endif
     }
     ~TMediaPlayer() = default;
 
-    TMediaData getMediaData() const { return mMediaData; }
+    TMediaData mediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
-    QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
+    QMediaPlayer* mediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
-    QMediaPlayerPlaybackState getPlaybackState() const {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return mMediaPlayer->state();
-#else
+    QMediaPlayer::PlaybackState getPlaybackState() const {
+        if (!mMediaPlayer) {
+            qWarning() << "TMediaPlayer::getPlaybackState() - mMediaPlayer is nullptr!";
+            return QMediaPlayer::StoppedState; // Safe default state
+        }
         return mMediaPlayer->playbackState();
-#endif
     }
     void setVolume(int volume) const {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return mMediaPlayer->setVolume(volume);
-#else
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
-#endif
     }
     TMediaPlaylist* playlist() const {
         return mPlaylist;
     }
     void setPlaylist(TMediaPlaylist* playlist) {
         if (mPlaylist != playlist) {
-            delete mPlaylist;
+            if (mPlaylist) delete mPlaylist;
             mPlaylist = playlist;
         }
     }
@@ -92,8 +82,8 @@ public:
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer = nullptr;
-    TMediaPlaylist* mPlaylist = nullptr;
+    QMediaPlayer* mMediaPlayer;
+    TMediaPlaylist* mPlaylist;
     bool initialized = false;
 };
 
@@ -108,6 +98,8 @@ public:
 
     void playMedia(TMediaData& mediaData);
     QList<TMediaData> playingMedia(TMediaData& mediaData);
+    QList<TMediaData> pausedMedia(TMediaData& mediaData);
+    void pauseMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
@@ -118,9 +110,14 @@ private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
+    bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
+    QList<std::shared_ptr<TMediaPlayer>>& findMediaPlayersByCriteria(const TMediaData& mediaData);
+    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
+    bool resume(TMediaData mediaData);
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
+    QString getStreamUrl(const TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
@@ -130,18 +127,19 @@ private:
     bool processUrl(TMediaData& mediaData);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
-    QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
-    void connectMediaPlayer(TMediaPlayer& player);
-    void updateMediaPlayerList(TMediaPlayer& player);
-    TMediaPlayer getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
+    void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
+    void updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player);
+    std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
+    std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
-    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& pPlayer);
+    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
+    bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);
 
     void play(TMediaData& mediaData);
 
     static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
+    static int parseJSONByMediaInput(QJsonObject& json);
     static QString parseJSONByMediaFileName(QJsonObject& json);
     static int parseJSONByMediaVolume(QJsonObject& json);
     static int parseJSONByMediaFadeIn(QJsonObject& json);
@@ -155,21 +153,25 @@ private:
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
     static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
+    static TMediaData::MediaClose parseJSONByMediaClose(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
+    void parseJSONForMediaPause(QJsonObject& json);
     void parseJSONForMediaStop(QJsonObject& json);
 
     QPointer<Host> mpHost;
     QString mProfileName;
 
-    QList<TMediaPlayer> mMSPSoundList;
-    QList<TMediaPlayer> mMSPMusicList;
-    QList<TMediaPlayer> mGMCPSoundList;
-    QList<TMediaPlayer> mGMCPMusicList;
-    QList<TMediaPlayer> mAPISoundList;
-    QList<TMediaPlayer> mAPIMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mMSPSoundList;
+    QList<std::shared_ptr<TMediaPlayer>> mMSPMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mGMCPSoundList;
+    QList<std::shared_ptr<TMediaPlayer>> mGMCPMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mGMCPVideoList;
+    QList<std::shared_ptr<TMediaPlayer>> mAPISoundList;
+    QList<std::shared_ptr<TMediaPlayer>> mAPIMusicList;
+    QList<std::shared_ptr<TMediaPlayer>> mAPIVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;

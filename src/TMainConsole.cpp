@@ -211,13 +211,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             mLogFile.open(QIODevice::Append);
         }
         mLogStream.setDevice(&mLogFile);
-        // We have to set a codec here to convert the QString based QTextStream
-        // encoding (from UTF-16) to UTF-8 - by default a local 8-Bit one would
-        // be used, which is problematic on Windows for non-ASCII (or Latin1?)
-        // characters. The default in Qt6 is UTF-8:
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        out.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
+
         if (isMessageEnabled) {
             const QString message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
@@ -1091,7 +1085,7 @@ void TMainConsole::setProfileName(const QString& newName)
 {
     TConsole::setProfileName(newName);
 
-    for (auto pC : qAsConst(mSubConsoleMap)) {
+    for (const auto pC : std::as_const(mSubConsoleMap)) {
         pC->setProfileName(newName);
     }
 }
@@ -1152,9 +1146,18 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 {
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
+
     mTriggerEngineMode = true;
+    const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
+    const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
+
+    const int lastLineNumber = buffer.getLastLineNumber();
+    const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
+    if (mAlertOnNewData && isFromServer && bufferChanged) {
+        QApplication::alert(mudlet::self(), 0);
+    }
 
     // dequeues MXP events and raise them through the LuaInterpreter
     // TODO: move this somewhere else more appropriate

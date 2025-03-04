@@ -2381,16 +2381,11 @@ int TLuaInterpreter::setFont(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(font));
     }
 
-#if defined(Q_OS_LINUX)
-    // On Linux ensure that emojis are displayed in colour even if this font
-    // doesn't support it:
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
+    // if this font doesn't support it:
     QFont::insertSubstitution(font, qsl("Noto Color Emoji"));
     // TODO issue #4159: a nonexisting font breaks the console
-#endif
-
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Add Apple Color Emoji fallback.
-    QFont::insertSubstitution(font, qsl("Apple Color Emoji"));
 #endif
 
     auto console = CONSOLE(L, windowName);

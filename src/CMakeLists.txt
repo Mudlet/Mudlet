@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020, 2023 by Stephen Lyons                  #
+#    Copyright (C) 2015-2018, 2020, 2023, 2025 by Stephen Lyons            #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -31,8 +31,8 @@ endif()
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
-  if(CMAKE_SYSTEM_NAME STREQUAL Linux)
-    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+    list(APPEND mudlet_RCCS mudlet_fonts_posix.qrc)
   endif()
 endif()
 
@@ -419,65 +419,36 @@ set(USE_SANITIZER
 add_sanitizer_support(${USE_SANITIZER})
 message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
 
+find_package(Qt6 6.4.0 REQUIRED
+    COMPONENTS Core
+               Multimedia
+               MultimediaWidgets
+               Network
+               OpenGL
+               UiTools
+               Widgets
+               Concurrent
+               Core5Compat)
 
-if(WITH_QT6)
-find_package(
-  Qt6 6.2.0 REQUIRED
-  COMPONENTS Core
-             Multimedia
-             Network
-             OpenGL
-             UiTools
-             Widgets
-             Concurrent
-             Core5Compat)
-  find_package(Qt6 COMPONENTS TextToSpeech QUIET)
+find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
-  message(STATUS "Qt version: ${Qt6Core_VERSION}")
+message(STATUS "Qt version: ${Qt6Core_VERSION}")
 
-  set(QT_MAJOR_VERSION 6)
-  set(QT_LIBS Qt6::Concurrent
+set(QT_MAJOR_VERSION 6)
+set(QT_LIBS Qt6::Concurrent
               Qt6::Core
               Qt6::Network
               Qt6::Multimedia
+              Qt6::MultimediaWidgets
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
               Qt6::Core5Compat
               qt6keychain)
 
-  if(Qt6TextToSpeech_FOUND)
-    list(APPEND QT_LIBS Qt6::TextToSpeech)
-    message(STATUS "Using TextToSpeech module")
-  endif()
-else()
-  find_package(
-          Qt5 5.14 REQUIRED
-          COMPONENTS Core
-          Multimedia
-          Network
-          OpenGL
-          UiTools
-          Widgets
-          Concurrent)
-  find_package(Qt5 COMPONENTS TextToSpeech QUIET)
-
-  message(STATUS "Qt version: ${Qt5Core_VERSION}")
-
-  set(QT_MAJOR_VERSION 5)
-  set(QT_LIBS Qt5::Concurrent
-              Qt5::Core
-              Qt5::Network
-              Qt5::Multimedia
-              Qt5::OpenGL
-              Qt5::UiTools
-              Qt5::Widgets
-              qt5keychain)
-
-  if(Qt5TextToSpeech_FOUND)
-    list(APPEND QT_LIBS Qt5::TextToSpeech)
-    message(STATUS "Using TextToSpeech module")
-  endif()
+if(Qt6TextToSpeech_FOUND)
+  list(APPEND QT_LIBS Qt6::TextToSpeech)
+  message(STATUS "Using TextToSpeech module")
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -605,7 +576,7 @@ target_compile_definitions(mudlet
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h

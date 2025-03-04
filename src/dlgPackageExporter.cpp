@@ -614,7 +614,7 @@ void dlgPackageExporter::slot_exportPackage()
         } else {
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=]() {
+            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
                 mExportingPackage = false;
                 checkToEnableExportButton();
 
@@ -878,10 +878,6 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     QSaveFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
-        // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        out.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
         out << mPackageConfig;
         if (!configFile.commit()) {
             qDebug() << "dlgPackageExporter::writeConfigFile: error saving package config data: " << configFile.errorString();
@@ -1148,14 +1144,14 @@ void dlgPackageExporter::slot_addFiles()
     if (dialogListView) {
         dialogListView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         //button would be disabled if no folder is selected
-        connect(dialogListView, &QListView::clicked, this, [=] { button->setEnabled(true); });
+        connect(dialogListView, &QListView::clicked, this, [=, this] { button->setEnabled(true); });
     }
     QTreeView* dialogTreeView = fDialog->findChild<QTreeView*>();
     if (dialogTreeView) {
         dialogTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        connect(dialogTreeView, &QTreeView::clicked, this, [=] { button->setEnabled(true); });
+        connect(dialogTreeView, &QTreeView::clicked, this, [=, this] { button->setEnabled(true); });
     }
-    connect(button, &QPushButton::clicked, this, [=] { fDialog->QDialog::accept(); });
+    connect(button, &QPushButton::clicked, this, [=, this] { fDialog->QDialog::accept(); });
     if (fDialog->exec()) {
         selectedFiles = fDialog->selectedFiles();
     }
