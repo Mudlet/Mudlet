@@ -2043,9 +2043,6 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Delete map:</string>
             </property>
-            <property name="buddy">
-             <cstring>checkBox_enablMapDeleteButton</cstring>
-            </property>
            </widget>
           </item>
           <item row="4" column="1">
@@ -2055,13 +2052,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="text">
              <string comment="Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox">delete</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QCheckBox" name="checkBox_enablMapDeleteButton">
-            <property name="text">
-             <string comment="Text for a checkbox adjacent to the delete map button, ensure the text 'quoted' matches the word or words on the button">enable 'delete' button</string>
             </property>
            </widget>
           </item>
@@ -4272,7 +4262,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
-  <tabstop>comboBox_commandLineHistorySaveSize</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
@@ -4330,7 +4319,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>
   <tabstop>pushButton_loadHistoricMap</tabstop>
   <tabstop>pushButton_deleteMap</tabstop>
-  <tabstop>checkBox_enablMapDeleteButton</tabstop>
   <tabstop>pushButton_chooseProfiles</tabstop>
   <tabstop>pushButton_copyMap</tabstop>
   <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
