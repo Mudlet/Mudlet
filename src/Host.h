@@ -456,7 +456,7 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
-    bool mEnableMSDP = true;
+    bool mEnableMSDP = false;
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
