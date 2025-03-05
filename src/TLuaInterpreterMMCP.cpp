@@ -454,15 +454,15 @@ int TLuaInterpreter::getChatList(lua_State* L) {
     lua_newtable(L);
 
     int i = 0;
-    QListIterator<QPointer<MMCPClient>> it(clients);
+    QListIterator<QPointer<MMCPClient>> it(*clients);
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
 
         lua_pushnumber(L, ++i);
         lua_newtable(L);
         lua_pushnumber(L, pClient->id());
-        lua_pushstring(L, pClient->chatName());
-        lua_pushstring(L, pClient->host());
+        lua_pushstring(L, pClient->chatName().toUtf8().constData());
+        lua_pushstring(L, pClient->host().toUtf8().constData());
 
         lua_settable(L, -3);
     }
