@@ -223,6 +223,7 @@ public:
     static int chatStartServer(lua_State*);
     static int chatStopServer(lua_State*);
     static int chatUnChat(lua_State*);
+    static int getChatList(lua_State*);
     static int sendIrc(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);

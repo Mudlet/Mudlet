@@ -437,3 +437,35 @@ int TLuaInterpreter::chatUnChat(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
+
+int TLuaInterpreter::getChatList(lua_State* L) {
+    const Host& host = getHostFromLua(L);
+
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    QList<QPointer<MMCPClient>>* clients = pHost->mmcpServer->GetClients();
+    if (clients.IsEmpty()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_newtable(L);
+
+    int i = 0;
+    QListIterator<QPointer<MMCPClient>> it(pHost->mmcpServer->mPeersList);
+    while (it.hasNext()) {
+        MMCPClient* pClient = it.next();
+
+        lua_pushnumber(L, ++i);
+        lua_newtable(L);
+        lua_pushnumber(L, pClient->id());
+        lua_pushstring(L, pClient->chatName());
+        lua_pushstring(L, pClient->host());
+
+        lua_settable(L, -3);
+    }
+    lua_settable(L, -3);
+
+    return 1;
+}
