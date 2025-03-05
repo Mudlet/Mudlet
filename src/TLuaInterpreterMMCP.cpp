@@ -440,13 +440,13 @@ int TLuaInterpreter::chatUnChat(lua_State* L)
 }
 
 int TLuaInterpreter::getChatList(lua_State* L) {
-    const Host& host = getHostFromLua(L);
+    Host* pHost = &getHostFromLua(L);
 
-    if (!host.mmcpServer) {
-        host.initMMCPServer();
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
     }
 
-    QList<QPointer<MMCPClient>>* clients = host.mmcpServer->getClients();
+    QList<QPointer<MMCPClient>>* clients = pHost->mmcpServer->getClients();
     if (clients->isEmpty()) {
         lua_pushnil(L);
         return 1;
