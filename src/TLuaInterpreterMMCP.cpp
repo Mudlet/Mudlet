@@ -23,6 +23,7 @@
 
 #include "Host.h"
 #include "MMCP.h"
+#include "MMCPClient.h"
 #include "MMCPServer.h"
 #include "TLuaInterpreter.h"
 
@@ -441,19 +442,19 @@ int TLuaInterpreter::chatUnChat(lua_State* L)
 int TLuaInterpreter::getChatList(lua_State* L) {
     const Host& host = getHostFromLua(L);
 
-    if (!pHost->mmcpServer) {
-        pHost->initMMCPServer();
+    if (!host.mmcpServer) {
+        host.initMMCPServer();
     }
 
-    QList<QPointer<MMCPClient>>* clients = pHost->mmcpServer->GetClients();
-    if (clients.IsEmpty()) {
+    QList<QPointer<MMCPClient>>* clients = host.mmcpServer->getClients();
+    if (clients->isEmpty()) {
         lua_pushnil(L);
         return 1;
     }
     lua_newtable(L);
 
     int i = 0;
-    QListIterator<QPointer<MMCPClient>> it(pHost->mmcpServer->mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(clients);
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
 
