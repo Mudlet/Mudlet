@@ -5353,6 +5353,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "chatStartServer", TLuaInterpreter::chatStartServer);
     lua_register(pGlobalLua, "chatStopServer", TLuaInterpreter::chatStopServer);
     lua_register(pGlobalLua, "chatUnChat", TLuaInterpreter::chatUnChat);
+    lua_register(pGlobalLua, "getChatList", TLuaInterpreter::getChatList);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
