@@ -3322,22 +3322,22 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
         alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
     }
 
-    if ((r < 0)||(r > 255)) {
+    if ((r < 0) || (r > 255)) {
         lua_pushnil(L);
         lua_pushfstring(L, "red color component %d out of range {0 to 255}", r);
         return 2;
     }
-    if ((g < 0)||(g > 255)) {
+    if ((g < 0) || (g > 255)) {
         lua_pushnil(L);
         lua_pushfstring(L, "green color component %d out of range {0 to 255}", g);
         return 2;
     }
-    if ((b < 0)||(b > 255)) {
+    if ((b < 0) || (b > 255)) {
         lua_pushnil(L);
         lua_pushfstring(L, "blue color component %d out of range {0 to 255}", b);
         return 2;
     }
-    if ((alpha < 0)||(alpha > 255)) {
+    if ((alpha < 0) || (alpha > 255)) {
         lua_pushnil(L);
         lua_pushfstring(L, "alpha color component %d out of range {0 to 255}", alpha);
         return 2;
