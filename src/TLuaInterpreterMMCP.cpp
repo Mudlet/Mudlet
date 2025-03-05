@@ -458,15 +458,27 @@ int TLuaInterpreter::getChatList(lua_State* L) {
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
 
-        lua_pushnumber(L, ++i);
+        // Create a new inner table for the client.
         lua_newtable(L);
-        lua_pushnumber(L, pClient->id());
-        lua_pushstring(L, pClient->chatName().toUtf8().constData());
-        lua_pushstring(L, pClient->host().toUtf8().constData());
 
+        lua_pushstring(L, "id");
+        lua_pushnumber(L, pClient->id());
         lua_settable(L, -3);
+
+        lua_pushstring(L, "name");
+        lua_pushstring(L, pClient->chatName().toUtf8().constData());
+        lua_settable(L, -3);
+
+
+        lua_pushstring(L, "host");
+        lua_pushstring(L, pClient->host().toUtf8().constData());
+        lua_settable(L, -3);
+
+        
+        lua_pushnumber(L, ++i); // Push outer table key (index)
+        lua_insert(L, -2);  // Swap the inner table and key so that the table is on top
+        lua_settable(L, -3);;   // Set the inner table in the outer table.
     }
-    lua_settable(L, -3);
 
     return 1;
 }
