@@ -4027,7 +4027,7 @@ or your nameservers are not working properly.</source>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
       <translation>[ 경고 ] - 소켓이 연결이 끊어졌습니다.
-이유: </translation>
+           이유: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
@@ -6587,37 +6587,37 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="912"/>
       <source>Protocols</source>
-      <translation type="unfinished"/>
+      <translation>프로토콜</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="916"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP: 일반 머드 통신 프로토콜</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="921"/>
       <source>MSDP: Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP: 머드 서버 데이터 프로토콜</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="926"/>
       <source>MSSP: Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP: 머드 서버 상태 프로토콜</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="931"/>
       <source>MSP: Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP: 머드 사운드 프로토콜</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="936"/>
       <source>MTTS: Mud Terminal Type Standard</source>
-      <translation type="unfinished"/>
+      <translation>MTTS: 머드 터미널 유형 표준</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="941"/>
       <source>MNES: Mud New-Environ Standard</source>
-      <translation type="unfinished"/>
+      <translation>MNES: 머드 새로운 환경 표준</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1823"/>
@@ -13075,12 +13075,12 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="303"/>
       <source>Choose protocols</source>
-      <translation type="unfinished"/>
+      <translation>프로토콜 선택</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="310"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;이 또한 프로토콜에서 GMCP가 활성화되어야 합니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1968"/>
