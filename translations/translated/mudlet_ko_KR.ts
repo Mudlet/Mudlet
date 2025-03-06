@@ -10305,7 +10305,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="3207"/>
       <location filename="../src/mudlet.cpp" line="3210"/>
       <source>Mute all media</source>
-      <translation>모든 미디어 소리끄기</translation>
+      <translation>소리끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
