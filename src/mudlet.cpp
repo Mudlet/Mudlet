@@ -268,9 +268,15 @@ void mudlet::init()
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
+    mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
+    mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
+    mpActionCloseApplication->setIconText(tr("Close Mudlet"));
+    mpActionCloseApplication->setObjectName(qsl("close_application"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
     mpButtonConnect->addAction(mpActionCloseProfile);
+    mpButtonConnect->addAction(mpActionCloseApplication);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -526,6 +532,8 @@ void mudlet::init()
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_closeCurrentProfile);
+    connect(dactionCloseApplication, &QAction::triggered, this, &mudlet::close);
+    connect(mpActionCloseApplication, &QAction::triggered, this, &mudlet::close);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -1940,7 +1948,8 @@ Host* mudlet::getActiveHost()
 }
 
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
-// ourselves):
+// ourselves or the user hits the close application menu option or action on
+// the "Connect" buttion):
 void mudlet::closeEvent(QCloseEvent* event)
 {
     qDebug() << "mudlet::closeEvent(...) INFO - called!";
