@@ -447,8 +447,6 @@ void dlgProfilePreferences::disableHostDetails()
     label_loadMap->setEnabled(false);
     pushButton_loadMap->setEnabled(false);
     label_deleteMap->setEnabled(false);
-    checkBox_enablMapDeleteButton->setEnabled(false);
-    checkBox_enablMapDeleteButton->setChecked(false);
     pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
@@ -571,7 +569,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_loadMap->setEnabled(true);
     pushButton_loadMap->setEnabled(true);
     label_deleteMap->setEnabled(true);
-    checkBox_enablMapDeleteButton->setEnabled(true);
+    pushButton_deleteMap->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
 
@@ -1021,7 +1019,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
 
-        connect(checkBox_enablMapDeleteButton, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleMapDeleteButton);
         connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
@@ -4507,12 +4504,6 @@ void dlgProfilePreferences::slot_changeWrapAt()
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
-void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
-{
-    // Enable/Disable map deletion button:
-    pushButton_deleteMap->setEnabled(state);
-}
-
 void dlgProfilePreferences::slot_deleteMap()
 {
     Host* pHost = mpHost;
@@ -4521,7 +4512,6 @@ void dlgProfilePreferences::slot_deleteMap()
     }
 
     // Disable the button, but set it to be down until process is complete
-    pushButton_deleteMap->setEnabled(false);
     pushButton_deleteMap->setCheckable(true);
     pushButton_deleteMap->setChecked(true);
 
@@ -4539,9 +4529,6 @@ void dlgProfilePreferences::slot_deleteMap()
     // Reset the button but leave it disabled
     pushButton_deleteMap->setChecked(false);
     pushButton_deleteMap->setCheckable(false);
-
-    // Also reset the checkBox that enables the button:
-    checkBox_enablMapDeleteButton->setChecked(false);
 
     label_mapFileActionResult->setText(tr("Deleted map."));
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
