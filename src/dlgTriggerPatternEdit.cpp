@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,25 +21,46 @@
 
 
 #include "dlgTriggerPatternEdit.h"
+#include "TTrigger.h"
 
 #include "pre_guard.h"
 #include <QAction>
+#include <QDebug>
 #include "post_guard.h"
 
-dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF)
-: QWidget(pF)
-, mRow()
+dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
-
-    mAction_typeIndication = new QAction(this);
-    lineEdit_pattern->addAction(mAction_typeIndication, QLineEdit::LeadingPosition);
-
-    connect(comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged);
+    // delay the connection so the pattern type is available for the slot
+    connect(comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged, Qt::QueuedConnection);
 }
 
 void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 {
-    mAction_typeIndication->setIcon(comboBox_patternType->itemIcon(index));
+    label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
+
+    const bool firstRow = comboBox_patternType->itemData(0).toInt() == 0;
+    if (!firstRow) {
+        return;
+    }
+
+    switch (comboBox_patternType->currentIndex()) {
+    case REGEX_SUBSTRING:
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (anywhere in the game output)"));
+        break;
+    case REGEX_PERL:
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (as a regular expression pattern)"));
+        break;
+    case REGEX_BEGIN_OF_LINE_SUBSTRING:
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (from beginning of the line)"));
+        break;
+    case REGEX_EXACT_MATCH:
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Exact line to match"));
+        break;
+    case REGEX_LUA_CODE:
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Lua code to run (return true to match)"));
+        break;
+    }
 }

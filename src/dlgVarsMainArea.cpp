@@ -27,15 +27,16 @@
 #include "post_guard.h"
 
 extern "C" {
-#include <lua.h>
+    #include <lua.h>
 }
 
-dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
+dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
 
-    // Modify the normal QComboBoxes with customised data models that impliment
+    // Modify the normal QComboBoxes with customised data models that implement
     // https://stackoverflow.com/a/21376774/4805858 so that individual entries
     // can be "disabled":
     // Key type widget:

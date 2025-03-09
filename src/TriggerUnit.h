@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +25,6 @@
 
 #include "pre_guard.h"
 #include <QMultiMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -41,18 +41,23 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-    TriggerUnit(Host* pHost) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats(); }
+    explicit TriggerUnit(Host* pHost)
+    : mpHost(pHost)
+    , mMaxID(0)
+    , mModuleMember()
+    {}
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
-        QMutexLocker locker(&mTriggerUnitLock);
         return mTriggerRootNodeList;
     }
 
+    void resetStats();
     TTrigger* getTrigger(int id);
     void removeAllTempTriggers();
     void reorderTriggersAfterPackageImport();
     TTrigger* findTrigger(const QString&);
+    std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
     bool enableTrigger(const QString&);
     bool disableTrigger(const QString&);
     bool killTrigger(const QString& name);
@@ -64,36 +69,20 @@ public:
     void setTriggerStayOpen(const QString&, int);
     void stopAllTriggers();
     void reenableAllTriggers();
-    QString assembleReport();
+    std::tuple<QString, int, int, int, int, int> assembleReport();
     std::list<TTrigger*> mCleanupList;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
-    QMutex mTriggerUnitLock;
     void markCleanup(TTrigger* pT);
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
-    int statsTriggerTotal;
-    int statsTempTriggers;
-    int statsPatterns;
-    int statsActiveTriggers;
-    int statsActiveTriggersMax;
-    int statsActiveTriggersMin;
-    int statsActiveTriggersAverage;
-    int statsTempTriggersCreated;
-    int statsTempTriggersKilled;
-    int statsAverageLineProcessingTime;
-    int statsMaxLineProcessingTime;
-    int statsMinLineProcessingTime;
-    int statsRegexTriggers;
     QList<TTrigger*> uninstallList;
 
 private:
     TriggerUnit() = default;
-
-    void initStats();
-    void _assembleReport(TTrigger*);
+    void assembleReport(TTrigger*);
     TTrigger* getTriggerPrivate(int id);
     void addTriggerRootNode(TTrigger* pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false);
     void addTrigger(TTrigger* pT);
@@ -105,6 +94,11 @@ private:
     std::list<TTrigger*> mTriggerRootNodeList;
     int mMaxID;
     bool mModuleMember;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
+    int statsPatternsTotal = 0;
+    int statsPatternsActive = 0;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

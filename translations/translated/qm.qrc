@@ -1,19 +1,23 @@
 <RCC>
     <qresource prefix="/lang">
+        <file>mudlet_ar_SA.qm</file>
         <file>mudlet_de_DE.qm</file>
-        <file>mudlet_ru_RU.qm</file>
-        <file>mudlet_es_ES.qm</file>
-        <file>mudlet_en_GB.qm</file>
-        <file>mudlet_it_IT.qm</file>
-        <file>mudlet_zh_CN.qm</file>
-        <file>mudlet_pl_PL.qm</file>
-        <file>mudlet_nl_NL.qm</file>
-        <file>mudlet_fr_FR.qm</file>
-        <file>mudlet_zh_TW.qm</file>
-        <file>mudlet_en_US.qm</file>
         <file>mudlet_el_GR.qm</file>
-        <file>mudlet_pt_PT.qm</file>
+        <file>mudlet_en_GB.qm</file>
+        <file>mudlet_en_US.qm</file>
+        <file>mudlet_es_ES.qm</file>
+        <file>mudlet_fi_FI.qm</file>
+        <file>mudlet_fr_FR.qm</file>
+        <file>mudlet_he_IL.qm</file>
+        <file>mudlet_it_IT.qm</file>
+        <file>mudlet_ko_KR.qm</file>
+        <file>mudlet_nl_NL.qm</file>
         <file>mudlet_pt_BR.qm</file>
+        <file>mudlet_pl_PL.qm</file>
+        <file>mudlet_pt_PT.qm</file>
+        <file>mudlet_ru_RU.qm</file>
         <file>mudlet_tr_TR.qm</file>
+        <file>mudlet_zh_CN.qm</file>
+        <file>mudlet_zh_TW.qm</file>
     </qresource>
 </RCC>

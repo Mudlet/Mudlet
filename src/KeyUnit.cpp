@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,15 +28,7 @@
 #include "TKey.h"
 
 KeyUnit::KeyUnit(Host* pHost)
-: statsKeyTotal(0)
-, statsTempKeys(0)
-, statsActiveKeys(0)
-, statsActiveKeysMax(0)
-, statsActiveKeysMin(0)
-, statsActiveKeysAverage(0)
-, statsTempKeysCreated(0)
-, statsTempKeysKilled(0)
-, mRunAllKeyMatches(false)
+: mRunAllKeyMatches(false)
 , mpHost(pHost)
 , mMaxID(0)
 , mModuleMember(false)
@@ -43,6 +36,12 @@ KeyUnit::KeyUnit(Host* pHost)
     setupKeyNames();
 }
 
+void KeyUnit::resetStats()
+{
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
+}
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
@@ -68,16 +67,16 @@ void KeyUnit::uninstall(const QString& packageName)
     uninstallList.clear();
 }
 
-bool KeyUnit::processDataStream(const int key, const Qt::KeyboardModifiers modifiers)
+bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers modifiers)
 {
     bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
                 return true;
-            } else {
-                isMatchFound = true;
             }
+
+            isMatchFound = true;
         }
     }
 
@@ -109,17 +108,37 @@ void KeyUnit::reenableAllTriggers()
 
 TKey* KeyUnit::findFirstKey(QString& name)
 {
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {
         return it.value();
     }
     return nullptr;
 }
 
+std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
+{
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : std::as_const(mKeyMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : std::as_const(mKeyMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    }
+    return ids;
+}
+
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         // Unlike the TTriggerUnit version of this code we directly set
@@ -136,7 +155,7 @@ bool KeyUnit::enableKey(const QString& name)
 bool KeyUnit::disableKey(const QString& name)
 {
     bool found = false;
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         // Unlike the TTriggerUnit version of this code we directly clear
@@ -153,7 +172,7 @@ bool KeyUnit::disableKey(const QString& name)
 // This currently only acts on the FIRST key-binding with the given name
 QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKeyModifiers(const QString& name) const
 {
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    QMultiMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         return {true, it.value()->getKeyModifiers()};
     }
@@ -164,7 +183,7 @@ QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKey
 // This currently only acts on the FIRST key-binding with the given name
 bool KeyUnit::setKeyModifiers(const QString& name, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers)
 {
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    QMultiMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         it.value()->setKeyModifiers(modifiers);
         return true;
@@ -231,8 +250,6 @@ void KeyUnit::addKeyRootNode(TKey* pT, int parentPosition, int childPosition, bo
 
 void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
-    QMutexLocker locker(&mKeyUnitLock);
-
     TKey* pOldParent = getKeyPrivate(oldParentID);
     TKey* pNewParent = getKeyPrivate(newParentID);
     TKey* pChild = getKeyPrivate(childID);
@@ -269,22 +286,12 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
 
 TKey* KeyUnit::getKey(int id)
 {
-    QMutexLocker locker(&mKeyUnitLock);
-    if (mKeyMap.find(id) != mKeyMap.end()) {
-        return mKeyMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mKeyMap.value(id);
 }
-
 
 TKey* KeyUnit::getKeyPrivate(int id)
 {
-    if (mKeyMap.find(id) != mKeyMap.end()) {
-        return mKeyMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mKeyMap.value(id);
 }
 
 bool KeyUnit::registerKey(TKey* pT)
@@ -316,7 +323,6 @@ void KeyUnit::unregisterKey(TKey* pT)
     }
 }
 
-
 void KeyUnit::addKey(TKey* pT)
 {
     if (!pT) {
@@ -344,44 +350,59 @@ void KeyUnit::removeKey(TKey* pT)
     mKeyMap.remove(pT->getID());
 }
 
-
 int KeyUnit::getNewID()
 {
     return ++mMaxID;
 }
 
-QString KeyUnit::getKeyName(const int keyCode, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers, const bool showModifersDetails)
+QString KeyUnit::getKeyName(const Qt::Key keyCode, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers, const bool showModifersDetails)
 {
-    QString separator = tr(" + ",
-                           // Intentional comment to separate arguments
-                           "This is the text that is put between the key involved in a keybinding and any modifiers (and between those modifiers if there are more than one).");
+    //: This is the text that is put between the key involved in a keybinding and any modifiers (and between those modifiers if there are more than one).
+    const QString separator = tr(" + ");
 
     if (!showModifersDetails) {
-        return mKeys.value(keyCode, tr("Unknown key (0x%1)",
-                                       // Intentional comment to separate arguments
-                                       "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name.")
-                           .arg(keyCode, 0, 16, QLatin1Char('0')));
+        /*: This text is part of the display of the keybinding and is shown if
+         * the actual key is not one that is known with a specific name and we
+         * are showing modifiers separately in the editor. %1 is a 4 digit hex
+         * number.
+         */
+         return mKeys.value(keyCode, tr("Unknown key (0x%1)")
+                            .arg(keyCode, 0, 16, QLatin1Char('0')));
     }
 
     QStringList modifierText;
     if (modifiers.first == Qt::NoModifier && modifiers.second == Qt::NoModifier) {
-        // We have been asked to show the modifiers but there are not any
         if (mKeys.contains(keyCode)) {
+            /*: This is the text that is show for a keybinding for a known key
+             * with no modifiers where we WOULD show modifiers if there were
+             * any, %1 is the key name, %2 is a separator text ' + ' by default
+             * unless changed for the locale.
+             */
             return tr("%1%2No modifiers").arg(mKeys.value(keyCode), separator);
         }
 
-        return tr("Unknown key (0x%1)%2No modifiers",
-                  // Intentional comment to separate arguments
-                  "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name and has no modifers though we have been asked to show them.")
+        /*: This is the text that is show for a keybinding for an unknown key
+         * with no modifiers but where we would be showing them if there were
+         * any, %1 is the 4 hed digits for the unknown key code, %2 is a
+         * separator text ' + ' by default
+         * unless changed for the locale.
+         */
+        return tr("Unknown key (0x%1)%2No modifiers")
                 .arg(keyCode, 0, 16, QLatin1Char('0'))
                 .arg(separator);
     }
 
     if (modifiers.first & Qt::ShiftModifier) {
-        modifierText << tr("Shift",
-                           // Intentional comment to separate arguments
-                           "Text to show when the SHIFT modifier MUST be present in a key-binding.");
+        /*: Text to show when the SHIFT modifier MUST be present in a
+         * key-binding. Will be concatenated with any others, each separated
+         * by a separator text, ' + ' by default unless changed for the locale.
+         */
+        modifierText << tr("Shift");
     } else if (modifiers.second & Qt::ShiftModifier) {
+        /*: Text to show when the SHIFT modifier must NOT be present in a
+         * key-binding. Will be concatenated with any others, each separated
+         * by a separator text, ' + ' by default unless changed for the locale.
+         */
         modifierText << tr("NOT Shift",
                            // Intentional comment to separate arguments
                            "Text to show when the SHIFT modifier must NOT be present in a key-binding.");
@@ -389,171 +410,203 @@ QString KeyUnit::getKeyName(const int keyCode, const QPair<Qt::KeyboardModifiers
 
 #if defined(Q_OS_MACOS)
     if (modifiers.first & Qt::ControlModifier) {
-        modifierText << tr("Command",
-                           // Intentional comment to separate arguments
-                           "Text to show when the COMMAND modifier {macOS specific, CONTROL on all other OSs} MUST be present in a key-binding.");
+        /*: Text to show when the COMMAND {MacOS only} modifier MUST be present
+         * in a key-binding. Will be concatenated with any others, each separated
+         * by a separator text, ' + ' by default unless changed for the locale.
+         */
+        modifierText << tr("Command");
     } else if (modifiers.second & Qt::ControlModifier) {
-        modifierText << tr("NOT Command",
-                           // Intentional comment to separate arguments
-                           "Text to show when the COMMAND modifier {macOS specific, CONTROL on all other OSs} must NOT be present in a key-binding.");
+        /*: Text to show when the COMMAND {MacOS only} modifier must NOT be present
+         * in a key-binding. Will be concatenated with any others, each separated
+         * by a separator text, ' + ' by default unless changed for the locale.
+         */
+        modifierText << tr("NOT Command");
     }
 #else
     if (modifiers.first & Qt::ControlModifier) {
-        modifierText << tr("Control",
-                           // Intentional comment to separate arguments
-                           "Text to show when the CONTROL modifier {COMMAND on macOS} MUST be present in a key-binding.");
+        /*: Text to show when the CONTROL {except for MacOS} modifier MUST be
+         * present in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("Control");
     } else if (modifiers.second & Qt::ControlModifier) {
-        modifierText << tr("NOT Control",
-                           // Intentional comment to separate arguments
-                           "Text to show when the CONTROL modifier {COMMAND on macOS} must NOT be present in a key-binding.");
+        /*: Text to show when the CONTROL {except for MacOS} modifier must NOT
+         * be present in a key-binding. Will be concatenated with any others,
+         * each separated by a separator text, ' + ' by default unless changed
+         * for the locale.
+         */
+        modifierText << tr("NOT Control");
     }
 #endif
 
 #if defined(Q_OS_MACOS)
     if (modifiers.first & Qt::AltModifier) {
-        modifierText << tr("Option",
-                           // Intentional comment to separate arguments
-                           "Text to show when the OPTION modifier {macOs specific, ALT on all other OSs} MUST be present in a key-binding.");
+        /*: Text to show when the OPTION {MacOS only} modifier MUST be present
+         * in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("Option");
     } else if (modifiers.second & Qt::AltModifier) {
-        modifierText << tr("NOT Option",
-                           // Intentional comment to separate arguments
-                           "Text to show when the OPTION modifier {macOs specific, ALT on all other OSs} must NOT be present in a key-binding.");
+        /*: Text to show when the OPTION {MacOS only} modifier must NOT be
+         * present in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("NOT Option");
     }
 #else
     if (modifiers.first & Qt::AltModifier) {
-        modifierText << tr("Alt",
-                           // Intentional comment to separate arguments
-                           "Text to show when the ALT modifier {OPTION on macOs} MUST be present in a key-binding.");
+        /*: Text to show when the ALT {except MacOS} modifier MUST be present in
+         * a key-binding. Will be concatenated with any others, each separated
+         * by a separator text, ' + ' by default unless changed for the locale.
+         */
+        modifierText << tr("Alt");
     } else if (modifiers.second & Qt::AltModifier) {
-        modifierText << tr("NOT Alt",
-                           // Intentional comment to separate arguments
-                           "Text to show when the ALT modifier {OPTION on macOs} must NOT be present in a key-binding.");
+        /*: Text to show when the ALT {except MacOS} modifier must NOT be
+         * present in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("NOT Alt");
     }
 #endif
 
 #if defined(Q_OS_MACOS)
     if (modifiers.first & Qt::MetaModifier) {
-        modifierText << tr("Control",
-                           // Intentional comment to separate arguments
-                           "Text to show when the CONTROL modifier {macOS specific, WINDOWS key on Windows, META on all other OSs) MUST be present in a key-binding.");
+        /*: Text to show when the CONTROL {MacOS specific} modifier MUST be
+         * present in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("Control");
     } else if (modifiers.second & Qt::MetaModifier) {
-        modifierText << tr("NOT Control",
-                           // Intentional comment to separate arguments
-                           "Text to show when the CONTROL modifier {macOS specific, WINDOWS key on Windows, META on all other OSs) must NOT be present in a key-binding.");
+        /*: Text to show when the CONTROL {MacOS specific} modifier must NOT be
+         * present in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("NOT Control");
     }
 #elif defined(Q_OS_WIN32)
     if (modifiers.first & Qt::MetaModifier) {
-        modifierText << tr("Windows",
-                           // Intentional comment to separate arguments
-                           "Text to show when the WINDOW modifier {Windows specific, CONTROL on macOS, META on all other OSs) MUST be present in a key-binding.");
+        /*: Text to show when the WINDOWS {Windows specific} modifier MUST be
+         * present in a key-binding. Will be concatenated with any others, each
+         * separated by a separator text, ' + ' by default unless changed for
+         * the locale.
+         */
+        modifierText << tr("Windows");
     } else if (modifiers.second & Qt::MetaModifier) {
-        modifierText << tr("NOT Windows",
-                           // Intentional comment to separate arguments
-                           "Text to show when the WINDOW modifier {Windows specific, CONTROL on macOS, META on all other OSs) must NOT be present in a key-binding.");
+        /*: Text to show when the WINDOWS {Windows specific} modifier must NOT
+         * be present in a key-binding. Will be concatenated with any others,
+         * each separated by a separator text, ' + ' by default unless changed
+         * for the locale.
+         */
+        modifierText << tr("NOT Windows");
     }
 #else
     if (modifiers.first & Qt::MetaModifier) {
-        modifierText << tr("Meta",
-                           // Intentional comment to separate arguments
-                           "Text to show when the META modifier (CONTROL on MacOS and WINDOWS on Windows OSs) MUST be present in a key-binding.");
+        /*: Text to show when the META {OSes other than Windows or MacOS}
+         * modifier MUST be present in a key-binding. Will be concatenated with
+         * any others, each separated by a separator text, ' + ' by default
+         * unless changed for the locale.
+         */
+        modifierText << tr("Meta");
     } else if (modifiers.second & Qt::MetaModifier) {
-        modifierText << tr("NOT Meta",
-                           // Intentional comment to separate arguments
-                           "Text to show when the META modifier (CONTROL on MacOS and WINDOWS on Windows OSs) must NOT be present in a key-binding.");
+        /*: Text to show when the META {OSes other than Windows or MacOS}
+         * modifier must NOT be present in a key-binding. Will be concatenated
+         * with any others, each separated by a separator text, ' + ' by default
+         * unless changed for the locale.
+         */
+        modifierText << tr("NOT Meta");
     }
 #endif
 
     if (modifiers.first & Qt::KeypadModifier) {
-        modifierText << tr("Keypad",
-                           // Intentional comment to separate arguments
-                           "Text to show when the KEYPAD modifier MUST be present in a key-binding.");
+        /*: Text to show when the KEYPAD modifier MUST be present in a
+         * key-binding. Will be concatenated with any others, each separated by
+         * a separator text, ' + ' by default unless changed for the locale.
+         */
+        modifierText << tr("Keypad");
     } else if (modifiers.second & Qt::KeypadModifier) {
-        modifierText << tr("NOT Keypad",
-                           // Intentional comment to separate arguments
-                           "Text to show when the KEYPAD modifier must NOT be present in a key-binding.");
+        /*: Text to show when the KEYPAD modifier must NOT be present in a
+         * key-binding. Will be concatenated with any others, each separated by
+         * a separator text, ' + ' by default unless changed for the locale.
+         */
+        modifierText << tr("NOT Keypad");
     }
 
     if (modifiers.first & Qt::GroupSwitchModifier) {
-        modifierText << tr("Group-Switch",
-                           // Intentional comment to separate arguments
-                           "Text to show when the GROUPSWITCH modifier {Unix systems (FreeBSD and Linux, not macOS) with X11 display system} MUST be present in a key-binding.");
+        /*: Text to show when the GROUPSWITCH modifier (may be the AltGR key)
+         * MUST be present in a key-binding. Will be concatenated with any
+         * others, each separated by a separator text, ' + ' by default unless
+         * changed for the locale.
+         */
+        modifierText << tr("Group-Switch");
     } else if (modifiers.second & Qt::GroupSwitchModifier) {
-        modifierText << tr("NOT Group-Switch",
-                           // Intentional comment to separate arguments
-                           "Text to show when the GROUPSWITCH modifier {Unix systems (FreeBSD and Linux, not macOS) with X11 display system} must NOT be present in a key-binding.");
+        /*: Text to show when the GROUPSWITCH modifier (may be the AltGR key)
+         * must NOT be present in a key-binding. Will be concatenated with any
+         * others, each separated by a separator text, ' + ' by default unless
+         * changed for the locale.
+         */
+        modifierText << tr("NOT Group-Switch");
     }
 
     if (mKeys.contains(keyCode)) {
-        return tr("%1%2%3",
-                  // Intentional comment to separate arguments
-                  "This text is part of the display of the keybinding and is shown if the actual key is known with a specific name and has modifers and we have been asked to show them. %1 is the name for the key; %2 is the separator and %3 is the list of present modifiers joined together with the same separator.")
-                  .arg(mKeys.value(keyCode), separator, modifierText.join(separator));
+        return mKeys.value(keyCode) % separator % modifierText.join(separator);
     }
 
-    return tr("Unknown key (0x%1)%2%3",
-              // Intentional comment to separate arguments
-              "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name and has modifers and we have been asked to show them. %1 is a hex code for the key; %2 is the separator and %3 is the list of present modifiers joined together with the same separator.")
+    /*: This text is the display of the keybinding and is shown if the actual
+     * key is not one that is known with a specific name and has modifers and we
+     * have been asked to show them. %1 is a hex code for the key; %2 is the
+     * separator and %3 is the list of the modifiers (either MUST or must NOT
+     * be present) joined together with the same separator.
+     */
+    return tr("Unknown key (0x%1)%2%3")
             .arg(keyCode, 0, 16, QLatin1Char('0'))
             .arg(separator, modifierText.join(separator));
 }
 
-void KeyUnit::initStats()
+void KeyUnit::assembleReport(TKey* pItem)
 {
-    statsKeyTotal = 0;
-    statsTempKeys = 0;
-    statsActiveKeys = 0;
-    statsActiveKeysMax = 0;
-    statsActiveKeysMin = 0;
-    statsActiveKeysAverage = 0;
-    statsTempKeysCreated = 0;
-    statsTempKeysKilled = 0;
-}
-
-void KeyUnit::_assembleReport(TKey* pChild)
-{
-    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto pT : *childrenList) {
-        _assembleReport(pT);
-        if (pT->isActive()) {
-            statsActiveKeys++;
-        }
-        if (pT->isTemporary()) {
-            statsTempKeys++;
-        }
-        statsKeyTotal++;
-    }
-}
-
-QString KeyUnit::assembleReport()
-{
-    statsActiveKeys = 0;
-    statsKeyTotal = 0;
-    statsTempKeys = 0;
-    for (auto pChild : mKeyRootNodeList) {
+    std::list<TKey*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
         if (pChild->isActive()) {
-            statsActiveKeys++;
+            ++statsActiveItems;
         }
         if (pChild->isTemporary()) {
-            statsTempKeys++;
+            ++statsTempItems;
         }
-        statsKeyTotal++;
-        std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-        for (auto pT : *childrenList) {
-            _assembleReport(pT);
-            if (pT->isActive()) {
-                statsActiveKeys++;
-            }
-            if (pT->isTemporary()) {
-                statsTempKeys++;
-            }
-            statsKeyTotal++;
+        assembleReport(pChild);
+    }
+}
+
+std::tuple<QString, int, int, int> KeyUnit::assembleReport()
+{
+    resetStats();
+    for (auto pItem : mKeyRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
         }
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
+        }
+        assembleReport(pItem);
     }
     QStringList msg;
-    msg << "Keys current total: " << QString::number(statsKeyTotal) << "\n"
-        << "tempKeys current total: " << QString::number(statsTempKeys) << "\n"
-        << "active Keys: " << QString::number(statsActiveKeys) << "\n";
-    return msg.join("");
+    msg << QLatin1String("Keys current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempKeys current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active Keys: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsTempItems,
+        statsActiveItems
+    };
 }
 
 void KeyUnit::markCleanup(TKey* pT)

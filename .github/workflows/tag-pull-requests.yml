@@ -1,0 +1,49 @@
+name: Pull request
+
+on:
+  pull_request_target:
+
+permissions:
+  contents: read
+
+jobs:
+  add-milestone:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Get next milestone
+      id: next-milestone-string
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
+
+    - name: 'Convert milestone to Github #'
+      id: next-milestone-number
+      run: |
+        MILESTONE_NUMBER=$(curl --silent --request GET                \
+          --url https://api.github.com/repos/Mudlet/Mudlet/milestones \
+          -H "Accept: application/vnd.github.v3+json" |               \
+          jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number')
+
+        echo "MILESTONE_NUMBER=$MILESTONE_NUMBER" >> "$GITHUB_ENV"
+
+    - name: Assign PR to milestone
+      env:
+        TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
+      run: |
+        # Fetch pull request details
+        PR_DETAILS=$(curl -s --request GET \
+          -H "Accept: application/vnd.github.v3+json"      \
+          --url ${{ github.event.pull_request.issue_url }} \
+          --header "authorization: token $TOKEN")
+
+        # Check if the pull request has a milestone already
+        if [ $(echo "$PR_DETAILS" | jq '.milestone == null') == "true" ]; then
+            curl -s --request PATCH \
+              -H "Accept: application/vnd.github.v3+json"      \
+              --url ${{ github.event.pull_request.issue_url }} \
+              --header "authorization: token $TOKEN"           \
+              --data '{"milestone": '"$MILESTONE_NUMBER"'}'
+        fi

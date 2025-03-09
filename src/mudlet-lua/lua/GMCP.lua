@@ -60,7 +60,7 @@ function isRegisteredModule(mod)
   return registeredModules[mod]
 end
 
--- Enable a module that isn't already enabled, and register it's use to a user.
+-- Enable a module that isn't already enabled, and register its use to a user.
 function enableModule(user, module)
   registerUser(user)
 

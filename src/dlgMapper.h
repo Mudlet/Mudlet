@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,7 +31,6 @@
 #include <QPointer>
 #include "post_guard.h"
 
-
 class Host;
 class TMap;
 #if defined(INCLUDE_3DMAPPER)
@@ -46,29 +46,34 @@ public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
 #if defined(INCLUDE_3DMAPPER)
-    GLWidget* glWidget;
+    GLWidget* glWidget = nullptr;
 #endif
     void updateAreaComboBox();
-    void setDefaultAreaShown(bool);
-    bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();
+    // The button is the goto source for this bit of information:
+    bool isIn3DMode() const { return pushButton_3D->isDown(); }
+    bool isFloatAndDockable() const;
+    int getCurrentShownAreaIndex();
 
 public slots:
-    void slot_bubbles();
-    void slot_info();
-    void slot_toggleShowRoomIDs(int s);
-    void slot_toggleStrongHighlight(int v);
-    void show2dView();
+    void slot_toggleRoundRooms(const bool);
+    void slot_toggleShowRoomIDs(int toggle);
+    void slot_toggleShowRoomNames(int toggle);
+    void slot_toggleStrongHighlight(int toggle);
+    void slot_toggle3DView(const bool);
     void slot_togglePanel();
-    void goRoom();
-    void choseRoom(QListWidgetItem*);
-    void slot_roomSize(int d);
-    void slot_lineSize(int d);
+    void slot_setMapperPanelVisible(bool panelVisible);
+    void slot_roomSize(int size);
+    void slot_exitSize(int size);
+    void slot_setRoomSize(int size);
+    void slot_setExitSize(int size);
+    void slot_setShowRoomIds(bool showRoomIds);
+    void slot_updateInfoContributors();
+    void slot_switchArea(const int);
 
 private:
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    bool mShowDefaultArea;
 };
 
 #endif // MUDLET_DLGMAPPER_H

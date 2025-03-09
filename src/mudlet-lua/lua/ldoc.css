@@ -87,9 +87,9 @@ em { font-style: italic;}
 
 h1 {
     font-size: 1.5em;
-    margin: 20px 0 20px 0;
+    margin: 20px 0;
 }
-h2, h3, h4 { margin: 15px 0 10px 0; }
+h2, h3, h4 { margin: 15px 0 10px; }
 h2 { font-size: 1.25em; }
 h3 { font-size: 1.15em; }
 h4 { font-size: 1.06em; }
@@ -117,7 +117,7 @@ pre {
     background-color: rgb(245, 245, 245);
     border: 1px solid #C0C0C0; /* silver */
     padding: 10px;
-    margin: 10px 0 10px 0;
+    margin: 10px 0;
     overflow: auto;
     font-family: "Andale Mono", monospace;
 }
@@ -172,7 +172,7 @@ table.index td { text-align: left; vertical-align: top; }
 {
     font-size:1em;
     list-style-type: none;
-    margin: 1px 1px 10px 1px;
+    margin: 1px 1px 10px;
 }
 
 #navigation li {

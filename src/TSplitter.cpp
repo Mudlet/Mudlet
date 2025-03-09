@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,7 +26,9 @@
 #include "TSplitterHandle.h"
 
 
-TSplitter::TSplitter(Qt::Orientation o, QWidget* p) : QSplitter(o, p), mpSplitterHandle()
+TSplitter::TSplitter(Qt::Orientation o, QWidget* p)
+: QSplitter(o, p)
+, mpSplitterHandle()
 {
 }
 

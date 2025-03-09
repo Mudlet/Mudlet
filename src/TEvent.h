@@ -47,7 +47,7 @@ public:
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const TEvent& event)
 {
-    QDebugStateSaver saver(debug);
+    const QDebugStateSaver saver(debug);
     const int argCount = event.mArgumentList.count();
     const int typeCount = event.mArgumentTypeList.count();
     int i = 0;

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -61,12 +61,12 @@ class IRC_UTIL_EXPORT IrcPalette : public QObject
     Q_PROPERTY(QString lightGray READ lightGray WRITE setLightGray)
 
 public:
-    ~IrcPalette();
+    ~IrcPalette() override;
 
     QMap<int, QString> colorNames() const;
     void setColorNames(const QMap<int, QString>& names);
 
-    QString colorName(int color, const QString& fallback = QLatin1String("black")) const;
+    QString colorName(int color, const QString& fallback = QStringLiteral("black")) const;
     void setColorName(int color, const QString& name);
 
     QString white() const;

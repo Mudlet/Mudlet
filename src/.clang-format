@@ -14,7 +14,7 @@ BasedOnStyle: LLVM
 
 # language
 Language: Cpp
-Standard: Cpp11
+Standard: c++17
 DisableFormat: false
 
 # line length

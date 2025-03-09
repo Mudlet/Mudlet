@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -28,6 +28,7 @@
 
 #include "ircmessagecomposer_p.h"
 #include "ircmessage.h"
+#include "irccore_p.h"
 #include "irc.h"
 
 IRC_BEGIN_NAMESPACE
@@ -94,7 +95,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         int count = message->parameters().count();
         QString channel = message->parameters().value(count - 2);
         QStringList names = d.messages.top()->parameters().mid(1);
-        names += message->parameters().value(count - 1).split(QLatin1Char(' '), QString::SkipEmptyParts);
+        names += message->parameters().value(count - 1).split(QLatin1Char(' '), Qt::SkipEmptyParts);
         d.messages.top()->setParameters(QStringList() << channel << names);
         break;
     }
@@ -150,8 +151,9 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
             replaceParam(9, message->parameters().value(2)); // away reason
             break;
         }
-        // flow through
+        Q_FALLTHROUGH();
     case Irc::RPL_UNAWAY:
+        Q_FALLTHROUGH();
     case Irc::RPL_NOWAWAY:
         d.messages.push(new IrcAwayMessage(d.connection));
         d.messages.top()->setCommand(QString::number(message->code()));

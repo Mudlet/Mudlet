@@ -74,7 +74,7 @@ macro(include_optional_module)
         set(OPTIONAL_MODULE_OPTION_VALUE OFF)
         message(
           STATUS
-            "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} module explicitly"
+            "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} explicitly"
         )
       else()
         # Any other value was seen so ignore it and set "yes, include the
@@ -82,7 +82,7 @@ macro(include_optional_module)
         set(OPTIONAL_MODULE_OPTION_VALUE ON)
         message(
           STATUS
-            "Including optional ${OPTIONAL_MODULE_READABLE_NAME} module explicitly"
+            "Including optional ${OPTIONAL_MODULE_READABLE_NAME} explicitly"
         )
       endif()
     else()
@@ -90,10 +90,10 @@ macro(include_optional_module)
       # include the module"
       set(OPTIONAL_MODULE_OPTION_VALUE ON)
       message(
-        STATUS "Including optional ${OPTIONAL_MODULE_READABLE_NAME} module")
+        STATUS "Including optional ${OPTIONAL_MODULE_READABLE_NAME}")
     endif()
     option(${OPTIONAL_MODULE_OPTION_VARIABLE}
-           "Include optional ${OPTIONAL_MODULE_READABLE_NAME} module"
+           "Include optional ${OPTIONAL_MODULE_READABLE_NAME}"
            ${OPTIONAL_MODULE_OPTION_VALUE})
   else()
     # Don't offer option to enable the module since it's not supported on this
@@ -101,7 +101,7 @@ macro(include_optional_module)
     set(${OPTIONAL_MODULE_OPTION_VARIABLE} OFF)
     message(
       STATUS
-        "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} module as it is not supported on this platform"
+        "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} as it is not supported on this platform"
     )
   endif()
 

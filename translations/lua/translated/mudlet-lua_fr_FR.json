@@ -1,0 +1,14 @@
+{
+  "AdjustableContainer.lock": {
+    "message": "Verrouiller",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.save": {
+    "message": "Enregistrer",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Déconnecter ",
+    "description": "disconnect your container from the border frame"
+  }
+}

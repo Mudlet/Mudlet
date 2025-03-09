@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,7 +26,6 @@
 
 #include "pre_guard.h"
 #include <QMultiMap>
-#include <QMutex>
 #include <QPointer>
 #include <QSet>
 #include <QString>
@@ -43,12 +43,17 @@ class TimerUnit
     friend class XMLimport;
 
 public:
-    TimerUnit(Host* pHost) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0), mModuleMember() {}
+    explicit TimerUnit(Host* pHost)
+    : mpHost(pHost)
+    {}
+    ~TimerUnit();
+
+    void resetStats();
     void removeAllTempTimers();
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
     TTimer* getTimer(int id);
     TTimer* findFirstTimer(const QString&) const;
-    QList<TTimer*> findTimers(const QString&);
+    std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
     void compileAll();
     bool enableTimer(const QString&);
     bool disableTimer(const QString&);
@@ -62,7 +67,7 @@ public:
     void reenableAllTriggers();
     void markCleanup(TTimer*);
     void doCleanup();
-    QString assembleReport();
+    std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TTimer* pChild, const QString& packageName);
@@ -70,10 +75,6 @@ public:
 
 
     QMultiMap<QString, TTimer*> mLookupTable;
-    QMutex mTimerUnitLock;
-    int statsActiveTriggers;
-    int statsTriggerTotal;
-    int statsTempTriggers;
     QList<TTimer*> uninstallList;
 
     // This will contain all the QTimers associated with the TTimer instances
@@ -86,18 +87,23 @@ public:
 private:
     TimerUnit() = default;
 
-    void _assembleReport(TTimer*);
+    void assembleReport(TTimer*);
     TTimer* getTimerPrivate(int id);
     void addTimerRootNode(TTimer* pT, int parentPosition = -1, int childPosition = -1);
     void addTimer(TTimer* pT);
     void _removeTimerRootNode(TTimer* pT);
     void _removeTimer(TTimer*);
+
+
     QPointer<Host> mpHost;
     QMap<int, TTimer*> mTimerMap;
     std::list<TTimer*> mTimerRootNodeList;
-    int mMaxID;
-    bool mModuleMember;
+    int mMaxID = 0;
+    bool mModuleMember = false;
     QSet<TTimer*> mCleanupSet;
+    int statsActiveItems = 0;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
 };
 
 #endif // MUDLET_TIMERUNIT_H

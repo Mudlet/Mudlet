@@ -28,7 +28,7 @@
     <height>100</height>
    </size>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
+  <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0,0,0">
    <item row="0" column="0">
     <widget class="QLabel" name="label_alias_name">
      <property name="text">
@@ -58,6 +58,56 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="4">
+    <widget class="QFrame" name="frameId">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_frameId">
+      <property name="leftMargin">
+       <number>3</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>3</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item alignment="Qt::AlignVCenter">
+       <widget class="QLabel" name="label_idLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>ID:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::NoTextInteraction</set>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignVCenter">
+       <widget class="QLabel" name="label_idNumber">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label_alias_pattern">
      <property name="sizePolicy">
@@ -78,57 +128,6 @@
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QLineEdit" name="lineEdit_alias_pattern">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="2" alignment="Qt::AlignRight">
-    <widget class="QLabel" name="label_alias_regex">
-     <property name="text">
-      <string>Type:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="3">
-    <widget class="QComboBox" name="comboBox_alias_regex">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <item>
-      <property name="text">
-       <string>Regex</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Plain</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item row="2" column="0" alignment="Qt::AlignRight">
@@ -153,7 +152,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1" colspan="3">
+   <item row="2" column="1" colspan="4">
     <widget class="QLineEdit" name="lineEdit_alias_command">
      <property name="minimumSize">
       <size>
@@ -167,13 +166,33 @@
        <height>21</height>
       </size>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
+     <property name="toolTip">
+      <string>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It's possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</string>
+     </property>
+     <property name="placeholderText">
+      <string>Replacement text (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" colspan="4">
+    <widget class="QLineEdit" name="lineEdit_alias_pattern">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>21</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>21</height>
+      </size>
      </property>
      <property name="toolTip">
-      <string>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+      <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
+     </property>
+     <property name="placeholderText">
+      <string>^mycommand$ (example)</string>
      </property>
     </widget>
    </item>

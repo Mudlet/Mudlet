@@ -1,12 +1,9 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Represents a gauge that can be either vertical or horizontal.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.Gauge">Mudlet Manual</a>
+-- @author guy
+-- @module Geyser.Gauge
 
 --- Represents a gauge that can be either vertical or horizontal.
--- @class table
--- @name Geyser.Gauge
 -- @field value Percentage value of how "full" the gauge is.
 -- @field strict If true, will cap the value of the gauge at 100, preventing
 --               it from overflowing the edge. Defaults to false to maintain
@@ -25,7 +22,7 @@ Geyser.Gauge = Geyser.Container:new({
   orientation = "horizontal" })
 
 --- Sets the gauge amount.
--- @param currentValue Current numeric value, or if maxValue is ommitted, then
+-- @param currentValue Current numeric value, or if maxValue is omitted, then
 --        it is assumed that currentValue is a value between 0 and 100 and is
 --        used to set the gauge.
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
@@ -142,20 +139,22 @@ function Geyser.Gauge:setAlignment(alignment)
 end
 
 --- Sets the color of the text on the gauge
--- @param color the color you want the text to be
+-- @param color the color you want the text to be. Can use color names such as "red", decho codes such as "<255,0,0>" and hex codes such as "#ff0000"
 function Geyser.Gauge:setFgColor(color)
   self.text:setFgColor(color)
 end
 
 --- Sets the text on the gauge, overwrites inherited echo function.
--- @param text The text to set.
+-- @param message the text to set
+-- @param color the color of the text
+-- @param format the text format
 function Geyser.Gauge:echo(message, color, format)
   self.text:echo(message, color, format)
   self.format = self.text.format
   self.formatTable = self.text.formatTable
 end
 
--- Sets the style sheet for the gauge
+--- Sets the style sheet for the gauge
 -- @param css Style sheet for the front label
 -- @param cssback Style sheet for the back label
 -- @param cssText Style sheet for the text label
@@ -209,7 +208,7 @@ function Geyser.Gauge:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   me.windowname = me.windowname or me.container.windowname or "main"
-  -----------------------------------------------------------
+
   -- Now create the Gauge using primitives and tastey classes
 
   -- Set up the constraints for the front label, the label that changes size to
@@ -254,5 +253,13 @@ function Geyser.Gauge:new (cons, container)
   if cons.message then me:echo(me.message) end
   
   --print("  New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+-- Overridden constructor to use add2
+function Geyser.Gauge:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end

@@ -1,0 +1,102 @@
+{
+  "AdjustableContainer.attach": {
+    "message": "Прикрепить к:",
+    "description": "attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "низ",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "топ",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "налево",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "вправо",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "Другой:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
+  "AdjustableContainer.lock": {
+    "message": "Заблокировать",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.lockstyle": {
+    "message": "Замок:",
+    "description": "different modes/styles to choose which will be the lock behaviour of the container"
+  },
+  "AdjustableContainer.standard": {
+    "message": "стандартный",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "светлый",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "полный",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.border": {
+    "message": "граница",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.save": {
+    "message": "Сохранить",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "Загрузить",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "Мин/Восстановить",
+    "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "Подключиться к: ",
+    "description": "connect your container to a border to create a frame"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Отключиться ",
+    "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "Пакет '%s' успешно установлен.",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "Установка '%s' не удалась: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallSuccess": {
+    "message": "Модуль '%s' успешно установлен.",
+    "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallFail": {
+    "message": "Не удалось установить '%s': %s",
+    "description": "Failure message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "Скачивание пакета с %s.",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[  OK  ]  - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ ВНИМ ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ ИНФО ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
+  }
+}

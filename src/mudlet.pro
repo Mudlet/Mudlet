@@ -1,9 +1,11 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2025 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -23,19 +25,19 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD, OpenBSD and GNU/Hurd are not officially supported    #
+#    platforms as such; the work on getting them working has been done by  #
+#    myself, and other developers, unless they have explicitly said so,    #
+#    are not able to address issues relating specifically to these         #
+#    Operating Systems. Nevertheless users of these operating systems are  #
+#    equally welcome to contribute to the development of Mudlet - bugfixes #
+#    and enhancements are welcome from all!                                #
+#        Stephen Lyons, February 2018, updated March 2021 & October 2022   #
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 11)) {
-    error("Mudlet requires Qt 5.11 or later")
+if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 1)) {
+    error("Mudlet requires Qt 6.0 or later")
 }
 
 # Including IRC Library
@@ -45,10 +47,6 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
-!msvc:CONFIG += warn_off
-# ignore unused parameters, because boost has a ton of them and that is not something we need to know.
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
@@ -65,47 +63,79 @@ include(../3rdparty/communi/communi.pri)
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++17 for builds.
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
-    QMAKE_CXXFLAGS += -std=c++17
-} else {
-    CONFIG += c++17
-}
+# c++20 for Qt 6
+CONFIG += c++20
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
 
-QT += network uitools multimedia gui concurrent
-qtHaveModule(gamepad) {
-    QT += gamepad
-    !build_pass : message("Using Gamepad module")
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+win32 {
+    DEFINES += INCLUDE_WINSOCK2
 }
+
+QT += network uitools multimedia multimediawidgets gui concurrent
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
 
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
+
 TEMPLATE = app
 
-########################## Version and Build setting ###########################
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.6.2
+# Define a variable for the Git executable
+GIT_EXECUTABLE = git
 
-# if you are distributing modified code, it would be useful if you
-# put something distinguishing into the MUDLET_VERSION_BUILD environment
-# variable to make identification of the used version simple
-# the qmake BUILD variable is NOT built-in
+# Run the command to get the short SHA1 hash of the current HEAD, UNLESS there
+# is a Git SHA1 in the BRANCH_COMMIT enviromental variable (which has been set
+# by Mudlet's own CI/CB build system. This is to account for the manipulation
+# that happens during a build of a PR on Mudlet's own GitHub repository which
+# combines the PR state with that of the currently development branch such that
+# the HEAD of that branch does not match what git rev-parse HEAD would return:
+BUILD_COMMIT_TEST = $$(BUILD_COMMIT)
+BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
+!isEmpty( BUILD_COMMIT_TEST ) {
+  # Building a PR in the AppVeyor environment of Mudlet's own repository
+  GIT_SHA1 = $${BUILD_COMMIT_TEST}
+  # Report the above, for debugging purposes:
+  !build_pass:message("Git SHA1 set from the environment: " $${GIT_SHA1})
+} else {
+  GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+  # Report the above, for debugging purposes:
+  !build_pass:message("Git SHA1 used: " $${GIT_SHA1})
+}
+
+
+# Set Mudlet version (update in CMakeLists.txt as well)
+VERSION = 4.19.1
+
+# Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
-# Possible values are:
-# "-dev" for the development build
-# "-ptb" for the public test build
-# "" for the release build
-   BUILD = "-dev"
+!isEmpty(BUILD) {
+    BUILD = $${BUILD}-$${GIT_SHA1}
+} else {
+    BUILD = "-dev-"$${GIT_SHA1}
+}
+
+# Write BUILD to app-build.txt, note that this adds a newline to the file
+write_file(app-build.txt, BUILD)
+
+# Log the value written to app-build.txt
+!build_pass {
+    isEmpty(BUILD) {
+        message("Value written to app-build.txt file: {nothing}")
+    } else {
+        message("Value written to app-build.txt file: " $${BUILD})
+    }
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -120,7 +150,12 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
-# Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+# Use APP_VERSION and APP_TARGET defines in the source code if needed.
+# APP_BUILD is going away (it is not currently used in the source code now as
+# Mudlet instead reads it from the resource file) however until the CI/CB system
+# is cleaned up to not use it in any way in the
+# /CI/travis.validate_deployment.sh script we probably have to
+# leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
 
@@ -154,8 +189,8 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # It would be nice if we could automate the download and extraction of all
     # the font and associate documentation (but NOT the "sources" sub-directory)
     # contents into the ./src/fonts/ directory structure only if this option is
-    # set to ON; however that would be plaform specific and add more complexity
-    # and it is not obvious that there is a demand to do this currenly.
+    # set to ON; however that would be platform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currently.
 }
 
 ######################### Auto Updater setting detection #########,#############
@@ -181,7 +216,7 @@ linux|macx|win32 {
 # don't include it either
 
 
-######################### 3D mapper toggle #######################
+############################### 3D mapper toggle ###############################
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
@@ -190,12 +225,26 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+######################## System QtKeyChain library #############################
+# To use a system provided QtKeyChain library set the environmental variable
+# WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
+# useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
+# any other value than "NO" then the build process will download and link to a
+# locally built copy of the library. This is designed to help Linux and other
+# distribution package builders integrate Mudlet into their system - if a system
+# provided one is specified and the library is NOT available then the
+# build will fail both at the compilation and the linking stages.
+OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
+isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
+  DEFINES += INCLUDE_OWN_QT6_KEYCHAIN
+}
+
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
 # the user to find them if the files (and specifically the <10KByte
-# "LuaGlobal.lua" one) is not accessable (read access only required) during
+# "LuaGlobal.lua" one) is not accessible (read access only required) during
 # startup.  The precise directory is remembered once found (and stored in the
 # Mudlet configuration file as "systemLuaFilePath") but if the installer places
 # the files in the place documented here the user will not be bothered by this.
@@ -204,6 +253,60 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 
 # We should consider the XDG specifications in:
 # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
+########################### Debugging code inclusions ##########################
+# Controls the include/selection of extra code to aide developers debug various
+# features of Mudlet, generally speaking they will not be '#define'd in
+# production builds - uncomment the 'DEFINES+=DEBUG_XXX' line here to include
+# the relevant code:
+#
+# Other DEFINES+=DEBUG_XXX expected here as a result of:
+# https://github.com/Mudlet/Mudlet/issues/6314
+#
+# * Produce a timestamped message on the OS's command line when an autosave of
+# the map file gets requested and when such a request gets actioned (or
+# rejected because the profile is being loaded):
+# DEFINES+=DEBUG_MAPAUTOSAVE
+#
+# * Produce all the time the surprise that normally will only occur on the first
+# day of the fourth month of the Gregorian calendar year:
+# DEFINES+=DEBUG_EASTER_EGGS
+#
+# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+DEFINES+=DEBUG_TELNET=1
+#
+# * Produce qDebug() messages about the decoding of UTF-8 data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_UTF8_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
+# it is not the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_GB_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of BIG5 data when it is not the
+# single bytes of pure ASCII text:
+# DEFINES+=DEBUG_BIG5_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of EUC-KR data when it is not
+# the single bytes of pure ASCII text:
+# DEFINES+=DEBUG_EUC_KR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI SGR sequences:
+# DEFINES+=DEBUG_SGR_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI OSC sequences:
+# DEFINES+=DEBUG_OSC_PROCESSING
+#
+# * Produce qDebug() messages about the decoding of ANSI MXP sequences although
+# there is not much against this item at present {only an announcement of the
+# type (?) of an `\x1b[?z` received}:
+# DEFINES+=DEBUG_MXP_PROCESSING
+#
+# * Enable the features associated with reporting problems in processing Unicode
+# codepoints that cannot be displayed on screen in a `TConsole`:
+# DEFINES+=DEBUG_CODEPOINT_PROBLEMS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -226,6 +329,15 @@ unix:!macx {
     isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    openbsd {
+        LIBS += \
+# Some OS platforms have a hyphen (I think Cygwin does as well):
+            -llua5.1 \
+            -lhunspell-1.7
+        INCLUDEPATH += \
+            /usr/local/include \
+            /usr/local/include/lua-5.1
+    }
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
@@ -237,7 +349,8 @@ unix:!macx {
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
-    } else {
+    }
+    linux {
         LIBS += \
             -llua5.1 \
             -lhunspell
@@ -245,7 +358,6 @@ unix:!macx {
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
-        -lyajl \
         -lzip \
         -lz \
         -lpugixml
@@ -258,22 +370,69 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
     isEmpty( MINGW_BASE_DIR_TEST ) {
-        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
+        # 32-BIT Build systems have been obsolete since 2020/05/15
+        # https://www.msys2.org/news/#2020-05-17-32-bit-msys2-no-longer-actively-supported
+        #
+        # 32-Bit Targets have now been dropped - whilst a temporary reprieve
+        # for some Qt libraries that Mudlet needed was granted they are no
+        # longer available:
+        # https://www.msys2.org/news/#2023-12-13-starting-to-drop-some-32-bit-packages
+        # although it might be possible for dedicated parties to build them
+        # locally for a while:
+        error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
+        "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
+        "application build) typically this is one of:\\n"\
+        "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
+        "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
+        "'C:\msys64\mingw64' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
     }
-    LIBS +=  \
-        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
-        -llua51 \
+    GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
+    isEmpty( GITHUB_WORKSPACE_TEST ) {
+        # For users/developers building with MSYS2 on Windows:
+        LIBS +=  \
+            -L$${MINGW_BASE_DIR_TEST}/bin \
+            -llua5.1 \
+            -llibhunspell-1.7
+
+        INCLUDEPATH += \
+            $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+            $${MINGW_BASE_DIR_TEST}/include/pugixml
+    } else {
+        # For CI building with MSYS2 for Windows in a GH Workflow:
+        contains(QMAKE_HOST.arch, x86_64) {
+
+            LIBS +=  \
+                -LD:\\a\\_temp\\msys64\\mingw64/lib \
+                -LD:\\a\\_temp\\msys64\\mingw64/bin \
+                -llua5.1 \
+                -llibhunspell-1.7
+
+            INCLUDEPATH += \
+                D:\\a\\_temp\\msys64\\mingw64/include \
+                D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                $${MINGW_BASE_DIR_TEST}/include/pugixml
+        } else {
+            LIBS +=  \
+                -LD:\\a\\_temp\\msys64\\mingw32/lib \
+                -LD:\\a\\_temp\\msys64\\mingw32/bin \
+                -llua5.1 \
+                -llibhunspell-1.7
+
+            INCLUDEPATH += \
+                D:\\a\\_temp\\msys64\\mingw32/include \
+                D:/a/_temp/msys64/mingw32/include/lua5.1 \
+                $${MINGW_BASE_DIR_TEST}/include/pugixml
+        }
+    }
+
+    LIBS += \
         -lpcre-1 \
-        -llibhunspell-1.6 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
-        -lyajl \
         -lpugixml \
-        -lWs2_32
-    INCLUDEPATH += \
-         "C:\\Libraries\\boost_1_71_0" \
-         "$${MINGW_BASE_DIR_TEST}\\include" \
-         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+        -lws2_32 \
+        -loleaut32
+
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
 }
@@ -289,6 +448,7 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
+        LUA_TRANSLATIONS.path = $${LUA.path}/translations
         LUA_LCF.path = $${LUA.path}/lcf
         LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
@@ -305,17 +465,20 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
+    PKGCONFIG += hunspell lua5.1 libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
 # use ccache if available
-unix {
-    BASE_CXX = $$QMAKE_CXX
-    # common linux location
-    exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
-    # common macos location
-    exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+BASE_CXX = $$QMAKE_CXX
+BASE_C = $$QMAKE_CC
+# common linux location
+
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(C:\msys64\mingw64\bin\ccache.exe)|exists(C:\msys64\mingw32\bin\ccache.exe) {
+    QMAKE_CXX = ccache $$BASE_CXX
+    QMAKE_CC = ccache $$BASE_C
+} else {
+    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, C:\msys64\mingw64\bin\ccache.exe, or C:\msys64\mingw64\bin\ccache.exe")
 }
 
 # There does not seem to be an obvious pkg-config option for this one, it is
@@ -368,9 +531,11 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
+    contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+            system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
+        }
     }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
@@ -381,9 +546,11 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
+    contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+            system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
+        }
     }
 }
 
@@ -400,14 +567,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/dblsqd")
         }
-
-        # Sparkle glue code - only needed for MacOs
-        macx {
-            !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-                message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
-                system("cd $${PWD}/.. ; git submodule update --init 3rdparty/sparkle-glue")
-            }
-        }
     }
 }
 
@@ -423,10 +582,12 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
-    include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
-} else {
-    error("Cannot locate QtKeychain submodule source code, build abandoned!")
+contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+    exists("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri") {
+        include("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri")
+    } else {
+        error("Cannot locate QtKeychain submodule source code, build abandoned!")
+    }
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
@@ -436,21 +597,14 @@ contains( DEFINES, INCLUDE_UPDATER ) {
     } else {
         error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
     }
-
-    macx {
-        # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle complation below
-        !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-            error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
-        }
-    }
 }
 
 ################################## File Lists ##################################
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
-    TTextCodec.cpp \
+    AltFocusMenuBarDisable.cpp \
+    DarkTheme.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -461,11 +615,15 @@ SOURCES += \
     dlgConnectionProfiles.cpp \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
+    dlgModuleManager.cpp \
+    dlgMapLabel.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
+    dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomProperties.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -478,15 +636,25 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
+    FileOpenHandler.cpp \
+    GifTracker.cpp \
+    GMCPAuthenticator.cpp \
+    TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MudletInstanceCoordinator.cpp \
+    MxpTag.cpp \
     ScriptUnit.cpp \
+    ShortcutsManager.cpp \
+    SingleLineTextEdit.cpp \
     T2DMap.cpp \
+    TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
     TArea.cpp \
@@ -496,21 +664,60 @@ SOURCES += \
     TDebug.cpp \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
+    TEncodingTable.cpp \
+    TEntityHandler.cpp \
+    TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TScrollBox.cpp \
+    TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterDiscord.cpp \
+    TLuaInterpreterMapper.cpp \
+    TLuaInterpreterMedia.cpp \
+    TLuaInterpreterMudletObjects.cpp \
+    TLuaInterpreterNetworking.cpp \
+    TLuaInterpreterUI.cpp \
+    TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
+    TMediaPlaylist.cpp \
+    TMxpBRTagHandler.cpp \
+    TMxpElementDefinitionHandler.cpp \
+    TMxpElementRegistry.cpp \
+    TMxpEntityTagHandler.cpp \
+    TLuaInterpreterTextToSpeech.cpp \
+    TMxpFormattingTagsHandler.cpp \
+    TMxpColorTagHandler.cpp \
+    TMxpCustomElementTagHandler.cpp \
+    TMxpFontTagHandler.cpp \
+    TMxpLinkTagHandler.cpp \
+    TMxpMusicTagHandler.cpp \
+    TMxpSoundTagHandler.cpp \
+    TMxpMudlet.cpp \
+    TMxpNodeBuilder.cpp \
+    TMxpProcessor.cpp \
+    TMxpSendTagHandler.cpp \
+    TMxpSupportTagHandler.cpp \
+    TMxpTagHandler.cpp \
+    TMxpTagParser.cpp \
+    TMxpTagProcessor.cpp \
+    TMxpVersionTagHandler.cpp \
+    TMxpVarTagHandler.cpp \
+    TriggerHighlighter.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TStringUtils.cpp \
     TTabBar.cpp \
+    TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -522,10 +729,14 @@ SOURCES += \
     XMLimport.cpp
 
 HEADERS += \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
+    Announcer.h \
     AliasUnit.h \
-    TTextCodec.h \
+    AltFocusMenuBarDisable.h \
     ctelnet.h \
+    DarkTheme.h \
     discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
@@ -535,11 +746,15 @@ HEADERS += \
     dlgConnectionProfiles.h \
     dlgIRC.h \
     dlgKeysMainArea.h \
+    dlgMapLabel.h \
     dlgMapper.h \
+    dlgModuleManager.h \
     dlgNotepad.h \
     dlgPackageExporter.h \
+    dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomProperties.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -551,16 +766,27 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
+    FileOpenHandler.h \
+    GifTracker.h \
+    GMCPAuthenticator.h \
+    TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    mapInfoContributorManager.h \
     mudlet.h \
+    MudletInstanceCoordinator.h \
+    MxpTag.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
+    ShortcutsManager.h \
+    SingleLineTextEdit.h \
     T2DMap.h \
+    TAccessibleConsole.h \
+    TAccessibleTextEdit.h \
     TAction.h \
     TAlias.h \
     TArea.h \
@@ -571,25 +797,61 @@ HEADERS += \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
+    TEncodingTable.h \
+    TEntityHandler.h \
+    TEntityResolver.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
+    TGameDetails.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TLinkStore.h \
     TLuaInterpreter.h \
+    TMainConsole.h \
     TMap.h \
-    TMedia.h \
+    TMapLabel.h \
     TMatchState.h \
+    TMedia.h \
+    TMediaData.h \
+    TMediaPlaylist.h \
+    TMxpBRTagHandler.h \
+    TMxpClient.h \
+    TMxpColorTagHandler.h \
+    TMxpCustomElementTagHandler.h \
+    TMxpFontTagHandler.h \
+    TMxpLinkTagHandler.h \
+    TMxpMusicTagHandler.h \
+    TMxpSoundTagHandler.h \
+    TMxpElementDefinitionHandler.h \
+    TMxpElementRegistry.h \
+    TMxpEntityTagHandler.h \
+    TMxpContext.h \
+    TMxpFormattingTagsHandler.h \
+    TMxpMudlet.h \
+    TMxpNodeBuilder.h \
+    TMxpProcessor.h \
+    TMxpSendTagHandler.h \
+    TMxpTagHandler.h \
+    TMxpTagParser.h \
+    TMxpTagProcessor.h \
+    TMxpSupportTagHandler.h \
+    TMxpVarTagHandler.h \
+    TMxpVersionTagHandler.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \
     TRoomDB.h \
     TScript.h \
+    TScrollBox.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TStringUtils.h \
+    TriggerHighlighter.h \
     TTabBar.h \
+    TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -597,12 +859,29 @@ HEADERS += \
     TTrigger.h \
     TVar.h \
     VarUnit.h \
+    utils.h \
     XMLexport.h \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
+macx|win32 {
+    macx {
+        SOURCES += AnnouncerMac.mm
+    }
+
+    win32 {
+        SOURCES += AnnouncerWindows.cpp \
+            uiawrapper.cpp
+
+        HEADERS += uiawrapper.h
+    }
+} else {
+    # Everything else
+    SOURCES += \
+        AnnouncerUnix.cpp
+}
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -617,10 +896,14 @@ FORMS += \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
+    ui/module_manager.ui \
+    ui/map_label.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
+    ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_properties.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \
@@ -635,13 +918,18 @@ RESOURCES += \
     mudlet.qrc \
     ../translations/translated/qm.qrc
 
+contains(DEFINES, "INCLUDE_VARIABLE_SPLASH_SCREEN") {
+    RESOURCES += \
+        additional_splash_screens.qrc
+}
+
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \
         mudlet_fonts_common.qrc
 
-    linux {
+    linux|freebsd {
         RESOURCES += \
-            mudlet_fonts_linux.qrc
+            mudlet_fonts_posix.qrc
     }
 
     !build_pass{
@@ -694,6 +982,17 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     }
 }
 
+contains( DEFINES, "INCLUDE_OWN_QT6_KEYCHAIN" ) {
+    !build_pass{
+        message("Including own copy of QtKeyChain library code in this configuration")
+    }
+} else {
+    LIBS += -lqt6keychain
+    !build_pass{
+        message("Linking with system QtKeyChain library code in this configuration")
+    }
+}
+
 TRANSLATIONS = $$files(../translations/translated/*.ts)
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
@@ -705,7 +1004,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
-# that - if you are NOT runnning QT Creator as root, which is the safest way
+# that - if you are NOT running QT Creator as root, which is the safest way
 # (i.e safe = NOT root) - against:
 # "Override <path to?>/make" has the entry: "/usr/bin/sudo"
 # without the quotes, assuming /usr/bin is the location of "sudo"
@@ -731,6 +1030,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/IDManager.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
     $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
@@ -745,6 +1045,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserCommandLine.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
@@ -753,13 +1054,20 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserScrollBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserStyleSheet.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUserWindow.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
+    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserButton.lua
 LUA_GEYSER.depends = mudlet
+
+LUA_TRANSLATIONS.files = \
+    $${PWD}/../translations/lua/*
+LUA_TRANSLATIONS.depends = mudlet
 
 # Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt
 # makefile constructor to reproduce the exact directory structure we have to
@@ -1249,8 +1557,22 @@ macx {
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
-    # Set the .app's icns file
-    ICON = icons/osx.icns
+    APP_MUDLET_LUA_TRANSLATION.files = \
+        ../translations/lua
+
+    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
+
+    # Set the macOS application's icon
+    contains(BUILD, "-ptb.+") {
+        ICON = icons/mudlet_ptb.icns
+    } else {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
+            ICON = icons/mudlet_dev.icns
+        } else {
+            ICON = icons/mudlet.icns
+        }
+    }
 
     LIBS += -framework AppKit
 
@@ -1270,15 +1592,8 @@ macx {
         QMAKE_LFLAGS += -F $$SPARKLE_PATH
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
-        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-        OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-            ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-        HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
-            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-            ../3rdparty/sparkle-glue/CocoaInitializer.h
-
+        OBJECTIVE_SOURCES += sparkleupdater.mm
+        HEADERS += sparkleupdater.h        
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework
@@ -1290,8 +1605,17 @@ macx {
 }
 
 win32 {
-    # set the Windows binary icon
-    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+    # set the Windows binary icon, a proper .ico file will contains several
+    # images/layers in specific formats and is used in MORE than one way!
+    contains(BUILD, "-ptb.+") {
+        RC_ICONS = icons/mudlet_ptb.ico
+    } else {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
+            RC_ICONS = icons/mudlet_dev.ico
+        } else {
+            RC_ICONS = icons/mudlet.ico
+        }
+    }
 
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
@@ -1305,28 +1629,100 @@ win32 {
     }
 }
 
-# Pull the docs and lua files into the project so they show up in the Qt Creator project files list
+# This is a list of files that we want to show up in the Qt Creator IDE that are
+# not otherwise used by the main project:
 OTHER_FILES += \
-    $${LUA.files} \
-    $${LUA_GEYSER.files} \
-    $${LUA_TESTS.files} \
-    $${DISTFILES} \
-    ../README \
-    ../COMPILE \
-    ../COPYING \
-    ../INSTALL \
-    mac-deploy.sh
+    ../.crowdin.yml \
+    ../.devcontainer/Dockerfile \
+    ../.devcontainer/devcontainer.json \
+    ../.devcontainer/library-scripts/desktop-lite-debian.sh \
+    ../.github/CODE_OF_CONDUCT.md \
+    ../.github/CODEOWNERS \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/codespell-wordlist.txt \
+    ../.github/CONTRIBUTING.md \
+    ../.github/dependabot.yml \
+    ../.github/FUNDING.yml \
+    ../.github/ISSUE_TEMPLATE.md \
+    ../.github/pr-labeler.yml \
+    ../.github/PULL_REQUEST_TEMPLATE.md \
+    ../.github/repo-metadata.yml \
+    ../.github/SUPPORT.md \
+    ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/build-mudlet-win.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/clangtidy-post-comments.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/codespell-analysis.yml \
+    ../.github/workflows/dangerjs.yml \
+    ../.github/workflows/generate-changelog.yml \
+    ../.github/workflows/generate-coder-attribution.yml \
+    ../.github/workflows/qridlayout-ordering.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/performance-analysis.yml \
+    ../.github/workflows/tag-pull-requests.yml \
+    ../.github/workflows/update-3rdparty.yml \
+    ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-en-us-plural.yml \
+    ../.github/workflows/update-geyser-docs.yml \
+    ../.github/workflows/update-translations.yml \
+    ../.gitignore \
+    ../CI/build-mudlet-for-windows.sh \
+    ../CI/deploy-mudlet-for-windows.sh \
+    ../CI/fix.grid.ui.ordering.js \
+    ../CI/generate-changelog.lua \
+    ../CI/lua-5.1.5-so.patch \
+    ../CI/org.mudlet.mudlet.yml \
+    ../CI/qt-silent-install.qs \
+    ../CI/register-windows-release.sh \
+    ../CI/package-mudlet-for-windows.sh \
+    ../CI/setup-windows-sdk.sh \
+    ../CI/travis.after_success.sh \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
+    ../CI/travis.validate_deployment.sh \
+    ../CI/update-autocompletion.lua \
+    ../CI/validate-deployment-for-windows.sh \
+    ../dangerfile.js \
+    ../docker/.env.template \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
+    ../docker/Dockerfile \
+    ../test/CMakeLists.txt \
+    ../test/GUIConsoleTests.mpackage \
+    ../test/TEntityHandlerTest.cpp \
+    ../test/TEntityResolverTest.cpp \
+    ../test/TLinkStoreTest.cpp \
+    ../test/TLuaInterfaceTest.cpp \
+    ../test/TMxpCustomElementTagHandlerTest.cpp \
+    ../test/TMxpEntityTagHandlerTest.cpp \
+    ../test/TMxpFormattingTagsTest.cpp \
+    ../test/TMxpSendTagHandlerTest.cpp \
+    ../test/TMxpStubClient.h \
+    ../test/TMxpTagParserTest.cpp \
+    ../test/TMxpVersionTagTest.cpp \
+    mac-deploy.sh \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/lua/ldoc.css
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
-# or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
+# or via environmental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
-    INSTALLS += \
+INSTALLS += \
         target \
         LUA \
         LUA_GEYSER \
+        LUA_TRANSLATIONS \
         LUA_LCF \
         LUA_LCF_L1_GET__AST \
         LUA_LCF_L1_GET__FORMATTER__AST \
@@ -1390,65 +1786,43 @@ unix:!macx {
 # leaves those empty sub-directories behind and that prevents their parents
 # from being deleted as well
 
-
+# This is the extra files that are needed to do a `make dist` given a makefile
 DISTFILES += \
-    CMakeLists.txt \
-    .clang-format \
-    ../.github/pr-labeler.yml \
-    ../.github/CODEOWNERS.md \
-    ../.github/CODE_OF_CONDUCT.md \
-    ../.github/CONTRIBUTING.md \
-    ../.github/FUNDING.yml \
-    ../.github/ISSUE_TEMPLATE.md \
-    ../.github/PULL_REQUEST_TEMPLATE.md \
-    ../.github/SUPPORT.md \
-    ../.github/workflows/build-mudlet.yml \
-    ../.github/workflows/update-3rdparty.yml \
-    ../.github/workflows/update-autocompletion.yml \
-    ../.github/workflows/update-translations.yml \
-    ../.github/workflows/whitespace-linter.yml \
-    ../CMakeLists.txt \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${LUA_TRANSLATIONS.files} \
+    ../.clang-tidy \
+    ../.gitmodules \
     ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindLua51.cmake \
     ../cmake/FindPCRE.cmake \
+    ../cmake/FindPUGIXML.cmake \
+    ../cmake/FindSparkle.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    ../cmake/FindPUGIXML.cmake \
-    ../.travis.yml \
-    ../CI/travis.before_install.sh \
-    ../CI/travis.install.sh \
-    ../CI/travis.linux.before_install.sh \
-    ../CI/travis.linux.install.sh \
-    ../CI/travis.osx.before_install.sh \
-    ../CI/travis.osx.install.sh \
-    ../CI/travis.set-build-info.sh \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.osx.after_success.sh \
-    ../.appveyor.yml \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.build.ps1 \
-    mudlet-lua/lua/ldoc.css \
-    mudlet-lua/genDoc.sh \
-    mudlet-lua/tests/README.md \
-    mudlet-lua/tests/DB.lua \
-    mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua \
+    ../cmake/FindZZIPLIB.cmake \
+    ../cmake/IncludeOptionalModule.cmake \
+    ../cmake/InitGitSubmodule.cmake \
+    ../CMakeLists.txt \
+    ../COMMITMENT \
+    ../COMPILE \
+    ../COPYING \
+    ../INSTALL \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
     ../README.md \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
-    ../COMMITMENT \
-    ../.crowdin.yml \
-    ../.gitignore \
-    ../.gitmodules \
     ../translations/translated/updateqm.pri \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
-    ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
-    ../CI/travis.compile.sh
+    .clang-format \
+    CF-loader.xml \
+    CMakeLists.txt \
+    mg-loader.xml \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua \
+    mudlet-lua/tests/README.md

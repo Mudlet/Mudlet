@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -33,10 +33,12 @@
 #include "ircmessagecomposer_p.h"
 #include "ircnetwork_p.h"
 #include "irccommand.h"
+#include "irccore_p.h"
 #include "irc.h"
 #include <QMetaEnum>
 #include <QVariant>
 #include <QDebug>
+#include <functional>
 
 IRC_BEGIN_NAMESPACE
 
@@ -241,40 +243,43 @@ IRC_BEGIN_NAMESPACE
     \brief The message is an implicit "reply" after joining a channel.
  */
 
-static const QMetaObject* irc_command_meta_object(const QString& command)
-{
-    static QHash<QString, const QMetaObject*> metaObjects;
-    if (metaObjects.isEmpty()) {
-        metaObjects.insert("ACCOUNT", &IrcAccountMessage::staticMetaObject);
-        metaObjects.insert("AWAY", &IrcAwayMessage::staticMetaObject);
-        metaObjects.insert("BATCH", &IrcBatchMessage::staticMetaObject);
-        metaObjects.insert("CAP", &IrcCapabilityMessage::staticMetaObject);
-        metaObjects.insert("ERROR", &IrcErrorMessage::staticMetaObject);
-        metaObjects.insert("CHGHOST", &IrcHostChangeMessage::staticMetaObject);
-        metaObjects.insert("INVITE", &IrcInviteMessage::staticMetaObject);
-        metaObjects.insert("JOIN", &IrcJoinMessage::staticMetaObject);
-        metaObjects.insert("KICK", &IrcKickMessage::staticMetaObject);
-        metaObjects.insert("MODE", &IrcModeMessage::staticMetaObject);
-        metaObjects.insert("NICK", &IrcNickMessage::staticMetaObject);
-        metaObjects.insert("NOTICE", &IrcNoticeMessage::staticMetaObject);
-        metaObjects.insert("PART", &IrcPartMessage::staticMetaObject);
-        metaObjects.insert("PING", &IrcPingMessage::staticMetaObject);
-        metaObjects.insert("PONG", &IrcPongMessage::staticMetaObject);
-        metaObjects.insert("PRIVMSG", &IrcPrivateMessage::staticMetaObject);
-        metaObjects.insert("QUIT", &IrcQuitMessage::staticMetaObject);
-        metaObjects.insert("TOPIC", &IrcTopicMessage::staticMetaObject);
-    }
+extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
 
-    const QMetaObject* metaObject = metaObjects.value(command.toUpper());
-    if (!metaObject) {
-        bool ok = false;
-        command.toInt(&ok);
-        if (ok)
-            metaObject = &IrcNumericMessage::staticMetaObject;
-    }
-    if (!metaObject)
-        metaObject = &IrcMessage::staticMetaObject;
-    return metaObject;
+static IrcMessage* irc_create_message(const QString& command, IrcConnection* connection)
+{
+    typedef std::function<IrcMessage *(IrcConnection *)> IrcMessageFactory;
+
+    static const QHash<QString, IrcMessageFactory> factories = {
+        {"ACCOUNT", [](IrcConnection* c) { return new IrcAccountMessage(c); }},
+        {"AWAY", [](IrcConnection* c) { return new IrcAwayMessage(c); }},
+        {"BATCH", [](IrcConnection* c) { return new IrcBatchMessage(c); }},
+        {"CAP", [](IrcConnection* c) { return new IrcCapabilityMessage(c); }},
+        {"ERROR", [](IrcConnection* c) { return new IrcErrorMessage(c); }},
+        {"CHGHOST", [](IrcConnection* c) { return new IrcHostChangeMessage(c); }},
+        {"INVITE", [](IrcConnection* c) { return new IrcInviteMessage(c); }},
+        {"JOIN", [](IrcConnection* c) { return new IrcJoinMessage(c); }},
+        {"KICK", [](IrcConnection* c) { return new IrcKickMessage(c); }},
+        {"MODE", [](IrcConnection* c) { return new IrcModeMessage(c); }},
+        {"NICK", [](IrcConnection* c) { return new IrcNickMessage(c); }},
+        {"NOTICE", [](IrcConnection* c) { return new IrcNoticeMessage(c); }},
+        {"PART", [](IrcConnection* c) { return new IrcPartMessage(c); }},
+        {"PING", [](IrcConnection* c) { return new IrcPingMessage(c); }},
+        {"PONG", [](IrcConnection* c) { return new IrcPongMessage(c); }},
+        {"PRIVMSG", [](IrcConnection* c) { return new IrcPrivateMessage(c); }},
+        {"QUIT", [](IrcConnection* c) { return new IrcQuitMessage(c); }},
+        {"TOPIC", [](IrcConnection* c) { return new IrcTopicMessage(c); }},
+    };
+
+    IrcMessageFactory factory = factories.value(command);
+    if (factory)
+        return factory(connection);
+
+    bool isNumeric = false;
+    int number = command.toInt(&isNumeric);
+    if (isNumeric && number > 0)
+        return new IrcNumericMessage(connection);
+
+    return new IrcMessage(connection);
 }
 
 /*!
@@ -314,7 +319,7 @@ IrcConnection* IrcMessage::connection() const
 IrcNetwork* IrcMessage::network() const
 {
     Q_D(const IrcMessage);
-    return d->connection ? d->connection->network() : 0;
+    return d->connection ? d->connection->network() : nullptr;
 }
 
 /*!
@@ -527,7 +532,7 @@ QString IrcMessage::host() const
 QString IrcMessage::account() const
 {
     Q_D(const IrcMessage);
-    return d->tags().value(QLatin1String("account")).toString();
+    return d->tags().value(QStringLiteral("account")).toString();
 }
 
 /*!
@@ -624,7 +629,6 @@ QByteArray IrcMessage::encoding() const
 void IrcMessage::setEncoding(const QByteArray& encoding)
 {
     Q_D(IrcMessage);
-    extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
     if (!irc_is_supported_encoding(encoding)) {
         qWarning() << "IrcMessage::setEncoding(): unsupported encoding" << encoding;
         return;
@@ -689,19 +693,15 @@ void IrcMessage::setTag(const QString& name, const QVariant& value)
  */
 IrcMessage* IrcMessage::fromData(const QByteArray& data, IrcConnection* connection)
 {
-    IrcMessage* message = 0;
     IrcMessageData md = IrcMessageData::fromData(data);
-    const QMetaObject* metaObject = irc_command_meta_object(md.command);
-    if (metaObject) {
-        message = qobject_cast<IrcMessage*>(metaObject->newInstance(Q_ARG(IrcConnection*, connection)));
-        Q_ASSERT(message);
-        message->d_ptr->data = md;
-        QByteArray tag = md.tags.value("time");
-        if (!tag.isEmpty()) {
-            QDateTime ts = QDateTime::fromString(QString::fromUtf8(tag), Qt::ISODate);
-            if (ts.isValid())
-                message->d_ptr->timeStamp = ts.toTimeSpec(Qt::LocalTime);
-        }
+    IrcMessage* message = irc_create_message(md.command, connection);
+    Q_ASSERT(message);
+    message->d_ptr->data = md;
+    QByteArray tag = md.tags.value("time");
+    if (!tag.isEmpty()) {
+        QDateTime ts = QDateTime::fromString(QString::fromUtf8(tag), Qt::ISODate);
+        if (ts.isValid())
+            message->d_ptr->timeStamp = ts.toTimeSpec(Qt::LocalTime);
     }
     return message;
 }
@@ -711,15 +711,11 @@ IrcMessage* IrcMessage::fromData(const QByteArray& data, IrcConnection* connecti
  */
 IrcMessage* IrcMessage::fromParameters(const QString& prefix, const QString& command, const QStringList& parameters, IrcConnection* connection)
 {
-    IrcMessage* message = 0;
-    const QMetaObject* metaObject = irc_command_meta_object(command);
-    if (metaObject) {
-        message = qobject_cast<IrcMessage*>(metaObject->newInstance(Q_ARG(IrcConnection*, connection)));
-        Q_ASSERT(message);
-        message->setPrefix(prefix);
-        message->setCommand(command);
-        message->setParameters(parameters);
-    }
+    IrcMessage* message = irc_create_message(command, connection);
+    Q_ASSERT(message);
+    message->setPrefix(prefix);
+    message->setCommand(command);
+    message->setParameters(parameters);
     return message;
 }
 
@@ -731,7 +727,7 @@ IrcMessage* IrcMessage::fromParameters(const QString& prefix, const QString& com
 IrcMessage* IrcMessage::clone(QObject* parent) const
 {
     Q_D(const IrcMessage);
-    IrcMessage* msg = qobject_cast<IrcMessage*>(metaObject()->newInstance(Q_ARG(IrcConnection*, d->connection)));
+    IrcMessage* msg = irc_create_message(d->command(), d->connection);
     if (msg) {
         msg->setParent(parent);
         IrcMessagePrivate* p = IrcMessagePrivate::get(msg);
@@ -837,7 +833,7 @@ bool IrcAwayMessage::isAway() const
     Q_D(const IrcMessage);
     int rpl = d->command().toInt();
     return rpl == Irc::RPL_AWAY || rpl == Irc::RPL_NOWAWAY
-            || (d->command() == "AWAY" && !d->param(0).isEmpty());
+            || (d->command() == QLatin1String("AWAY") && !d->param(0).isEmpty());
 }
 
 bool IrcAwayMessage::isValid() const
@@ -989,7 +985,7 @@ QStringList IrcCapabilityMessage::capabilities() const
     QStringList caps;
     QStringList params = d->params();
     if (params.count() > 2)
-        caps = params.last().split(QLatin1Char(' '), QString::SkipEmptyParts);
+        caps = params.last().split(QLatin1Char(' '), Qt::SkipEmptyParts);
     return caps;
 }
 
@@ -1412,7 +1408,7 @@ IrcMotdMessage::IrcMotdMessage(IrcConnection* connection) : IrcMessage(connectio
 {
     Q_D(IrcMessage);
     d->type = Motd;
-    setCommand(QLatin1String("MOTD"));
+    setCommand(QStringLiteral("MOTD"));
 }
 
 /*!
@@ -1446,7 +1442,7 @@ IrcNamesMessage::IrcNamesMessage(IrcConnection* connection) : IrcMessage(connect
 {
     Q_D(IrcMessage);
     d->type = Names;
-    setCommand(QLatin1String("NAMES"));
+    setCommand(QStringLiteral("NAMES"));
 }
 
 /*!
@@ -2021,7 +2017,7 @@ IrcWhoisMessage::IrcWhoisMessage(IrcConnection* connection) : IrcMessage(connect
 {
     Q_D(IrcMessage);
     d->type = Whois;
-    setCommand(QLatin1String("WHOIS"));
+    setCommand(QStringLiteral("WHOIS"));
 }
 
 /*!
@@ -2093,7 +2089,11 @@ QString IrcWhoisMessage::address() const
 QDateTime IrcWhoisMessage::since() const
 {
     Q_D(const IrcMessage);
+#if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
     return QDateTime::fromTime_t(d->param(5).toInt());
+#else
+    return QDateTime::fromSecsSinceEpoch(d->param(5).toInt());
+#endif
 }
 
 /*!
@@ -2130,7 +2130,7 @@ bool IrcWhoisMessage::isSecure() const
 QStringList IrcWhoisMessage::channels() const
 {
     Q_D(const IrcMessage);
-    return d->params().value(8).split(QLatin1Char(' '), QString::SkipEmptyParts);
+    return d->params().value(8).split(QLatin1Char(' '), Qt::SkipEmptyParts);
 }
 
 /*!
@@ -2167,7 +2167,7 @@ IrcWhowasMessage::IrcWhowasMessage(IrcConnection* connection) : IrcMessage(conne
 {
     Q_D(IrcMessage);
     d->type = Whowas;
-    setCommand(QLatin1String("WHOWAS"));
+    setCommand(QStringLiteral("WHOWAS"));
 }
 
 /*!
@@ -2274,7 +2274,7 @@ QString IrcWhoReplyMessage::server() const
 bool IrcWhoReplyMessage::isAway() const
 {
     Q_D(const IrcMessage);
-    return d->param(2).contains("G");
+    return d->param(2).contains(QLatin1String("G"));
 }
 
 /*!
@@ -2287,7 +2287,7 @@ bool IrcWhoReplyMessage::isAway() const
 bool IrcWhoReplyMessage::isServOp() const
 {
     Q_D(const IrcMessage);
-    return d->param(2).contains("*");
+    return d->param(2).contains(QLatin1String("*"));
 }
 
 /*!
@@ -2330,13 +2330,13 @@ QDebug operator<<(QDebug debug, IrcMessage::Flags flags)
 {
     QStringList lst;
     if (flags == IrcMessage::None)
-        lst << "None";
+        lst << QStringLiteral("None");
     if (flags & IrcMessage::Own)
-        lst << "Own";
+        lst << QStringLiteral("Own");
     if (flags & IrcMessage::Playback)
-        lst << "Playback";
+        lst << QStringLiteral("Playback");
     if (flags & IrcMessage::Implicit)
-        lst << "Implicit";
+        lst << QStringLiteral("Implicit");
     debug.nospace() << '(' << qPrintable(lst.join("|")) << ')';
     return debug;
 }

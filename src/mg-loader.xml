@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>MG-Loader</name>
+			<packageName></packageName>
+			<script>function downloadPackage(a,b)
+  decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Das Mudlet-Paket fürs MorgenGrauen wird heruntergeladen...")
+  downloadFile(getMudletHomeDir() .. "/MorgenGrauen.mpackage", "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
+end
+
+function installReady(event, file)
+  if file ~= getMudletHomeDir().."/MorgenGrauen.mpackage" then return end
+  if not io.exists(getMudletHomeDir().."/MorgenGrauen.mpackage") then
+    decho([[&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Um das Mudlet-Paket fürs MorgenGrauen zu laden, kopiere bitte folgenden Text (ohne Zeilenumbrüche) in die Eingabezeile und sende ihn ab:
+
+lua function d(a,b)if not b:find("MorgenGrauen",1,true)then return end installPackage(b)os.remove(b)cecho("&amp;lt;gold&amp;gt;Paket installiert!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/MorgenGrauen.mpackage","https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
+
+]])
+    return
+  end
+
+
+  decho("&lt;0,160,0&gt;[  OK  ]  - &lt;190,100,50&gt;Dein Mudlet-Paket fürs MorgenGrauen wurde erfolgreich heruntergeladen.\n")
+  decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Installiere... (dies dauert einige Sekunden.)\n")
+  tempTimer(1, [[installPackage(getMudletHomeDir().."/MorgenGrauen.mpackage")]])
+  uninstallPackage("mg-loader")
+end
+
+registerAnonymousEventHandler("sysConnectionEvent", "downloadPackage")
+registerAnonymousEventHandler("sysDownloadDone", "installReady")</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

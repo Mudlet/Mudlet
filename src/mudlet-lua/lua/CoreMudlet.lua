@@ -37,7 +37,7 @@ if false then
 
   --- Clears the user window or a mini console with the name given as argument.
   ---
-  --- @param windowName optinal
+  --- @param windowName optional
   function closeUserWindow(windowName)
   end
 
@@ -106,7 +106,7 @@ if false then
 
 
   --- Disables/deactivates an alias with the given name. This means that when you type in text that should
-  --- match it's pattern, it won't match and will be sent to the MUD. If several aliases have this name, they'll all be disabled.
+  --- match its pattern, it won't match and will be sent to the MUD. If several aliases have this name, they'll all be disabled.
   function disableAlias(name)
   end
 
@@ -118,7 +118,7 @@ if false then
 
 
 
-  --- Disables a timer from running it's script when it fires - so the timer
+  --- Disables a timer from running its script when it fires - so the timer
   --- cycles will still be happening, just no action on them. If you'd like to
   --- permanently delete it, use killTimer() instead. <br/><br/>
   ---
@@ -202,7 +202,7 @@ if false then
 
 
 
-  --- Enables/activates the alias by it's name. If several aliases have this name, they'll all be enabled.
+  --- Enables/activates the alias by its name. If several aliases have this name, they'll all be enabled.
   function enableAlias(name)
   end
 
@@ -356,7 +356,7 @@ if false then
 
 
 
-  --- Returns the time without stoping stop watch (milliseconds based) in form of 0.058
+  --- Returns the time without stopping stop watch (milliseconds based) in form of 0.058
   --- (= clock ran for 58 milliseconds before it was stopped).
   --- @see createStopWatch
   function getStopWatchTime(watchID)
@@ -585,6 +585,8 @@ if false then
 
 
   --- <b><u>TODO</u></b>  loadRawFile - TLuaInterpreter::loadRawFile
+  --- in TLuaInterpreter, loadRawFile is established as an alias to
+  --- loadReplay. We override the old name to do nothing instead.
   function loadRawFile()
   end
 
@@ -783,7 +785,7 @@ if false then
 
 
   --- Pastes the previously copied text including all format codes like color, font etc. at the current user
-  --- cursor position. The copy() and paste() functions can be used to copy formated text from the main window
+  --- cursor position. The copy() and paste() functions can be used to copy formatted text from the main window
   --- to a user window without losing colors e. g. for chat windows, map windows etc.
   ---
   --- @see copy
@@ -846,7 +848,7 @@ if false then
   ---
   --- As an example, your prompt trigger could raise an onPrompt event if you want to attach 2 functions to it.
   --- In your prompt trigger, all you'd need to do is raiseEvent("onPrompt") Now we go about creating functions
-  --- that attach to the event. Lets say the first one is check_health_stuff() and the other is check_salve_stuff().
+  --- that attach to the event. Let's say the first one is check_health_stuff() and the other is check_salve_stuff().
   --- We would like these to be executed when the event is raised. So create a script and give it a name of check_health_stuff.
   --- In the Add user defined event handler, type onPrompt, and press enter to add it to the list. In the script box,
   --- create: function check_health_stuff()blah blah end. When the onPrompt event comes along, that script catches it,
@@ -894,7 +896,7 @@ if false then
   ---   replace("cute trolly")
   ---   </pre>
   ---
-  --- @usage Lets replace the whole line. If you'd like to delete/gag the whole line, use deleteLine()!
+  --- @usage Let's replace the whole line. If you'd like to delete/gag the whole line, use deleteLine()!
   ---   <pre>
   ---   selectString(line, 1)
   ---   replace("Out with the old, in with the new!")
@@ -902,7 +904,7 @@ if false then
   ---
   --- @see selectString
   --- @see deleteLine
-  function replace(with)
+  function replace(with, keepColor)
   end
 
 
@@ -975,7 +977,7 @@ if false then
   ---      setFgColor(255,0,0)
   ---   end
   ---   </pre>
-  --- @usage In a trigger, lets color all words on the current line green.
+  --- @usage In a trigger, let's color all words on the current line green.
   ---   <pre>
   ---   selectString(line, 1)
   ---   fg("green")
@@ -1089,6 +1091,9 @@ if false then
   function setWindowWrap(windowName, wrapAt)
   end
 
+  --- Gets at what position in the line the console or miniconsole will start word wrap.
+  function getWindowWrap(windownName)
+  end
 
 
   --- <b><u>TODO</u></b>  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent
@@ -1132,7 +1137,7 @@ if false then
   ---   send("kill rat")
   ---   </pre>
   --- @usage This example is demonstrating transition from Nexus/Zmud wait.
-  ---   You can simply rewrote following nexus/zmud code bellow with <b>tempTimers</b>.
+  ---   You can simply rewrote following nexus/zmud code below with <b>tempTimers</b>.
   ---   <pre>
   ---   #send jerk fish
   ---   #wait 1500

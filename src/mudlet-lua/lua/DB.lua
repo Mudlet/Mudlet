@@ -40,7 +40,7 @@ end
 datetime = {
   _directives = {
     ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-    ["%B"] = "(?P<month_name>january|febuary|march|april|may|june|july|august|september|october|november|december)",
+    ["%B"] = "(?P<month_name>january|february|march|april|may|june|july|august|september|october|november|december)",
     ["%d"] = "(?P<day_of_month>\\d{2})",
     ["%H"] = "(?P<hour_24>\\d{2})",
     ["%I"] = "(?P<hour_12>\\d{2})",
@@ -54,7 +54,7 @@ datetime = {
   _pattern_cache = {},
   _month_names = {
     ["january"] = 1,
-    ["febuary"] = 2,
+    ["february"] = 2,
     ["march"] = 3,
     ["april"] = 4,
     ["may"] = 5,
@@ -88,7 +88,7 @@ function datetime:calculate_UTCdiff(ts)
   local date, time = os.date, os.time
   local utc = date('!*t', ts)
   local lcl = date('*t', ts)
-  lcl.isdst = false
+  lcl.isdst = os.date("*t")["isdst"]
   return os.difftime(time(lcl), time(utc))
 end
 
@@ -176,7 +176,7 @@ function datetime:parse(source, format, as_epoch)
 
     dt.min = tonumber(m.minute)
     dt.sec = tonumber(m.second)
-    dt.isdst = false
+    dt.isdst = os.date("*t")["isdst"]
 
     if as_epoch then
       return os.time(dt)
@@ -217,6 +217,8 @@ function db:_sql_type(value)
     return "NULL"
   elseif t == "table" and value._timestamp ~= nil then
     return "INTEGER"
+  elseif t == "table" and value._isNull ~= nil then
+    return "NULL"
   else
     return "TEXT"
   end
@@ -226,7 +228,7 @@ end
 
 -- NOT LUADOC
 -- Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
--- prevent inadvertant SQL injection.
+-- prevent inadvertent SQL injection.
 -- called when generating the schema
 function db:_sql_convert(value)
   local t = db:_sql_type(value)
@@ -253,7 +255,7 @@ end
 -- NOT LUADOC
 -- Given a sheet name and the details of an index, this function will return a unique index name to
 -- add to the database. The purpose of this is to create unique index names as indexes are tested
--- for existance on each call of db:create and not only on creation. That way new indexes can be
+-- for existence on each call of db:create and not only on creation. That way new indexes can be
 -- added after initial creation.
 function db:_index_name(tbl_name, params)
   local t = type(params)
@@ -356,10 +358,12 @@ function db:_sql_values(values)
       s = "NULL"
     elseif t == "table" and v._timestamp ~= nil then
       if not v._timestamp then
-        return "NULL"
+        s = "NULL"
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
+    elseif t == "table" and v._isNull then
+      s = "NULL"
     else
       s = tostring(v)
     end
@@ -385,7 +389,7 @@ end
 
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
---- script: in fact it is reccommended you run this function at a top-level without any kind of guards.
+--- script: in fact it is recommended you run this function at a top-level without any kind of guards.
 --- If the named database does not exist it will create it. If the database does exist then it will add
 --- any columns or indexes which didn't exist before to that database. If the database already has all the
 --- specified columns and indexes, it will do nothing. <br/><br/>
@@ -407,7 +411,7 @@ end
 ---   REPLACE - The old record which matched the unique index is dropped, and the new one is added to replace it.
 ---   </pre>
 ---
---- @usage Example bellow will create a database with two sheets; the first is kills and is used to track every successful kill,
+--- @usage Example below will create a database with two sheets; the first is kills and is used to track every successful kill,
 ---   with both where and when the kill happened. It has one index, a compound index tracking the combination of name and area.
 ---   The second sheet has two indexes, but one is unique: it isn't possible to add two items to the enemies sheet with the same name.
 ---   <pre>
@@ -432,14 +436,14 @@ end
 ---   )
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
-function db:create(db_name, sheets)
-  if not db.__env or (db.__env and db.__env == 'SQLite3 environment (closed)') then
+function db:create(db_name, sheets, force)
+  if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
   end
 
   db_name = db:safe_name(db_name)
 
-  if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
+  if not db.__conn[db_name] or db.__conn[db_name] == 'SQLite3 connection (closed)' or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
     db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
     db.__conn[db_name]:setautocommit(false)
     db.__autocommit[db_name] = true
@@ -453,7 +457,7 @@ function db:create(db_name, sheets)
   -- field. The db package reserves any key that begins with an underscore to be special and syntax
   -- for its own use.
   for s_name, sht in pairs(sheets) do
-    options = {}
+    local options = {}
 
     if sht[1] ~= nil then
       -- in case the sheet was provided in the sheet = {"column1", "column2"} format:
@@ -463,15 +467,11 @@ function db:create(db_name, sheets)
       end
       sht = t
     else -- sheet provided in the sheet = {"column1" = default} format
-      local opts = {}
       for k, v in pairs(sht) do
         if string.starts(k, "_") then
           options[k] = v
-          opts[#opts + 1] = k
+          sht[k] = nil
         end
-      end
-      for _, v in ipairs(opts) do
-        sht[v] = nil
       end
     end
 
@@ -480,7 +480,7 @@ function db:create(db_name, sheets)
     end
 
     db.__schema[db_name][s_name] = { columns = sht, options = options }
-    db:_migrate(db_name, s_name)
+    db:_migrate(db_name, s_name, force)
   end
   return db:get_database(db_name)
 end
@@ -488,11 +488,11 @@ end
 
 
 -- NOT LUADOC
--- The migrate function is meant to upgrade an existing database live, to maintain a consistant
+-- The migrate function is meant to upgrade an existing database live, to maintain a consistent
 -- and correct set of sheets and fields, along with their indexes. It should be safe to run
 -- at any time, and must not cause any data loss. It simply adds to what is there: in perticular
 -- it is not capable of removing indexes, columns, or sheets after they have been defined.
-function db:_migrate(db_name, s_name)
+function db:_migrate(db_name, s_name, force)
   local conn = db.__conn[db_name]
   local schema = db.__schema[db_name][s_name]
 
@@ -514,57 +514,13 @@ function db:_migrate(db_name, s_name)
       ---------------  GETS ALL COLUMNS FROM SHEET IF IT EXISTS
       db:echo_sql("SELECT * FROM " .. s_name)
       local get_sheet_cur = conn:execute("SELECT * FROM " .. s_name)  -- select the sheet
-
       if get_sheet_cur and get_sheet_cur ~= 0 then
-        local row = get_sheet_cur:fetch({}, "a") -- grab the first row, if any
-        if not row then
-          -- if no first row then
-          local tried_cols, contains, found_something, col = {}, table.contains, false
+        local colnames = get_sheet_cur:getcolnames()
 
-          while not found_something do
-            -- guarded by the error below from infinite looping
-            col = false
-            for k, v in pairs(schema.columns) do
-              -- look through sheet schema to find the first column that is text
-              if type(k) == "number" then
-                if string.sub(v, 1, 1) ~= "_" and not contains(tried_cols, v) then
-                  col = v break
-                end
-              else
-                if string.sub(k, 1, 1) ~= "_" and type(v) == "string" and not contains(tried_cols, k) then
-                  col = k break
-                end
-              end
-            end
-
-            if not col then
-              error("db:_migrate: cannot find a suitable column for testing a new row with.")
-            end
-
-            -- add row with found column set as "test"
-            db:add({ _db_name = db_name, _sht_name = s_name }, { [col] = "test" })
-
-            db:echo_sql("SELECT * FROM " .. s_name)
-            local get_row_cur = conn:execute("SELECT * FROM " .. s_name) -- select the sheet
-            row = get_row_cur:fetch({}, "a") -- grab the newly created row
-            get_row_cur:close()
-
-            -- delete the newly created row. If we picked a row that doesn't exist yet and we're
-            -- trying to add, the delete will fail - remember this, and try another row
-            local worked, msg = pcall(db.delete, db, { _db_name = db_name, _sht_name = s_name }, db:eq({ database = db_name, sheet = s_name, name = col, type = "string" }, "test"))
-
-            if not worked then
-              tried_cols[#tried_cols + 1] = col
-            else
-              found_something = true
-            end
-          end
-        end
-
-        if row then
+        if colnames then
           -- add each column from row to current_columns table
-          for k, v in pairs(row) do
-            current_columns[k] = ""
+          for _, v in ipairs(colnames) do
+            current_columns[v] = ""
           end
         end
         get_sheet_cur:close()
@@ -624,6 +580,32 @@ function db:_migrate(db_name, s_name)
     -- if we add all missing columns and we have more columns than we want
     -- then there are currently some columns we don't want anymore.
     then
+      --find the redundant columns
+      local redundant_columns = {}
+      for k, _ in pairs(current_columns) do
+        if k ~= "_row_id" and not schema.columns[k] then
+          table.insert(redundant_columns, k)
+        end
+      end
+      
+      --check if any of the redundant columns are non-empty
+      local max_redundant = {}
+      for i, v in ipairs(redundant_columns) do
+        max_redundant[i] = string.format([[max(%s) AS %s]], v, v)
+      end
+      local sql_check_blank = [[SELECT %s from %s;]]
+      local sql = sql_check_blank:format(table.concat(max_redundant, ", "), s_name)
+      local blank_cur = conn:execute(sql)
+      local blank_results = blank_cur:fetch({}, "a")
+      blank_cur:close()
+      local not_blank = {}
+      for k, _ in pairs(blank_results) do
+        table.insert(not_blank, k)
+      end
+      
+      -- don't drop non-empty columns unless force flag is provided
+      assert(not not_blank[1] or force, "db:_migrate halted due to data present in undefined columns: "..table.concat(not_blank, ","))
+      
       local get_create = "SELECT sql FROM sqlite_master " ..
       "WHERE type = 'table' AND " ..
       "name = '" .. s_name .. "'"
@@ -1276,7 +1258,9 @@ end
 -- type of the specified field. Strings will be single-quoted (and single-quotes
 -- within will be properly escaped), numbers will be rendered properly, and such.
 function db:_coerce(field, value)
-  if field.type == "number" then
+  if type(value) == "table" and value._isNull then
+    return "NULL"
+  elseif field.type == "number" then
     return tonumber(value) or "'" .. value .. "'"
   elseif field.type == "datetime" then
     if value._timestamp == false then
@@ -1625,6 +1609,9 @@ function db:Timestamp(ts, fmt)
   return setmetatable(dt, db.__TimestampMT)
 end
 
+function db:Null()
+  return {_isNull = true}
+end
 
 
 db.Field = {}
@@ -1646,7 +1633,7 @@ db.__SheetMT = {
     local sht_name = rawget(t, "_sht_name")
     local f_name = k
 
-    local errormsg = "Attempt to access field %s in sheet %s in database %s that does not exist."
+    local errormsg = "Attempt to access field '%s' which does not exist (in sheet '%s' within database '%s')"
 
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
     if assert(field, errormsg:format(k, sht_name, db_name)) then

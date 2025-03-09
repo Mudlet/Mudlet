@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,9 +27,13 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
+#include <QDebug>
 #include <QPointer>
-#include <QRegularExpression>
 #include "post_guard.h"
+
+extern "C" {
+    #include <lua.h>
+}
 
 class Host;
 
@@ -39,14 +44,15 @@ class TKey : public Tree<TKey>
     friend class XMLimport;
 
 public:
-    virtual ~TKey();
+    ~TKey();
     TKey(TKey* parent, Host* pHost);
     TKey(QString name, Host* pHost);
     void compileAll();
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString & name);
-    int getKeyCode() { return mKeyCode; }
-    void setKeyCode(int code) { mKeyCode = code; }
+    Qt::Key getKeyCode() const { return mKeyCode; }
+    void setKeyCode(const Qt::Key code) { mKeyCode = code; }
+    void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
     QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> getKeyModifiers() const {
         return qMakePair(mPresentModifiers, mAbsentModifiers);
     }
@@ -62,22 +68,24 @@ public:
     void compile();
     bool compileScript();
     void execute();
-    QString getScript() { return mScript; }
-    bool setScript(QString& script);
+    QString getScript() const { return mScript; }
+    bool setScript(const QString& script);
     void setCommand(QString command) { mCommand = command; }
-    QString getCommand() { return mCommand; }
+    QString getCommand() const { return mCommand; }
+    QString packageName(TKey* pKey);
+    QString moduleName(TKey* pKey);
 
-    bool match(const int, const Qt::KeyboardModifiers modifiers, const bool);
+    bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
 
-    bool exportItem;
-    bool mModuleMasterFolder;
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
+    bool mRegisteredAnonymousLuaFunction = false;
 
     static const quint32 scmPresentModifierMask = 0x7E000000;
     static const quint32 scmAbsentModifierMask  = 0x007E0000;
 
 private:
-    TKey() = default;
 
     QString mName;
     QString mCommand;
@@ -89,9 +97,8 @@ private:
      * Qt::AltModifier         0x08000000 An Alt key on the keyboard is pressed.
      * Qt::MetaModifier        0x10000000 A Meta key on the keyboard is pressed.
      * Qt::KeypadModifier      0x20000000 A keypad button is pressed.
-     * Qt::GroupSwitchModifier 0x40000000 (X11-only) Group switch modifier is present (maybe associated with AltGr key on PCs)
-     * Around 3.20.0 we use some otherwise unused bits to represent the inverse
-     * when saving/loading shift the mAbsentModifiers bits left/right by 8
+     * We introduced some otherwise unused bits to represent the inverse
+     * so when saving/loading we shift the mAbsentModifiers bits left/right by 8
      * places and combine with the mPresentModifiers:
      * NoShiftModifier         0x00020000 A Shift key on the keyboard is NOT pressed.
      * NoControlModidier       0x00040000 A Ctrl key on the keyboard is NOT preseed.
@@ -101,20 +108,34 @@ private:
      * NoGroupSwitchModifier   0x00400000 (X11-only) Group switch modifier is NOT present
      */
 
-    int mKeyCode;
+    // Have to use brace default initiliaser here as there is not a null enum
+    // value declared:
+    Qt::Key mKeyCode = {};
     // The modifiers must be present for the key to fire:
     Qt::KeyboardModifiers mPresentModifiers;
     // The modifiers must NOT be present for the key to fire - should the
     // modifier be present in BOTH then ignore it in this one:
     Qt::KeyboardModifiers mAbsentModifiers;
 
-    QString mRegexCode;
-    QRegularExpression mRegex;
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
-    bool mModuleMember;
+    bool mNeedsToBeCompiled = true;
+    bool mModuleMember = false;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TKey* key)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << "TKey(" << key->getName();
+    debug.nospace() << ", keyCode=" << key->getKeyCode();
+    debug.nospace() << ", keyModifiers=" << key->getKeyModifiers();
+    debug.nospace() << ", script=" << key->getScript();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TKEY_H

@@ -1,0 +1,19 @@
+name: Post clang-tidy review comments
+
+on:
+  workflow_run:
+    workflows: ["🔍 Check improvements with cpp style guide"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: ZedThree/clang-tidy-review/post@v0.20.1
+        with:
+          # don't post any comments if the PR is fine
+          lgtm_comment_body: ''
+          # post comments instead of annotations - limited to just 10 however
+          annotations: true

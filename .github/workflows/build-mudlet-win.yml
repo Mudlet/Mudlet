@@ -1,0 +1,168 @@
+name: 🔨 Build Mudlet (windows)
+on:
+  push:
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      scheduled:
+        description: 'Imitate a scheduled build'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  compile-mudlet:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2019
+            buildname: 'windows64'
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: (Windows) Setup MSYS2
+      if: matrix.buildname == 'windows64'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+
+    - name: (Windows) Build Environment Setup
+      shell: msys2 {0}
+      env:
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+      run: |
+        $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
+        $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
+
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+
+    - name: (Windows) Build
+      shell: msys2 {0}
+      env:
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    - name: (Windows) Run Lua tests
+      timeout-minutes: 5
+      shell: msys2 {0}
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+      run: |
+        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        export LUA_PATH
+        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        export LUA_CPATH
+
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+
+    - name: Passed Lua tests
+      shell: msys2 {0}
+      run: |
+        if [ -e $TEMP/busted-tests-failed ]
+        then
+          echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi
+
+    - name: Save ccache
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
+    - name: (Windows) Package
+      shell: msys2 {0}
+      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+
+    - name: (Windows) Login to Azure
+      uses: azure/login@v2
+      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get Azure access token for code signing
+      shell: pwsh
+      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+      run: |
+        $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
+        "::add-mask::$token"
+        "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
+
+    - name: (Windows) Deploy
+      shell: msys2 {0}
+      env:
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
+        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+        AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
+        GITHUB_REPO_NAME: ${{ github.repository }}
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+
+    - name: Upload packaged Mudlet
+      uses: actions/upload-artifact@v4
+      if: env.UPLOAD_FILENAME
+      with:
+        name: ${{env.UPLOAD_FILENAME}}
+        path: ${{env.FOLDER_TO_UPLOAD}}
+
+    - name: Submit to make.mudlet.org
+      if: env.UPLOAD_FILENAME
+      run: |
+        $uri = "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=$($env:UPLOAD_FILENAME)&unzip=$($env:PARAM_UNZIP)"
+        try {
+          $response = Invoke-WebRequest -Uri $uri -Method Post -ErrorAction Stop
+          Write-Output "Submission successful"
+        }
+        catch {
+          $errorMessage = $_.Exception.Message
+          if ($errorMessage -like "*Artifact is not unique*") {
+            Write-Output "Info: Artifact was already submitted and is not unique. Continuing..."
+            exit 0
+          }
+          else {
+            Write-Error "An error occurred: $errorMessage"
+            exit 1
+          }
+        }
+      shell: pwsh
+
+    - name: Register Release
+      shell: msys2 {0}
+      if: env.PUBLIC_TEST_BUILD == 'true'
+      env:
+        ARCH: ${{env.ARCH}}
+        VERSION_STRING: ${{env.VERSION_STRING}}
+        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
+      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh

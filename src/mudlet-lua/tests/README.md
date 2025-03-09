@@ -1,44 +1,79 @@
 # Setting up for tests
 
-**Ubuntu**, have Mudlet installed:
+## Ubuntu
 
-	sudo apt-get install luarocks
-	sudo luarocks install busted
+Have Mudlet and [Busted](https://lunarmodules.github.io/busted/) installed:
+
+```sh
+  sudo apt-get install luarocks
+  sudo luarocks install busted
+```
+
+## macOS
+
+```sh
+  brew install luarocks
+  luarocks install busted
+```
+
+## Windows
+
+### Download and unzip [LuaRocks](https://luarocks.org/releases/luarocks-3.8.0-windows-32.zip)
+
+- Install Visual Studio (the [free community edition](https://visualstudio.microsoft.com/vs/community/) works)
+- Open the x86 Native Tools Command Prompt that comes with Visual Studio in administrator mode (regular command prompt may work but is untested; the x64 Native Tools Command Prompt will *not* work)
+  - Navigate to the folder containing the unzipped files
+  - `install /P <install_path> /SELFCONTAINED /L` (omit angular brackets)
+    - You may need to include the `/F` option if you have previously installed LuaRocks
+  - Set the `LUA_PATH` or `LUA_CPATH` system environment variables as suggested by the installer output, ensuring that it ends in two `;;` characters. This causes Lua to insert additional paths needed by Mudlet and without them Mudlet won't be able to load its included lua libraries properly. For example:
+  - LUA_PATH for me is set to `C:\Qt\Tools\mingw730_32\lib\luarocks\rocks-5.1\?.lua;C:\Qt\Tools\mingw730_32\lib\luarocks\rocks-5.1\?\init.lua;C:\Qt\Tools\mingw730_32\share\lua\5.1\?.lua;C:\Qt\Tools\mingw730_32\share\lua\5.1\?\init.lua;;`
+  - LUA_CPATH for me is set to `C:\Qt\Tools\mingw730_32\lib\luarocks\rocks-5.1\?.dll;;`
+    - Setting `Path` and `PATHEXT` is fine
+
+### Install Busted
+
+- Open a command prompt and enter `luarocks install busted`
+- If you get a `'luarocks' is not recognized...` message:
+  - You may need to add the LuaRocks directory to your `Path` system environment variable and restart
+  - Alternatively, navigate the command prompt to the LuaRocks directory to run LuaRocks commands
 
 You're now ready to run the tests.
 
-**Ubuntu**, haven't got Mudlet installed:
+## Running tests
 
-	sudo apt-get install lua5.1
-	sudo apt-get install liblua5.1-filesystem0
-	sudo apt-get install liblua5.1-rex-pcre0
-	sudo apt-get install liblua5.1-sql-sqlite3-2
-	sudo apt-get install liblua5.1-zip0
+1. Open the `Mudlet self-test` profile by typing the name in the connection dialog ([example](https://wiki.mudlet.org/images/4/4d/Opening_Mudlet_self-test_profile.webm
+)).
 
-You're now ready to run the tests.
+2. Use the `runTests` either with the location of the folder with all tests, or a specific test:
 
-**Other platforms**:
+```txt
+-- run all tests in the folder:
+runTests <full path>/src/mudlet-lua/tests
 
-Tests are only run on Ubuntu by the maintainer and CI at the moment, so the extra effort do add other platforms to instructions hasn't been done (time is short, and there's many other things to do). If you'd like to add instructions here, and maintain them, for another platform - please fork!
+-- run a specific test
+runTests <full path>/src/mudlet-lua/tests/StringUtils_spec.lua
+```
 
-mudlet-lua tests depend on [Busted](http://olivinelabs.com/busted) (that's the test framework), [Lua](http://www.lua.org/) and some Lua libraries Mudlet makes use of: [LuaFilesystem](http://keplerproject.github.io/luafilesystem), [Lrexlib](http://rrthomas.github.io/lrexlib/), [LuaSQL](http://www.keplerproject.org/luasql/), and [LuaZip](http://www.keplerproject.org/luazip/). Once you have all of that installed, you'll be able to run the tests.
+## Creating tests
 
-# Running tests
+See [Busted manual](https://lunarmodules.github.io/busted/) and currently existing tests for examples on how to write tests.
 
-**Ubuntu**:
-
-	cd tests
-	busted -l lua DB.lua
-	busted -l lua Other.lua
-
-Ideally we'd be able to use just one command for all files, but Busted doesn't handle `busted -l lua *.lua` and I couldn't get [`.busted`](http://olivinelabs.com/busted/#usage) to comply.
-
-# Creating tests
-
-See [Busted manual](http://olivinelabs.com/busted/) and currently existing tests for examples on how to write tests.
-
-## Test structure
+### Test structure
 
 Each file in `tests/` should mimic its companion in `lua/` - i.e., ``tests/DB.lua`` tests all the functionality that is present in ``lua/DB.lua``.
 
-Tests should be logically grouped in `describe()` blocks, running one or more tests described by `it()` that are relevant to the block and tests all possible cases.
+Tests for a specific function should be grouped within a describe block as follows:
+
+```lua
+describe("Tests the functionality of myFunctionName", function() 
+  it("should handle situation 1", function()
+    -- test
+  end)
+
+  it ("should handle situation 2", function()
+    -- another test
+  end)
+end)
+```
+
+If you have tests which it makes sense to have but would not logically fall into a describe block like this specific one, that is fine, but we use the format of the describe message as part of our method for gathering some code coverage metrics so we would like to try and include one describe for each function tested, in addition to any other logical groups of tests necessary. See existing test files for examples and ask on Discord is you still need help.

@@ -18,15 +18,22 @@ TS_FILES += mudlet_en_US.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32 {
-        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
-    } else {
-        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+        equals(QT_MAJOR_VERSION, 5) {
+            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt5.exe
+        } else {
+            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt6.exe
+        }
         !exists($$QMAKE_LRELEASE) {
-            equals(QT_MAJOR_VERSION, 5) {
-                QMAKE_LRELEASE = lrelease-qt5
-            } else {
-                QMAKE_LRELEASE = lrelease
-            }
+            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+        }
+    } else {
+        equals(QT_MAJOR_VERSION, 5) {
+            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease-qt5
+        } else {
+            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease-qt6
+        }
+        !exists($$QMAKE_LRELEASE) {
+            QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
         }
     }
 }
@@ -46,32 +53,59 @@ STATS_GENERATOR = $$system_path("$${PWD}/generate-translation-stats.lua")
 
 win32 {
     CMD = "where"
-    message("You can safely ignore one or two \"INFO: Could not find files for the given pattern(s).\" messages that may appear!")
+    message("You can safely ignore one to three \"INFO: Could not find files for the given pattern(s).\" messages that may appear!")
 } else {
-    CMD = "which"
+    # OpenBSD reports the failure to find lua5.1 loudly enough to be seen;
+    # so explictly bin the stderr output:
+    CMD = "which 2>/dev/null"
 }
 
-LUA_SEARCH_OUT = $$system("$$CMD lua5.1")
-isEmpty(LUA_SEARCH_OUT) {
-    LUA_SEARCH_OUT = $$system("$$CMD lua51")
-    isEmpty(LUA_SEARCH_OUT) {
-        LUA_SEARCH_OUT = $$system("$$CMD lua")
-        isEmpty(LUA_SEARCH_OUT) {
-            error("no lua found in PATH")
-        } else {
-            LUA_COMMAND = "lua"
-        }
-    } else {
-        LUA_COMMAND = "lua51"
-    }
+win32 {
+    # The '.1' in the file name confuses the QMake system() utility or the
+    # shell used in the Windows case as it is considered to be an extension
+    # unless we put in the actual 'exe' extension as well:
+    LUA_SEARCH_OUT = $$system("$$CMD lua-5.1.exe")
 } else {
+    LUA_SEARCH_OUT = $$system("$$CMD lua-5.1")
+}
+isEmpty(LUA_SEARCH_OUT) {
     win32 {
-        # The '.1' in the file name confuses the QMake system() utility or the
-        # shell used in the Windows case as it is considered to be an extension
-        # unless we put in the actual 'exe' extension as well:
-        LUA_COMMAND = "lua5.1.exe"
+        LUA_SEARCH_OUT = $$system("$$CMD lua5.1.exe")
     } else {
-        LUA_COMMAND = "lua5.1"
+        LUA_SEARCH_OUT = $$system("$$CMD lua5.1")
+    }
+    isEmpty(LUA_SEARCH_OUT) {
+        # This can be used for all OS since there is no '.'
+        LUA_SEARCH_OUT = $$system("$$CMD lua51")
+        isEmpty(LUA_SEARCH_OUT) {
+            LUA_SEARCH_OUT = $$system("$$CMD lua")
+            isEmpty(LUA_SEARCH_OUT) {
+                error("no lua found in PATH")
+            } else {
+               # "lua" worked
+               LUA_COMMAND = "lua"
+            }
+
+        } else {
+            # "lua51" worked
+            LUA_COMMAND = "lua51"
+        }
+
+    } else {
+        # "lua5.1" worked
+        win32 {
+            LUA_COMMAND = "lua5.1.exe"
+        } else {
+            LUA_COMMAND = "lua5.1"
+        }
+    }
+
+} else {
+    # "lua-5.1" worked
+    win32 {
+        LUA_COMMAND = "lua-5.1.exe"
+    } else {
+        LUA_COMMAND = "lua-5.1"
     }
 }
 

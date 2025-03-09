@@ -6,7 +6,7 @@ find_path(
 include(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set SPARKLE_FOUND to TRUE if all
 # listed variables are TRUE
-find_package_handle_standard_args(SPARKLE REQUIRED_VARS SPARKLE_INCLUDE_DIR)
+find_package_handle_standard_args(Sparkle REQUIRED_VARS SPARKLE_INCLUDE_DIR)
 
 mark_as_advanced(SPARKLE_INCLUDE_DIR)
 

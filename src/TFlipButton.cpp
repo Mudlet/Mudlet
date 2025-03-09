@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2922 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,13 +35,13 @@
 #include "post_guard.h"
 
 TFlipButton::TFlipButton(TAction* pTAction, Host* pHost)
-: QPushButton( nullptr )
-, mpTAction( pTAction )
-, mID( pTAction->getID() )
-, mpHost( pHost )
-, mOrientation( Qt::Horizontal )
-, mMirrored( false )
+: QPushButton(nullptr)
+, mpTAction(pTAction)
+, mID(pTAction->getID())
+, mpHost(pHost)
 {
+    // This should make it easier to track the button within the GammaRay tool!
+    setObjectName(qsl("flipButton_%1_%2").arg(mpHost->getName(), QString::number(mID)));
 }
 
 Qt::Orientation TFlipButton::orientation() const
@@ -94,28 +94,28 @@ QSize TFlipButton::minimumSizeHint() const
 void TFlipButton::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
-    QStylePainter p(this);
+    QStylePainter painter(this);
 
     switch (mOrientation) {
     case Qt::Horizontal:
         if (mMirrored) {
-            p.rotate(180);
-            p.translate(-width(), -height());
+            painter.rotate(180);
+            painter.translate(-width(), -height());
         }
         break;
 
     case Qt::Vertical:
         if (mMirrored) {
-            p.rotate(-90);
-            p.translate(-height(), 0);
+            painter.rotate(-90);
+            painter.translate(-height(), 0);
         } else {
-            p.rotate(90);
-            p.translate(0, -width());
+            painter.rotate(90);
+            painter.translate(0, -width());
         }
         break;
     }
 
-    p.drawControl(QStyle::CE_PushButton, getStyleOption());
+    painter.drawControl(QStyle::CE_PushButton, getStyleOption());
 }
 
 QStyleOptionButton TFlipButton::getStyleOption() const

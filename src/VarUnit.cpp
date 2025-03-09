@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia..com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,27 +22,28 @@
 
 #include "VarUnit.h"
 
-
 #include "TVar.h"
 
 #include "pre_guard.h"
 #include <QTreeWidgetItem>
+#include <QDebug>
 #include "post_guard.h"
 
 
-VarUnit::VarUnit() : base()
+VarUnit::VarUnit()
+: base()
 {
 }
 
 bool VarUnit::isHidden(TVar* var)
 {
-    if (var->getName() == "_G") { // we never hide global
+    if (var->getName() == qsl("_G")) { // we never hide global
         return false;
     }
-    if (hidden.contains(shortVarName(var).join("."))) {
+    if (hidden.contains(shortVarName(var).join(qsl(".")))) {
         return true;
     }
-    return hiddenByUser.contains(shortVarName(var).join("."));
+    return hiddenByUser.contains(shortVarName(var).join(qsl(".")));
 }
 
 
@@ -56,14 +58,14 @@ bool VarUnit::isHidden(const QString& fullname)
     return hiddenByUser.contains(fullname);
 }
 
-void VarUnit::addPointer(const void* p)
+void VarUnit::addPointer(const void* pointer)
 {
-    pointers.insert(p);
+    mPointers.insert(pointer);
 }
 
-bool VarUnit::shouldSave(QTreeWidgetItem* p)
+bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
 {
-    auto var = getWVar(p);
+    auto var = getWVar(pWidgetItem);
 
     return !(!var || var->getValueType() == 6 || var->isReference());
 }
@@ -84,8 +86,8 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             s1 << child->getName();
             auto pItem = new QTreeWidgetItem(s1);
             pItem->setText(0, child->getName());
-            pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
-            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+            pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
+            pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
             pItem->setCheckState(0, Qt::Unchecked);
             if (isSaved(child)) {
                 pItem->setCheckState(0, Qt::Checked);
@@ -93,26 +95,26 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             if (!shouldSave(child)) { // 6 is lua_tfunction, parent must be saveable as well if not global
                 pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
                 pItem->setForeground(0, QBrush(QColor("grey")));
-                pItem->setToolTip(0, "");
+                pItem->setToolTip(0, QString());
             }
             pItem->setData(0, Qt::UserRole, child->getValueType());
             QIcon icon;
             switch (child->getValueType()) {
             case 5:
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
                 break;
             case 6:
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
                 break;
             default:
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
                 break;
             }
             pItem->setIcon(0, icon);
             wVars.insert(pItem, child);
             cList.append(pItem);
             if (child->getValueType() == 5) {
-                buildVarTree((QTreeWidgetItem*)pItem, child, showHidden);
+                buildVarTree(pItem, child, showHidden);
             }
         }
     }
@@ -172,26 +174,26 @@ QStringList VarUnit::varName(TVar* var)
 QStringList VarUnit::shortVarName(TVar* var)
 {
     QStringList names;
-    if (!var || var->getName() == "_G") {
+    if (!var || var->getName() == qsl("_G")) {
         names << "";
         return names;
     }
     names << var->getName();
-    TVar* p = var->getParent();
-    while (p && p->getName() != "_G") {
-        names.insert(0, p->getName());
-        p = p->getParent();
+    TVar* pParent = var->getParent();
+    while (pParent && pParent->getName() != qsl("_G")) {
+        names.insert(0, pParent->getName());
+        pParent = pParent->getParent();
     }
     return names;
 }
 
 void VarUnit::addVariable(TVar* var)
 {
-    QString n = varName(var).join(".");
+    const QString fullName = varName(var).join(qsl("."));
     // pointers.insert(var->pointer);
-    varList.insert(n);
+    variableSet.insert(fullName);
     if (var->hidden) {
-        hidden.insert(shortVarName(var).join("."));
+        hidden.insert(shortVarName(var).join(qsl(".")));
     }
 }
 
@@ -199,9 +201,9 @@ void VarUnit::addHidden(TVar* var, int user)
 {
     var->hidden = true;
     if (user) {
-        hiddenByUser.insert(shortVarName(var).join("."));
+        hiddenByUser.insert(shortVarName(var).join(qsl(".")));
     } else {
-        hidden.insert(shortVarName(var).join("."));
+        hidden.insert(shortVarName(var).join(qsl(".")));
     }
 }
 
@@ -212,9 +214,9 @@ void VarUnit::addHidden(const QString& var)
 
 void VarUnit::removeHidden(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
-    hidden.remove(n);
-    hiddenByUser.remove(n);
+    const QString fullName = shortVarName(var).join(qsl("."));
+    hidden.remove(fullName);
+    hiddenByUser.remove(fullName);
     var->hidden = false;
 }
 
@@ -227,32 +229,32 @@ void VarUnit::removeHidden(const QString& name)
 
 void VarUnit::addSavedVar(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
+    const QString fullName = shortVarName(var).join(qsl("."));
     var->saved = true;
-    savedVars.insert(n);
+    savedVars.insert(fullName);
 }
 
 void VarUnit::removeSavedVar(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
-    savedVars.remove(n);
+    const QString fullName = shortVarName(var).join(qsl("."));
+    savedVars.remove(fullName);
     var->saved = false;
 }
 
 bool VarUnit::isSaved(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
-    return (savedVars.contains(n) || var->saved);
+    const QString fullName = shortVarName(var).join(qsl("."));
+    return (savedVars.contains(fullName) || var->saved);
 }
 
 void VarUnit::removeVariable(TVar* var)
 {
-    varList.remove(varName(var).join("."));
+    variableSet.remove(varName(var).join(qsl(".")));
 }
 
 bool VarUnit::varExists(TVar* var)
 {
-    return ((var->kpointer && pointers.contains(var->kpointer)) || (var->vpointer && pointers.contains(var->vpointer)));
+    return ((var->pKey && mPointers.contains(var->pKey)) || (var->pValue && mPointers.contains(var->pValue)));
 }
 
 TVar* VarUnit::getBase()
@@ -260,9 +262,9 @@ TVar* VarUnit::getBase()
     return base;
 }
 
-void VarUnit::setBase(TVar* t)
+void VarUnit::setBase(TVar* pVariable)
 {
-    base = t;
+    base = pVariable;
 }
 
 void VarUnit::clear()
@@ -270,6 +272,6 @@ void VarUnit::clear()
     // delete base;
     tVars.clear();
     wVars.clear();
-    varList.clear();
-    pointers.clear();
+    variableSet.clear();
+    mPointers.clear();
 }

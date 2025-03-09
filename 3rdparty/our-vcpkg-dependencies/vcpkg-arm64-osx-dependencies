@@ -1,0 +1,8 @@
+--triplet
+arm64-osx
+yajl
+pugixml
+--overlay-ports=../our-vcpkg-dependencies/lua
+lua[core]
+sqlite3
+pcre

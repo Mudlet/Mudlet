@@ -35,7 +35,7 @@ endif()
 
 include(FindPackageHandleStandardArgs)
 # Support the REQUIRED and QUIET arguments, and set PUGIXML_FOUND if found.
-find_package_handle_standard_args(PugiXML REQUIRED_VARS PUGIXML_LIBRARY
+find_package_handle_standard_args(PUGIXML REQUIRED_VARS PUGIXML_LIBRARY
                                   PUGIXML_INCLUDE_DIR VERSION_VAR PUGIXML_VER)
 
 if(PUGIXML_FOUND AND NOT TARGET PUGIXML::PUGIXML)

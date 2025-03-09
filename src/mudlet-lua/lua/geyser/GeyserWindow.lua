@@ -1,15 +1,12 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Represents an abstract window class designed to be subclassed for windows
+-- that are built on Mudlet primitives, like labels.
+-- @author guy
+-- @module Geyser.Window
 
 local cparse = Geyser.Color.parse
 
 --- Represents an abstract window class designed to be subclassed for windows
 -- that are built on Mudlet primitives, like labels.
--- @class table
--- @name Geyser.Window
 -- @field message The message last *echo()'d to this window. Default is “”.
 -- @field bgColor Text background color, default "white"
 -- @field fgColor Text foreground color, default "black"
@@ -68,7 +65,7 @@ end
 
 --- Sets the background color of this window primitive.  If this primitive
 -- was using a shared color, then it creates a new, personal color.
--- @param r The red value, or a quoted color name, like "green".
+-- @param r The red value, or a quoted color name, like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green value, or nil if using a name.
 -- @param b The blue value, or nil if using a name.
 function Geyser.Window:setBgColor (r, g, b)
@@ -77,7 +74,7 @@ end
 
 --- Sets the foreground color of this window primitive.  If this primitive
 -- was using a shared color, then it creates a new, personal color.
--- @param r The red value, or a quoted color name, like "green".
+-- @param r The red value, or a quoted color name, like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green value, or nil if using a name.
 -- @param b The blue value, or nil if using a name.
 function Geyser.Window:setFgColor (r, g, b)
@@ -86,7 +83,7 @@ end
 
 --- Sets the background color and alpha.  If this primitive
 -- was using a shared color, then it creates a new, personal color.
--- @param r The red component of the color, or a named color like "green".
+-- @param r The red component of the color, or a named color like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green component, or nil if using named colors.
 -- @param b The blue component, or nil if using named colors.
 -- @param a The alpha component. If nil, uses current alpha value.
@@ -110,8 +107,8 @@ end
 -- @param bold The bolded status. 1 is bold, 0 is normal.
 -- @param underline The underlined status. 1 is underlined, 0 is normal.
 -- @param italics The italicized status. 1 is italicized, 0 is normal.
-function Geyser.Window:setTextFormat(r1, g1, b1, r1, g2, b2, bold, underline, italics)
-  setTextFormat(self.name, r1, g1, b1, r1, g2, b2, bold, underline, italics)
+function Geyser.Window:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underline, italics)
+  setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
 end
 
 --- Sets bolded text.

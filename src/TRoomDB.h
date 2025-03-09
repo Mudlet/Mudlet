@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2016, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,23 +31,31 @@
 #include <QString>
 #include "post_guard.h"
 
+#include "utils.h"
+
 class TArea;
 class TMap;
 class TRoom;
 
+// well-known userData tags
+extern const QString ROOM_UI_SHOWNAME;
+extern const QString ROOM_UI_NAMEPOS;
+extern const QString ROOM_UI_NAMEFONT;  // global only
+extern const QString ROOM_UI_NAMESIZE;  // TODO
 
 class TRoomDB
 {
     Q_DECLARE_TR_FUNCTIONS(TRoomDB) // Needed so we can use tr() even though TRoomDB is NOT derived from QObject
 
 public:
-    TRoomDB(TMap*);
+    explicit TRoomDB(TMap*);
 
     TRoom* getRoom(int id);
     TArea* getArea(int id);
     TArea* getRawArea(int, bool*);
     bool addRoom(int id);
-    int size() { return rooms.size(); }
+    int size() const { return rooms.size(); }
+    bool isEmpty() const { return rooms.isEmpty(); }
     bool removeRoom(int);
     void removeRoom(QSet<int>&);
     bool removeArea(int id);
@@ -55,6 +64,7 @@ public:
     bool addArea(int id);
     int addArea(QString name);
     bool addArea(int id, QString name);
+    bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
     const QList<TRoom*> getRoomPtrList() const;
     const QList<TArea*> getAreaPtrList() const;
@@ -77,7 +87,8 @@ public:
     void restoreAreaMap(QDataStream&);
     void restoreSingleArea(int, TArea*);
     void restoreSingleRoom(int, TRoom*);
-    const QString getDefaultAreaName() { return mDefaultAreaName; }
+    qreal get2DMapZoom(const int areaId) const;
+    bool set2DMapZoom(const int areaId, const qreal zoom) const;
 
     // This is for muds that provide hashes to rooms instead of IDs.
     // If it exists, we delete the info when deleting a room.
@@ -102,14 +113,24 @@ private:
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
-    QString mUnnamedAreaName;
-    QString mDefaultAreaName;
 
-    friend class TRoom; //friend TRoom::~TRoom();
-    //friend class TMap;//bool TMap::restore(QString location);
-    //friend bool TMap::serialize(QDataStream &);
+    friend class TRoom;
     friend class XMLexport;
     friend class XMLimport;
 };
+
+// helpers to get/set bools from userdata, required for storing some bool
+// values there instead of upticking the map format
+bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue = false);
+
+// this needs to be inlined due to a compiler and/or Qt bug.
+static inline void setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
+{
+    if (value) {
+        userData[key] = qsl("1");
+    } else {
+        userData[key] = qsl("0");
+    }
+}
 
 #endif // MUDLET_TROOMDB_H

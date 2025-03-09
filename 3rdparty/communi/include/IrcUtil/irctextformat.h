@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -53,8 +53,8 @@ class IRC_UTIL_EXPORT IrcTextFormat : public QObject
     Q_ENUMS(SpanFormat)
 
 public:
-    explicit IrcTextFormat(QObject* parent = 0);
-    virtual ~IrcTextFormat();
+    explicit IrcTextFormat(QObject* parent = nullptr);
+    ~IrcTextFormat() override;
 
     IrcPalette* palette() const;
 

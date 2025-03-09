@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020, 2022-2023, 2025 by Stephen Lyons             *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,7 +27,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QMap>
-#include <QMutex>
+#include <QObject>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -37,18 +38,18 @@ class Host;
 class TKey;
 
 
-class KeyUnit
+class KeyUnit : public QObject
 {
     Q_DECLARE_TR_FUNCTIONS(KeyUnit) // Needed so we can use tr() even though KeyUnit is NOT derived from QObject
+
     friend class XMLexport;
     friend class XMLimport;
 
 public:
-    KeyUnit(Host* pHost);
+    explicit KeyUnit(Host* pHost);
 
     std::list<TKey*> getKeyRootNodeList()
     {
-        QMutexLocker locker(&mKeyUnitLock);
         return mKeyRootNodeList;
     }
 
@@ -56,6 +57,7 @@ public:
     void removeAllTempKeys();
     void compileAll();
     TKey* findFirstKey(QString & name);
+    std::vector<int> findItems(const QString& name, const bool exactMatch, const bool caseSensitive);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
     QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> > getKeyModifiers(const QString&) const;
@@ -64,51 +66,49 @@ public:
     bool registerKey(TKey* pT);
     void unregisterKey(TKey* pT);
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
-    QString assembleReport();
+    std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
-    QString getKeyName(const int keyCode, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>, const bool showModifersDetails = false);
+    QString getKeyName(const Qt::Key, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>, const bool showModifersDetails = false);
     void setupKeyNames();
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
-    bool processDataStream(const int, const Qt::KeyboardModifiers);
+    bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
     void markCleanup( TKey * pT );
     void doCleanup();
     void stopAllTriggers();
     void reenableAllTriggers();
 
+
     QMultiMap<QString, TKey*> mLookupTable;
     std::list<TKey*> mCleanupList;
-    QMutex mKeyUnitLock;
-    int statsKeyTotal;
-    int statsTempKeys;
-    int statsActiveKeys;
-    int statsActiveKeysMax;
-    int statsActiveKeysMin;
-    int statsActiveKeysAverage;
-    int statsTempKeysCreated;
-    int statsTempKeysKilled;
     QList<TKey*> uninstallList;
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
     // could break things - so only do it if this flag is set:
     bool mRunAllKeyMatches;
 
+
 private:
     KeyUnit() = default;
 
     TKey* getKeyPrivate(int id);
-    void initStats();
-    void _assembleReport(TKey*);
+    void resetStats();
+    void assembleReport(TKey*);
     void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1, bool moveKey = false);
     void addKey(TKey* pT);
     void removeKeyRootNode(TKey* pT);
     void removeKey(TKey*);
+
+
     QPointer<Host> mpHost;
     QMap<int, TKey*> mKeyMap;
     std::list<TKey*> mKeyRootNodeList;
     int mMaxID;
     bool mModuleMember;
     QMap<int, QString> mKeys;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
 };
 
 #endif // MUDLET_KEYUNIT_H

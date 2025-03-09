@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,8 +23,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QOpenGLWidget>
+// (2 of 2) This must be included before any Qt library tries to include
+// windows.h which pulls in winsock.h to avoid (multiple):
+// "#warning Please include winsock2.h before windows.h [-Wcpp]" warnings
+#if defined(INCLUDE_WINSOCK2)
+#include <winsock2.h>
+#endif
+
 #include "pre_guard.h"
+#include <QOpenGLWidget>
 #include <QPointer>
 #include "post_guard.h"
 
@@ -37,9 +45,9 @@ class GLWidget : public QOpenGLWidget
 
 public:
     Q_DISABLE_COPY(GLWidget)
-    GLWidget(QWidget* parent = nullptr);
-    GLWidget(TMap* pM, QWidget* parent = nullptr);
-    ~GLWidget();
+    GLWidget(TMap*, Host*, QWidget* parent = nullptr);
+    ~GLWidget() = default;
+
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
 
@@ -47,38 +55,25 @@ public:
     QSize sizeHint() const override;
 
 public slots:
-    void showInfo();
-    void shiftUp();
-    void shiftDown();
-    void shiftLeft();
-    void shiftRight();
-    void shiftZup();
-    void shiftZdown();
-    void setXRotation(int angle);
-    void setYRotation(int angle);
-    void setZRotation(int angle);
-    void setXDist(int angle);
-    void setYDist(int angle);
-    void setZDist(int angle);
-    void setScale(int);
-    void goRoom(const QString&);
-    void fullView();
-    void singleView();
-    void increaseTop();
-    void reduceTop();
-    void increaseBottom();
-    void reduceBottom();
-    void defaultView();
-    void sideView();
-    void topView();
-
-signals:
-    void xRotationChanged(int angle);
-    void yRotationChanged(int angle);
-    void zRotationChanged(int angle);
-    void xDistChanged(int angle);
-    void yDistChanged(int angle);
-    void zDistChanged(int angle);
+    void slot_shiftUp();
+    void slot_shiftDown();
+    void slot_shiftLeft();
+    void slot_shiftRight();
+    void slot_shiftZup();
+    void slot_shiftZdown();
+    void slot_setCameraPositionX(int angle);
+    void slot_setCameraPositionY(int angle);
+    void slot_setCameraPositionZ(int angle);
+    void slot_setScale(int);
+    void slot_showAllLevels();
+    void slot_singleLevelView();
+    void slot_showMoreUpperLevels();
+    void slot_showLessUpperLevels();
+    void slot_showMoreLowerLevels();
+    void slot_showLessLowerLevels();
+    void slot_defaultView();
+    void slot_sideView();
+    void slot_topView();
 
 protected:
     void initializeGL() override;
@@ -89,32 +84,36 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 public:
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
 
 private:
-    bool is2DView;
-
-    int mRID;
-    int mAID;
-    int mOx;
-    int mOy;
-    int mOz;
-    bool mShiftMode;
-    bool mShowInfo;
-
-    float xRot;
-    float yRot;
-    float zRot;
-    float xDist;
-    float yDist;
-    float zDist;
-    float dehnung;
-    int mShowTopLevels;
-    int mShowBottomLevels;
-
-    float mScale;
-    int mTarget;
     QPointer<Host> mpHost;
+    bool is2DView = false;
+    bool mPanMode = false;
+    float mPanXStart = 0;
+    float mPanYStart = 0;
+    float zmax = 9999999.0;
+    float zmin = 9999999.0;
+
+    int mRID = 0;
+    int mAID = 0;
+    int mMapCenterX = 0;
+    int mMapCenterY = 0;
+    int mMapCenterZ = 0;
+    bool mShiftMode = false;
+
+    float xRot = 1.0;
+    float yRot = 5.0;
+    float zRot = 10.0;
+    // Scales the size of rooms compared to the space between them - currently
+    // hard coded to be a quarter (would be equivalent to a 2D room size setting
+    // of "2.5"):
+    float scale = 4;
+    int mShowTopLevels = 999999;
+    int mShowBottomLevels = 999999;
+
+    float mScale = 1.0;
+    int mTargetRoomId = 0;
 };
 
 #endif // MUDLET_GLWIDGET_H

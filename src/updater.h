@@ -25,11 +25,9 @@
 #if defined (INCLUDE_UPDATER)
 #include "dblsqd/feed.h"
 #include "dblsqd/update_dialog.h"
+#include "sparkleupdater.h"
 #endif
 
-#ifdef Q_OS_MACOS
-#include "../3rdparty/sparkle-glue/AutoUpdater.h"
-#endif
 
 #include "pre_guard.h"
 #include <QObject>
@@ -41,11 +39,12 @@ class Updater : public QObject
 
 public:
     Q_DISABLE_COPY(Updater)
-    explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr);
+    explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr, bool testVersion = false);
     virtual ~Updater();
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
+    void showFullChangelog() const;
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();
@@ -61,9 +60,10 @@ private:
 #if defined(Q_OS_LINUX)
     void setupOnLinux();
     void untarOnLinux(const QString& fileName);
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
+    bool is64BitCompatible() const;
 #elif defined(Q_OS_MACOS)
     void setupOnMacOS();
 #endif
@@ -72,11 +72,12 @@ private:
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
     void finishSetup();
+    void showDialogManually() const;
 
 #if defined(Q_OS_LINUX)
     QString unzippedBinaryName;
 #elif defined(Q_OS_MACOS)
-    AutoUpdater* msparkleUpdater;
+    SparkleUpdater* msparkleUpdater;
 #endif
 
 
@@ -87,10 +88,10 @@ signals:
     void signal_automaticUpdatesChanged(const bool);
 
 public slots:
-    void installOrRestartClicked(QAbstractButton* button, const QString& filePath);
+    void slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
     // might want to make these private
-    void updateBinaryOnLinux();
+    void slot_updateLinuxBinary();
 #endif
 };
 

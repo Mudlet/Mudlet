@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -51,8 +51,8 @@ class IRC_MODEL_EXPORT IrcUser : public QObject
     Q_PROPERTY(IrcChannel* channel READ channel CONSTANT)
 
 public:
-    explicit IrcUser(QObject* parent = 0);
-    virtual ~IrcUser();
+    explicit IrcUser(QObject* parent = nullptr);
+    ~IrcUser() override;
 
     QString title() const;
     QString name() const;

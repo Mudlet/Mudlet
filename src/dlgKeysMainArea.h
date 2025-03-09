@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022, 2025 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,10 +34,14 @@ class dlgKeysMainArea : public QWidget, public Ui::keybindings_main_area
     Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(dlgKeysMainArea)
-    dlgKeysMainArea(QWidget*);
+    Q_DISABLE_COPY(dlgKeysMainArea);
+    explicit dlgKeysMainArea(QWidget*);
     void setModifiers(const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers);
     QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> getModifiers() const;
+
+    // public function allow to trim even when QLineEdit::editingFinished()
+    // is not raised. Example: When the user saves without leaving the LineEdit
+    void trimName();
 
 
 signals:
@@ -54,6 +59,9 @@ private slots:
 
 private:
     void setModifier(QCheckBox*, const bool isPresentModifierSet, const bool isAbsentModifierSet);
+
+private slots:
+    void slot_editingNameFinished();
 };
 
 #endif // MUDLET_DLGKEYSMAINAREA_H

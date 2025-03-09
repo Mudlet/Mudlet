@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -44,11 +44,11 @@ class IrcChannelPrivate : public IrcBufferPrivate
 
 public:
     IrcChannelPrivate();
-    virtual ~IrcChannelPrivate();
+    ~IrcChannelPrivate() override;
 
-    virtual void init(const QString& title, IrcBufferModel* model);
-    virtual void connected();
-    virtual void disconnected();
+    void init(const QString& title, IrcBufferModel* model) override;
+    void connected() override;
+    void disconnected() override;
 
     void setActive(bool active);
 
@@ -66,19 +66,19 @@ public:
     bool setUserAway(const QString &name, bool away);
     void setUserServOp(const QString &name, bool servOp);
 
-    virtual bool processAwayMessage(IrcAwayMessage* message);
-    virtual bool processJoinMessage(IrcJoinMessage* message);
-    virtual bool processKickMessage(IrcKickMessage* message);
-    virtual bool processModeMessage(IrcModeMessage* message);
-    virtual bool processNamesMessage(IrcNamesMessage* message);
-    virtual bool processNickMessage(IrcNickMessage* message);
-    virtual bool processNoticeMessage(IrcNoticeMessage* message);
-    virtual bool processNumericMessage(IrcNumericMessage* message);
-    virtual bool processPartMessage(IrcPartMessage* message);
-    virtual bool processPrivateMessage(IrcPrivateMessage* message);
-    virtual bool processQuitMessage(IrcQuitMessage* message);
-    virtual bool processTopicMessage(IrcTopicMessage* message);
-    virtual bool processWhoReplyMessage(IrcWhoReplyMessage* message);
+    bool processAwayMessage(IrcAwayMessage* message) override;
+    bool processJoinMessage(IrcJoinMessage* message) override;
+    bool processKickMessage(IrcKickMessage* message) override;
+    bool processModeMessage(IrcModeMessage* message) override;
+    bool processNamesMessage(IrcNamesMessage* message) override;
+    bool processNickMessage(IrcNickMessage* message) override;
+    bool processNoticeMessage(IrcNoticeMessage* message) override;
+    bool processNumericMessage(IrcNumericMessage* message) override;
+    bool processPartMessage(IrcPartMessage* message) override;
+    bool processPrivateMessage(IrcPrivateMessage* message) override;
+    bool processQuitMessage(IrcQuitMessage* message) override;
+    bool processTopicMessage(IrcTopicMessage* message) override;
+    bool processWhoReplyMessage(IrcWhoReplyMessage* message) override;
 
     static IrcChannelPrivate* get(IrcChannel* channel)
     {
@@ -87,8 +87,8 @@ public:
 
     QMap<QString, QString> modes;
     QString topic;
-    bool active;
-    bool enabled;
+    bool active = false;
+    bool enabled = true;
     QStringList names;
     QList<IrcUser*> userList;
     QList<IrcUser*> activeUsers;

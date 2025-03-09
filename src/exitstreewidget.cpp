@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,7 +27,8 @@
 #include "post_guard.h"
 
 
-ExitsTreeWidget::ExitsTreeWidget(QWidget* pW) : QTreeWidget(pW)
+ExitsTreeWidget::ExitsTreeWidget(QWidget* pParent)
+: QTreeWidget(pParent)
 {
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setUniformRowHeights(true);
@@ -35,13 +37,14 @@ ExitsTreeWidget::ExitsTreeWidget(QWidget* pW) : QTreeWidget(pW)
 void ExitsTreeWidget::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-        closePersistentEditor(currentItem(), 1);
-        closePersistentEditor(currentItem(), 2);
+        closePersistentEditor(currentItem(), colIndex_exitRoomId);
+        closePersistentEditor(currentItem(), colIndex_exitWeight);
+        closePersistentEditor(currentItem(), colIndex_command);
     }
     if (event->key() == Qt::Key_Delete && hasFocus()) {
-        QList<QTreeWidgetItem*> selection = selectedItems();
-        foreach (QTreeWidgetItem* item, selection) {
-            takeTopLevelItem(indexOfTopLevelItem(item));
+        QList<QTreeWidgetItem*> const selection = selectedItems();
+        for (auto pItem : selection) {
+            takeTopLevelItem(indexOfTopLevelItem(pItem));
         }
     }
 }

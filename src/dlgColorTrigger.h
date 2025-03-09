@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2019, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -57,13 +58,13 @@ public slots:
 private:
     void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
 
-    QSignalMapper* mSignalMapper;
-    TTrigger* mpTrigger;
-    bool mIsBackground;
+    QSignalMapper* mSignalMapper = nullptr;
+    TTrigger* mpTrigger = nullptr;
+    bool mIsBackground = false;
     QColor mRgbAnsiColor;
     QColor mGrayAnsiColor;
-    int mRgbAnsiColorNumber;
-    int mGrayAnsiColorNumber;
+    int mRgbAnsiColorNumber = 0;
+    int mGrayAnsiColorNumber = 0;
 };
 
 #endif // MUDLET_DLGCOLORTRIGGER_H

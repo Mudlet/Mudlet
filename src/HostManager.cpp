@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2018, 2020, 2024 by Stephen Lyons                 *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,35 +20,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-/*
- * Revised to allow concurrent read access to mHostPool but as some methods
- * were not used they have been commented out - if they are needed again they
- * will need to be rewritten to use the (QReadWriteLock) mPoolReadWriteLock
- * that is now used instead of the previous (QMutex) mPoolLock which was used
- * with a QMutexLocker - the latter is not suitable for a QReadWriteLock I
- * think - SlySven Dec 2016
- */
-
 #include "HostManager.h"
 
-
+#include "dlgMapper.h"
 #include "mudlet.h"
 
-
-bool HostManager::deleteHost(const QString& hostname)
+void HostManager::deleteHost(const QString& hostname)
 {
-    mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
-
-    // make sure this is really a new host
+    // make sure this is really an existing host
     if (!mHostPool.contains(hostname)) {
-        mPoolReadWriteLock.unlock();
-        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: it is not a member of host pool... releasing lock and aborting, returning false!";
-        return false;
-    } else {
-        int ret = mHostPool.remove(hostname);
-        mPoolReadWriteLock.unlock();
-        return ret;
+        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
+        return;
     }
+
+    // As this pulls the QSharedPointer that hostname identifies out of the pool
+    // the Host goes out of scope when execution leaves this method and thus
+    // gets destroyed:
+    mHostPool.remove(hostname);
 }
 
 bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
@@ -62,61 +51,31 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         portnumber = port.toInt();
     }
 
-    mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
     // make sure this is really a new host
     if (mHostPool.contains(hostname)) {
-        mPoolReadWriteLock.unlock();
         return false;
     }
 
-
-    // Was an ONLY use of a createNewHostID() method here but that extra
-    // function call was unnecessary and wastes time while we are locking access
-    // to the host pool
-    int id = mHostPool.size() + 1;
-    QSharedPointer<Host> pNewHost(new Host(portnumber, hostname, login, pass, id));
+    const int id = mHostPool.size() + 1;
+    QSharedPointer<Host> const pNewHost(new Host(portnumber, hostname, login, pass, id));
 
     if (Q_UNLIKELY(!pNewHost)) {
-        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... releasing lock and aborting, returning false!";
-        mPoolReadWriteLock.unlock();
+        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... aborting!";
         return false;
     }
 
     mHostPool.insert(hostname, pNewHost);
-    mPoolReadWriteLock.unlock();
     return true;
-}
-
-QStringList HostManager::getHostList()
-{
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-
-    QStringList strlist;
-    const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
-    mPoolReadWriteLock.unlock();
-    if (!hostList.isEmpty()) {
-        strlist << hostList;
-    }
-
-    return strlist;
 }
 
 int HostManager::getHostCount()
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-    // This assumes that there will not be nullptr values for destroyed Host
-    // instances:
-    const unsigned int total = mHostPool.count();
-    mPoolReadWriteLock.unlock();
-    return total;
+    return mHostPool.count();
 }
 
 void HostManager::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
-    mPoolReadWriteLock.unlock();
     for (const auto& i : hostList) {
         if (i) {
             i->postIrcMessage(a, b, c);
@@ -136,19 +95,15 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
         return;
     }
 
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
-    mPoolReadWriteLock.unlock();
 
     int i = 0;
     QList<int> beforeSendingHost;
-    int sendingHost = -1;
     QList<int> afterSendingHost;
     while (i < hostList.size()) {
         if (hostList.at(i) && hostList.at(i) != pHost) {
             beforeSendingHost.append(i++);
         } else if (hostList.at(i) && hostList.at(i) == pHost) {
-            sendingHost = i++;
             break;
         } else {
             i++;
@@ -165,16 +120,70 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     allValidHosts = afterSendingHost;
     allValidHosts.append(beforeSendingHost);
 
-    for (int validHost : qAsConst(allValidHosts)) {
+    for (const int validHost : std::as_const(allValidHosts)) {
         hostList.at(validHost)->raiseEvent(event);
+    }
+}
+
+void HostManager::changeAllHostColour(const Host* pHost)
+{
+    if (!pHost) {
+        return;
+    }
+    //change all main and subconsoles color
+    const QList<QSharedPointer<Host>> hostList = mHostPool.values();
+    for (int i = 0; i < hostList.size(); i++) {
+        hostList.at(i)->mpConsole->changeColors();
+        // Mapper also needs a refresh of its colours
+        auto mapper = hostList.at(i)->mpMap->mpMapper;
+        if (mapper) {
+            mapper->setPalette(QApplication::palette());
+        }
+        QMutableMapIterator<QString, TConsole*> itSubConsole(hostList.at(i)->mpConsole->mSubConsoleMap);
+        while (itSubConsole.hasNext()) {
+            itSubConsole.next();
+            itSubConsole.value()->changeColors();
+        }
     }
 }
 
 Host* HostManager::getHost(const QString& hostname)
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     Host* pHost = mHostPool.value(hostname).data();
-    mPoolReadWriteLock.unlock();
-
     return pHost;
+}
+
+HostManager::Iter::Iter(HostManager* manager, bool at_start)
+{
+    if (at_start) {
+        it = manager->mHostPool.begin();
+    } else {
+        it = manager->mHostPool.end();
+    }
+}
+
+bool HostManager::Iter::operator== (const Iter& other)
+{
+    return it == other.it;
+}
+
+bool HostManager::Iter::operator!= (const Iter& other)
+{
+    return it != other.it;
+}
+
+HostManager::Iter& HostManager::Iter::operator++()
+{
+    it++;
+    return *this;
+}
+
+QSharedPointer<Host> HostManager::Iter::operator*()
+{
+    return *it;
+}
+
+bool HostManager::hostLoaded(const QString& hostname) const
+{
+    return mHostPool.contains(hostname);
 }

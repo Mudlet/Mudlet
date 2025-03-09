@@ -1,7 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Christer Oscarsson-christer.oscarsson@gmail.com *
+ *   Copyright (C) 2016 by Christer Oscarsson                              *
+ *                                          - christer.oscarsson@gmail.com *
+ *   Copyright (C) 2020, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,16 +28,16 @@
 TForkedProcess::~TForkedProcess()
 {
     if (callBackFunctionRef != -1) {
-        luaL_unref(interpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
+        luaL_unref(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
     }
 }
 
 
-TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QProcess()
+TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
+: QProcess()
+, mpInterpreter(pInterpreter)
 {
-    this->interpreter = interpreter;
     int n = lua_gettop(L);
-    callBackFunctionRef = -1;
     if (n < 2) {
         lua_pushstring(L, "Need read function and process name as parameters.");
         lua_error(L);
@@ -50,25 +52,25 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
     callBackFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
 
 
-    QString prog = QString((char*)luaL_checkstring(L, 2));
+    QString prog{luaL_checkstring(L, 2)};
     QStringList args;
     for (int i = 3; i <= n; i++) {
-        args << ((char*)luaL_checkstring(L, i));
+        args << luaL_checkstring(L, i);
     }
 
     // QProcess::finished is overloaded so we have to say which form we are
     // connecting here
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), interpreter, &TLuaInterpreter::slotDeleteSender);
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slotFinish);
-    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slot_deleteSender);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slot_finished);
+    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slot_receivedData);
 
-    setReadChannelMode(QProcess::MergedChannels);
+    setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
     waitForStarted();
     running = true;
 }
 
-void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
+void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus)
 {
     Q_UNUSED(exitCode);
     Q_UNUSED(exitStatus);
@@ -76,14 +78,14 @@ void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
     running = false;
 }
 
-void TForkedProcess::slotReceivedData()
+void TForkedProcess::slot_receivedData()
 {
     while (canReadLine()) {
         QByteArray line = readLine();
         // Call lua function by stored Reference
-        lua_rawgeti(interpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(interpreter->pGlobalLua, line.data());
-        lua_pcall(interpreter->pGlobalLua, 1, 0, 0);
+        lua_rawgeti(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
+        lua_pushstring(mpInterpreter->pGlobalLua, line.data());
+        lua_pcall(mpInterpreter->pGlobalLua, 1, 0, 0);
     }
 }
 
@@ -100,14 +102,14 @@ int TForkedProcess::sendMessage(lua_State* L)
     const char* toWrite = lua_tolstring(L, 1, &stringLength);
     if (!toWrite) {
         lua_pushstring(L, "Unable to get data to send.");
-        lua_error(L);
+        return lua_error(L);
     }
     size_t writedBytes = 0;
     while (stringLength > writedBytes) {
         int res = (*forkedProcess)->write(toWrite + writedBytes, stringLength - writedBytes);
         if (res == -1) {
             lua_pushstring(L, "Unable to send data to process.");
-            lua_error(L);
+            return lua_error(L);
         }
         writedBytes += res;
     }
@@ -144,26 +146,26 @@ static int qPointerGC(lua_State* L)
 }
 
 
-int TForkedProcess::startProcess(TLuaInterpreter* interpreter, lua_State* L)
+int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 {
-    auto process = new TForkedProcess(interpreter, L);
+    auto process = new TForkedProcess(pInterpreter, L);
 
     // The userdata for the closures.
     auto ** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
     int userDataIndex = lua_gettop(L);
     if (lua_getmetatable(L, userDataIndex) != 0) {
         lua_pushstring(L, "Error: new user data should not have any metatable.");
-        lua_error(L);
-    } else {
-        if (luaL_newmetatable(L, "qPointerGCMetatable") == 1) {
-            // First time one call this method. One must register the garbage collection method.
-            int tableIndex = lua_gettop(L);
-            lua_pushstring(L, "__gc");
-            lua_pushcfunction(L, qPointerGC);
-            lua_settable(L, tableIndex);
-        }
-        lua_setmetatable(L, userDataIndex);
+        return lua_error(L);
     }
+    if (luaL_newmetatable(L, "qPointerGCMetatable") == 1) {
+        // First time one call this method. One must register the garbage collection method.
+        int tableIndex = lua_gettop(L);
+        lua_pushstring(L, "__gc");
+        lua_pushcfunction(L, qPointerGC);
+        lua_settable(L, tableIndex);
+    }
+    lua_setmetatable(L, userDataIndex);
+
     *luaMemory = new QPointer<TForkedProcess>(process);
 
     // One must return a table with the following function:

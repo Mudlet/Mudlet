@@ -334,4 +334,14 @@ mudlet.keymodifier = {
   --   pressed as the arrow keys are considered part of the keypad.
   -- Note: On Windows Keyboards, Qt::MetaModifier and Qt::Key_Meta are mapped
   --   to the Windows key.
+  -- Since PR #2411 we can also specify modifiers that must NOT be present for
+  -- a key-binding to match - this is to aide in increasing the combinations
+  -- or to avoid clashing with OS/DE built in ones that also use the base key.
+  -- Should both be provided the negative one will be ignored
+  ["NotShift"]                 = 0x00020000, -- Qt::ShiftModifier
+  ["NotControl"]               = 0x00040000, -- Qt::ControlModifier
+  ["NotAlt"]                   = 0x00080000, -- Qt::AltModifier
+  ["NotMeta"]                  = 0x00100000, -- Qt::MetaModifier
+  ["NotKeypad"]                = 0x00200000, -- Qt::KeypadModifier
+  ["NotGroupSwitch"]           = 0x00400000, -- Qt::GroupSwitchModifier (X11 only)
 }

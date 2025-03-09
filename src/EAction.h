@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2019, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,8 +30,6 @@
 #include "post_guard.h"
 
 class Host;
-class mudlet;
-
 
 class EAction : public QAction
 {
@@ -38,13 +37,13 @@ class EAction : public QAction
 
 public:
     Q_DISABLE_COPY(EAction)
-    EAction(QIcon&, QString&);
+    explicit EAction(Host*, const QIcon&, const QString&, const int);
 
 public slots:
     void slot_execute(bool checked);
 
-public: // TODO: private:
-    int mID;
+private:
+    int mID = 0;
     QPointer<Host> mpHost;
 };
 

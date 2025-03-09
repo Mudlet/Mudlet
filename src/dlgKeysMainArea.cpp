@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022, 2025 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,6 +37,7 @@ dlgKeysMainArea::dlgKeysMainArea(QWidget* pF)
     connect(checkBox_modifier_meta, &QCheckBox::toggled, this, &dlgKeysMainArea::slot_modifierKeyToggled_meta);
     connect(checkBox_modifier_keypad, &QCheckBox::toggled, this, &dlgKeysMainArea::slot_modifierKeyToggled_keypad);
     connect(checkBox_modifier_group, &QCheckBox::toggled, this, &dlgKeysMainArea::slot_modifierKeyToggled_group);
+    connect(lineEdit_key_name, &QLineEdit::editingFinished, this, &dlgKeysMainArea::slot_editingNameFinished);
 
     checkBox_modifier_shift->setCheckState(Qt::PartiallyChecked);
     checkBox_modifier_control->setCheckState(Qt::PartiallyChecked);
@@ -201,12 +203,24 @@ void dlgKeysMainArea::slot_showModifierControls(const bool s)
     frame_modifiers->setVisible(s);
     label_key_modifiers_label->setVisible(s);
     if (s) {
-        label_key_binding_label->setText(tr("Key:",
-                                            // Intentional comment
-                                            "Text shown for the key-binding control label when the modifier controls are visible"));
+        /*: Text shown for the key-binding control label when the modifier
+         * controls are visible.
+         */
+        label_key_binding_label->setText(tr("Key:"));
     } else {
-        label_key_binding_label->setText(tr("Key-binding:",
-                                            // Intentional comment
-                                            "Text shown for the key-binding control label when the modifier controls are not shown"));
+        /*: Text shown for the key-binding control label when the modifier
+         * controls are not shown.
+         */
+        label_key_binding_label->setText(tr("Key-binding:"));
     }
+}
+
+void dlgKeysMainArea::trimName()
+{
+    lineEdit_key_name->setText(lineEdit_key_name->text().trimmed());
+}
+
+void dlgKeysMainArea::slot_editingNameFinished()
+{
+    trimName();
 }

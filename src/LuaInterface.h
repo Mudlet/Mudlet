@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,7 +31,7 @@
 #include "post_guard.h"
 
 extern "C" {
-#include <lua.h>
+    #include <lua.h>
 }
 
 
@@ -44,7 +45,7 @@ class QTreeWidgetItem;
 class LuaInterface
 {
 public:
-    LuaInterface(Host*);
+    explicit LuaInterface(lua_State*);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);
@@ -65,14 +66,12 @@ public:
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
     bool validMove(QTreeWidgetItem*);
     void getAllChildren(TVar* var, QList<TVar*>* list);
+    lua_State* getState();
     static int onPanic(lua_State*);
 
 private:
-    Host* mpHost;
-    int mHostID;
     int depth;
-    TLuaInterpreter* interpreter;
-    lua_State* L;
+    lua_State* mL;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;
