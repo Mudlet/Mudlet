@@ -345,7 +345,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    bool mEnableFullScreenMode = false;
     FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
@@ -526,7 +525,6 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
-    void drawFullScreenWidgets();
 
     inline static QPointer<mudlet> smpSelf = nullptr;
 

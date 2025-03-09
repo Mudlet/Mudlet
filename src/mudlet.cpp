@@ -474,9 +474,15 @@ void mudlet::init()
 
     disableToolbarButtons();
 
-    drawFullScreenWidgets();
-
-    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
+    QIcon fullScreenIcon;
+    fullScreenIcon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
+    fullScreenIcon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
+    mpActionFullScreenView = new QAction(fullScreenIcon, tr("Full Screen"), this);
+    mpActionFullScreenView->setToolTip(utils::richText(tr("Toggle Full Screen View")));
+    mpActionFullScreenView->setCheckable(true);
+    mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
+    mpMainToolBar->addAction(mpActionFullScreenView);
+    mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpWidget_profileContainer->setFont(mainFont);
@@ -647,6 +653,20 @@ void mudlet::init()
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
+    dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
+
+    // The readLateSetting(...) call will set the initial
+    // Full-Screen/Maximised/Normal state - we just need to set the knobs to
+    // match
+    mpActionFullScreenView->setChecked(windowState() & Qt::WindowFullScreen);
+    dactionToggleFullScreen->setChecked(windowState() & Qt::WindowFullScreen);
+
+    // Now we wire up the knobs, after they've been set to the right state:
+    connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+    connect(dactionToggleFullScreen, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+    // And we also need to track outside causes that can change it:
+    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
+
 #if defined(INCLUDE_UPDATER)
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
@@ -662,7 +682,11 @@ void mudlet::init()
 #endif // INCLUDE_UPDATER
 
     if (!mToolbarIconSize) {
-        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
+        // If the button size has not been previously set - on the first run
+        // set it according to whether we are full-screen - originally this
+        // would have been because it was likely running on a small screen
+        // device; this may no longer be useful:
+        setToolBarIconSize((windowState() & Qt::WindowFullScreen) ? 2 : 3);
     }
 
     // Allow mute functionality always
@@ -2001,10 +2025,6 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // In the near future the user's locale preferences will need to be read
     // as soon as possible as well!
 
-    if (settings.contains(qsl("enableFullScreenMode"))) {
-        mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
-    }
-
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 
     // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
@@ -2058,11 +2078,14 @@ void mudlet::readLateSettings(const QSettings& settings)
     resize(size);
     move(pos);
 
-    // Need to remove the Qt::WindowMaximized AND Qt::WindowActive from the
-    // state and then apply the result - If we are in, or go into,
-    // full-screen then this does not have any effect until we leave that:
-    setWindowState((windowState() & ~(Qt::WindowMaximized|Qt::WindowActive))
-                   |(settings.value("maximized", false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState));
+    // Need to remove the Qt::WindowMaximized, Qt::WindowFullScreen AND
+    // Qt::WindowActive from the state and then apply the result of combining
+    // the stored state - if we are full-screen then the maximised does not have
+    // any effect until we leave that:
+    auto state = windowState() & ~(Qt::WindowMaximized|Qt::WindowFullScreen|Qt::WindowActive);
+    state |= (settings.value(qsl("fullScreen"), false).toBool() ? Qt::WindowFullScreen : Qt::WindowNoState)
+            |(settings.value(qsl("maximized"), false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState);
+    setWindowState(state);
 
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
@@ -2209,11 +2232,11 @@ void mudlet::writeSettings()
     settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
     settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
+    settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
-    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
@@ -3300,9 +3323,9 @@ mudlet::~mudlet()
 
 void mudlet::slot_toggleFullScreenView()
 {
-    // This slot can only be called when the button is visible on the main
-    // toolbar and the option is visible in the main menu bar - but there are
-    // other things that can change the full-screen state outside of Mudlet!
+    // Althoug this slot can be called from the button on the main toolbar or
+    // the main menu bar there are other things that can change the full-screen
+    // state outside of Mudlet!
 
     // In the following calls to setWindowState we must NOT include
     // Qt::WindowActive in the flags to be applied:
@@ -3311,12 +3334,10 @@ void mudlet::slot_toggleFullScreenView()
         // Need to remove the Qt::WindowFullScreen AND Qt::WindowActive from the
         // state and then apply the result
         setWindowState(state & ~(Qt::WindowFullScreen|Qt::WindowActive));
-        mEnableFullScreenMode = false;
     } else {
         // Need to apply the Qt::WindowFullScreen state after removing
         // Qt::WindowActive from the flags we might read:
         setWindowState((state & ~(Qt::WindowActive))|Qt::WindowFullScreen);
-        mEnableFullScreenMode = true;
     }
     // Update the controls to reflect the actual state - note that
     // QAction::setChecked(bool) won't cause excution loops as it doesn't
@@ -3329,9 +3350,7 @@ void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
 {
     // Update the state of the button and the menu item to match the actual
     // state - if it doesn't match:
-    if (mpActionFullScreenView
-        && (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen))) {
-
+    if (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen)) {
         mpActionFullScreenView->setChecked(newState & Qt::WindowFullScreen);
     }
     if (dactionToggleFullScreen->isChecked() != (newState & Qt::WindowFullScreen)) {
@@ -4121,33 +4140,6 @@ std::string mudlet::replaceString(std::string subject, const std::string& search
          pos += replace.length();
     }
     return subject;
-}
-
-void mudlet::drawFullScreenWidgets()
-{
-    // We always start in full-screen mode if it is enabled:
-    if (mEnableFullScreenMode) {
-        setWindowState((windowState() & ~Qt::WindowActive) | Qt::WindowFullScreen);
-    }
-    if (!mpActionFullScreenView) {
-        QIcon icon;
-        icon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
-        icon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
-        mpActionFullScreenView = new QAction(icon, tr("Full Screen"), this);
-        mpActionFullScreenView->setToolTip(utils::richText(tr("Toggle Full Screen View")));
-        mpActionFullScreenView->setCheckable(true);
-        mpActionFullScreenView->setChecked(true);
-        mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
-        mpMainToolBar->addAction(mpActionFullScreenView);
-        mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
-    }
-    dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
-    // Use Qt::UniqueConnection to ensure the signal is not generated more
-    // than one per click even if the creation/destruction doesn't go to
-    // plan:
-    connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView, Qt::UniqueConnection);
-    connect(dactionToggleFullScreen, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView, Qt::UniqueConnection);
-    dactionToggleFullScreen->setVisible(true);
 }
 
 bool mudlet::migratePasswordsToSecureStorage()
