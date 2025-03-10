@@ -173,7 +173,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl && cl->host() == host && pClient->port() == port) {
+        if (cl && cl->host() == host && cl->port() == port) {
             pClient = cl;
             break;
         }
