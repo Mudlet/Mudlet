@@ -6809,7 +6809,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="669"/>
       <source>Enable spell check using dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Enable spell check using dictionary:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="699"/>
@@ -13087,12 +13087,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="533"/>
       <source>Text to separate commands or blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Text to separate commands or blank to disable</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="662"/>
       <source>User dictionary: </source>
-      <translation type="unfinished"/>
+      <translation>User dictionary: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1979"/>
