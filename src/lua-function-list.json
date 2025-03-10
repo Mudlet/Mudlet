@@ -442,7 +442,7 @@
     "chatStartServer": "chatStartServer([port])",
     "chatStopServer": "chatStopServer()",
     "chatUnChat": "chatUnChat(target)",
-    "getChatList": "getChatList()",
+    "chatGetClientList": "chatGetClientList()",
     "sendIrc": "sendIrc(target, message)",
     "sendMSDP": "sendMSDP(variable[, value][, value...])",
     "sendSocket": "sendSocket(data)",

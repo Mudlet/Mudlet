@@ -439,7 +439,7 @@ int TLuaInterpreter::chatUnChat(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::getChatList(lua_State* L) {
+int TLuaInterpreter::chatGetClientList(lua_State* L) {
     Host* pHost = &getHostFromLua(L);
 
     if (!pHost->mmcpServer) {
@@ -469,9 +469,16 @@ int TLuaInterpreter::getChatList(lua_State* L) {
         lua_pushstring(L, pClient->chatName().toUtf8().constData());
         lua_settable(L, -3);
 
-
         lua_pushstring(L, "host");
         lua_pushstring(L, pClient->host().toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "port");
+        lua_pushnumber(L, pClient->port());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "version");
+        lus_pushstring(L, pClient->getVersion().toUtf8().constData());
         lua_settable(L, -3);
 
         
