@@ -478,7 +478,7 @@ int TLuaInterpreter::chatGetClientList(lua_State* L) {
         lua_settable(L, -3);
 
         lua_pushstring(L, "version");
-        lus_pushstring(L, pClient->getVersion().toUtf8().constData());
+        lua_pushstring(L, pClient->getVersion().toUtf8().constData());
         lua_settable(L, -3);
 
         
