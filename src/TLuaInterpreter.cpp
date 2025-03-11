@@ -2605,7 +2605,6 @@ int TLuaInterpreter::getEpoch(lua_State *L)
     return 1;
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
 int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 {
@@ -5865,7 +5864,10 @@ void TLuaInterpreter::loadGlobal()
         // and in a "src" subdirectory (to match the relative source file
         // location to that top-level project file) of the main project
         // "mudlet" directory:
-        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
+        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // CMake builds from Qt Creator on Windows 11 appear to use this directory:
+        QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
 
     // Although it is relatively easy to detect whether something is #define d

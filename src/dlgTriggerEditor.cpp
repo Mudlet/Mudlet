@@ -9569,7 +9569,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                 mpKeysMainArea->pushButton_key_grabKey->setChecked(false);
                 mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nto\ngrab\nkey"));
                 // Restore cursor after aborted grab:
-                setCursor(QCursor(Qt::ArrowCursor));
+                qApp->restoreOverrideCursor();
                 setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
                 // This is the default and is redundant:
@@ -9591,10 +9591,10 @@ bool dlgTriggerEditor::event(QEvent* event)
                 keyGrabCallback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
                 setShortcuts();
-                // Restore cursor to indicate end of grab
                 mpKeysMainArea->pushButton_key_grabKey->setChecked(false);
                 mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nto\ngrab\nkey..."));
-                setCursor(QCursor(Qt::ArrowCursor));
+                // Restore cursor to indicate end of grab
+                qApp->restoreOverrideCursor();
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
@@ -9626,8 +9626,9 @@ void dlgTriggerEditor::slot_keyGrab(const bool state)
     // grab - but we need it to hold the keyboard focus until the key is grabbed
     // and disabling it prevents that...
     mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nthe\nkey\nto\ngrab..."));
-    // Change cursor to indicate a grab is in progress:
-    setCursor(QCursor(Qt::ForbiddenCursor));
+    // Change cursor to indicate a grab is in progress - for EVERYTHING in the
+    // application:
+    qApp->setOverrideCursor(QCursor(Qt::ForbiddenCursor));
     QList<QAction*> actionList = toolBar->actions();
     for (auto& action : actionList) {
         if (action->text() == "Save Item") {

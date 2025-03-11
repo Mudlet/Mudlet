@@ -115,6 +115,7 @@
     </property>
     <addaction name="dactionOptions"/>
     <addaction name="dactionMultiView"/>
+    <addaction name="dactionToggleFullScreen"/>
     <addaction name="separator"/>
     <addaction name="menuMute"/>
    </widget>
@@ -324,6 +325,17 @@
    </property>
    <property name="toolTip">
     <string comment="Same text is used in 2 places.">&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleFullScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Full Screen</string>
    </property>
   </action>
   <action name="dactionMuteMedia">

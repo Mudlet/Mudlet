@@ -589,6 +589,28 @@ int TLuaInterpreter::getConsoleBufferSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getKeyModifiers
+int TLuaInterpreter::getKeyModifiers(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> result{};
+    auto [isNumber, text] = getVerifiedStringOrInteger(L, __func__, 1, "key name or id");
+    if (isNumber) {
+        result = host.getKeyUnit()->getKeyModifiers(text.toInt());
+    } else {
+        result = host.getKeyUnit()->getKeyModifiers(text);
+    }
+
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushfstring(L, isNumber ? "key ID: %s not found" : "key \"%s\" not found", text.toUtf8().constData());
+        return 2;
+    }
+    auto returnValue = static_cast<uint64_t>(result.second.first.toInt());
+    returnValue |= static_cast<uint64_t>(result.second.second.toInt()) >> 8;
+    lua_pushnumber(L, returnValue);
+    return 1;
+}
 
 int TLuaInterpreter::getProfileStats(lua_State* L)
 {
@@ -1550,6 +1572,47 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     auto console = CONSOLE(L, windowName);
     console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
     // Indicate success with a true return value:
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setKeyModifiers
+int TLuaInterpreter::setKeyModifiers(lua_State* L)
+{
+    auto [isNumber, text] = getVerifiedStringOrInteger(L, __func__, 1, "key name or id");
+
+    // We use this to produce an error if the argument is NOT an integer, but we
+    // will processes the argument as a longer than int32_t type ourself:
+    Q_UNUSED(getVerifiedInt(L, __func__, 2, "modifiers"));
+
+    // The cast to uint64_t might seem a bit odd but the value returned from
+    // lua_tointeger(...) is a lua_integer which may not be the standard "int"
+    // type of a system (it could be longer) - and that may confuse things when
+    // trying to convert an integer type to a QFlag-ged type like the
+    // Qt::keyboardModifier:
+    const auto rawValue = static_cast<uint64_t>(lua_tointeger(L, 2));
+    const auto mask = static_cast<uint64_t>(Qt::KeyboardModifierMask);
+    const auto requiredModifersValue = rawValue & mask;
+    const auto avoidedModifiersValue = (rawValue << 8) & mask;
+    // Note: Qt::KeyboardModifierMask is not currently mentioned in the Qt
+    // documentation (seems to be 0xFE000000)!
+    const Qt::KeyboardModifiers requiredKeyModifiers = Qt::KeyboardModifiers(static_cast<uint32_t>(requiredModifersValue));
+    const Qt::KeyboardModifiers avoidedKeyModifiers = Qt::KeyboardModifiers(static_cast<uint32_t>(avoidedModifiersValue));
+
+    Host& host = getHostFromLua(L);
+    bool result = false;
+    if (isNumber) {
+        result = host.getKeyUnit()->setKeyModifiers(text.toInt(), std::pair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>{requiredKeyModifiers, avoidedKeyModifiers});
+    } else {
+        result = host.getKeyUnit()->setKeyModifiers(text, std::pair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>{requiredKeyModifiers, avoidedKeyModifiers});
+    }
+
+    if (!result) {
+        lua_pushnil(L);
+        lua_pushfstring(L, isNumber ? "key ID: %s not found" : "key \"%s\" not found", text.toUtf8().constData());
+        return 2;
+    }
+
     lua_pushboolean(L, true);
     return 1;
 }

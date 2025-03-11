@@ -28,10 +28,7 @@
 #include "TKey.h"
 
 KeyUnit::KeyUnit(Host* pHost)
-: mRunAllKeyMatches(false)
-, mpHost(pHost)
-, mMaxID(0)
-, mModuleMember(false)
+: mpHost(pHost)
 {
     setupKeyNames();
 }
@@ -169,6 +166,17 @@ bool KeyUnit::disableKey(const QString& name)
     return found;
 }
 
+QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKeyModifiers(const int id) const
+{
+    auto pKey = mKeyMap.value(id);
+    if (pKey) {
+        return {true, pKey->getKeyModifiers()};
+    }
+
+    return {false, qMakePair(Qt::NoModifier, Qt::NoModifier)};
+}
+
+
 // This currently only acts on the FIRST key-binding with the given name
 QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKeyModifiers(const QString& name) const
 {
@@ -178,6 +186,17 @@ QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKey
     }
 
     return {false, qMakePair(Qt::NoModifier, Qt::NoModifier)};
+}
+
+bool KeyUnit::setKeyModifiers(const int id, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers)
+{
+    auto pKey = mKeyMap.value(id);
+    if (pKey) {
+        pKey->setKeyModifiers(modifiers);
+        return true;
+    }
+
+    return false;
 }
 
 // This currently only acts on the FIRST key-binding with the given name

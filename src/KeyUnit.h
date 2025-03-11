@@ -60,7 +60,9 @@ public:
     std::vector<int> findItems(const QString& name, const bool exactMatch, const bool caseSensitive);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
-    QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> > getKeyModifiers(const QString&) const;
+    QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> getKeyModifiers(const int) const;
+    QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> getKeyModifiers(const QString&) const;
+    bool setKeyModifiers(const int, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>);
     bool setKeyModifiers(const QString&, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>);
     bool killKey(QString& name);
     bool registerKey(TKey* pT);
@@ -85,7 +87,7 @@ public:
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
     // could break things - so only do it if this flag is set:
-    bool mRunAllKeyMatches;
+    bool mRunAllKeyMatches = false;
 
 
 private:
@@ -103,8 +105,8 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TKey*> mKeyMap;
     std::list<TKey*> mKeyRootNodeList;
-    int mMaxID;
-    bool mModuleMember;
+    int mMaxID = 0;
+    bool mModuleMember = false;
     QMap<int, QString> mKeys;
     int statsItemsTotal = 0;
     int statsTempItems = 0;
