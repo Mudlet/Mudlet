@@ -96,16 +96,17 @@ private:
      * Qt::ControlModifier     0x04000000 A Ctrl key on the keyboard is pressed.
      * Qt::AltModifier         0x08000000 An Alt key on the keyboard is pressed.
      * Qt::MetaModifier        0x10000000 A Meta key on the keyboard is pressed.
-     * Qt::KeypadModifier      0x20000000 A keypad button is pressed.
+     * Qt::KeypadModifier      0x20000000 A keypad key is pressed.
+     * Qt::GroupSwitchModifier 0x40000000 (X11 only) A GroupSwitch key (AltGr?) button is pressed.
      * We introduced some otherwise unused bits to represent the inverse
      * so when saving/loading we shift the mAbsentModifiers bits left/right by 8
      * places and combine with the mPresentModifiers:
      * NoShiftModifier         0x00020000 A Shift key on the keyboard is NOT pressed.
      * NoControlModidier       0x00040000 A Ctrl key on the keyboard is NOT preseed.
-     * NoAltModifier           0x00080000 An Alt key on the keyboard is pressed.
-     * NoMetaModifier          0x00100000 A Meta key on the keyboard is pressed.
-     * NoKeypadModifier        0x00200000 A keypad button is NOT pressed.
-     * NoGroupSwitchModifier   0x00400000 (X11-only) Group switch modifier is NOT present
+     * NoAltModifier           0x00080000 An Alt key on the keyboard is NOT pressed.
+     * NoMetaModifier          0x00100000 A Meta key on the keyboard is NOT pressed.
+     * NoKeypadModifier        0x00200000 A keypad key is NOT pressed.
+     * NoGroupSwitchModifier   0x00400000 (X11-only) A Group switch key on the keyboard is NOT pressed
      */
 
     // Have to use brace default initiliaser here as there is not a null enum

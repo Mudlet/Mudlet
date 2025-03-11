@@ -9622,21 +9622,17 @@ void dlgTriggerEditor::slot_keyGrab(const bool state)
     }
 
     mIsGrabKey = true;
+    setShortcuts(false);
     // Theoretically we would lock the button down and disable it during the
     // grab - but we need it to hold the keyboard focus until the key is grabbed
-    // and disabling it prevents that...
+    // and disabling it prevents that - we have deliberately designed the button
+    // to be a BIG square one - so it is hard to miss/easy to hit and we change
+    // the displayed text to further advise that we are now waiting for a key-
+    // press:
     mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nthe\nkey\nto\ngrab..."));
-    // Change cursor to indicate a grab is in progress - for EVERYTHING in the
-    // application:
+    // Also change the cursor to indicate a grab is in progress - for EVERYTHING
+    // in the application:
     qApp->setOverrideCursor(QCursor(Qt::ForbiddenCursor));
-    QList<QAction*> actionList = toolBar->actions();
-    for (auto& action : actionList) {
-        if (action->text() == "Save Item") {
-            action->setShortcut(QString());
-        } else if (action->text() == "Save Profile") {
-            action->setShortcut(QString());
-        }
-    }
     QCoreApplication::instance()->installEventFilter(this);
 }
 

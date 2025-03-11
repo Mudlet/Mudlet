@@ -1747,6 +1747,11 @@ int TLuaInterpreter::findItems(lua_State* L)
         }
         return 1;
     };
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
     if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
         const auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);

@@ -422,9 +422,7 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const QPair<Qt::KeyboardModif
          * key-binding. Will be concatenated with any others, each separated
          * by a separator text, ' + ' by default unless changed for the locale.
          */
-        modifierText << tr("NOT Shift",
-                           // Intentional comment to separate arguments
-                           "Text to show when the SHIFT modifier must NOT be present in a key-binding.");
+        modifierText << tr("NOT Shift");
     }
 
 #if defined(Q_OS_MACOS)
