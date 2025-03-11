@@ -85,12 +85,7 @@ bool bSpeechQueueing;
 int speechState = QTextToSpeech::State::Ready;
 QString speechCurrent;
 
-// BackendError was renamed to Error in Qt6
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::BackendError;
-#else
 static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
-#endif
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsBuild()

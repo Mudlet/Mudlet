@@ -93,18 +93,19 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_exitSize);
     connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
-#else
-    connect(comboBox_showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
-#endif
 #if defined(INCLUDE_3DMAPPER)
     connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
 #else
     pushButton_3D->hide();
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(checkBox_showRoomIds, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+    connect(checkBox_showRoomNames, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#else
     connect(checkBox_showRoomIds, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     connect(checkBox_showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#endif
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
@@ -363,15 +364,11 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
     }
 }
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-// Only needed in newer Qt versions as the old SIGNAL overload that returned the
-// QString of the activated QComboBox entry has been obsoleted:
 void dlgMapper::slot_switchArea(const int index)
 {
     const QString areaName{comboBox_showArea->itemText(index)};
     mp2dMap->switchArea(areaName);
 }
-#endif
 
 void dlgMapper::slot_updateInfoContributors()
 {
@@ -379,7 +376,7 @@ void dlgMapper::slot_updateInfoContributors()
     //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
     auto* clearAction = new QAction(tr("None"), pushButton_info);
     pushButton_info->menu()->addAction(clearAction);
-    connect(clearAction, &QAction::triggered, this, [=]() {
+    connect(clearAction, &QAction::triggered, this, [=, this]() {
         for (auto action : pushButton_info->menu()->actions()) {
             action->setChecked(false);
         }
@@ -389,7 +386,7 @@ void dlgMapper::slot_updateInfoContributors()
         auto* action = new QAction(name, pushButton_info);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));
-        connect(action, &QAction::toggled, this, [=](bool isToggled) {
+        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
             if (isToggled) {
                 mpHost->mMapInfoContributors.insert(name);
             } else {

@@ -336,9 +336,9 @@ public:
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
-    QString getMediaLocationGMCP() const;
+    QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
-    QString getMediaLocationMSP() const;
+    QString mediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
@@ -426,6 +426,13 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+    bool getF3SearchEnabled() const { return mF3SearchEnabled; }
+    void setF3SearchEnabled(const bool enabled) { 
+        mF3SearchEnabled = enabled;
+        if (mpConsole) {
+            mpConsole->setF3SearchEnabled(enabled);
+        }
+    }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -449,7 +456,7 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
-    bool mEnableMSDP = true;
+    bool mEnableMSDP = false;
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
@@ -556,6 +563,7 @@ public:
     bool mUSE_UNIX_EOL;
     int mWrapAt;
     int mWrapIndentCount;
+    int mWrapHangingIndentCount;
 
     bool mEditorAutoComplete;
 
@@ -920,6 +928,9 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Whether F3 search functionality is enabled
+    bool mF3SearchEnabled = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:

@@ -245,7 +245,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                     setError(qsl("<b><font color='blue'>%1</font></b>")
                              .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
-                             .arg(QString::number(i + 1), patterns.at(i), QString(error).toHtmlEscaped())));
+                             .arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
                     state = false;
                     if (mudlet::smDebugMode) {
                         TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;

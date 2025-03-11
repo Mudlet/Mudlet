@@ -205,7 +205,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpActionsMainArea = new dlgActionMainArea(this);
     layoutColumn->addWidget(mpActionsMainArea, 1);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::checkStateChanged, this, &dlgTriggerEditor::slot_toggleIsPushDownButton);
+#else
     connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::stateChanged, this, &dlgTriggerEditor::slot_toggleIsPushDownButton);
+#endif
 
     mpKeysMainArea = new dlgKeysMainArea(this);
     layoutColumn->addWidget(mpKeysMainArea, 1);
@@ -949,6 +953,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
 {
+    Q_UNUSED(pos)
+    Q_UNUSED(index)
     mSearchSplitterState = searchSplitter->saveState();
 }
 
@@ -8481,8 +8487,9 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler()
     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
-void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem*)
+void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem* item)
 {
+    Q_UNUSED(item)
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clearSelection();
     mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
     mIsScriptsMainAreaEditHandler = false;
@@ -9431,7 +9438,7 @@ void dlgTriggerEditor::doCleanReset()
 
     mCleanResetQueued = true;
 
-    QTimer::singleShot(0, this, [=]() {
+    QTimer::singleShot(0, this, [=, this]() {
         mCleanResetQueued = false;
 
         runScheduledCleanReset();
@@ -10044,7 +10051,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
         formatAction->setIcon(QIcon::fromTheme(qsl("run-build-clean"), QIcon::fromTheme(qsl("run-build-clean"))));
     }
 
-    connect(formatAction, &QAction::triggered, this, [=]() {
+    connect(formatAction, &QAction::triggered, this, [=, this]() {
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
         // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
         controller->beginUndoGroup();

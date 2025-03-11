@@ -57,15 +57,11 @@
 #include <QVersionNumber>
 #include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
-#if defined(INCLUDE_OWN_QT5_KEYCHAIN)
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
 #else
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <qt5keychain/keychain.h>
-#else
 #include <qt6keychain/keychain.h>
-#endif // QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#endif // defined(INCLUDE_OWN_QT5_KEYCHAIN)
+#endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
@@ -294,7 +290,6 @@ public:
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
-    void setEnableFullScreenMode(const bool);
     void setGlobalStyleSheet(const QString&);
     void setInterfaceLanguage(const QString&);
     void setMenuBarVisibility(enums::controlsVisibility);
@@ -350,11 +345,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    // Currently tracks the "mudlet_option_use_smallscreen" file's existence but
-    // may eventually migrate solely to the "EnableFullScreenMode" in the main
-    // QSetting file - it is only stored as a file now to maintain backwards
-    // compatibility...
-    bool mEnableFullScreenMode = false;
     FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
@@ -585,6 +575,7 @@ private:
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionCloseProfile;
+    QPointer<QAction> mpActionCloseApplication;
     QPointer<QAction> mpActionConnect;
     QPointer<QAction> mpActionDisconnect;
     QPointer<QAction> mpActionDiscord;

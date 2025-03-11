@@ -881,11 +881,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::RightButton) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        auto popup = createStandardContextMenu(event->globalPos());
-#else
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
-#endif
         if (mpHost->mEnableSpellCheck) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
@@ -896,7 +892,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         foreach(auto label, contextMenuItems.keys()) {
             auto eventName = contextMenuItems.value(label);
             auto action = new QAction(label, this);
-            connect(action, &QAction::triggered, this, [=]() {
+            connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
                 mudletEvent.mArgumentList << eventName;
                 mudletEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -906,11 +902,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         }
 
         mPopupPosition = event->pos();
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        popup->popup(event->globalPos());
-#else
         popup->popup(event->globalPosition().toPoint());
-#endif
         // The use of accept here is supposed to prevents this event from
         // reaching any parent widget - like the TConsole containing this
         // TCommandLine...
@@ -1492,11 +1484,7 @@ void TCommandLine::restoreHistory()
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
-            // In Qt6 the default encoding is UTF-8
             QTextStream ifs(&historyFile);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            ifs.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
             QString buffer;
             while (!ifs.atEnd() && ifs.status() == QTextStream::Ok) {
                 ifs.readLineInto(&buffer);
@@ -1554,10 +1542,6 @@ void TCommandLine::slot_saveHistory()
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);
-        // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        ofs.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
         // We need to add one here because usually the first line in
         // mHistoryList is an empty one - maybe it might represent the current
         // line and will get captured/saved if the profile is closed with some

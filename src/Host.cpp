@@ -243,6 +243,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
+, mF3SearchEnabled(false)
 , mIsRemoteEchoingActive(false)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
@@ -257,6 +258,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mWrapHangingIndentCount(0)
 , mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
@@ -352,10 +354,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * otherwise - note that this must be done AFTER setDevice(...):
      */
     mErrorLogStream.setDevice(&mErrorLogFile);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
@@ -753,7 +751,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=]() {
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
             reloadModule(syncModuleName);
             obj->deleteLater();
         });
@@ -872,6 +870,12 @@ void Host::resetProfile_phase2()
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    // A zero value is how we send a "false" value - which indicates that
+    // this is for a reset profile and NOT a freshly loaded one:
+    event.mArgumentList.append(QString::number(0));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
     raiseEvent(event);
     qDebug() << "resetProfile() DONE";
 }
@@ -933,12 +937,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     qApp->processEvents();
 
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=]() {
+    mModuleFuture = QtConcurrent::run([=, this]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
@@ -1066,7 +1070,7 @@ void Host::setMediaLocationGMCP(const QString& mediaUrl)
     mMediaLocationGMCP = mediaUrl;
 }
 
-QString Host::getMediaLocationGMCP() const
+QString Host::mediaLocationGMCP() const
 {
     return mMediaLocationGMCP;
 }
@@ -1082,7 +1086,7 @@ void Host::setMediaLocationMSP(const QString& mediaUrl)
     mMediaLocationMSP = mediaUrl;
 }
 
-QString Host::getMediaLocationMSP() const
+QString Host::mediaLocationMSP() const
 {
     return mMediaLocationMSP;
 }
@@ -2185,15 +2189,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
-        /*
-         * We also have to explicit set the codec to use whilst reading the file
-         * as otherwise QTextCodec::codecForLocale() is used which for Qt5
-         * might be a local8Bit codec that thus will not handle all the
-         * characters contained in Unicode. In Qt6 the default is UTF-8.
-         */
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
+
         while (!in.atEnd()) {
             strings += in.readLine();
         }
@@ -2278,10 +2274,6 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 bool Host::writeProfileIniData(const QString& item, const QString& what)
 {
     QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     settings.setValue(item, what);
     settings.sync();
     switch (settings.status()) {
@@ -2300,10 +2292,6 @@ bool Host::writeProfileIniData(const QString& item, const QString& what)
 QString Host::readProfileIniData(const QString& item)
 {
     QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     return settings.value(item).toString();
 }
 
@@ -2981,7 +2969,7 @@ void Host::loadSecuredPassword()
 
     job->setKey(getName());
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
         if (task->error()) {
             const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {

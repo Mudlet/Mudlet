@@ -11,12 +11,12 @@
 local function installServerPackage()
   local installedVersion = mpkg.getInstalledVersion(meduiPackage)
   local repoVersion = mpkg.getRepositoryVersion(meduiPackage)
-  
+
   if not installedVersion then
     mpkg.install(meduiPackage)
     return
   end
-      
+
   if semver(installedVersion) &lt; semver(repoVersion) then
     mpkg.upgrade(meduiPackage)
   end
@@ -26,9 +26,9 @@ end
 local mpkgVersion = getPackageInfo("mpkg", "version")
 
 if mpkgVersion == "" then
-  installPackage("https://mudlet.github.io/mudlet-package-repository/packages/mpkg.mpackage")
+  installPackage("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/mpkg.mpackage")
   -- wait a few seconds until mpkg is installed then check MUD package
-  tempTimer(5, function() installServerPackage() end)  
+  tempTimer(5, function() installServerPackage() end)
 else
   installServerPackage()
 end</script>

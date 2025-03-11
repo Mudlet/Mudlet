@@ -6,12 +6,13 @@
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.mpackage</file>
         <file>echo.mpackage</file>
+        <file>mpkg.mpackage</file>
         <file>MedBootstrap.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
-        <file>icons/3klogo.png</file>
-        <file>icons/3slogo.png</file>
+        <file>icons/3Kingdoms.png</file>
+        <file>icons/3Scapes.png</file>
         <file>icons/aardwolf_mud.png</file>
         <file>icons/abandonedrealms_icon.jpg</file>
         <file>icons/accessories-text-editor.png</file>
