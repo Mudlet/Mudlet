@@ -290,7 +290,6 @@ public:
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
-    void setEnableFullScreenMode(const bool);
     void setGlobalStyleSheet(const QString&);
     void setInterfaceLanguage(const QString&);
     void setMenuBarVisibility(enums::controlsVisibility);
@@ -346,11 +345,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    // Currently tracks the "mudlet_option_use_smallscreen" file's existence but
-    // may eventually migrate solely to the "EnableFullScreenMode" in the main
-    // QSetting file - it is only stored as a file now to maintain backwards
-    // compatibility...
-    bool mEnableFullScreenMode = false;
     FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
