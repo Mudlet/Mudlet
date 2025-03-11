@@ -740,7 +740,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    painter.drawText(textRect, Qt::AlignHCenter|Qt::TextDontClip|Qt::TextSingleLine, grapheme);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
