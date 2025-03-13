@@ -87,8 +87,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
 
-    checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -256,7 +254,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
     // included in compliation:
-    connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);
     connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
     connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
     connect(pMudlet, &mudlet::signal_setToolBarIconSize, this, &dlgProfilePreferences::slot_setToolBarIconSize);
@@ -3172,7 +3169,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pMudlet->setToolBarVisibility(enums::visibleAlways);
     }
 
-    pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
@@ -4123,12 +4119,6 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
 // opened for different Profiles then common (application wide) settings changed
 // in one of them is immediately updated in the others (so they do not get out
 // of sync):
-void dlgProfilePreferences::slot_changeEnableFullScreenMode(const bool state)
-{
-    if (checkBox_USE_SMALL_SCREEN->isChecked() != state) {
-        checkBox_USE_SMALL_SCREEN->setChecked(state);
-    }
-}
 
 // Connected to mudlet::signal_editorTextOptionsChanged which is emitted when
 // (void) mudlet::setEditorTextoptions(...) is called from this or another
