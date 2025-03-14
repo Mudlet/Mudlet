@@ -107,6 +107,8 @@ public slots:
     void slot_setMapRoomBorderColor();
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
+    void slot_setLowerLevelColor();
+    void slot_setUpperLevelColor();
     void slot_resetMapColors();
 
     // Map.
@@ -148,14 +150,13 @@ private slots:
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
-    void slot_changeEnableFullScreenMode(const bool);
-    void slot_setAppearance(const mudlet::Appearance);
+    void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
     void slot_setTreeWidgetIconSize(const int);
-    void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
-    void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeMenuBarVisibility(const enums::controlsVisibility);
+    void slot_changeToolBarVisibility(const enums::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);
@@ -167,14 +168,12 @@ private slots:
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
     void slot_enableDarkEditor(const QString&);
-    void slot_toggleMapDeleteButton(const bool);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
-
 
 signals:
     void signal_themeUpdateCompleted();
@@ -208,7 +207,6 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
 
-
     int mFontSize = 10;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
@@ -218,6 +216,13 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence*> currentShortcuts;
+    QPointer<QMenu> protocolMenu;
+    QPointer<QAction> mEnableGMCP;
+    QPointer<QAction> mEnableMSDP;
+    QPointer<QAction> mEnableMSSP;
+    QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMTTS;
+    QPointer<QAction> mEnableMNES;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

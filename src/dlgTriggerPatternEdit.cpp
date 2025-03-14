@@ -48,19 +48,19 @@ void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 
     switch (comboBox_patternType->currentIndex()) {
     case REGEX_SUBSTRING:
-        lineEdit_pattern->setPlaceholderText(tr("Text to find (anywhere in the game output)"));
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (anywhere in the game output)"));
         break;
     case REGEX_PERL:
-        lineEdit_pattern->setPlaceholderText(tr("Text to find (as a regular expression pattern)"));
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (as a regular expression pattern)"));
         break;
     case REGEX_BEGIN_OF_LINE_SUBSTRING:
-        lineEdit_pattern->setPlaceholderText(tr("Text to find (from beginning of the line)"));
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (from beginning of the line)"));
         break;
     case REGEX_EXACT_MATCH:
-        lineEdit_pattern->setPlaceholderText(tr("Exact line to match"));
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Exact line to match"));
         break;
     case REGEX_LUA_CODE:
-        lineEdit_pattern->setPlaceholderText(tr("Lua code to run (return true to match)"));
+        singleLineTextEdit_pattern->setPlaceholderText(tr("Lua code to run (return true to match)"));
         break;
     }
 }

@@ -145,7 +145,7 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 #ifdef QT_DEBUG
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
-    for (auto table : csmEncodingTable.getEncodings()) {
+    for (const auto& table : csmEncodingTable.getEncodings()) {
         Q_ASSERT_X(table.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
 #endif
@@ -852,7 +852,7 @@ COMMIT_LINE:
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
-            wrap(lineBuffer.size() - 1);
+            wrap(line);
 
             // Start a new, but empty line in the various buffers
             ++localBufferPosition;
@@ -2226,13 +2226,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
-    // Qt 6 changed the return type of QLIST<T>::size() to qsizetype which is
-    // not directly comparable to a const int& without a cast:
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2333,11 +2327,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2434,11 +2424,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     int lineEndPos = sub_end;
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;
@@ -2692,6 +2678,12 @@ inline int TBuffer::wrap(int startLine)
                     i2++;
                     break;
                 }
+                if (i3 == 0 && i2 != 0) {
+                    for (int j = 0; j < mWrapHangingIndent; ++j) {
+                        newLine.push_back(pSpace);
+                        lineText.append(" ");
+                    }
+                }
                 newLine.push_back(buffer[i][i2]);
                 lineText.append(lineBuffer[i].at(i2));
                 i2++;
@@ -2710,7 +2702,7 @@ inline int TBuffer::wrap(int startLine)
             }
             newLine.clear();
             lineText = "";
-            indent = 0;
+            indent = mWrapHangingIndent;
             i2 += skipSpacesAtBeginOfLine(i, i2);
         }
         lineCount++;

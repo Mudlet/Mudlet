@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023, 2024 by Stephen Lyons       *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023-2025 by Stephen Lyons        *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -29,9 +29,9 @@
 #include <chrono>
 #include <QCommandLineParser>
 #include <QDir>
-#if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
-#endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#endif // defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
 #include <QCommandLineOption>
 #include <QPainter>
 #include <QPointer>
@@ -57,7 +57,7 @@ using namespace std::chrono_literals;
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 bool runUpdate();
 #endif
 
@@ -87,7 +87,7 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
     }
 }
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 void removeOldNoteColorEmojiFonts()
 {
     // PLACEMARKER: previous Noto Color Emoji font versions removal
@@ -103,15 +103,17 @@ void removeOldNoteColorEmojiFonts()
     // When adding a later version, append the path and version comment of the
     // replaced one comment to this area:
     // Tag: "v2018-04-24-pistol-update"
-    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(enums::mainFontsPath));
     // Release: "v2019-11-19-unicode12"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(enums::mainFontsPath));
     // Release: "Noto Emoji v2.0238"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 14.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    // Release: "Unicode 15.1, take 3"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(enums::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -152,14 +154,35 @@ QTranslator* loadTranslationsForCommandLine()
     return pMudletTranslator;
 }
 
+#ifdef Q_OS_WINDOWS
+void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
+{
+    switch (type) {
+    case QtDebugMsg:
+    case QtInfoMsg:
+        std::cout << msg.toUtf8().constData() << std::endl;
+        break;
+    case QtWarningMsg:
+    case QtCriticalMsg:
+    case QtFatalMsg:
+        std::cerr << msg.toUtf8().constData() << std::endl;
+    }
+}
+#endif
+
 int main(int argc, char* argv[])
 {
-    // print stdout to console if Mudlet is started in a console in Windows
-    // credit to https://stackoverflow.com/a/41701133 for the workaround
-#ifdef Q_OS_WIN32
+#ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
+        if (qgetenv("MSYSTEM").isNull()) {
+            // print stdout to console if Mudlet is started in a console in Windows
+            // credit to https://stackoverflow.com/a/41701133 for the workaround
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+        } else {
+            // simply print qt logs into stdout and stderr if it's MSYS2
+            qInstallMessageHandler(msys2QtMessageHandler);
+        }
     }
 #endif
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -217,15 +240,7 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(Announcer::accessibleFactory);
 #endif
 
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Apple Color Emoji Fallback
-    QFont defaultFont;
-    defaultFont.setFamily(defaultFont.defaultFamily());
-    QFont::insertSubstitution(defaultFont.family(), qsl("Apple Color Emoji"));
-    app->setFont(defaultFont);
-#endif
-
-#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -393,7 +408,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2024  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2025  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
@@ -442,7 +457,7 @@ int main(int argc, char* argv[])
 
     // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
         // sound to work:
@@ -459,7 +474,7 @@ int main(int argc, char* argv[])
 
     QStringList cliProfiles = parser.values(profileToOpen);
     qDebug() << "Got CLI profiles:" << cliProfiles;
-    
+
     if (cliProfiles.isEmpty()) {
         qDebug() << "No CLI profiles specified, checking environment variable";
         const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
@@ -473,7 +488,6 @@ int main(int argc, char* argv[])
     }
 
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-    
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
@@ -484,7 +498,8 @@ int main(int argc, char* argv[])
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            const QFont font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(qsl("Bitstream Vera Serif"), fontSize, 75);
+            font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -518,8 +533,9 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2024");
-        const QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
+        QFont font(qsl("Bitstream Vera Serif"), 16, 75);
+        font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -532,21 +548,18 @@ int main(int argc, char* argv[])
         copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
     const QPixmap pixmap = QPixmap::fromImage(splashImage);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Specifying the screen here seems to help to put the splash screen on the
     // same monitor that the main application window will be put upon on first
     // run, in some situations the two can otherwise get to be different which
     // is misleading unhelpful to a new user...!
     QSplashScreen splash(qApp->primaryScreen(), pixmap);
-#else
-    QSplashScreen splash(pixmap);
-#endif
+
     if (showSplash) {
         splash.show();
     }
     app->processEvents();
 
-    const QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
+    const QString homeDirectory = mudlet::getMudletPath(enums::mainPath);
     const QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
@@ -555,20 +568,20 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-#if defined(Q_OS_LINUX)
-    // Only needed/works on Linux to provide color emojis:
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    // Only needed/works on GNU/Linux and FreeBSD to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
-    // Release: "Unicode 15.1, take 3"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    // Release: "Unicode 16.0"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -622,15 +635,15 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2023-11-30-v2.042"), qsl("LICENSE"));
-#endif // defined(Q_OS_LINUX)
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2024-10-03-v2.047"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2024-10-03-v2.047"), qsl("LICENSE"));
+#endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #endif // defined(INCLUDE_FONTS)
 
     const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     /*
      * From Qt Documentation for:
      * bool QFile::link(const QString &linkName)
@@ -734,14 +747,15 @@ int main(int argc, char* argv[])
     return app->exec();
 }
 
-#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
-// small detour for Windows - check if there's an updated Mudlet
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+// Small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
-// will update Mudlet and then launch it once it's done
-// return true if we should abort the current launch since the updater got started
+// will update Mudlet and then launch it once it's done.
+//
+// Return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QCoreApplication::applicationDirPath()));
+    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {

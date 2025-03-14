@@ -75,7 +75,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 {
 }
 
-TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, Host* pHost)
+TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex(false)
 , mPerlSlashGOption(false)
@@ -98,6 +98,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 , mIsLineTrigger(false)
 , mStartOfLineDelta(0)
 , mLineDelta(3)
+, mIsMultiline(isMultiline)
 , mConditionLineDelta(0)
 , mpLua(mpHost->getLuaInterpreter())
 , mFgColor(QColor(Qt::red))
@@ -244,7 +245,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                     setError(qsl("<b><font color='blue'>%1</font></b>")
                              .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
-                             .arg(QString::number(i + 1), patterns.at(i), QString(error).toHtmlEscaped())));
+                             .arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
                     state = false;
                     if (mudlet::smDebugMode) {
                         TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
@@ -1502,4 +1503,38 @@ void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCo
         fgColorCode = scmIgnored;
         bgColorCode = scmIgnored;
     }
+}
+
+QString TTrigger::packageName(TTrigger* pTrigger)
+{
+    if (!pTrigger) {
+        return QString();
+    }
+
+    if (!pTrigger->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
+    }
+
+    if (pTrigger->getParent()) {
+        return packageName(pTrigger->getParent());
+    }
+
+    return QString();
+}
+
+QString TTrigger::moduleName(TTrigger* pTrigger)
+{
+    if (!pTrigger) {
+        return QString();
+    }
+
+    if (!pTrigger->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pTrigger->mPackageName) ? pTrigger->mPackageName : QString();
+    }
+
+    if (pTrigger->getParent()) {
+        return moduleName(pTrigger->getParent());
+    }
+
+    return QString();
 }

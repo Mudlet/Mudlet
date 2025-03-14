@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024 by Stephen Lyons            #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -33,12 +33,10 @@
 ############################################################################
 
 # Should be called before PROJECT.
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
-  # needed for fetching Sparkle
-  cmake_minimum_required(VERSION 3.18)
-  # minimum supported version by Qt6 for our Qt5/Qt6 build compatibility
+  # minimum supported version by Qt6
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
 endif()
 
@@ -80,7 +78,7 @@ else()
   set(APP_TARGET mudlet)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -103,7 +101,7 @@ else()
 endif()
 
 # Set APP_VERSION (update in mudlet.pro as well)
-set(APP_VERSION 4.18.5)
+set(APP_VERSION 4.19.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
@@ -145,29 +143,13 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
-                        OPTION_VARIABLE USE_QT6
-                        READABLE_NAME "build with Qt6 (if installed)")
 
-if(USE_QT6)
-  find_package(
-          Qt6 6.2.0
-          QUIET)
-  if(NOT Qt6_FOUND)
-    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
-  endif()
-endif()
+find_package(Qt6 6.4.0 REQUIRED)
 
-# Set Qt version for src, test, translations and communi
-set(WITH_QT6 ${Qt6_FOUND} CACHE BOOL "Whether to build with Qt6 or Qt5.")
 # Set Qt version for edbee-lib and dblsqd
-if(WITH_QT6)
-  option(BUILD_WITH_QT5 "" OFF)
-else()
-  option(BUILD_WITH_QT5 "" ON)
-endif()
+option(BUILD_WITH_QT5 "" OFF)
 # Set Qt version for qtkeychain
-option(BUILD_WITH_QT6 "" ${WITH_QT6})
+option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
 

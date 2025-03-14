@@ -1843,7 +1843,7 @@ bool TRoom::readJsonExits(const QJsonObject& obj)
 {
     const QJsonArray exitArray = obj.value(QLatin1String("exits")).toArray();
     bool hasCustomExits = false;
-    for (const QJsonValue exitValue : exitArray) {
+    for (const QJsonValue& exitValue : exitArray) {
         const QJsonObject exitObj{exitValue.toObject()};
         const QString dirString{exitObj.value(QLatin1String("name")).toString()};
         const int dirCode = stringToDirCode(dirString);
@@ -2235,7 +2235,7 @@ void TRoom::writeJsonExitStubs(QJsonObject& obj) const
         std::sort(exitStubsList.begin(), exitStubsList.end());
     }
 
-    for (auto stubName : exitStubsList) {
+    for (const auto& stubName : exitStubsList) {
         QJsonObject exitStubObj;
         const QJsonValue stubNameValue{stubName};
         exitStubObj.insert(QLatin1String("name"), stubNameValue);

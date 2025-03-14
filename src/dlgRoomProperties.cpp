@@ -91,6 +91,12 @@ void dlgRoomProperties::init(
             comboBox_roomSymbol->lineEdit()->selectAll();
         }
     }
+    if (!lineEdit_roomSymbol->isHidden()) {
+        lineEdit_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+    }
+    if (!comboBox_roomSymbol->isHidden()) {
+        comboBox_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+    }
     initSymbolInstructions();
 
     // Configure icon display
@@ -511,10 +517,10 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
     connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
+    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this]() {
         QMenu menu;
         //: This action deletes a color from the list of all room colors
-        menu.addAction(tr("Delete room color"), this, [=]() {
+        menu.addAction(tr("Delete room color"), this, [=, this]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto color = selectedItem->text();
 

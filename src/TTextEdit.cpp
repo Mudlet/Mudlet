@@ -32,7 +32,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include "uiawrapper.h"
 #endif
 #include "widechar_width.h"
@@ -181,7 +181,7 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
         if (mpConsole->getType() == TConsole::MainConsole) {
-            const auto filePath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+            const auto filePath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
             QSaveFile file(filePath);
             if (state) {
                 file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -740,7 +740,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    painter.drawText(textRect, Qt::AlignHCenter|Qt::TextDontClip|Qt::TextSingleLine, grapheme);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -1080,23 +1080,19 @@ void TTextEdit::highlightSelection()
 
 void TTextEdit::unHighlight()
 {
-    // clang-format off
-    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
-         y < endY;
-         ++y) {
+    for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
+        if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
+            // Abort if we are considering a line not in the buffer:
+            break;
+        }
 
-        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
-                 endX = (y == (mPB.y()))
-                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
-                     : static_cast<int>(mpBuffer->buffer.at(y).size());
-             x < endX;
-             ++x) {
-
-            mpBuffer->buffer.at(y).at(x).deselect();
+        auto& bufferLine = mpBuffer->buffer.at(yIndex);
+        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
+            if (bufferLine.at(xIndex).isSelected()) {
+                bufferLine[xIndex].deselect();
+            }
         }
     }
-    // clang-format on
-
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
         QAccessible::updateAccessibility(&event);
@@ -1179,11 +1175,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     bool isOutOfbounds = false;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto eventPos = event->pos();
-#else
     auto eventPos = event->position().toPoint();
-#endif
     int lineIndex = std::max(0, (eventPos.y() / mFontHeight) + imageTopLine());
     int tCharIndex = convertMouseXToBufferX(eventPos.x(), lineIndex, &isOutOfbounds);
 
@@ -1249,11 +1241,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPA.setX(0);
         mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
     }
-    // FIXME: There is an issue now that deselecting a selection upwards in the
-    // left column will leave the first column highlighted - it turns out that
-    // those first columns are being deselected but the highlight() below is not
-    // including the portion of the display with the now deselected portion on
-    // the left margin within the area that gets repainted...
+
     highlightSelection();
     mDragSelectionEnd = cursorLocation;
     forceUpdate();
@@ -1268,11 +1256,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 // If a special tooltip hint was given, use that one.
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QToolTip::showText(event->globalPos(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
-#else
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
-#endif
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
@@ -1394,13 +1378,8 @@ void TTextEdit::slot_popupMenu()
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
     //new event to get mouse position on the parent window
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto eventPos = event->pos();
-    auto eventGlobalPos = event->globalPos();
-#else
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
-#endif
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(eventGlobalPos), eventGlobalPos, event->button(), event->buttons(), event->modifiers());
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
@@ -1697,6 +1676,9 @@ bool TTextEdit::establishSelectedText()
     }
 
     normaliseSelection();
+    if (mMouseTrackLevel == 2) {
+        expandSelectionToWords();
+    }
     return true;
 }
 
@@ -1873,13 +1855,8 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto eventPos = event->pos();
-    auto eventGlobalPos = event->globalPos();
-#else
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
-#endif
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
@@ -2020,7 +1997,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
         if (mpConsole->getType() == TConsole::ErrorConsole) {
             QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
-            connect(clearErrorConsole, &QAction::triggered, this, [=]() {
+            connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
                 mpConsole->buffer.clear();
                 mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
             });

@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          #
-#    Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   #
+#    Copyright (C) 2020, 2023, 2025 by Stephen Lyons                       #
+#                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -22,13 +23,8 @@
 
 message(STATUS "Building translations")
 
-if(WITH_QT6)
-  find_package(Qt6LinguistTools REQUIRED)
-  get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
-else()
-  find_package(Qt5LinguistTools REQUIRED)
-  get_target_property(LRELEASE_LOCATION Qt5::lrelease LOCATION)
-endif()
+find_package(Qt6LinguistTools 6.4.0 REQUIRED)
+get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
 
 file(GLOB TS_FILES *.ts)
 string(REPLACE ".ts" "" TS_FILES_NOEXT "${TS_FILES}")

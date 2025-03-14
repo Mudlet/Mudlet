@@ -88,7 +88,7 @@
 #include <memory>
 #include <zip.h>
 #include <QStyle>
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <QSettings>
 #endif
 
@@ -151,7 +151,7 @@ mudlet::mudlet()
 
 void mudlet::init()
 {
-    smFirstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+    smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
@@ -173,18 +173,13 @@ void mudlet::init()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // 'AA_UseHighDpiPixmaps' is deprecated in Qt6: High-DPI pixmaps are always enabled.
-    qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-
     // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
     // ... which is applied here:
     setAppearance(mAppearance, true);
 
     scanForMudletTranslations(qsl(":/lang"));
-    scanForQtTranslations(getMudletPath(qtTranslationsPath));
+    scanForQtTranslations(getMudletPath(enums::qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
     // Cannot assign a value in the constructor list as it requires the
@@ -280,9 +275,15 @@ void mudlet::init()
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
+    mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
+    mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
+    mpActionCloseApplication->setIconText(tr("Close Mudlet"));
+    mpActionCloseApplication->setObjectName(qsl("close_application"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
     mpButtonConnect->addAction(mpActionCloseProfile);
+    mpButtonConnect->addAction(mpActionCloseApplication);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -486,28 +487,17 @@ void mudlet::init()
 
     disableToolbarButtons();
 
-    if (mEnableFullScreenMode) {
-        // We always start in full-screen mode if it is enabled:
-        setWindowState(windowState() & ~(Qt::WindowFullScreen|Qt::WindowActive));
-        QIcon icon;
-        icon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
-        icon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
-        mpActionFullScreenView = new QAction(icon, tr("Full Screen"), this);
-        mpActionFullScreenView->setStatusTip(tr("Toggle Full Screen View"));
-        mpActionFullScreenView->setCheckable(true);
-        mpActionFullScreenView->setChecked(true);
-        mpMainToolBar->addAction(mpActionFullScreenView);
-        mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
-        mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
-        connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
-    }
-    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
+    QIcon fullScreenIcon;
+    fullScreenIcon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
+    fullScreenIcon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
+    mpActionFullScreenView = new QAction(fullScreenIcon, tr("Full Screen"), this);
+    mpActionFullScreenView->setToolTip(utils::richText(tr("Toggle Full Screen View")));
+    mpActionFullScreenView->setCheckable(true);
+    mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
+    mpMainToolBar->addAction(mpActionFullScreenView);
+    mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    #if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Add Apple Color Emoji fallback.
-    QFont::insertSubstitution(mainFont.family(), qsl("Apple Color Emoji"));
-    #endif
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
@@ -542,6 +532,8 @@ void mudlet::init()
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_closeCurrentProfile);
+    connect(dactionCloseApplication, &QAction::triggered, this, &mudlet::close);
+    connect(mpActionCloseApplication, &QAction::triggered, this, &mudlet::close);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -552,7 +544,7 @@ void mudlet::init()
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_showHelpDialogIrc);
-    connect(dactionShowErrors, &QAction::triggered, this, [=]() {
+    connect(dactionShowErrors, &QAction::triggered, this, [=, this]() {
         auto host = getActiveHost();
         if (!host) {
             return;
@@ -573,6 +565,8 @@ void mudlet::init()
     // Show the update option if the code is present AND if this is a
     // release OR a public test version, or if you're specifically trying to test Sparkle.
     dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionChangelog->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
+
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
@@ -589,6 +583,7 @@ void mudlet::init()
     // Unconditionally hide the update and report bug menu items if the updater
     // code is not included:
     dactionUpdate->setVisible(false);
+    dactionChangelog->setVisible(false);
     dactionReportIssue->setVisible(false);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_packageManager);
@@ -673,20 +668,40 @@ void mudlet::init()
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
+    dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
+
+    // The readLateSetting(...) call will set the initial
+    // Full-Screen/Maximised/Normal state - we just need to set the knobs to
+    // match
+    mpActionFullScreenView->setChecked(windowState() & Qt::WindowFullScreen);
+    dactionToggleFullScreen->setChecked(windowState() & Qt::WindowFullScreen);
+
+    // Now we wire up the knobs, after they've been set to the right state:
+    connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+    connect(dactionToggleFullScreen, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+    // And we also need to track outside causes that can change it:
+    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
+
 #if defined(INCLUDE_UPDATER)
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
+    connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showFullChangelog);
 #if defined(Q_OS_MACOS)
-    // ensure that 'Check for updates' is under the Applications menu per convention
+    // ensure that 'Check for updates' and 'Changelog' are under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
+    dactionChangelog->setMenuRole(QAction::ApplicationSpecificRole);
 #else
     connect(pUpdater, &Updater::signal_updateInstalled, this, &mudlet::slot_updateInstalled);
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
     if (!mToolbarIconSize) {
-        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
+        // If the button size has not been previously set - on the first run
+        // set it according to whether we are full-screen - originally this
+        // would have been because it was likely running on a small screen
+        // device; this may no longer be useful:
+        setToolBarIconSize((windowState() & Qt::WindowFullScreen) ? 2 : 3);
     }
 
     // Allow mute functionality always
@@ -827,10 +842,6 @@ void mudlet::setupConfig()
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    mpSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     migrateConfig(*mpSettings);
 }
 
@@ -1747,6 +1758,11 @@ void mudlet::disableToolbarButtons()
     dactionModuleManager->setEnabled(false);
     dactionPackageExporter->setEnabled(false);
 
+    dactionToggleTimeStamp->setEnabled(false);
+    dactionToggleReplay->setEnabled(false);
+    dactionToggleLogging->setEnabled(false);
+    dactionToggleEmergencyStop->setEnabled(false);
+
     mpActionIRC->setEnabled(false);
     dactionIRC->setEnabled(false);
 
@@ -1804,6 +1820,11 @@ void mudlet::enableToolbarButtons()
     dactionModuleManager->setEnabled(true);
     dactionPackageExporter->setEnabled(true);
 
+    dactionToggleTimeStamp->setEnabled(true);
+    dactionToggleReplay->setEnabled(true);
+    dactionToggleLogging->setEnabled(true);
+    dactionToggleEmergencyStop->setEnabled(true);
+
     mpActionIRC->setEnabled(true);
     dactionIRC->setEnabled(true);
 
@@ -1845,7 +1866,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    const QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
 
     QSaveFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -1876,7 +1897,7 @@ bool mudlet::loadWindowLayout()
     }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    const QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -1945,7 +1966,8 @@ Host* mudlet::getActiveHost()
 }
 
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
-// ourselves):
+// ourselves or the user hits the close application menu option or action on
+// the "Connect" buttion):
 void mudlet::closeEvent(QCloseEvent* event)
 {
     qDebug() << "mudlet::closeEvent(...) INFO - called!";
@@ -2021,24 +2043,14 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 
-    // PLACEMARKER: Full-screen mode controlled by File (1 of 2) At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
-    if (settings.contains(qsl("enableFullScreenMode"))) {
-        // We have a setting stored for this
-        mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
-    } else {
-        // We do not have a QSettings value stored so check for the sentinel file:
-        const QFile file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
-        mEnableFullScreenMode = file_use_smallscreen.exists();
-    }
-
     // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
     auto oldDarkTheme = settings.value(qsl("darkTheme"), QVariant(false)).toBool();
 
     auto appearance = settings.value(qsl("appearance"), QVariant(0)).toInt();
     if (appearance == 0) {
-        mAppearance = settings.contains(qsl("darkTheme")) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::systemSetting;
+        mAppearance = settings.contains(qsl("darkTheme")) ? (oldDarkTheme ? enums::Appearance::dark : enums::Appearance::light) : enums::Appearance::systemSetting;
     } else {
-        mAppearance = static_cast<Appearance>(appearance);
+        mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
@@ -2071,8 +2083,8 @@ void mudlet::readLateSettings(const QSettings& settings)
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
     // it is suggested Mudlet 4.x:
-    setMenuBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(visibleAlways)).toInt()));
-    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    setMenuBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
+    setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
@@ -2082,16 +2094,19 @@ void mudlet::readLateSettings(const QSettings& settings)
     resize(size);
     move(pos);
 
-    // Need to remove the Qt::WindowMaximized AND Qt::WindowActive from the
-    // state and then apply the result - If we are in, or go into,
-    // full-screen then this does not have any effect until we leave that:
-    setWindowState((windowState() & ~(Qt::WindowMaximized|Qt::WindowActive))
-                   |(settings.value("maximized", false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState));
+    // Need to remove the Qt::WindowMaximized, Qt::WindowFullScreen AND
+    // Qt::WindowActive from the state and then apply the result of combining
+    // the stored state - if we are full-screen then the maximised does not have
+    // any effect until we leave that:
+    auto state = windowState() & ~(Qt::WindowMaximized|Qt::WindowFullScreen|Qt::WindowActive);
+    state |= (settings.value(qsl("fullScreen"), false).toBool() ? Qt::WindowFullScreen : Qt::WindowNoState)
+            |(settings.value(qsl("maximized"), false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState);
+    setWindowState(state);
 
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
-
+    mDrawUpperLowerLevels = settings.value("drawUpperLowerLevels", QVariant(true)).toBool();
     // Make a local version of the value so that we can update the real one
     // by calling the slot method that does that and ALSO carry out the
     // other things needed for it:
@@ -2165,7 +2180,7 @@ void mudlet::setEditorTreeWidgetIconSize(const int s)
 }
 
 // This is used to set the menu bar visibility and adjusts that accordingly
-void mudlet::setMenuBarVisibility(const controlsVisibility state)
+void mudlet::setMenuBarVisibility(const enums::controlsVisibility state)
 {
     mMenuBarVisibility = state;
 
@@ -2177,14 +2192,14 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 void mudlet::adjustMenuBarVisibility()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mMenuBarVisibility & visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & visibleMaskNormally))) {
+    if ((hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally))) {
         menuBar()->show();
     } else {
         menuBar()->hide();
     }
 }
 
-void mudlet::setToolBarVisibility(const controlsVisibility state)
+void mudlet::setToolBarVisibility(const enums::controlsVisibility state)
 
 {
     mToolbarVisibility = state;
@@ -2198,10 +2213,10 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
 // profile loaded so no TConsoles with a "rescue" context menu):
 void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
-    if (!isVisible && mMenuBarVisibility == visibleNever) {
+    if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
         const int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
+        if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -2210,7 +2225,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 void mudlet::adjustToolBarVisibility()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
+    if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -2236,17 +2251,17 @@ void mudlet::writeSettings()
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
-    settings.setValue("showMenuBar", mMenuBarVisibility != visibleNever);
-    settings.setValue("showToolbar", mToolbarVisibility != visibleNever);
+    settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
+    settings.setValue("showToolbar", mToolbarVisibility != enums::visibleNever);
 
     settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
     settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
+    settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
-    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
@@ -2264,6 +2279,7 @@ void mudlet::writeSettings()
     // there has to be a Qt-supplied way to serialise this value
     settings.setValue(qsl("ttsVoice"), QVariant::fromValue(mTtsVoice));
 #endif
+    settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2278,7 +2294,7 @@ void mudlet::slot_showConnectionDialog()
     QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
-    connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
     mpConnectionDialog->show();
 }
@@ -2430,7 +2446,7 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
+        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=, this]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
@@ -2459,8 +2475,8 @@ void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
 void mudlet::slot_updateShortcuts()
 {
     if (Q_LIKELY(mMenuVisibleState.has_value())) {
-        if ((mMenuBarVisibility == visibleNever
-            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
+        if ((mMenuBarVisibility == enums::visibleNever
+            || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
            && (!mMenuVisibleState.value()) ) {
 
             /*
@@ -2475,8 +2491,8 @@ void mudlet::slot_updateShortcuts()
             return;
         }
 
-        if ((mMenuBarVisibility == visibleAlways
-            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
+        if ((mMenuBarVisibility == enums::visibleAlways
+            || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
            && (mMenuVisibleState.value()) ) {
 
             /*
@@ -2496,7 +2512,7 @@ void mudlet::slot_updateShortcuts()
 
 void mudlet::assignKeySequences()
 {
-    mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
+    mMenuVisibleState = !(mMenuBarVisibility == enums::visibleNever || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
 
@@ -2824,7 +2840,7 @@ void mudlet::slot_replay()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
@@ -2843,7 +2859,7 @@ void mudlet::slot_replay()
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
-    QFile file(getMudletPath(profileDataItemPath, profile, item));
+    QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
     file.open(QIODevice::ReadOnly);
     if (!file.exists()) {
         return QString();
@@ -2862,7 +2878,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
 QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(getMudletPath(mudlet::profileDataItemPath, profile, item));
+    QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
@@ -2880,44 +2896,55 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
 {
-    if (!QFile::remove(getMudletPath(profileDataItemPath, profile, item))) {
+    if (!QFile::remove(getMudletPath(enums::profileDataItemPath, profile, item))) {
         qWarning() << "Couldn't delete profile data file" << item;
     }
 }
 
 void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
-    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QElapsedTimer timer;
+    timer.start();
+
+    QStringList hostList = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
-    bool openedProfile = false;
+    int loadedProfiles = 0;
 
     for (auto& hostName : cliProfiles){
         if (hostList.contains(hostName)) {
+            QElapsedTimer timer;
+            timer.start();
             doAutoLogin(hostName);
-            openedProfile = true;
             hostList.removeOne(hostName);
+            loadedProfiles++;
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
         }
     }
 
     for (auto& hostName : hostList) {
         const QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
+            QElapsedTimer timer;
+            timer.start();
             doAutoLogin(hostName);
-            openedProfile = true;
+            loadedProfiles++;
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
         }
     }
 
-    if (!openedProfile) {
+    if (loadedProfiles == 0) {
         slot_showConnectionDialog();
+    } else {
+        qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed()/1000.0 << "seconds";
     }
 }
 
 // credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
 int64_t mudlet::getPhysicalMemoryTotal()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
@@ -3015,7 +3042,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host *pHost = loadProfile(profile_name, true);
+    loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
@@ -3085,7 +3112,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     // install default packages
     for (int i = 0; i < mPackagesToInstallList.size(); i++) {
-        pHost->installPackage(mPackagesToInstallList[i], 0);
+        pHost->installPackage(mPackagesToInstallList[i], enums::PackageModuleType::Package);
     }
 
     mPackagesToInstallList.clear();
@@ -3097,6 +3124,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // A non-zero value is how we send a "true" value - which indicates that
+    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
+    event.mArgumentList.append(QString::number(1));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
 
     // Now load the default (latest stored) map file:
@@ -3118,7 +3149,7 @@ void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
     for (int i = 0; i < modules.size(); i++) {
         QStringList entry = pHost->mInstalledModules[modules[i]];
-        pHost->installPackage(entry[0], 1);
+        pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
         pHost->mInstalledModules[modules[i]] = entry;
@@ -3148,7 +3179,7 @@ void mudlet::slot_multiView(const bool state)
     }
     mMultiView = state;
     bool foundActiveHost = false;
-    for (auto pHost : mHostManager) {
+    for (const auto &pHost : mHostManager) {
         auto console = pHost->mpConsole;
         if (!console) {
             continue;
@@ -3178,7 +3209,7 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
         menuAction->setChecked(state);
     }
 
-    for (auto pHost : mHostManager) {
+    for (const auto &pHost : mHostManager) {
         if (state) {
             if (isAPINotGame) {
                 pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);
@@ -3225,13 +3256,14 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
                 const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
 
                 if (sequence && !sequence->toString().isEmpty()) {
-                    const QString seq = sequence->toString(QKeySequence::NativeText).split("", Qt::SkipEmptyParts).join(">+<");
-
+                    const QString seq = sequence->toString(QKeySequence::NativeText);
                     message = isMediaMuted
-                        ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use <%1> to unmute.").arg(seq)
-                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use <%1> to mute.").arg(seq);
+                        ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use \"%1\" to unmute.").arg(seq)
+                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use \"%1\" to mute.").arg(seq);
                 } else {
-                    message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted.") : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
+                    message = isMediaMuted
+                        ? tr("[ INFO ]  - Mudlet and game sounds are muted.")
+                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
                 }
 
                 pHost->postMessage(message);
@@ -3285,9 +3317,11 @@ void mudlet::slot_compactInputLine(const bool state)
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
+                state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
-            const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.").arg(shortcut->toString());
+            const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
             mpCurrentActiveHost->postMessage(infoMsg);
             mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
         }
@@ -3303,7 +3337,7 @@ mudlet::~mudlet()
     mpTimerReplay = nullptr;
 
     if (mpHunspell_sharedDictionary) {
-        saveDictionary(getMudletPath(mainDataItemPath, qsl("mudlet")), mWordSet_shared);
+        saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         mpHunspell_sharedDictionary = nullptr;
     }
     if (!mTranslatorsLoadedList.isEmpty()) {
@@ -3324,9 +3358,9 @@ mudlet::~mudlet()
 
 void mudlet::slot_toggleFullScreenView()
 {
-    // This slot can only be called when the button is visible on the main
-    // toolbar - but there are other things that can change the full-screen
-    // state!
+    // Althoug this slot can be called from the button on the main toolbar or
+    // the main menu bar there are other things that can change the full-screen
+    // state outside of Mudlet!
 
     // In the following calls to setWindowState we must NOT include
     // Qt::WindowActive in the flags to be applied:
@@ -3340,16 +3374,22 @@ void mudlet::slot_toggleFullScreenView()
         // Qt::WindowActive from the flags we might read:
         setWindowState((state & ~(Qt::WindowActive))|Qt::WindowFullScreen);
     }
+    // Update the controls to reflect the actual state - note that
+    // QAction::setChecked(bool) won't cause excution loops as it doesn't
+    // cause the QAction::triggered signal to be raised:
+    dactionToggleFullScreen->setChecked(windowState() & Qt::WindowFullScreen);
+    mpActionFullScreenView->setChecked(windowState() & Qt::WindowFullScreen);
 }
 
 void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
 {
-    // Update the state of the button to match the actual state - if it doesn't
-    // match
-    if (mpActionFullScreenView
-        && (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen))) {
-
+    // Update the state of the button and the menu item to match the actual
+    // state - if it doesn't match:
+    if (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen)) {
         mpActionFullScreenView->setChecked(newState & Qt::WindowFullScreen);
+    }
+    if (dactionToggleFullScreen->isChecked() != (newState & Qt::WindowFullScreen)) {
+        dactionToggleFullScreen->setChecked(newState & Qt::WindowFullScreen);
     }
 }
 
@@ -3650,7 +3690,7 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     // getMudletPath(...) needs the themeFile to determine if it is the
     // "default" which is stored in the resource file and not downloaded into
     // the cache:
-    const QString themeLocation(getMudletPath(editorWidgetThemePathFile, themeFile));
+    const QString themeLocation(getMudletPath(enums::editorWidgetThemePathFile, themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -3662,90 +3702,90 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 
 // This is a static wrapper for singleton instance method
 // Should only be called after mudlet has been initialised
-QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
+QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
 {
     QString confPath = self()->confPath;
     switch (mode) {
-    case mainPath:
+    case enums::mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
         return confPath;
-    case mainDataItemPath:
+    case enums::mainDataItemPath:
         // Takes one extra argument as a file (or directory) relating to
         // (profile independent) mudlet data - may end with a '/' if the extra
         // argument does:
         return qsl("%1/%2").arg(confPath, extra1);
-    case mainFontsPath:
+    case enums::mainFontsPath:
         // (Added for 3.5.0) a revised location to store Mudlet provided fonts
         return qsl("%1/fonts").arg(confPath);
-    case profilesPath:
+    case enums::profilesPath:
         // The directory containing all the saved user's profiles - does not end
         // in '/'
         return qsl("%1/profiles").arg(confPath);
-    case profileHomePath:
+    case enums::profileHomePath:
         // Takes one extra argument (profile name) that returns the base
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
         return qsl("%1/profiles/%2").arg(confPath, extra1);
-    case profileMediaPath:
+    case enums::profileMediaPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile's cached media files - does NOT end in a '/'
         return qsl("%1/profiles/%2/media").arg(confPath, extra1);
-    case profileMediaPathFileName:
+    case enums::profileMediaPathFileName:
         // Takes two extra arguments (profile name, mediaFileName) that returns
         // the pathFile name for any media file:
         return qsl("%1/profiles/%2/media/%3").arg(confPath, extra1, extra2);
-    case profileXmlFilesPath:
+    case enums::profileXmlFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/'
         return qsl("%1/profiles/%2/current/").arg(confPath, extra1);
-    case profileMapsPath:
+    case enums::profileMapsPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save maps files - does NOT end in a '/'
         return qsl("%1/profiles/%2/map").arg(confPath, extra1);
-    case profileDateTimeStampedMapPathFileName:
+    case enums::profileDateTimeStampedMapPathFileName:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         return qsl("%1/profiles/%2/map/%3map.dat").arg(confPath, extra1, extra2);
-    case profileDateTimeStampedJsonMapPathFileName:
+    case enums::profileDateTimeStampedJsonMapPathFileName:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped JSON map file:
         return qsl("%1/profiles/%2/map/%3map.json").arg(confPath, extra1, extra2);
-    case profileMapPathFileName:
+    case enums::profileMapPathFileName:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         return qsl("%1/profiles/%2/map/%3").arg(confPath, extra1, extra2);
-    case profileXmlMapPathFileName:
+    case enums::profileXmlMapPathFileName:
         // Takes one extra argument (profile name) that returns the pathFile
         // name for the downloaded IRE Server provided XML map:
         return qsl("%1/profiles/%2/map.xml").arg(confPath, extra1);
-    case profileDataItemPath:
+    case enums::profileDataItemPath:
         // Takes two extra arguments (profile name, data item) that gives a
         // path file name for, typically a data item stored as a single item
         // (binary) profile data) file (ideally these can be moved to a per
         // profile QSettings file but that is a future pipe-dream on my part
         // SlySven):
         return qsl("%1/profiles/%2/%3").arg(confPath, extra1, extra2);
-    case profilePackagePath:
+    case enums::profilePackagePath:
         // Takes two extra arguments (profile name, package name) returns the
         // per profile directory used to store (unpacked) package contents
         // - ends with a '/':
         return qsl("%1/profiles/%2/%3/").arg(confPath, extra1, extra2);
-    case profilePackagePathFileName:
+    case enums::profilePackagePathFileName:
         // Takes two extra arguments (profile name, package name) returns the
         // filename of the XML file that contains the (per profile, unpacked)
         // package mudlet items in that package/module:
         return qsl("%1/profiles/%2/%3/%3.xml").arg(confPath, extra1, extra2);
-    case profileReplayAndLogFilesPath:
+    case enums::profileReplayAndLogFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // that contains replays (*.dat files) and logs (*.html or *.txt) files
         // for that profile - does NOT end in '/':
         return qsl("%1/profiles/%2/log").arg(confPath, extra1);
-    case profileLogErrorsFilePath:
+    case enums::profileLogErrorsFilePath:
         // Takes one extra argument (profile name) that returns the pathFileName
         // to the map auditing report file that is appended to each time a
         // map is loaded:
         return qsl("%1/profiles/%2/log/errors.txt").arg(confPath, extra1);
-    case editorWidgetThemePathFile:
+    case enums::editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
         // handles the special case of the default theme "mudlet.tmTheme" that
@@ -3757,21 +3797,17 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
             // Match - return path to copy held in resource file
             return qsl(":/edbee_defaults/Mudlet.tmTheme");
         }
-    case editorWidgetThemeJsonFile:
+    case enums::editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
         // an edbee editor widget theme:
         return qsl("%1/edbee/Colorsublime-Themes-master/themes.json").arg(confPath);
-    case moduleBackupsPath:
+    case enums::moduleBackupsPath:
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return qsl("%1/moduleBackups/").arg(confPath);
-    case qtTranslationsPath:
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#else
+    case enums::qtTranslationsPath:
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-#endif
-    case hunspellDictionaryPath:
+    case enums::hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
         mudlet::self()->mUsingMudletDictionaries = true;
@@ -3885,6 +3921,11 @@ void mudlet::slot_manualUpdateCheck()
     pUpdater->manuallyCheckUpdates();
 }
 
+void mudlet::slot_showFullChangelog()
+{
+    pUpdater->showFullChangelog();
+}
+
 void mudlet::slot_reportIssue()
 {
     QDesktopServices::openUrl(QUrl(qsl("https://github.com/Mudlet/Mudlet/issues/new")));
@@ -3962,7 +4003,7 @@ void mudlet::slot_updateInstalled()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=]() {
+    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
@@ -4010,7 +4051,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         pHost->mSslTsl = (*it).tlsEnabled;
     }
 
-    const QString folder = getMudletPath(profileXmlFilesPath, profile_name);
+    const QString folder = getMudletPath(enums::profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
@@ -4086,7 +4127,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
     QString absoluteReplayFileName;
     if (QFileInfo(replayFileName).isRelative()) {
-        absoluteReplayFileName = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
+        absoluteReplayFileName = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
     } else {
         absoluteReplayFileName = replayFileName;
     }
@@ -4136,30 +4177,6 @@ std::string mudlet::replaceString(std::string subject, const std::string& search
     return subject;
 }
 
-void mudlet::setEnableFullScreenMode(const bool state)
-{
-    // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
-    if (state != mEnableFullScreenMode) {
-        mEnableFullScreenMode = state;
-        auto filePath = mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_option_use_smallscreen"));
-        QSaveFile file(filePath);
-        if (state) {
-            file.open(QIODevice::WriteOnly | QIODevice::Text);
-            const QTextStream out(&file);
-            Q_UNUSED(out);
-            if (!file.commit()) {
-                qDebug() << "mudlet::setEnableFullScreenMode: error saving fullscreen state: " << file.errorString();
-            }
-        } else {
-            QFile::remove(filePath);
-        }
-    }
-
-    // Emit the signal whatever the stored value is - so that if there are
-    // multiple profile preference dialogs open they all update themselves:
-    emit signal_enableFulScreenModeChanged(state);
-}
-
 bool mudlet::migratePasswordsToSecureStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
@@ -4168,7 +4185,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     }
     mStorePasswordsSecurely = true;
 
-    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
@@ -4227,7 +4244,7 @@ bool mudlet::migratePasswordsToProfileStorage()
     }
     mStorePasswordsSecurely = false;
 
-    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
         auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
@@ -4307,14 +4324,14 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
     }
 }
 
-void mudlet::setAppearance(const Appearance state, const bool& loading)
+void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 {
     if (state == mAppearance && !loading) {
         return;
     }
 
     mDarkMode = false;
-    if (state == Appearance::dark || (state == Appearance::systemSetting && desktopInDarkMode())) {
+    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && desktopInDarkMode())) {
         mDarkMode = true;
     }
 
@@ -4403,10 +4420,6 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8 instead
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -4475,10 +4488,6 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -4504,10 +4513,6 @@ int mudlet::getDictionaryWordCount(const QString &dictionaryPath)
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -4555,10 +4560,6 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
     }
 
     QTextStream as(&aff);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    as.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
@@ -4615,9 +4616,9 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 {
     // Need to check that the files exist first:
     // full dictionary path+filename
-    QString dictionaryPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
+    QString dictionaryPath(getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
     // full affix path+filename
-    QString affixPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
+    QString affixPath(getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
 
     int oldWordCount = 0;
     QStringList wordList;
@@ -4659,7 +4660,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
 #endif
@@ -4678,8 +4679,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // Need to check that the files exist first:
-    QString dictionaryPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.dic")));
-    QString affixPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.aff")));
+    QString dictionaryPath(getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
+    QString affixPath(getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
@@ -4708,7 +4709,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
 
     mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
 #endif
@@ -4794,7 +4795,7 @@ QSet<QString> mudlet::getWordSet()
 std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
 {
     QDir dir;
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, qsl("profileicon"));
+    auto profileIconPath = mudlet::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
@@ -4811,7 +4812,7 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
 std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
 {
     QDir dir;
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, qsl("profileicon"));
+    auto profileIconPath = mudlet::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
@@ -4820,7 +4821,7 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
     return {true, QString()};
 }
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 // credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
 static QString getShortPathName(const QString& name)
 {
@@ -4836,11 +4837,8 @@ static QString getShortPathName(const QString& name)
     }
     QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
     GetShortPathNameW(nameC, buffer.data(), length);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
-#else
     const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
-#endif
+
     return rc;
 }
 
@@ -5019,7 +5017,7 @@ void mudlet::setupTrayIcon()
     mTrayIcon.setIcon(windowIcon());
     auto menu = new QMenu(this);
     auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
-    connect(hideTrayAction, &QAction::triggered, this, [=]() {
+    connect(hideTrayAction, &QAction::triggered, this, [=, this]() {
        mTrayIcon.hide();
     });
     menu->addAction(hideTrayAction);
@@ -5075,23 +5073,24 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code.xml"),    {qsl("*")}},
-        {qsl(":/echo.xml"),               {qsl("*")}},
-        {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.xml"), {qsl("*")}},
-        {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
-        {qsl(":/mg-loader.xml"),          {qsl("mg.mud.de")}},
-        {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
+        {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
+        {qsl(":/echo.mpackage"),                          {qsl("*")}},
+        {qsl(":/deleteOldProfiles.mpackage"),             {qsl("*")}},
+        {qsl(":/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/mpkg.mpackage"),                    {qsl("*")}},
+        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
+        {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
+        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
+        {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
-        {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
+        {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
                                                       qsl("ashyriamud.com"),
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
                                                       qsl("stickmud.com")}},
-        {qsl(":/MedBootstrap.xml"),       {qsl("medievia.com")}}
+        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
         // clang-format on
     };
 
@@ -5104,7 +5103,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     }
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
     }
 }
 
@@ -5112,7 +5111,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 // Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
 bool mudlet::desktopInDarkMode()
 {
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
     return settings.value("AppsUseLightTheme", 1).toInt() == 0;
 #elif defined(Q_OS_MACOS)
@@ -5237,7 +5236,7 @@ bool mudlet::experiencedMudletPlayer()
     }
 
     // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
-    QDir profilesDir(mudlet::getMudletPath(mudlet::profilesPath));
+    QDir profilesDir(mudlet::getMudletPath(enums::profilesPath));
     QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
     QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
 
@@ -5285,7 +5284,7 @@ void mudlet::changeEvent(QEvent* event)
 
 bool mudlet::profileExists(const QString& profileName)
 {
-    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
                                  .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     if (profiles.contains(profileName, Qt::CaseInsensitive)) {

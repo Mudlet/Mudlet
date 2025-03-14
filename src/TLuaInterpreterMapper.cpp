@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -978,6 +979,10 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     const int bgr = getVerifiedInt(L, __func__, 9, "bgRed");
     const int bgg = getVerifiedInt(L, __func__, 10, "bgGreen");
     const int bgb = getVerifiedInt(L, __func__, 11, "bgBlue");
+    int olr = fgr;
+    int olg = fgg;
+    int olb = fgb;
+
     if (args > 11) {
         zoom = getVerifiedFloat(L, __func__, 12, "zoom", true);
         fontSize = getVerifiedInt(L, __func__, 13, "fontSize", true);
@@ -1000,9 +1005,14 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     if (args > 18) {
         temporary = getVerifiedBool(L, __func__, 19, "temporary", true);
     }
+    if (args > 19) {
+        olr = getVerifiedInt(L, __func__, 20, "outlineRed");
+        olg = getVerifiedInt(L, __func__, 21, "outlineGreen");
+        olb = getVerifiedInt(L, __func__, 22, "outlineBlue");
+    }
 
     const Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName, QColor(olr, olg, olb, foregroundTransparency)));
     host.mpMap->update();
     return 1;
 }
@@ -1390,7 +1400,7 @@ int TLuaInterpreter::getAreaRooms1(lua_State* L)
     }
     lua_newtable(L);
     int i = 0;
-    for (int room : qAsConst(pA->getAreaRooms())) {
+    for (const int room : std::as_const(pA->getAreaRooms())) {
         lua_pushnumber(L, ++i);
         lua_pushnumber(L, room);
         lua_settable(L, -3);
@@ -3824,4 +3834,44 @@ int TLuaInterpreter::updateMap(lua_State* L)
         host.mpMap->update();
     }
     return 0;
+}
+
+int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(area)));
+    }
+
+    lua_newtable(L);
+    int i = 0;
+    for (const auto& coordinateSet : pA->getCollisionNodes()) {
+        lua_pushnumber(L, ++i);
+        {
+            lua_newtable(L);
+
+            // x:
+            lua_pushnumber(L, 1);
+            lua_pushnumber(L, std::get<0>(coordinateSet));
+            lua_settable(L, -3);
+
+            // y:
+            lua_pushnumber(L, 2);
+            lua_pushnumber(L, std::get<1>(coordinateSet));
+            lua_settable(L, -3);
+
+            // z:
+            lua_pushnumber(L, 3);
+            lua_pushnumber(L, std::get<2>(coordinateSet));
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+    }
+    return 1;
+
 }

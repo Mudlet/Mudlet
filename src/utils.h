@@ -23,28 +23,14 @@
 
 #include "pre_guard.h"
 #include <QApplication>
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QEnterEvent>
-#endif
 #include <QDir>
 #include <QString>
 #include "post_guard.h"
 
 #define qsl(s) QStringLiteral(s)
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
-template <typename T1, typename T2>
-using QMultiMapIterator = QMapIterator<T1, T2>;
-
-template <typename T1, typename T2>
-using QMutableMultiMapIterator = QMutableMapIterator<T1, T2>;
-
-// QEvent was derived into a specific QEnterEvent in Qt6
-using TEnterEvent = QEvent;
-#else
 using TEnterEvent = QEnterEvent;
-#endif
 
 class utils
 {

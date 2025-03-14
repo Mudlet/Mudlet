@@ -89,8 +89,9 @@ bool TAlias::match(const QString& haystack)
         return false; //regex compile error
     }
 
-#if defined(Q_OS_WIN32)
-    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+#if defined(Q_OS_WINDOWS)
+    // strndup(3) - a safe strdup(3) does not seem to be available in the
+    // original Mingw or the replacement Mingw-w64 environment we use:
     char* haystackC = static_cast<char*>(malloc(strlen(haystack.toUtf8().constData()) + 1));
     strcpy(haystackC, haystack.toUtf8().constData());
 #else
@@ -363,4 +364,38 @@ void TAlias::execute()
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
+}
+
+QString TAlias::packageName(TAlias* pAlias)
+{
+    if (!pAlias) {
+        return QString();
+    }
+
+    if (!pAlias->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+    }
+
+    if (pAlias->getParent()) {
+        return packageName(pAlias->getParent());
+    }
+
+    return QString();
+}
+
+QString TAlias::moduleName(TAlias* pAlias)
+{
+    if (!pAlias) {
+        return QString();
+    }
+
+    if (!pAlias->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+    }
+
+    if (pAlias->getParent()) {
+        return moduleName(pAlias->getParent());
+    }
+
+    return QString();
 }

@@ -52,7 +52,7 @@
 #include <queue>
 #include <string>
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -235,7 +235,6 @@ public:
     bool mResponseProcessed = true;
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
-    bool mAlertOnNewData = true;
     bool mGA_Driver = false;
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;

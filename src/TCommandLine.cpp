@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -54,6 +54,15 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setFont(mpHost->getDisplayFont());
     document()->setDocumentMargin(2);
+
+    if (mType & (MainCommandLine|ConsoleCommandLine)) {
+        // put an outline around the command line when it is integrated into
+        // bottom of a TConsole - so that it can be visually separated from
+        // the text output area - particulary when "dark" mode is in effect
+        // as that modified "Fusion" style suffers from the division being
+        // invisible without this:
+        setFrameShape(QFrame::Box);
+    }
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -872,11 +881,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::RightButton) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        auto popup = createStandardContextMenu(event->globalPos());
-#else
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
-#endif
         if (mpHost->mEnableSpellCheck) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
@@ -887,7 +892,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         foreach(auto label, contextMenuItems.keys()) {
             auto eventName = contextMenuItems.value(label);
             auto action = new QAction(label, this);
-            connect(action, &QAction::triggered, this, [=]() {
+            connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
                 mudletEvent.mArgumentList << eventName;
                 mudletEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -897,11 +902,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         }
 
         mPopupPosition = event->pos();
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        popup->popup(event->globalPos());
-#else
         popup->popup(event->globalPosition().toPoint());
-#endif
         // The use of accept here is supposed to prevents this event from
         // reaching any parent widget - like the TConsole containing this
         // TCommandLine...
@@ -1479,15 +1480,11 @@ void TCommandLine::restoreHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
-            // In Qt6 the default encoding is UTF-8
             QTextStream ifs(&historyFile);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            ifs.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
             QString buffer;
             while (!ifs.atEnd() && ifs.status() == QTextStream::Ok) {
                 ifs.readLineInto(&buffer);
@@ -1541,14 +1538,10 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);
-        // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        ofs.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
         // We need to add one here because usually the first line in
         // mHistoryList is an empty one - maybe it might represent the current
         // line and will get captured/saved if the profile is closed with some

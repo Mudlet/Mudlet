@@ -194,7 +194,7 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     if (async) {
         auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
         auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
             if (!mpHost) {
                 return;
             }
@@ -215,7 +215,7 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
         if (!mpHost) {
             return;
         }
@@ -540,6 +540,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("borderRightWidth").text().set(QString::number(borders.right()).toUtf8().constData());
         host.append_child("wrapAt").text().set(QString::number(pHost->mWrapAt).toUtf8().constData());
         host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toUtf8().constData());
+        host.append_child("wrapHangingIndentCount").text().set(QString::number(pHost->mWrapHangingIndentCount).toUtf8().constData());
         host.append_child("mFgColor").text().set(pHost->mFgColor.name().toUtf8().constData());
         host.append_child("mBgColor").text().set(pHost->mBgColor.name().toUtf8().constData());
         host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toUtf8().constData());
@@ -570,6 +571,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
         host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        host.append_child("mLowerLevelColor").text().set(pHost->mLowerLevelColor.name().toUtf8().constData());
+        host.append_child("mUpperLevelColor").text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
         auto mapInfoBgNode = host.append_child("mMapInfoBg");
@@ -780,7 +783,7 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
             if (!mpHost) {
                 return;
             }

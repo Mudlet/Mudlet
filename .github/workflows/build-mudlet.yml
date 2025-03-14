@@ -27,29 +27,28 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 8
-            qt: '5.14.2'
+            gcc_compiler_version: 10
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            # We still need a gcc for some sub-stages - and it ain't always the same one:
-            gcc_compiler_version: 9
-            qt: '5.14.2'
+            gcc_compiler_version: 10
+            qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.2'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
-            qt: '5.15.13'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -66,14 +65,12 @@ jobs:
         fetch-depth: 0
 
     - name: Install Qt
-      # need to install qt via homebrew for qt5 on arm64-osx
-      if: ${{ !(matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5')) }}
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: ${{ startsWith(matrix.qt, '6') && 'qt5compat qtmultimedia' || '' }}
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
       id: restore-boost
@@ -118,11 +115,6 @@ jobs:
         # dependencies needed for vcpkg specifically.
         BREWS=("automake" "autoconf" "pkg-config")
 
-        # for qt5 on arm64, also install libtool and qt@5
-        if [[ "$(uname -m)" = "arm64" && "$QT_VERSION" == 5* ]]; then
-         BREWS+=("libtool" "qt@5")
-        fi
-
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
          if ! brew list --formula "${brew}" &>/dev/null; then
@@ -165,6 +157,9 @@ jobs:
         # these aren't available or don't work well in vcpkg
         BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect")
 
+        # these are available in vcpkg but not working in our old version
+        BREWS+=("hunspell")
+
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
           if ! brew list --formula "{brew}" &>/dev/null; then
@@ -194,28 +189,17 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (macOS) Add additional paths for Qt5 on arm64 (1/1)
-      if: ${{ matrix.triplet == 'arm64-osx' && startsWith(matrix.qt, '5') }}
-      run: |
-        echo "LDFLAGS=-L$(brew --prefix qt@5)/lib" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I$(brew --prefix qt@5)/include" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$(brew --prefix qt@5)/lib/pkgconfig" >> $GITHUB_ENV
-        echo "QT_PREFIX=$(brew --prefix qt@5)" >> $GITHUB_ENV
-        # both of these needed for the packager / installer on Github
-        echo "PATH=$(brew --prefix qt@5)/bin:$PATH" >> $GITHUB_ENV
-        echo "QT_DIR=$(brew --prefix qt@5)" >> $GITHUB_ENV
-
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
-      uses: leafo/gh-actions-lua@v10
+      uses: leafo/gh-actions-lua@v11
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
         buildCache: false
 
     - name: (Linux) Install latest Luarocks
-      uses: leafo/gh-actions-luarocks@v4
+      uses: leafo/gh-actions-luarocks@v5
       if: runner.os == 'Linux'
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
@@ -226,10 +210,10 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
+        # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
@@ -306,6 +290,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
+          -DUSE_SANITIZER=""
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
@@ -390,6 +375,7 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
@@ -408,8 +394,9 @@ jobs:
 
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
-      run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
+
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests

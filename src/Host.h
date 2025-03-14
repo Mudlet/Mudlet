@@ -39,6 +39,7 @@
 #include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
+#include "enums.h"
 
 #include "pre_guard.h"
 #include <QColor>
@@ -168,6 +169,8 @@ public:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
+
 
 
     QString         getName()                        { return mHostName; }
@@ -315,8 +318,8 @@ public:
 
     void updateDisplayDimensions();
 
-    std::pair<bool, QString> installPackage(const QString&, int);
-    bool uninstallPackage(const QString&, int);
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing);
+    bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
     QString getPackageConfig(const QString&, bool isModule = false);
@@ -336,9 +339,9 @@ public:
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
-    QString getMediaLocationGMCP() const;
+    QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
-    QString getMediaLocationMSP() const;
+    QString mediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
@@ -426,6 +429,13 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+    bool getF3SearchEnabled() const { return mF3SearchEnabled; }
+    void setF3SearchEnabled(const bool enabled) { 
+        mF3SearchEnabled = enabled;
+        if (mpConsole) {
+            mpConsole->setF3SearchEnabled(enabled);
+        }
+    }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -449,7 +459,7 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
-    bool mEnableMSDP = true;
+    bool mEnableMSDP = false;
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
@@ -556,6 +566,7 @@ public:
     bool mUSE_UNIX_EOL;
     int mWrapAt;
     int mWrapIndentCount;
+    int mWrapHangingIndentCount;
 
     bool mEditorAutoComplete;
 
@@ -563,6 +574,7 @@ public:
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+    void editorThemeChanged();
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
@@ -618,6 +630,8 @@ public:
     QColor mWhite_2{QColorConstants::LightGray};
     QColor mFgColor_2{QColorConstants::LightGray};
     QColor mBgColor_2{QColorConstants::Black};
+    QColor mLowerLevelColor{QColorConstants::DarkGray};
+    QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
 
@@ -725,6 +739,7 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void signal_editorThemeChanged();
 
 private slots:
     void slot_purgeTemps();
@@ -916,6 +931,9 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Whether F3 search functionality is enabled
+    bool mF3SearchEnabled = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:

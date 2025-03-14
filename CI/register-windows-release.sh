@@ -22,7 +22,7 @@
 # BUILD_COMMIT and registers it with dblsqd. It will attempt this for up to
 # an hour, every minute until success.
 # GHA Env vars needed:
-#    ARCH - For registering wither 32 or 64 bit build with dblsqd
+#    ARCH - For registering wither 64 bit build with dblsqd
 #    BUILD_COMMIT - For listing the json feed
 #    PATH - For path of dblsqd
 #    VERSION_STRING - The version of Mudlet being released
@@ -60,13 +60,10 @@ FetchAndCheckURL() {
       return 1
     fi
 
-    # Determine the search pattern based on ARCH environment variable
-    if [ "$ARCH" == "x86" ]; then
-      search_pattern="windows-32.exe"
-    elif [ "$ARCH" == "x86_64" ]; then
+    if [ "$ARCH" == "x86_64" ]; then
       search_pattern="windows-64.exe"
     else
-      echo "ARCH environment variable is not set to x86 or x86_64."
+      echo "ARCH environment variable is not set to x86_64 as expected."
       exit 2
     fi
 

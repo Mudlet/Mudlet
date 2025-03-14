@@ -237,13 +237,15 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
-#if defined(Q_OS_WIN32)
-    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
-    strcpy(subject, data.toUtf8().data());
+#if defined(Q_OS_WINDOWS)
+    // strndup(3) - a safe strdup(3) does not seem to be available in the
+    // original mingw or the replacement mingw-w64 enmvironment we use:
+    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().constData()) + 1));
+    strcpy(subject, data.toUtf8().constData());
 #else
     char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
 #endif
+
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }

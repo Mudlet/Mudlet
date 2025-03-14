@@ -6,6 +6,52 @@ on:
     - cron: '0 0 * * fri'
 
 jobs:
+  update-mpkg-mpackage:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: development
+
+      - name: Download latest mpkg
+        uses: carlosperate/download-file-action@v2.0.2
+        with:
+          file-url: https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.mpackage
+          file-name: mpkg.mpackage
+          location: src/
+
+      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
+      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
+      - name: check if we have any updates
+        id: getdiff
+        run: |
+          echo "Checking for changes in src/mpkg.mpackage..."
+          if git diff --quiet "src/mpkg.mpackage"; then
+            echo "No changes detected in mpkg.mpackage"
+          else
+            echo "Changes detected in mpkg.mpackage"
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: send in a pull request
+        uses: peter-evans/create-pull-request@v7
+        if: steps.check-changes.outputs.changes == 'true'
+        with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: src/
+          branch: update-mpkg-mpackage
+          commit-message: (autocommit) Updated mpkg.mpackage to latest upstream
+          title: "Infrastructure: Update bundled mpkg.mpackage to latest upstream"
+          body: |
+            #### Brief overview of PR changes/additions
+            :crown: An automated PR to update mpkg.mpackage to the latest version.
+            #### Motivation for adding to Mudlet
+            Users are automatically updated to the latest version of mpkg.
+            #### Other info (issues closed, discussion etc)
+            _update triggered by ${{ github.ref }} ${{ github.sha }}_
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
   update-iremapper-source:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
