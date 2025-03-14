@@ -9448,7 +9448,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="441"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="449"/>
@@ -10192,7 +10192,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="271"/>
       <location filename="../src/mudlet.cpp" line="273"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
@@ -10735,7 +10735,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="3301"/>
       <source>[ INFO ]  - Compact input line set. Press &quot;%1&quot; to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Riga di input in modalità compatta. Premi &quot;%1&quot; per mostrare di nuovo i pulsanti in basso a destra.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3944"/>
