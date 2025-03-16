@@ -24,9 +24,14 @@
 #include "utils.h"
 
 #include "pre_guard.h"
+#include <QTcpServer>
+#include <QTcpSocket>
+#include <QUrlQuery>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QString>
 #include <QVariantMap>
 #include "post_guard.h"
@@ -49,6 +54,18 @@ public:
 private:
     Host* mpHost;
     QStringList mSupportedAuthTypes;
+    QTcpServer *mHttpServer;
+    QNetworkAccessManager networkManager;
+    QString oidcProvider; // Added to support multiple OIDC providers
+    void setOIDCProvider(const QString& provider); // Added method
+    QString getOIDCAuthURL(const QString& provider); // Added method
+    QString getOIDCTokenURL(const QString& provider); // Added method
+    void startLocalServer();
+    void stopLocalServer();
+    void handleIncomingConnection();
+    void exchangeCodeForToken(const QString& authCode);
+    void processOIDCToken(const QString& idToken);
+    QJsonObject decodeJWT(const QString& jwt);
 };
 
 #endif // MUDLET_AUTHENTICATOR_H

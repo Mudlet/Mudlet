@@ -22,9 +22,16 @@
 #include "Host.h"
 #include "ctelnet.h"
 #include <QDebug>
+#include <QTcpServer>
+#include <QTcpSocket>
+#include <QUrlQuery>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
-: mpHost(pHost)
+: mpHost(pHost), mHttpServer(nullptr)
 {}
 
 void GMCPAuthenticator::saveSupportsSet(const QString& data)
@@ -71,7 +78,6 @@ void GMCPAuthenticator::sendCredentials()
     qDebug() << "Sent GMCP credentials";
 #endif
 }
-
 
 void GMCPAuthenticator::handleAuthResult(const QString& data)
 {
@@ -127,4 +133,215 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Unknown GMCP auth package:" << packageMessage;
 #endif
+}
+
+void GMCPAuthenticator::startLocalServer()
+{
+    if (!mHttpServer) {
+        mHttpServer = new QTcpServer(this);
+    }
+
+    connect(mHttpServer, &QTcpServer::newConnection, this, &GMCPAuthenticator::handleIncomingConnection);
+
+    if (!mHttpServer->listen(QHostAddress::LocalHost, 8000)) {
+        qDebug() << "Error: Could not start local HTTP server";
+        return;
+    }
+
+    qDebug() << "Local HTTP server started on port 8000";
+}
+
+void GMCPAuthenticator::handleIncomingConnection()
+{
+    QTcpSocket *clientConnection = mHttpServer->nextPendingConnection();
+    connect(clientConnection, &QTcpSocket::disconnected, clientConnection, &QTcpSocket::deleteLater);
+
+    if (!clientConnection->waitForReadyRead(5000)) {
+        clientConnection->disconnectFromHost();
+        return;
+    }
+
+    QByteArray requestData = clientConnection->readAll();
+    QString requestString = QString::fromUtf8(requestData);
+
+    QRegExp errorRegex("GET /\\?error=([^&\\s]+)");
+    if (errorRegex.indexIn(requestString) != -1) {
+        QString error = errorRegex.cap(1);
+        mpHost->postMessage(tr("[ WARN ]  - OpenID authentication failed: %1").arg(error));
+        stopLocalServer();
+        return;
+    }
+
+    QRegExp codeRegex("GET /\\?code=([^&\\s]+)&state=([^\\s]+)");
+    if (codeRegex.indexIn(requestString) != -1) {
+        QString receivedCode = codeRegex.cap(1);
+        QString receivedState = codeRegex.cap(2);
+
+        if (receivedState == oidcState) {
+            qDebug() << "Received OIDC Authorization Code: " << receivedCode;
+            exchangeCodeForToken(receivedCode);
+        } else {
+            qDebug() << "OIDC state mismatch! Possible CSRF attack.";
+        }
+    }
+
+    clientConnection->disconnectFromHost();
+}
+
+void GMCPAuthenticator::stopLocalServer()
+{
+    if (mHttpServer) {
+        mHttpServer->close();
+        delete mHttpServer;
+        mHttpServer = nullptr;
+        qDebug() << "Local HTTP server stopped";
+    }
+}
+
+void GMCPAuthenticator::exchangeCodeForToken(const QString& authCode)
+{
+    QString tokenUrl = getOIDCTokenURL(oidcProvider);
+    if (tokenUrl.isEmpty()) {
+        qDebug() << "Error: Invalid token URL for provider " << oidcProvider;
+        return;
+    }
+
+    QUrl url(tokenUrl);
+    QUrlQuery postData;
+    postData.addQueryItem("client_id", "your-client-id");
+    postData.addQueryItem("client_secret", "your-client-secret");
+    postData.addQueryItem("code", authCode);
+    postData.addQueryItem("grant_type", "authorization_code");
+    postData.addQueryItem("redirect_uri", "http://127.0.0.1:8000");
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+
+    QNetworkReply* reply = networkManager.post(request, postData.query().toUtf8());
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QJsonDocument responseJson = QJsonDocument::fromJson(reply->readAll());
+            QString idToken = responseJson.object().value("id_token").toString();
+            processOIDCToken(idToken);
+        } else {
+            qDebug() << "OIDC Token Exchange Failed: " << reply->errorString();
+        }
+        reply->deleteLater();
+    });
+}
+
+void GMCPAuthenticator::processOIDCToken(const QString& idToken)
+{
+    QJsonObject payload = decodeJWT(idToken);
+    if (payload.isEmpty()) {
+        qDebug() << "Error: Failed to decode JWT";
+        return;
+    }
+
+    QString issuer = payload.value("iss").toString();
+    QString audience = payload.value("aud").toString();
+    qint64 expiration = payload.value("exp").toDouble();
+    QString receivedNonce = payload.value("nonce").toString();
+
+    if (issuer != "https://accounts.google.com") {
+        qDebug() << "Error: Invalid token issuer!";
+        return;
+    }
+
+    if (audience != "your-client-id") {
+        qDebug() << "Error: Token audience mismatch!";
+        return;
+    }
+
+    if (QDateTime::currentSecsSinceEpoch() >= expiration) {
+        qDebug() << "Error: ID token is expired!";
+        return;
+    }
+
+    if (receivedNonce != oidcNonce) {
+        qDebug() << "Error: Nonce mismatch! Possible replay attack.";
+        return;
+    }
+
+    qDebug() << "ID Token validated successfully.";
+    sendOIDCCredentials(payload.value("email").toString(), idToken);
+}
+
+QJsonObject GMCPAuthenticator::decodeJWT(const QString& jwt)
+{
+    QStringList parts = jwt.split(".");
+    if (parts.size() != 3) {
+        qDebug() << "Error: Invalid JWT format.";
+        return QJsonObject();
+    }
+
+    QByteArray payloadData = QByteArray::fromBase64(parts[1].toUtf8());
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(payloadData);
+    
+    if (jsonDoc.isNull()) {
+        qDebug() << "Error: Failed to parse JWT payload.";
+        return QJsonObject();
+    }
+
+    return jsonDoc.object();
+}
+
+void GMCPAuthenticator::setOIDCProvider(const QString& provider)
+{
+    oidcProvider = provider;
+}
+
+QString GMCPAuthenticator::getOIDCAuthURL(const QString& provider)
+{
+    QMap<QString, QString> providerURLs = {
+        {"Google", "https://accounts.google.com/o/oauth2/v2/auth"},
+        {"Microsoft", "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"},
+        {"GitHub", "https://github.com/login/oauth/authorize"},
+        {"Steam", "https://steamcommunity.com/openid"},
+        {"Apple", "https://appleid.apple.com/auth/authorize"},
+        {"Facebook", "https://www.facebook.com/v12.0/dialog/oauth"}
+    };
+    return providerURLs.value(provider, "");
+}
+
+QString GMCPAuthenticator::getOIDCTokenURL(const QString& provider)
+{
+    QMap<QString, QString> tokenURLs = {
+        {"Google", "https://oauth2.googleapis.com/token"},
+        {"Microsoft", "https://login.microsoftonline.com/common/oauth2/v2.0/token"},
+        {"GitHub", "https://github.com/login/oauth/access_token"},
+        {"Steam", "https://steamcommunity.com/openid"},
+        {"Apple", "https://appleid.apple.com/auth/token"},
+        {"Facebook", "https://graph.facebook.com/v12.0/oauth/access_token"}
+    };
+    return tokenURLs.value(provider, "");
+}
+
+void GMCPAuthenticator::startOIDCAuth(const QString& provider)
+{
+    setOIDCProvider(provider);
+    startLocalServer();
+
+    QString clientId = "your-client-id";
+    QString redirectUri = "http://127.0.0.1:8000";
+    oidcState = QUuid::createUuid().toString(QUuid::Id128);
+    oidcNonce = QUuid::createUuid().toString(QUuid::Id128);
+    QString authUrl = getOIDCAuthURL(provider);
+
+    if (authUrl.isEmpty()) {
+        qDebug() << "Error: Unsupported OIDC provider!";
+        return;
+    }
+
+    QUrl url(authUrl);
+    QUrlQuery query;
+    query.addQueryItem("client_id", clientId);
+    query.addQueryItem("response_type", "code");
+    query.addQueryItem("scope", "openid email profile");
+    query.addQueryItem("redirect_uri", redirectUri);
+    query.addQueryItem("state", oidcState);
+    query.addQueryItem("nonce", oidcNonce);
+
+    url.setQuery(query);
+    QDesktopServices::openUrl(url);
 }
