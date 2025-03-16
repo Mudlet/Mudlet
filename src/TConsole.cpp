@@ -2373,20 +2373,20 @@ void TConsole::setF3SearchEnabled(const bool enabled)
     mF3SearchEnabled = enabled;
     if (mF3SearchEnabled) {
         // Create F3/Shift+F3 shortcuts for search navigation if needed
-        if (!mpSearchNextShortcut) {
+        if (mpSearchNextShortcut.isNull()) {
             mpSearchNextShortcut = new QShortcut(QKeySequence(Qt::Key_F3), this);
         }
-        if (!mpSearchPrevShortcut) {
+        if (mpSearchPrevShortcut.isNull()) {
             mpSearchPrevShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), this);
         }
         connect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown, Qt::UniqueConnection);
         connect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp, Qt::UniqueConnection);
     } else {
-        if (mpSearchNextShortcut) {
+        if (!mpSearchNextShortcut.isNull()) {
             disconnect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
             mpSearchNextShortcut->deleteLater();
         }
-        if (!mpSearchPrevShortcut) {
+        if (!mpSearchPrevShortcut.isNull()) {
             disconnect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
             mpSearchPrevShortcut->deleteLater();
         }
