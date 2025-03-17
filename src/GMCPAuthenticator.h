@@ -51,7 +51,6 @@ public:
     void sendCredentials();
     void handleAuthResult(const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
-    void startOIDCAuth(const QString& provider); // Restored method for OIDC authentication flow
 
 private:
     Host* mpHost;

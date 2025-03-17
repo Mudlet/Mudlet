@@ -288,31 +288,3 @@ void GMCPAuthenticator::setOIDCProvider(const QString& provider)
 }
 
 void GMCPAuthenticator::startOIDCAuth(const QString& provider)
-{
-    setOIDCProvider(provider);
-    startLocalServer();
-
-    QString clientId = "your-client-id";
-    QString redirectUri = "http://127.0.0.1:8000";
-    oidcState = QUuid::createUuid().toString(QUuid::Id128);
-    oidcNonce = QUuid::createUuid().toString(QUuid::Id128);
-    oidcCodeVerifier = QUuid::createUuid().toString(QUuid::Id128); // PKCE
-    QString authUrl = getOIDCAuthURL(provider);
-
-    if (authUrl.isEmpty()) {
-        qDebug() << "Error: Unsupported OIDC provider!";
-        return;
-    }
-
-    QUrl url(authUrl);
-    QUrlQuery query;
-    query.addQueryItem("client_id", clientId);
-    query.addQueryItem("response_type", "code");
-    query.addQueryItem("scope", "openid email profile");
-    query.addQueryItem("redirect_uri", redirectUri);
-    query.addQueryItem("state", oidcState);
-    query.addQueryItem("nonce", oidcNonce);
-
-    url.setQuery(query);
-    QDesktopServices::openUrl(url);
-}
