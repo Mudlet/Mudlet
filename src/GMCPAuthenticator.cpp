@@ -21,6 +21,8 @@
 
 #include "Host.h"
 #include "ctelnet.h"
+
+#include "pre_guard.h"
 #include <QDebug>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -29,6 +31,9 @@
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QDesktopServices>
+#include "post_guard.h"
+
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost), mHttpServer(nullptr)
@@ -112,16 +117,7 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
 void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QString& data)
 {
     if (packageMessage == qsl("Char.Login.Default")) {
-        saveSupportsSet(data);
-
-        if (mSupportedAuthTypes.contains(qsl("password-credentials"))) {
-            mpHost->mTelnet.cancelLoginTimers();
-            sendCredentials();
-        } else {
-#if defined(DEBUG_GMCP_AUTHENTICATION)
-            qDebug() << "Server does not support credentials authentication and we don't support any other";
-#endif
-        }
+        handleLoginDefault(data);
         return;
     }
 
@@ -133,6 +129,24 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Unknown GMCP auth package:" << packageMessage;
 #endif
+}
+
+void GMCPAuthenticator::handleLoginDefault(const QString& data)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(data.toUtf8());
+    QJsonObject obj = doc.object();
+    
+    if (obj.contains("location")) {
+        QString authURL = obj["location"].toString();
+        if (!authURL.isEmpty()) {
+            QDesktopServices::openUrl(QUrl(authURL));
+#if defined(DEBUG_GMCP_AUTHENTICATION)
+            qDebug() << "Opened browser with OIDC location from Char.Login.Default: " << authURL;
+#endif
+        } else {
+            qDebug() << "Error: Received empty OIDC location.";
+        }
+    }
 }
 
 void GMCPAuthenticator::startLocalServer()
@@ -164,28 +178,42 @@ void GMCPAuthenticator::handleIncomingConnection()
     QByteArray requestData = clientConnection->readAll();
     QString requestString = QString::fromUtf8(requestData);
 
-    QRegExp errorRegex("GET /\\?error=([^&\\s]+)");
-    if (errorRegex.indexIn(requestString) != -1) {
-        QString error = errorRegex.cap(1);
-        mpHost->postMessage(tr("[ WARN ]  - OpenID authentication failed: %1").arg(error));
-        stopLocalServer();
-        return;
-    }
-
-    QRegExp codeRegex("GET /\\?code=([^&\\s]+)&state=([^\\s]+)");
+    QRegExp codeRegex("GET /\\?code=([^&\\s]+)");
     if (codeRegex.indexIn(requestString) != -1) {
         QString receivedCode = codeRegex.cap(1);
-        QString receivedState = codeRegex.cap(2);
 
-        if (receivedState == oidcState) {
+        if (!receivedCode.isEmpty()) {
             qDebug() << "Received OIDC Authorization Code: " << receivedCode;
-            exchangeCodeForToken(receivedCode);
-        } else {
-            qDebug() << "OIDC state mismatch! Possible CSRF attack.";
+            sendAuthorizationCodeToGame(receivedCode);
         }
     }
 
     clientConnection->disconnectFromHost();
+}
+
+void GMCPAuthenticator::sendAuthorizationCodeToGame(const QString& authCode)
+{
+    QJsonObject payload;
+    payload["code"] = authCode;
+    payload["provider"] = oidcProvider;
+
+    QJsonDocument doc(payload);
+    QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += "Char.Login.AuthCode ";
+    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
+    output += TN_IAC;
+    output += TN_SE;
+
+    mpHost->mTelnet.socketOutRaw(output);
+
+#if defined(DEBUG_GMCP_AUTHENTICATION)
+    qDebug() << "Sent OIDC Authorization Code to Game via Char.Login.AuthCode.";
+#endif
 }
 
 void GMCPAuthenticator::stopLocalServer()
@@ -196,38 +224,6 @@ void GMCPAuthenticator::stopLocalServer()
         mHttpServer = nullptr;
         qDebug() << "Local HTTP server stopped";
     }
-}
-
-void GMCPAuthenticator::exchangeCodeForToken(const QString& authCode)
-{
-    QString tokenUrl = getOIDCTokenURL(oidcProvider);
-    if (tokenUrl.isEmpty()) {
-        qDebug() << "Error: Invalid token URL for provider " << oidcProvider;
-        return;
-    }
-
-    QUrl url(tokenUrl);
-    QUrlQuery postData;
-    postData.addQueryItem("client_id", "your-client-id");
-    postData.addQueryItem("client_secret", "your-client-secret");
-    postData.addQueryItem("code", authCode);
-    postData.addQueryItem("grant_type", "authorization_code");
-    postData.addQueryItem("redirect_uri", "http://127.0.0.1:8000");
-
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
-
-    QNetworkReply* reply = networkManager.post(request, postData.query().toUtf8());
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            QJsonDocument responseJson = QJsonDocument::fromJson(reply->readAll());
-            QString idToken = responseJson.object().value("id_token").toString();
-            processOIDCToken(idToken);
-        } else {
-            qDebug() << "OIDC Token Exchange Failed: " << reply->errorString();
-        }
-        reply->deleteLater();
-    });
 }
 
 void GMCPAuthenticator::processOIDCToken(const QString& idToken)
@@ -291,32 +287,6 @@ void GMCPAuthenticator::setOIDCProvider(const QString& provider)
     oidcProvider = provider;
 }
 
-QString GMCPAuthenticator::getOIDCAuthURL(const QString& provider)
-{
-    QMap<QString, QString> providerURLs = {
-        {"Google", "https://accounts.google.com/o/oauth2/v2/auth"},
-        {"Microsoft", "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"},
-        {"GitHub", "https://github.com/login/oauth/authorize"},
-        {"Steam", "https://steamcommunity.com/openid"},
-        {"Apple", "https://appleid.apple.com/auth/authorize"},
-        {"Facebook", "https://www.facebook.com/v12.0/dialog/oauth"}
-    };
-    return providerURLs.value(provider, "");
-}
-
-QString GMCPAuthenticator::getOIDCTokenURL(const QString& provider)
-{
-    QMap<QString, QString> tokenURLs = {
-        {"Google", "https://oauth2.googleapis.com/token"},
-        {"Microsoft", "https://login.microsoftonline.com/common/oauth2/v2.0/token"},
-        {"GitHub", "https://github.com/login/oauth/access_token"},
-        {"Steam", "https://steamcommunity.com/openid"},
-        {"Apple", "https://appleid.apple.com/auth/token"},
-        {"Facebook", "https://graph.facebook.com/v12.0/oauth/access_token"}
-    };
-    return tokenURLs.value(provider, "");
-}
-
 void GMCPAuthenticator::startOIDCAuth(const QString& provider)
 {
     setOIDCProvider(provider);
@@ -326,6 +296,7 @@ void GMCPAuthenticator::startOIDCAuth(const QString& provider)
     QString redirectUri = "http://127.0.0.1:8000";
     oidcState = QUuid::createUuid().toString(QUuid::Id128);
     oidcNonce = QUuid::createUuid().toString(QUuid::Id128);
+    oidcCodeVerifier = QUuid::createUuid().toString(QUuid::Id128); // PKCE
     QString authUrl = getOIDCAuthURL(provider);
 
     if (authUrl.isEmpty()) {

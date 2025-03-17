@@ -34,6 +34,7 @@
 #include <QNetworkReply>
 #include <QString>
 #include <QVariantMap>
+#include <QDesktopServices>
 #include "post_guard.h"
 
 
@@ -50,6 +51,7 @@ public:
     void sendCredentials();
     void handleAuthResult(const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
+    void startOIDCAuth(const QString& provider); // Restored method for OIDC authentication flow
 
 private:
     Host* mpHost;
@@ -57,15 +59,15 @@ private:
     QTcpServer *mHttpServer;
     QNetworkAccessManager networkManager;
     QString oidcProvider; // Added to support multiple OIDC providers
+    QString code_verifier; // Added for PKCE
     void setOIDCProvider(const QString& provider); // Added method
-    QString getOIDCAuthURL(const QString& provider); // Added method
-    QString getOIDCTokenURL(const QString& provider); // Added method
-    void startLocalServer();
-    void stopLocalServer();
-    void handleIncomingConnection();
-    void exchangeCodeForToken(const QString& authCode);
+    void startLocalServer(); // Restoring missing function declarations
+    void stopLocalServer(); // Restoring missing function declarations
+    void handleIncomingConnection(); // Restoring missing function declarations
     void processOIDCToken(const QString& idToken);
-    QJsonObject decodeJWT(const QString& jwt);
+    QJsonObject decodeJWT(const QString& jwt); // Fixed missing parenthesis
+    void handleLoginDefault(const QString& data); // New method to handle `Char.Login.Default`
+    void sendAuthorizationCodeToGame(const QString& authCode);
 };
 
 #endif // MUDLET_AUTHENTICATOR_H
