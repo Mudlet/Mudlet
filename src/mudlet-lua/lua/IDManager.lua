@@ -444,14 +444,17 @@ function registerNamedTrigger(user, name, substring, handler, expireAfter)
   if nameType ~= "string" then
     printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  if type(substring) ~= "string" then
+    printError(funcName .. ": bad argument #3 type (substring as string expected, got " .. type(substring) .. "!)", true, true)
+  end
+  if type(handler) ~= "function" then
+    printError(funcName .. ": bad argument #4 type (function expected, got " .. type(handler) .. "!)", true, true)
+  end
   local mgr = getManager(user)
   local ok, err = mgr:registerTrigger(name, substring, handler, expireAfter)
   if ok then
     return true
   end
-  -- extract the error info from tempTrigger's error
-  -- increment argument number by 1 (to account for the leading 'name' parameter)
-  -- and then display it as our own error
   local errMsg = extractUpstreamError("tempTrigger", err)
   printError("registerNamedTrigger: " .. errMsg, true, true)
 end
