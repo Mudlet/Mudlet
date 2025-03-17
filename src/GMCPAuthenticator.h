@@ -38,12 +38,12 @@
 #include "post_guard.h"
 
 
-class GMCPAuthenticator
+class GMCPAuthenticator : public QObject
 {
-    Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
+    Q_OBJECT
 
 public:
-
+    Q_DISABLE_COPY(GMCPAuthenticator)
     explicit GMCPAuthenticator(Host* pHost);
     ~GMCPAuthenticator() = default;
 
@@ -57,14 +57,9 @@ private:
     QStringList mSupportedAuthTypes;
     QTcpServer *mHttpServer;
     QNetworkAccessManager networkManager;
-    QString oidcProvider; // Added to support multiple OIDC providers
-    QString code_verifier; // Added for PKCE
-    void setOIDCProvider(const QString& provider); // Added method
     void startLocalServer(); // Restoring missing function declarations
     void stopLocalServer(); // Restoring missing function declarations
     void handleIncomingConnection(); // Restoring missing function declarations
-    void processOIDCToken(const QString& idToken);
-    QJsonObject decodeJWT(const QString& jwt); // Fixed missing parenthesis
     void handleLoginDefault(const QString& data); // New method to handle `Char.Login.Default`
     void sendAuthorizationCodeToGame(const QString& authCode);
 };

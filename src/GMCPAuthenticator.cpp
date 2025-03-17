@@ -31,6 +31,7 @@
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QRegExp>
 #include <QDesktopServices>
 #include "post_guard.h"
 
@@ -152,7 +153,7 @@ void GMCPAuthenticator::handleLoginDefault(const QString& data)
 void GMCPAuthenticator::startLocalServer()
 {
     if (!mHttpServer) {
-        mHttpServer = new QTcpServer(this);
+        mHttpServer = new QTcpServer(mpHost);
     }
 
     connect(mHttpServer, &QTcpServer::newConnection, this, &GMCPAuthenticator::handleIncomingConnection);
@@ -195,7 +196,6 @@ void GMCPAuthenticator::sendAuthorizationCodeToGame(const QString& authCode)
 {
     QJsonObject payload;
     payload["code"] = authCode;
-    payload["provider"] = oidcProvider;
 
     QJsonDocument doc(payload);
     QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
@@ -225,66 +225,3 @@ void GMCPAuthenticator::stopLocalServer()
         qDebug() << "Local HTTP server stopped";
     }
 }
-
-void GMCPAuthenticator::processOIDCToken(const QString& idToken)
-{
-    QJsonObject payload = decodeJWT(idToken);
-    if (payload.isEmpty()) {
-        qDebug() << "Error: Failed to decode JWT";
-        return;
-    }
-
-    QString issuer = payload.value("iss").toString();
-    QString audience = payload.value("aud").toString();
-    qint64 expiration = payload.value("exp").toDouble();
-    QString receivedNonce = payload.value("nonce").toString();
-
-    if (issuer != "https://accounts.google.com") {
-        qDebug() << "Error: Invalid token issuer!";
-        return;
-    }
-
-    if (audience != "your-client-id") {
-        qDebug() << "Error: Token audience mismatch!";
-        return;
-    }
-
-    if (QDateTime::currentSecsSinceEpoch() >= expiration) {
-        qDebug() << "Error: ID token is expired!";
-        return;
-    }
-
-    if (receivedNonce != oidcNonce) {
-        qDebug() << "Error: Nonce mismatch! Possible replay attack.";
-        return;
-    }
-
-    qDebug() << "ID Token validated successfully.";
-    sendOIDCCredentials(payload.value("email").toString(), idToken);
-}
-
-QJsonObject GMCPAuthenticator::decodeJWT(const QString& jwt)
-{
-    QStringList parts = jwt.split(".");
-    if (parts.size() != 3) {
-        qDebug() << "Error: Invalid JWT format.";
-        return QJsonObject();
-    }
-
-    QByteArray payloadData = QByteArray::fromBase64(parts[1].toUtf8());
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(payloadData);
-    
-    if (jsonDoc.isNull()) {
-        qDebug() << "Error: Failed to parse JWT payload.";
-        return QJsonObject();
-    }
-
-    return jsonDoc.object();
-}
-
-void GMCPAuthenticator::setOIDCProvider(const QString& provider)
-{
-    oidcProvider = provider;
-}
-
-void GMCPAuthenticator::startOIDCAuth(const QString& provider)
