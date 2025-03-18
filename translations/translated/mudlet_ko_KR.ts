@@ -7826,7 +7826,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="123"/>
       <source>&lt;p&gt;Keys react on keyboard presses. To add a new key binding:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Keys can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;키는 키보드 입력에 반응합니다. 새 키 바인딩을 추가하려면:&lt;ol&gt;
-&lt;li&gt;위의 &apos;항목 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
+&lt;li&gt;위의 &apos;키 추가&apos; 아이콘을 클릭하십시오.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;&apos;키 가져오기&apos;&lt;/strong&gt;를 클릭한 후 Control, Shift와 같은 수정 키를 포함하여 원하는 키 조합을 누르십시오.&lt;/li&gt;
 &lt;li&gt;버튼을 눌렀을 때 게임으로 전송할 &lt;strong&gt;명령어&lt;/strong&gt;를 명확한 텍스트로 입력하거나, 더 복잡한 요구 사항을 위해 스크립트를 작성하십시오.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;새 키 바인딩을 활성화&lt;/strong&gt;하십시오.&lt;/li&gt;
@@ -7838,7 +7838,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
 
 &lt;p&gt;F8 키를 누르면 점프합니다.&lt;/p&gt;
 
-&lt;p&gt;자세한 내용은 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
+&lt;p&gt;자세한 내용은 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.ED.82.A4_.EB.B0.94.EC.9D.B8.EB.94.A9&apos;&gt;매뉴얼&lt;/a&gt;을 참조하십시오.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="133"/>
