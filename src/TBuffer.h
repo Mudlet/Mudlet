@@ -53,6 +53,18 @@ class Host;
 class QTextCodec;
 class TConsole;
 
+class WrapInfo
+{
+    friend class TBuffer;
+
+public:
+    const bool isNewline;
+    const bool needsIndent;
+    const int firstChar;
+    const int lastChar;
+    WrapInfo(bool isNewline, bool needsIndent, int firstChar, int lastChar) : isNewline(isNewline), needsIndent(needsIndent), firstChar(firstChar), lastChar(lastChar) {}
+};
+
 class TChar
 {
     friend class TBuffer;
@@ -327,6 +339,7 @@ public:
     inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
+    QList<WrapInfo> getWrapInfo(const QString& lineText);
     void shrinkBuffer();
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
