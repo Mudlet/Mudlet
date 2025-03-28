@@ -5331,29 +5331,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
-    lua_register(pGlobalLua, "chat", TLuaInterpreter::chat);
-    lua_register(pGlobalLua, "chatAccept", TLuaInterpreter::chatAccept);
-    lua_register(pGlobalLua, "chatAll", TLuaInterpreter::chatAll);
-    lua_register(pGlobalLua, "chatAllowSnoop", TLuaInterpreter::chatAllowSnoop);
-    lua_register(pGlobalLua, "chatCall", TLuaInterpreter::chatCall);
-    lua_register(pGlobalLua, "chatDeny", TLuaInterpreter::chatDeny);
-    lua_register(pGlobalLua, "chatDoNotDisturb", TLuaInterpreter::chatDoNotDisturb);
-    lua_register(pGlobalLua, "chatEmoteAll", TLuaInterpreter::chatEmoteAll);
-    lua_register(pGlobalLua, "chatGroup", TLuaInterpreter::chatGroup);
-    lua_register(pGlobalLua, "chatIgnore", TLuaInterpreter::chatIgnore);
-    lua_register(pGlobalLua, "chatList", TLuaInterpreter::chatList);
-    lua_register(pGlobalLua, "chatName", TLuaInterpreter::chatName);
-    lua_register(pGlobalLua, "chatPeek", TLuaInterpreter::chatPeek);
-    lua_register(pGlobalLua, "chatPing", TLuaInterpreter::chatPing);
-    lua_register(pGlobalLua, "chatPrivate", TLuaInterpreter::chatPrivate);
-    lua_register(pGlobalLua, "chatServe", TLuaInterpreter::chatServe);
-    lua_register(pGlobalLua, "chatSetGroup", TLuaInterpreter::chatSetGroup);
-    lua_register(pGlobalLua, "chatSideChannel", TLuaInterpreter::chatSideChannel);
-    lua_register(pGlobalLua, "chatSnoop", TLuaInterpreter::chatSnoop);
-    lua_register(pGlobalLua, "chatStartServer", TLuaInterpreter::chatStartServer);
-    lua_register(pGlobalLua, "chatStopServer", TLuaInterpreter::chatStopServer);
-    lua_register(pGlobalLua, "chatUnChat", TLuaInterpreter::chatUnChat);
-    lua_register(pGlobalLua, "chatGetClientList", TLuaInterpreter::chatGetClientList);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
@@ -5567,6 +5544,81 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getCollisionLocationsInArea", TLuaInterpreter::getCollisionLocationsInArea);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
+
+    // Create MMCP Chat Library
+    lua_newtable(pGlobalLua);
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chat);
+    lua_setfield(pGlobalLua, -2, "chat");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatAccept);
+    lua_setfield(pGlobalLua, -2, "chatAccept");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatAll);
+    lua_setfield(pGlobalLua, -2, "chatAll");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatAllowSnoop);
+    lua_setfield(pGlobalLua, -2, "chatAllowSnoop");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatCall);
+    lua_setfield(pGlobalLua, -2, "chatCall");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatDeny);
+    lua_setfield(pGlobalLua, -2, "chatDeny");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatDoNotDisturb);
+    lua_setfield(pGlobalLua, -2, "chatDoNotDisturb");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatEmoteAll);
+    lua_setfield(pGlobalLua, -2, "chatEmoteAll");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatGroup);
+    lua_setfield(pGlobalLua, -2, "chatGroup");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatIgnore);
+    lua_setfield(pGlobalLua, -2, "chatIgnore");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatList);
+    lua_setfield(pGlobalLua, -2, "chatList");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatName);
+    lua_setfield(pGlobalLua, -2, "chatName");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatPeek);
+    lua_setfield(pGlobalLua, -2, "chatPeek");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatPing);
+    lua_setfield(pGlobalLua, -2, "chatPing");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatPrivate);
+    lua_setfield(pGlobalLua, -2, "chatPrivate");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatServe);
+    lua_setfield(pGlobalLua, -2, "chatServe");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatSetGroup);
+    lua_setfield(pGlobalLua, -2, "chatSetGroup");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatSideChannel);
+    lua_setfield(pGlobalLua, -2, "chatSideChannel");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatSnoop);
+    lua_setfield(pGlobalLua, -2, "chatSnoop");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatStartServer);
+    lua_setfield(pGlobalLua, -2, "chatStartServer");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatStopServer);
+    lua_setfield(pGlobalLua, -2, "chatStopServer");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatUnChat);
+    lua_setfield(pGlobalLua, -2, "chatUnChat");
+
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatGetClientList);
+    lua_setfield(pGlobalLua, -2, "chatGetClientList");
+
+    lua_setglobal(pGlobalLua, "chat");
+
 
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
