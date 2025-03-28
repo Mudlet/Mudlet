@@ -563,8 +563,8 @@ end
 ---   </pre>
 function setGauge(gaugeName, currentValue, maxValue, gaugeText)
   assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-  assert(type(currentValue) == 'number', 'moveGauge: bad argument #2 type (expected number, got '..type(currentValue)..'!)')
-  assert(type(maxValue) == 'number', 'moveGauge: bad argument #3 type (expected number, got '..type(maxValue)..'!)')
+  assert(type(currentValue) == 'number', 'setGauge: bad argument #2 type (expected number, got '..type(currentValue)..'!)')
+  assert(type(maxValue) == 'number', 'setGauge: bad argument #3 type (expected number, got '..type(maxValue)..'!)')
   local value = currentValue / maxValue
   -- save new values in table
   gaugesTable[gaugeName].value = value
@@ -980,8 +980,8 @@ end
 --- <b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
 function resizeGauge(gaugeName, width, height)
   assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
-  assert(type(width) == 'number', 'moveGauge: bad argument #2 type (expected number, got '..type(width)..'!)')
-  assert(type(height) == 'number', 'moveGauge: bad argument #3 type (expected number, got '..type(height)..')')
+  assert(type(width) == 'number', 'resizeGauge: bad argument #2 type (expected number, got '..type(width)..'!)')
+  assert(type(height) == 'number', 'resizeGauge: bad argument #3 type (expected number, got '..type(height)..')')
   resizeWindow(gaugeName .. "_back", width, height)
   resizeWindow(gaugeName .. "_text", width, height)
   -- save new values in table
