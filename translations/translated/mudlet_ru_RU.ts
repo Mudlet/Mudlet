@@ -12451,7 +12451,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2200"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Скопировать карту в выбранные профили слева.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2232"/>
