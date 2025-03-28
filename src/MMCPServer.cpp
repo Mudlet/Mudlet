@@ -645,7 +645,13 @@ QPair<bool, QString> MMCPServer::serve(const QVariant& target)
 QPair<bool, QString> MMCPServer::startServer(quint16 port)
 {
     if (!listen(QHostAddress::Any, port)) {
-        const QString infoMsg = tr("[ CHAT ]  - Unable to start server: %1.").arg(errorString());
+        QString errorStr = errorString();
+        // The OS may return an unusefull error message (just a period)
+        // It's likey in that case that the port is already in use
+        if (errorStr.startsWith(".")) {
+            errorStr = qsl("Port already in use?");
+        }
+        const QString infoMsg = tr("[ CHAT ]  - Unable to start server: %1.").arg(errorStr);
         mpHost->postMessage(infoMsg);
         return {false, qsl("unable to start server")};
     }
