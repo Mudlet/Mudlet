@@ -11905,620 +11905,702 @@ try again when it has finished.</source>
       <translation>Symbolgröße in Symbolleisten:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="90"/>
+      <location filename="../src/ui/profile_preferences.ui" line="93"/>
       <source>Icon size in tree views:</source>
       <translation>Symbolgröße in Baumansichten:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="110"/>
+      <location filename="../src/ui/profile_preferences.ui" line="116"/>
       <source>Show menu bar:</source>
       <translation>Menüleiste anzeigen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="121"/>
-      <location filename="../src/ui/profile_preferences.ui" line="150"/>
+      <location filename="../src/ui/profile_preferences.ui" line="130"/>
+      <location filename="../src/ui/profile_preferences.ui" line="162"/>
       <source>Never</source>
       <translation>Niemals</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="126"/>
-      <location filename="../src/ui/profile_preferences.ui" line="155"/>
+      <location filename="../src/ui/profile_preferences.ui" line="135"/>
+      <location filename="../src/ui/profile_preferences.ui" line="167"/>
       <source>Until a profile is loaded</source>
       <translation>Bis ein Profil geladen wurde</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="131"/>
-      <location filename="../src/ui/profile_preferences.ui" line="160"/>
+      <location filename="../src/ui/profile_preferences.ui" line="140"/>
+      <location filename="../src/ui/profile_preferences.ui" line="172"/>
       <source>Always</source>
       <translation>Immer</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="139"/>
+      <location filename="../src/ui/profile_preferences.ui" line="148"/>
       <source>Show main toolbar</source>
       <translation>Funktionsleiste anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="296"/>
+      <location filename="../src/ui/profile_preferences.ui" line="342"/>
       <source>Allow server to install script packages</source>
       <translation>Erlaube Servern Skriptpakete zu installieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="290"/>
+      <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Game protocols</source>
       <translation>Spiel-Protokolle</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="331"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3905"/>
+      <location filename="../src/ui/profile_preferences.ui" line="329"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4025"/>
       <source>Please reconnect to your game for the change to take effect</source>
       <translation>Bitte neu mit dem Spiel verbinden, damit die Änderungen aktiv werden.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="347"/>
+      <location filename="../src/ui/profile_preferences.ui" line="362"/>
       <source>Log options</source>
       <translation>Optionen für die Protokollierung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="356"/>
+      <location filename="../src/ui/profile_preferences.ui" line="371"/>
       <source>Save log files in HTML format instead of plain text</source>
       <translation>Speichere Protokolldateien im HTML-Format anstelle von normalem Text</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="363"/>
+      <location filename="../src/ui/profile_preferences.ui" line="378"/>
       <source>Add timestamps at the beginning of log lines</source>
       <translation>Ergänze Zeitstempel zu Beginn der protokollierten Zeilen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="370"/>
+      <location filename="../src/ui/profile_preferences.ui" line="385"/>
       <source>Save log files in:</source>
       <translation>Protokolldateien speichern unter:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="387"/>
+      <location filename="../src/ui/profile_preferences.ui" line="402"/>
       <source>Browse...</source>
       <translation>Durchsuchen...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="394"/>
+      <location filename="../src/ui/profile_preferences.ui" line="409"/>
       <source>Reset</source>
       <translation>Zurücksetzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="401"/>
+      <location filename="../src/ui/profile_preferences.ui" line="416"/>
       <source>Log format:</source>
       <translation>Format des Protokolls:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="414"/>
+      <location filename="../src/ui/profile_preferences.ui" line="429"/>
       <source>Log name:</source>
       <translation>Name des Protokolls:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="434"/>
+      <location filename="../src/ui/profile_preferences.ui" line="449"/>
       <source>.txt</source>
       <translation>.txt</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="467"/>
+      <location filename="../src/ui/profile_preferences.ui" line="482"/>
       <source>Input line</source>
       <translation>Eingabezeile</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="476"/>
+      <location filename="../src/ui/profile_preferences.ui" line="491"/>
       <source>Input</source>
       <translation>Eingabe</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="517"/>
-      <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation>Benutze strenge UNIX-Zeilenenden bei Befehlen für alte UNIX-Server, die mit Windows-Zeilenenden nicht korrekt umgehen können</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="520"/>
+      <location filename="../src/ui/profile_preferences.ui" line="506"/>
       <source>Strict UNIX line endings</source>
       <translation>Strenge UNIX-Zeilenenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="491"/>
+      <location filename="../src/ui/profile_preferences.ui" line="535"/>
       <source>Show the text you sent</source>
       <translation>Zeige von dir gesendeten Text</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="546"/>
+      <location filename="../src/ui/profile_preferences.ui" line="519"/>
       <source>Auto clear the input line after you sent text</source>
       <translation>Leere die Eingabezeile nachdem du Text gesendet hast</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="201"/>
+      <location filename="../src/ui/profile_preferences.ui" line="213"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="353"/>
+      <location filename="../src/ui/profile_preferences.ui" line="368"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="562"/>
+      <location filename="../src/ui/profile_preferences.ui" line="503"/>
+      <source>&lt;p&gt;Use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="532"/>
+      <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>React to all keybindings on the same key</source>
       <translation>Reagiere auf alle Tasenkürzel derselben Taste</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="501"/>
+      <location filename="../src/ui/profile_preferences.ui" line="564"/>
+      <source>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="574"/>
       <source>Command separator:</source>
       <translation>Trennzeichen zwischen Befehlen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="569"/>
+      <location filename="../src/ui/profile_preferences.ui" line="597"/>
       <source>Command line minimum height in pixels:</source>
       <translation>Mindesthöhe der Befehlszeile in Pixel:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="712"/>
+      <location filename="../src/ui/profile_preferences.ui" line="724"/>
       <source>Main display</source>
       <translation>Hauptanzeige</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="724"/>
+      <location filename="../src/ui/profile_preferences.ui" line="736"/>
       <source>Font</source>
       <translation>Schriftart</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="730"/>
+      <location filename="../src/ui/profile_preferences.ui" line="742"/>
       <source>Font:</source>
       <translation>Schriftart:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="753"/>
+      <location filename="../src/ui/profile_preferences.ui" line="768"/>
       <source>Size:</source>
       <translation>Größe:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="791"/>
+      <location filename="../src/ui/profile_preferences.ui" line="806"/>
+      <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="809"/>
       <source>Enable anti-aliasing</source>
       <translation>Kantenglättung aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="807"/>
+      <location filename="../src/ui/profile_preferences.ui" line="825"/>
       <source>Display Border</source>
       <translation>Rand der Anzeige</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="828"/>
+      <location filename="../src/ui/profile_preferences.ui" line="843"/>
+      <location filename="../src/ui/profile_preferences.ui" line="862"/>
+      <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="846"/>
       <source>Top border height:</source>
       <translation>Höhe des Randes oben:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="872"/>
+      <location filename="../src/ui/profile_preferences.ui" line="890"/>
+      <location filename="../src/ui/profile_preferences.ui" line="909"/>
+      <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="893"/>
       <source>Left border width:</source>
       <translation>Breite des Randes links:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="916"/>
+      <location filename="../src/ui/profile_preferences.ui" line="937"/>
+      <location filename="../src/ui/profile_preferences.ui" line="956"/>
+      <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="940"/>
       <source>Bottom border height:</source>
       <translation>Höhe des Randes unten:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="960"/>
+      <location filename="../src/ui/profile_preferences.ui" line="984"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1003"/>
+      <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="987"/>
       <source>Right border width:</source>
       <translation>Breite des Randes rechts:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1001"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1031"/>
       <source>Word wrapping</source>
       <translation>Zeilenumbruch</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1025"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1055"/>
       <source>Wrap lines at:</source>
       <translation>Zeilenumbruch bei:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1045"/>
-      <location filename="../src/ui/profile_preferences.ui" line="1093"/>
-      <location filename="../src/ui/profile_preferences.ui" line="1144"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1078"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1132"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1189"/>
       <source>characters</source>
       <translation>Zeichen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1073"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1109"/>
       <source>Indent wrapped lines by:</source>
       <translation>Einzug bei umgebruchenen Zeilen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1157"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1163"/>
+      <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="1205"/>
       <source>Double-click</source>
       <translation>Doppelklick</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1163"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1211"/>
       <source>Stop selecting a word on these characters:</source>
       <translation>Stoppe die Auswahl eines Wortes bei diesen Zeichen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1173"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>&apos;&quot;</source>
       <translation>&apos;&quot;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1186"/>
-      <location filename="../src/ui/profile_preferences.ui" line="1378"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1237"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1432"/>
       <source>Display options</source>
       <translation>Darstellungsoptionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1195"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1246"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
       <translation>Behebe unnötige Zeilenbrüche auf GA-Servern</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1387"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1441"/>
       <source>Show Spaces/Tabs</source>
       <translation>Zeige Leerzeichen/Tabs</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1397"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1451"/>
       <source>Show Line/Paragraphs</source>
       <translation>Zeige Zeilen/Absätze</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1222"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1273"/>
       <source>Echo Lua errors to the main console</source>
       <translation>Zeige Lua Fehler in der Hauptanzeige</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1209"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1260"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
       <translation>Verbreitere &apos;mehrdeutige&apos; ostasiatische Zeichen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1278"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1332"/>
       <source>Editor</source>
       <translation>Editor</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1284"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1338"/>
       <source>Theme</source>
       <translation>Design</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1352"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1406"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1441"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1458"/>
+      <source>&lt;p&gt;Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="1495"/>
       <source>Color view</source>
       <translation>Farbansicht</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1447"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1501"/>
       <source>Select your color preferences</source>
       <translation>Wähle deine Farb-Einstellungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1453"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1507"/>
       <source>Foreground:</source>
       <translation>Vordergrund:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1476"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1533"/>
       <source>Background:</source>
       <translation>Hintergrund:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1496"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1556"/>
       <source>Command line foreground:</source>
       <translation>Vordergrund der Befehlszeile:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1513"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1576"/>
       <source>Command line background:</source>
       <translation>Hintergrund der Befehlszeile:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1530"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1596"/>
       <source>Command foreground:</source>
       <translation>Vordergrund des Befehls:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1550"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1619"/>
       <source>Command background:</source>
       <translation>Hintergrund des Befehls:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="171"/>
+      <location filename="../src/ui/profile_preferences.ui" line="183"/>
       <source>Language &amp;&amp; data encoding</source>
       <translation>Sprache &amp;&amp; Datenkodierung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="177"/>
+      <location filename="../src/ui/profile_preferences.ui" line="189"/>
       <source>Interface language:</source>
       <translation>Sprache der Benutzeroberfläche:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="191"/>
+      <location filename="../src/ui/profile_preferences.ui" line="203"/>
       <source>Server data encoding:</source>
       <translation>Server-Daten-Kodierung:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="213"/>
+      <location filename="../src/ui/profile_preferences.ui" line="225"/>
       <source>Please restart Mudlet to apply the new language</source>
       <translation>Bitte Mudlet neu starten, um die neue Sprache anzuwenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="223"/>
+      <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>Miscellaneous</source>
       <translation>Sonstiges</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="488"/>
-      <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zeigt den Text, den du sendest, in der Anzeigebox an.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Dies kann vom Spielserver deaktiviert werden, wenn er die Telnet-ECHO-Option verwendet.&lt;/i&gt;&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="559"/>
+      <location filename="../src/ui/profile_preferences.ui" line="548"/>
       <source>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="617"/>
+      <location filename="../src/ui/profile_preferences.ui" line="629"/>
       <source>Spell checking</source>
       <translation>Rechtschreibprüfung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="636"/>
+      <location filename="../src/ui/profile_preferences.ui" line="635"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Diese Option steuert die Rechtschreibprüfung der Befehlszeile in der Hauptkonsole für dieses Profil.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="639"/>
+      <location filename="../src/ui/profile_preferences.ui" line="638"/>
       <source>System/Mudlet dictionary:</source>
       <translation>System-/Mudlet -Wörterbuch:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="669"/>
+      <location filename="../src/ui/profile_preferences.ui" line="668"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Benutzerwörterbuch wird spezifisch für dieses Profil genutzt. Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="672"/>
+      <location filename="../src/ui/profile_preferences.ui" line="671"/>
       <source>Profile</source>
       <translation>Profil</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="646"/>
+      <location filename="../src/ui/profile_preferences.ui" line="678"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Benutzerwörterbuch wird von allen Profilen gemeinsam genutzt (wenn sie diese Option ausgewählt haben). Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="649"/>
+      <location filename="../src/ui/profile_preferences.ui" line="681"/>
       <source>Shared</source>
       <translation>Gemeinsam genutzt</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="768"/>
+      <location filename="../src/ui/profile_preferences.ui" line="786"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
       <translation>Die ausgewählte Schriftart funktioniert nicht mit Mudlet, bitte wähle eine andere</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="825"/>
-      <location filename="../src/ui/profile_preferences.ui" line="841"/>
-      <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text oben - kann negativ gesetzt werden, um Text oben vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="869"/>
-      <location filename="../src/ui/profile_preferences.ui" line="885"/>
-      <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text links - kann negativ gesetzt werden, um Text links vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="913"/>
-      <location filename="../src/ui/profile_preferences.ui" line="929"/>
-      <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text unten - kann negativ gesetzt werden, um Text unten vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="957"/>
-      <location filename="../src/ui/profile_preferences.ui" line="973"/>
-      <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text rechts - kann negativ gesetzt werden, um Text rechts vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1170"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1221"/>
       <source>&lt;p&gt;Enter the characters you&apos;d like double-clicking to stop selecting text on here. If you don&apos;t enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on &apos; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1176"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1227"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
       <translation>(Zeichen, die in der Auswahl ignoriert werden, bspw. &apos; oder &quot;)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1192"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1243"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Einige Spiele (besonders alle IRE MUDs) leiden unter einem Fehler, wobei sie mit dem Client nicht richtig kommunizieren, wo eine Zeile umbrechen sollte. Aktiviere diese Einstellung, damit Text nicht immer an die vorherige Promptzeile angehängt wird.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1384"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1438"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
       <translation>&lt;body&gt;&lt;p&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Tabulatoren und Leerzeichen sichtbar markiert.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1394"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1448"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
       <translation>&lt;body&gt;&lt;p&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Enden von Zeilen und Absätzen sichtbar markiert.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1219"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1270"/>
       <source>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Zeigt Lua-Fehler auch im Hauptfenster, nicht nur im Fehlerregister des Editors.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1202"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1253"/>
       <source>Enable text analyzer</source>
       <translation>Textanalyse aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2034"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2154"/>
       <source>Delete map:</source>
       <translation>Karte löschen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2216"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2339"/>
       <source>Use large area exit arrows in 2D view</source>
       <translation>Zeige große Pfeile für Ausgänge in ein anderes Gebiet</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2467"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2590"/>
       <source>Map info background:</source>
       <translation>Hintergrund der Karteninfos:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2981"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3104"/>
       <source>Server password: </source>
       <translation>Server-Passwort: </translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3001"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3124"/>
       <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
       <translation>&lt;p&gt;TLS/SSL ist normalerweise auf Port 6697. IRC-Netzwerke verwenden oft &lt;b&gt;+&lt;/b&gt;, um die angebotenen sicheren Ports aufzulisten.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3004"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3127"/>
       <source>Use a secure connection</source>
       <translation>Sichere Verbindung verwenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3534"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3657"/>
       <source>Allow secure connection reminder</source>
       <translation>Erinnerung an sichere Verbindung erlauben</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3531"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3654"/>
       <source>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3641"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2187"/>
+      <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2200"/>
+      <source>&lt;p&gt;Copy map into the selected profiles on the left.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2232"/>
+      <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2271"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2284"/>
+      <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2313"/>
+      <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2326"/>
+      <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3209"/>
+      <source>&lt;p&gt;Allow Lua to set Discord status.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3715"/>
+      <source>&lt;p&gt;Username for logging into the proxy if required.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3731"/>
+      <source>&lt;p&gt;Password for logging into the proxy if required.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3764"/>
       <source>Shortcuts</source>
       <translation>Tastaturkürzel</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3656"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3779"/>
       <source>Main window shortcuts</source>
       <translation>Tastaturkürzel für das Hauptfenster</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3668"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3791"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
       <translation>&apos;Esc&apos; eingeben, um das Tastaturkürzel zu deaktivieren.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3687"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3810"/>
       <source>Reset to defaults</source>
       <translation>Auf den Standard zurücksetzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3736"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3846"/>
+      <source>&lt;p&gt;On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3856"/>
       <source>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3887"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3926"/>
+      <source>&lt;p&gt;Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3975"/>
+      <source>&lt;p&gt;This option adds a line line break &lt;LF&gt; or &quot;
+&quot; to your command input on empty commands. This option will rarely be necessary.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="4007"/>
       <source>Force NEW_ENVIRON negotiation off</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3921"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4041"/>
       <source>Clear stored media</source>
       <translation>Gespeicherte Medien löschen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3927"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3940"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4047"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4060"/>
       <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3930"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4050"/>
       <source>Purge stored media files for the current profile:</source>
       <translation>Gespeicherte Mediendateien für das aktuelle Profil löschen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3943"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4063"/>
       <source>Clear</source>
       <translation>Löschen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4107"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4123"/>
+      <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="4227"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
       <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1362"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1416"/>
       <source>Autocomplete</source>
       <translation>Autovervollständigung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="232"/>
+      <location filename="../src/ui/profile_preferences.ui" line="295"/>
       <source>Notify on new data</source>
       <translation>Benachrichtigung bei neuen Daten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="229"/>
+      <location filename="../src/ui/profile_preferences.ui" line="292"/>
       <source>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Zeigt eine Benachrichtigung in der Symbolleiste an, wenn Mudlet minimiert ist und neue Daten eintreffen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="280"/>
+      <location filename="../src/ui/profile_preferences.ui" line="285"/>
       <source>Auto save on exit</source>
       <translation>Automatisch speichern beim Beenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="313"/>
+      <location filename="../src/ui/profile_preferences.ui" line="352"/>
       <source>Allow server to download and play media</source>
       <translation>Erlaube Servern das Herunterladen und Abspielen von Medien</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="262"/>
+      <location filename="../src/ui/profile_preferences.ui" line="252"/>
       <source>System setting</source>
       <translation>System-Einstellung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="267"/>
+      <location filename="../src/ui/profile_preferences.ui" line="257"/>
       <source>Light</source>
       <translation>Hell</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="272"/>
+      <location filename="../src/ui/profile_preferences.ui" line="262"/>
       <source>Dark</source>
       <translation>Dunkel</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="254"/>
+      <location filename="../src/ui/profile_preferences.ui" line="241"/>
       <source>Appearance</source>
       <translation>Erscheinungsbild</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="244"/>
+      <location filename="../src/ui/profile_preferences.ui" line="275"/>
       <source>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</source>
       <translation>Das dunkle Design auch im &lt;a href=&quot;dark-code-editor&quot;&gt;Code-Editor&lt;/a&gt; einstellen?</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="601"/>
-      <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation>Hebt den Text deiner Eingabezeile hervor während du durch den Verlauf scrollst, um leichter abzubrechen</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="604"/>
+      <location filename="../src/ui/profile_preferences.ui" line="567"/>
       <source>Highlight history</source>
       <translation>Verlauf hervorheben</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="780"/>
+      <location filename="../src/ui/profile_preferences.ui" line="798"/>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
@@ -12526,1008 +12608,925 @@ you can use it but there could be issues with aligning columns of text</source>
 Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textspalten geben</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="788"/>
-      <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation>Glätte Kanten der Schriften. Ergibt glattere Schriften, wenn du eine hohe Bildschirmauflösung und größere Schriften benutzt. Beachte, dass die Schrift bei kleinen Auflösungen verschwommen wird. </translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1121"/>
-      <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount&lt;/p&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1124"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1166"/>
       <source>Indent hanging wrapped lines by:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1229"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1280"/>
       <source>Display control characters as:</source>
       <translation>Steuerzeichen anzeigen als:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1243"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1297"/>
       <source>nothing</source>
       <translation>gar nicht</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1248"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1302"/>
       <source>Unicode Control Pictures</source>
       <translation>Unicode-Kontrollbilder</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1253"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1307"/>
       <source>CP437 (OEM Font)- like</source>
       <translation>CP437-ähnlich (OEM-Schriftart)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1368"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1422"/>
       <source>Autocomplete Lua functions in code editor</source>
       <translation>Vervollständige automatisch die Lua-Funktionen im Code-Editor</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1404"/>
-      <source>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</source>
-      <translation>Zeigt bidirektionale Unicode-Zeichen an, die verwendet werden können, um die Bedeutung von Quellcode zu ändern, dabei aber für das Auge unsichtbar bleiben</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1407"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1461"/>
       <source>Show invisible Unicode control characters</source>
       <translation>Unsichtbare Unicode-Steuerzeichen anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1414"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1468"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1417"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1471"/>
       <source>Show Items&apos; ID number</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1460"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1517"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1483"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1543"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1503"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1566"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1520"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1586"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1537"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1606"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Vordergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1557"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1629"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Hintergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1583"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1655"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
       <translation>Diese Einstellungen legen fest, wie bestimmte Farben in der Hauptanzeige visuell dargestellt werden sollen:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1593"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2551"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1665"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2674"/>
       <source>Black:</source>
       <translation>Schwarz:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1600"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1675"/>
       <source>ANSI Color Number 0</source>
       <translation>ANSI-Farbe Nummer 0</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1613"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2571"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1688"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2694"/>
       <source>Light black:</source>
       <translation>Helles Schwarz:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1620"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1698"/>
       <source>ANSI Color Number 8</source>
       <translation>ANSI-Farbe Nummer 8</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1633"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2591"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1711"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2714"/>
       <source>Red:</source>
       <translation>Rot:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1640"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1721"/>
       <source>ANSI Color Number 1</source>
       <translation>ANSI-Farbe Nummer 1</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1653"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2611"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1734"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2734"/>
       <source>Light red:</source>
       <translation>Helles Rot:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1660"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1744"/>
       <source>ANSI Color Number 9</source>
       <translation>ANSI-Farbe Nummer 9</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1673"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2631"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1757"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2754"/>
       <source>Green:</source>
       <translation>Grün:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1680"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1767"/>
       <source>ANSI Color Number 2</source>
       <translation>ANSI-Farbe Nummer 2</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1693"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2651"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1780"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2774"/>
       <source>Light green:</source>
       <translation>Helles Grün:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1700"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1790"/>
       <source>ANSI Color Number 10</source>
       <translation>ANSI-Farbe Nummer 10</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1713"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2671"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1803"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2794"/>
       <source>Yellow:</source>
       <translation>Gelb:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1720"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1813"/>
       <source>ANSI Color Number 3</source>
       <translation>ANSI-Farbe Nummer 3</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1733"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2691"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1826"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2814"/>
       <source>Light yellow:</source>
       <translation>Helles Gelb:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1740"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1836"/>
       <source>ANSI Color Number 11</source>
       <translation>ANSI-Farbe Nummer 11</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1753"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2711"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1849"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2834"/>
       <source>Blue:</source>
       <translation>Blau:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1760"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>ANSI Color Number 4</source>
       <translation>ANSI-Farbe Nummer 4</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1773"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2731"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1872"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2854"/>
       <source>Light blue:</source>
       <translation>Helles Blau:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1780"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1882"/>
       <source>ANSI Color Number 12</source>
       <translation>ANSI-Farbe Nummer 12</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1793"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2751"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1895"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2874"/>
       <source>Magenta:</source>
       <translation>Magenta:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1800"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1905"/>
       <source>ANSI Color Number 5</source>
       <translation>ANSI-Farbe Nummer 5</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1813"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2771"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1918"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2894"/>
       <source>Light magenta:</source>
       <translation>Helles Magenta:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1820"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1928"/>
       <source>ANSI Color Number 13</source>
       <translation>ANSI-Farbe Nummer 13</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1833"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2791"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1941"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2914"/>
       <source>Cyan:</source>
       <translation>Türkis:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1840"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1951"/>
       <source>ANSI Color Number 6</source>
       <translation>ANSI-Farbe Nummer 6</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1853"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2811"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1964"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2934"/>
       <source>Light cyan:</source>
       <translation>Helles Türkis:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1860"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1974"/>
       <source>ANSI Color Number 14</source>
       <translation>ANSI-Farbe Nummer 14</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1873"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2831"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1987"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2954"/>
       <source>White:</source>
       <translation>Weiß:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1880"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1997"/>
       <source>ANSI Color Number 7</source>
       <translation>ANSI-Farbe Nummer 7</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1893"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2851"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2010"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2974"/>
       <source>Light white:</source>
       <translation>Helles Weiß:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1900"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2020"/>
       <source>ANSI Color Number 15</source>
       <translation>ANSI-Farbe Nummer 15</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1923"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2871"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2043"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2994"/>
       <source>Reset all colors to default</source>
       <translation>Alle Farben auf den Standard zurücksetzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1913"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2033"/>
       <source>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos; to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1916"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2036"/>
       <source>Server allowed to redefine these colors</source>
       <translation>Der Server darf diese Farben neu definieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1947"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2067"/>
       <source>Mapper</source>
       <translation>Mapper</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1953"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2073"/>
       <source>Map files</source>
       <translation>Kartendateien</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1959"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2079"/>
       <source>Save your current map:</source>
       <translation>Speichere deine aktuelle Karte:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1986"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2106"/>
       <source>Load another map file in:</source>
       <translation>Lade eine andere Kartendatei:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1976"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2096"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet führt nun Prüfungen und Reparaturen durch, um Probleme mit vorherigen Versionen zu beseitigen, die auf fehlerhaften Code oder schlecht dokumentierten Befehlen zurückgehen. Sollten schwerwiegende Probleme auftauchen, kann der Bericht sehr umfangreich ausfallen, besonders bei sehr großen Karten.&lt;/p&gt;&lt;p&gt;Solange diese Funktion deaktiviert ist, wird Mudlet die Anzahl der Meldungen überschaubar halten und weniger Texte auf dem Bildschirm ausgegeben, sondern auf die Datei mit dem vollständigen Bericht verwiesen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="303"/>
+      <location filename="../src/ui/profile_preferences.ui" line="311"/>
       <source>Choose protocols</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="310"/>
+      <location filename="../src/ui/profile_preferences.ui" line="349"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1979"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2099"/>
       <source>report map issues on screen</source>
       <translation>Kartenprobleme auf dem Bildschirm berichten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1996"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2116"/>
       <source>choose map...</source>
       <translation>Karte wählen...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2003"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2123"/>
       <source>Or load an older version:</source>
       <translation>Oder eine ältere Version laden:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2020"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2140"/>
       <source>◀ load this map</source>
       <translation>◀️ Diese Karte laden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2044"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2167"/>
       <source>delete</source>
       <comment>Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox</comment>
       <translation>Löschen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2067"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2190"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
       <translation>Ziel wählen...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2109"/>
-      <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ändere dies auf eine kleinere Version, wenn du deine Karte in einem Format speichern möchtest, die von älteren Mudlet Versionen gelesen werden kann. Dadurch werden zusätzliche Daten aus dem aktuellen Kartenformat verloren gehen&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2151"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2274"/>
       <source>Download latest map provided by your game:</source>
       <translation>Lade die neueste Karte herunter, die dein Spiel bereitstellt:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2180"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2303"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Dies ermöglicht Kantenglättung (Anti-Aliasing) der 2D-Kartenansicht, die so glatter und schöner aussieht. Deaktiviere dies auf sehr langsamen Computern.&lt;/p&gt;&lt;p&gt;Die 3D-Kartenansicht hat immer Kantenglättung aktiviert.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2190"/>
-      <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Standard-Gebiet (Gebiets-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese ins richtige Gebiet platziert werden&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2265"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2388"/>
       <source>2D map player room marker style:</source>
       <translation>Stil der Markierung des Spielerraums auf der 2D-Karte:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2275"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2398"/>
       <source>Outer ring color</source>
       <translation>Farbe des Außenrings</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2285"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2408"/>
       <source>Inner ring color</source>
       <translation>Farbe des Innenrings</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2299"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2422"/>
       <source>Original</source>
       <translation>Original</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2304"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2427"/>
       <source>Red ring</source>
       <translation>Roter Ring</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2309"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2432"/>
       <source>Blue/Yellow ring</source>
       <translation>Blauer/Gelber Ring</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2314"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2437"/>
       <source>Custom ring</source>
       <translation>Benutzerdefinierter Ring</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2322"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2445"/>
       <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Prozentuales Verhältnis (&lt;i&gt;der Standardwert ist 120%&lt;/i&gt;) des markierenden Symbols zum verfügbaren Platz des Raumes.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2328"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2356"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2451"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2479"/>
       <source>%</source>
       <translation>%</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2331"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2454"/>
       <source>Outer diameter: </source>
       <translation>Äußerer Durchmesser: </translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2350"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2473"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Prozentuales Verhältnis des Innendurchmessers des markierenden Symbols zum äußeren Durchmesser (&lt;i&gt;der Standardwert ist 70%&lt;/i&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2359"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2482"/>
       <source>Inner diameter: </source>
       <translation>Innerer Durchmesser: </translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2203"/>
-      <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Dies zeigt Ränder am Raum. Die Farbe kann unter Mapper-Farben eingestellt werden&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2206"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2329"/>
       <source>Show room borders</source>
       <translation>Raumränder anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2447"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2570"/>
       <source>Room border color:</source>
       <translation>Farbe der Raumränder:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2895"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3018"/>
       <source>Chat</source>
       <translation>Chat</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3592"/>
-      <source>Username for logging into the proxy if required</source>
-      <translation>Benutzername für die Anmeldung am Proxy, falls nötig</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3608"/>
-      <source>Password for logging into the proxy if required</source>
-      <translation>Passwort für die Anmeldung am Proxy, falls nötig</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3842"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3962"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
       <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3880"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4000"/>
       <source>Force CHARSET negotiation off</source>
       <translation>CHARSET Verhandlungen ausschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4024"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4144"/>
       <source>the computer&apos;s password manager (secure)</source>
       <translation>im Kennwort-Manager des Computers (sicher)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4029"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4149"/>
       <source>plaintext with the profile (portable)</source>
       <translation>als Klartext mit dem Profil (protabel)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4117"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4237"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4003"/>
-      <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4006"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4126"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
       <translation>Erwarte Farbraum-ID in SGR... (3|4)8;2;... m-Codes</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4013"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4133"/>
       <source>Store character login passwords in:</source>
       <translation>Kennwörter für Charakteranmeldung speichern in:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3198"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3321"/>
       <source>TLS/SSL secure connection</source>
       <translation>Sichere TLS/SSL-Verbindung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3299"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3422"/>
       <source>Accept self-signed certificates</source>
       <translation>Akzeptiere selbstsignierte Zertifikate</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3309"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3432"/>
       <source>Accept expired certificates</source>
       <translation>Akzeptiere abgelaufene Zertifikate</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3216"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3339"/>
       <source>Certificate</source>
       <translation>Zertifikat</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3276"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3399"/>
       <source>Serial:</source>
       <translation>Seriennummer:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3225"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3348"/>
       <source>Issuer:</source>
       <translation>Aussteller:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3242"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3365"/>
       <source>Issued to:</source>
       <translation>Ausgestellt für:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3259"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3382"/>
       <source>Expires:</source>
       <translation>Läuft ab:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3319"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3442"/>
       <source>Accept all certificate errors       (unsecure)</source>
       <translation>Akzeptiere alle Zertifikatsfehler (unsicher)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2051"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2174"/>
       <source>Copy map to other profile(s):</source>
       <translation>Kopiere Karte an andere(s) Profil(e):</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2132"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2255"/>
       <source>An action above happened</source>
       <translation>Eine Aktion geschah oben.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2087"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2210"/>
       <source>Map format version:</source>
       <translation>Version des Kartenformats:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2115"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2119"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2238"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2242"/>
       <source># {default version}</source>
       <translation># {Standard-Version}</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2142"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2265"/>
       <source>Map download</source>
       <translation>Karte herunterladen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2164"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2287"/>
       <source>Download</source>
       <translation>Herunterladen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2174"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2297"/>
       <source>Map view</source>
       <translation>Kartenansicht</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2226"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2349"/>
       <source>2D Map Room Symbol Font</source>
       <translation>2D-Karte-Raum-Symbol-Schriftart</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2183"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2306"/>
       <source>Use high quality graphics in 2D view</source>
       <translation>Verwende hochwertige Grafiken in der 2D-Ansicht</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="184"/>
+      <location filename="../src/ui/profile_preferences.ui" line="196"/>
       <source>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Kannst du helfen, Mudlet zu übersetzen?&lt;/p&gt;&lt;p&gt;Falls ja, besuche bitte: &lt;b&gt;https://https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="533"/>
+      <location filename="../src/ui/profile_preferences.ui" line="590"/>
       <source>Text to separate commands or blank to disable</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="662"/>
+      <location filename="../src/ui/profile_preferences.ui" line="661"/>
       <source>User dictionary: </source>
       <translation>Benutzerwörterbuch: </translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1969"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2089"/>
       <source>choose location...</source>
       <translation>Position auswählen...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2064"/>
-      <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die Profile aus, in die die Karte kopiert werden soll, und drücke dann rechts auf Kopieren&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2077"/>
-      <source>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Karte in die links ausgewählten Profile kopieren&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2148"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2161"/>
-      <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;</source>
-      <translation>&lt;p&gt;In Spielen, die Karten zum Download anbieten, kannst du diese Taste drücken, um die neueste Karte zu erhalten. Beachte, dass dies deine bisherigen Änderungen &lt;span style=&quot; font-weight:600;&quot;&gt;überschreiben&lt;/span&gt; wird, und nur noch die neue Karte verwendet&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2193"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2316"/>
       <source>Show the default area in map area selection</source>
       <translation>Das Standard-Gebiet in der Auswahl der Kartengebiete anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2236"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2359"/>
       <source>Only use symbols (glyphs) from chosen font</source>
       <translation>Verwende nur Symbole (Glyphen) aus der gewählten Schriftart</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2243"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2366"/>
       <source>Show symbol usage...</source>
       <translation>Zeige Verwendung der Symbole...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2392"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2515"/>
       <source>Mapper colors</source>
       <translation>Farben des Mappers</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2398"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2521"/>
       <source>Select your color preferences for the map display</source>
       <translation>Wähle deine Farbeinstellungen für die Kartenanzeige</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2404"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2527"/>
       <source>Link color</source>
       <translation>Farbe der Verbindungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2427"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2550"/>
       <source>Background color:</source>
       <translation>Hintergrundfarbe:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2484"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2607"/>
       <source>Lower level color:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2504"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2627"/>
       <source>Upper level color:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2524"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2647"/>
       <source>Overlapping rooms border:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3806"/>
-      <source>Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3809"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3929"/>
       <source>Enable F3 search shortcuts</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3836"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3956"/>
       <source>Special Options</source>
       <translation>Spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3848"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3968"/>
       <source>Force compression off</source>
       <translation>Komprimierung zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3866"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3986"/>
       <source>Force telnet GA signal interpretation off</source>
       <translation>Telnet GA Signalinterpretation zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3855"/>
-      <source>This option adds a line line break &lt;LF&gt; or &quot;
-&quot; to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation>Diese Option ergänzt einen Zeilenumbruch &lt;LF&gt; oder &quot;
-&quot; zu deiner Befehlszeile bei leeren Befehlen. Diese Option wird nur selten notwendig sein.</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3859"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3979"/>
       <source>Force new line on empty commands</source>
       <translation>Neue Zeile bei leeren Befehlen ergänzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3873"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3993"/>
       <source>Force MXP negotiation off</source>
       <translation>MXP Verhandlungen ausschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3014"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3137"/>
       <source>Discord privacy</source>
       <translation>Discord Privatsphäre</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3047"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3170"/>
       <source>Don&apos;t hide small icon or tooltip</source>
       <translation>Tooltipp und kleines Symbol einblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3052"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3175"/>
       <source>Hide small icon tooltip</source>
       <translation>Tooltip am kleinen Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3057"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3180"/>
       <source>Hide small icon and tooltip</source>
       <translation>Tooltipp und kleines Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3079"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3202"/>
       <source>Hide timer</source>
       <translation>Timer ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3102"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3118"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3134"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3150"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3225"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3241"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3257"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3273"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet wird Informationen zur Rich Presence nur zeigen, während du diesen Discord Benutzernamen benutzt (hilfreich, falls du mehrere Discord Konten hast). Leer lassen, um sie für jedes eingeloggtes Discord Konto anzuzeigen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3108"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3231"/>
       <source>Restrict to:</source>
       <translation>Beschränken auf:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3021"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3144"/>
       <source>Don&apos;t hide large icon or tooltip</source>
       <translation>Tooltipp und großes Symbol einblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3026"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3149"/>
       <source>Hide large icon tooltip</source>
       <translation>Tooltip am großen Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3031"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3154"/>
       <source>Hide large icon and tooltip</source>
       <translation>Tooltipp und großes Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3086"/>
-      <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Erlaube Lua, den Status des Discord zu setzen&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3089"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3212"/>
       <source>Enable Lua API</source>
       <translation>Lua API aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3124"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3247"/>
       <source>specific Discord username</source>
       <translation>bestimmter Discord-Benutzername</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3065"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3188"/>
       <source>Hide state</source>
       <translation>Zustand ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3072"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3195"/>
       <source>Hide party details</source>
       <translation>Gruppendetails ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3039"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3162"/>
       <source>Hide detail</source>
       <translation>Detail ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2901"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3024"/>
       <source>IRC client options</source>
       <translation>IRC-Client-Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2920"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3043"/>
       <source>irc.example.net</source>
       <translation>irc.beispiel.net</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2927"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3050"/>
       <source>Port:</source>
       <translation>Port:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2974"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3097"/>
       <source>#channel1 #channel2 #etc...</source>
       <translation>#kanal1 #kanal2 #usw...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2957"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3080"/>
       <source>MudletUser123</source>
       <translation>MudletNutzer123</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2907"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3030"/>
       <source>Server address:</source>
       <translation>Server-Adresse:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2964"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3087"/>
       <source>Auto-join channels: </source>
       <translation>Automatisch betretene Kanäle: </translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2947"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3070"/>
       <source>Nickname:</source>
       <translation>Spitzname:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2940"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3063"/>
       <source>6667</source>
       <translation>6667</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3969"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4089"/>
       <source>Search Engine</source>
       <translation>Suchmaschine</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3953"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4073"/>
       <source>Mudlet updates</source>
       <translation>Mudlet Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3959"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4079"/>
       <source>Disable automatic updates</source>
       <translation>Deaktiviere automatische Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3981"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4101"/>
       <source>Other Special options</source>
       <translation>Andere spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3987"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4107"/>
       <source>Show icons on menus</source>
       <translation>Symbole in Menüs anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3192"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3315"/>
       <source>Connection</source>
       <translation>Verbindung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3547"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3670"/>
       <source>Connect to the game via proxy</source>
       <translation>Mit dem Spiel über Proxy verbinden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3562"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3685"/>
       <source>Address</source>
       <translation>Adresse</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3582"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3705"/>
       <source>port</source>
       <translation>port</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3598"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3721"/>
       <source>username (optional)</source>
       <translation>Benutzername (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2994"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3614"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3117"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3737"/>
       <source>password (optional)</source>
       <translation>Passwort (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4073"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4193"/>
       <source>Show debug messages for timers not smaller than:</source>
       <translation>Debug-Meldungen für Timer anzeigen, die nicht kleiner sind als:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4070"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4190"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
       <translation>&lt;p&gt;Zeige &apos;LUA OK&apos;-Meldungen für Timer mit dem angegebenen Mindestintervall (h:mm:ss.zzz). Der Minimalwert (die Voreinstellung) zeigt alle derartigen Meldungen an, kann aber die &lt;i&gt;Zentrale Debug-Konsole&lt;/i&gt; nutzlos machen, wenn ein Timer mit sehr kleinem Intervall läuft.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4120"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4240"/>
       <source>Report all Codepoint problems immediately</source>
       <translation>Alle Codepoint-Probleme sofort melden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4127"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4247"/>
       <source>Additional text wait time:</source>
       <translation>Zusätzliche Wartezeit auf den Text:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4137"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4257"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) und &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalisieren Mudlet, wann der Spielserver mit dem Senden von Text fertig ist. Bei Spielen, die weder &lt;tt&gt;GA&lt;/tt&gt; noch &lt;tt&gt;EOR&lt;/tt&gt;anbieten, steuert diese Option, wie lange Mudlet auf weiteren Text warten soll. Größere Werte verringern das Risiko, dass Mudlet einen großen Textabschnitt aufteilt (mit unbeabsichtigten Zeilenumbrüchen in der Mitte), was dazu führen kann, dass einige Trigger nicht funktionieren. Kleinere Werte erhöhen das Risiko, dass der Text unterbrochen wird, können aber dazu führen, dass das Spiel gefühlt schneller reagiert.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Der Standardwert, den Mudlet verwendet hat, bevor dieses Steuerelement hinzugefügt wurde, ist 0,3 Sekunden.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4140"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4260"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
       <translation> Sekunden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3711"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3717"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3834"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3840"/>
       <source>Accessibility</source>
       <translation>Barrierefreiheit</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3723"/>
-      <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation>Auf einigen Plattformen, wie z. B. macOS, hat das Screenreader-Tool Probleme damit, eingehenden Text vollständig und ohne Überspringen anzusagen. Mit dieser Option kannst du die Ansage von neuem Text im Spiel deaktivieren und stattdessen ein benutzerdefiniertes TTS verwenden, das solche Probleme vermeidet</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3726"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3849"/>
       <source>Announce incoming text in screen reader</source>
       <translation>Eingehenden Text im Screenreader ansagen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3754"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3874"/>
       <source>show them</source>
       <translation>Anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3759"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3879"/>
       <source>hide them</source>
       <translation>Ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3764"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3884"/>
       <source>replace with a space</source>
       <translation>Durch ein Leerzeichen ersetzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3743"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3863"/>
       <source>When the game sends blank lines:</source>
       <translation>Wenn das Spiel leere Zeilen sendet:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3772"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3892"/>
       <source>Switch between input line and main window using:</source>
       <translation>Wechsle zwischen Eingabezeile und Hauptfenster mit:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3783"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3903"/>
       <source>no key</source>
       <translation>Keiner Taste</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3788"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3908"/>
       <source>Tab</source>
       <translation>Tabulatortaste</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3793"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3913"/>
       <source>Ctrl+Tab</source>
       <translation>Strg + Tabulatortaste</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3798"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3918"/>
       <source>F6</source>
       <translation>F6-Taste</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="4210"/>
+      <location filename="../src/ui/profile_preferences.ui" line="4330"/>
       <source>Save</source>
       <translation>Speichern</translation>
     </message>
