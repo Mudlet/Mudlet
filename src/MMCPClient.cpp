@@ -754,8 +754,7 @@ void MMCPClient::handleIncomingSnoop()
 }
 
 /**
- * Handle someone's incoming snoop data.
- * Skip over the color data they sent as we'll be using our own
+ * Handle remote client incoming snoop data.
  */
 void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 {
@@ -763,8 +762,14 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     const char* inEnd = inScan + len;
     std::stringstream ss;
 
-    //Skip over fore and back colors
-    inScan += 4;
+    // If the remote client has prepended color information,
+    // skip over it as we'll be using our own.
+    // MudMaster seems to do this, other clients (TT++) may not
+    if (*inScan == '\27') {
+        while (*inScan != 'm') {
+            inScan++;
+        }
+    }
 
     for (; inScan < inEnd; inScan++) {
         char c = *inScan;
