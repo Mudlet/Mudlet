@@ -28,7 +28,7 @@ jobs:
         submodules: true
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.0.0
 
       # run-vcpkg action does not run on arm64 (https://github.com/lukka/run-vcpkg/issues/152)
       # so install dependencies manually
