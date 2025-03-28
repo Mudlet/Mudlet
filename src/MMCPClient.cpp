@@ -749,7 +749,7 @@ void MMCPClient::handleIncomingSnoop()
 
         const QString infoMsg = tr("[ CHAT ]  - %1 has begun snooping you.").arg(mPeerName);
         mpHost->postMessage(infoMsg);
-        sendMessage(qsl("<CHAT> You have stopped snooping %1.").arg(mpMMCPServer->getChatName()));
+        sendMessage(qsl("<CHAT> You have begun snooping %1.").arg(mpMMCPServer->getChatName()));
     }
 }
 
