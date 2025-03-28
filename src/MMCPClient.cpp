@@ -766,7 +766,11 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     // skip over it as we'll be using our own.
     // MudMaster seems to do this, other clients (TT++) may not
     if (*inScan == '\27') {
-        while (*inScan != 'm') {
+        for (; inScan < inEnd && *inScan != 'm'; inScan++) {
+            // Empty loop body - just advancing inScan until we find 'm'
+        }
+        // Move past the 'm' character
+        if (inScan < inEnd) {
             inScan++;
         }
     }
