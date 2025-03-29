@@ -1813,7 +1813,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1422"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[ 정보 ]  - 시스템으로부터 지도 다시 불러오기 요청이 수신되었습니다...</translation>
+      <translation>[ 정보 ] - 시스템으로부터 지도 다시 불러오기 요청이 수신되었습니다...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1427"/>
@@ -1982,14 +1982,14 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="525"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation>[ 정보 ]  - 맵 감사가 시작되고 있습니다...</translation>
+      <translation>[ 정보 ] - 맵 감사를 시작하는 중...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1556"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[ 정보 ]  - 이 맵 파일을 Mudlet 박물관에 기증하고 싶을 수도 있습니다!
+      <translation>[ 정보 ] - 이 맵 파일을 Mudlet 박물관에 기증하고 싶을 수도 있습니다!
 여기에는 없는 많은 데이터가 있으므로
 처음부터 다시 시작하는 것이 더 좋을 수 있습니다...</translation>
     </message>
@@ -2005,7 +2005,7 @@ better off starting again...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1624"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation>[ 정보 ]  - 이 맵 파일을 무시합니다.</translation>
+      <translation>[ 정보 ] - 이 맵 파일을 무시합니다.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1795"/>
@@ -2017,8 +2017,8 @@ area) not found, adding reserved -1 id.</source>
       <location filename="../src/TMap.cpp" line="1874"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ 정보 ]  - 지도 파일을 성공적으로 읽었습니다 (%1s), 일부
-일관성 세부 정보를 확인 중...</translation>
+      <translation>[ 정보 ] - 지도 파일을 성공적으로 읽었습니다 (%1s), 
+일부 일관성 세부 정보를 확인 중...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1889"/>
@@ -2131,7 +2131,7 @@ and there is enough space. The download operation has failed.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2517"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[ 정보 ]  - 맵 다운로드가 시작되었습니다. 잠시 기다려주세요...</translation>
+      <translation>[ 정보 ] - 맵 다운로드가 시작되었습니다. 잠시 기다려주세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2678"/>
@@ -2273,19 +2273,19 @@ it but it will try! The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ 정보 ]  - 맵 읽는 중입니다. 형식 버전: %1. 파일:
+      <translation>[ 정보 ] - 맵 읽는 중입니다. 형식 버전: %1. 파일:
 &quot;%2&quot;,
 기다려주세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation>[ 정보 ]  - 맵 읽는 중입니다. 형식 버전: %1. 파일: &quot;%2&quot;.</translation>
+      <translation>[ 정보 ] - 맵 읽는 중입니다. 형식 버전: %1. 파일: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1949"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation>[ 정보 ]  - 맵 파일 확인 중입니다. &quot;%1&quot;, 형식 버전 &quot;%2&quot;.</translation>
+      <translation>[ 정보 ] - 맵 파일 확인 중입니다. &quot;%1&quot;, 형식 버전 &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2526"/>
@@ -2303,7 +2303,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1525"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation>[ 정보 ]  - 이상한 맵 파일을 무시합니다.</translation>
+      <translation>[ 정보 ] - 이상한 맵 파일을 무시합니다.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2529"/>
@@ -2358,7 +2358,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2740"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ 정보 ]  - ... 맵이 다운로드되어 저장되었으며, 이제 구문 분석 중입니다...</translation>
+      <translation>[ 정보 ] - ... 맵이 다운로드되어 저장되었으며, 이제 구문 분석 중입니다...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2776"/>
@@ -2500,7 +2500,7 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[ 정보 ]  - ID가 %1 인 방에서 유효하지 않은 방으로 향하는 특수 출구 &quot;%2&quot; 를 수정하여 이제
+      <translation>[ 정보 ] - ID가 %1 인 방에서 유효하지 않은 방으로 향하는 특수 출구 &quot;%2&quot; 를 수정하여 이제
 방으로 이동합니다. (이전에는 유효하지 않은 방으로 향하는 방이 있었음: %3
  %4).</translation>
     </message>
@@ -2531,7 +2531,7 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[ 정보 ]  - ID가 %1 인 방에서 특별 출구 &quot;%2&quot;
+      <translation>[ 정보 ] - ID가 %1 인 방에서 특별 출구 &quot;%2&quot;
 가 유효하지 않은 방인 ID가 %3 인 방으로 향하고 있습니다.
 출구는 제거될 것입니다 (잘못된 대상 방 ID는
 번 키로
@@ -2540,7 +2540,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1253"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation>[ 정보 ]  - 방에는 잘못된 방으로 향하는 특별한 출구 &quot;%1&quot; 이 있었습니다: %2 존재하지 않는 방입니다. 출구는 제거될 것입니다 (잘못된 대상 방 ID는 방 사용자 데이터에&quot;%3&quot;키로 저장됩니다).</translation>
+      <translation>[ 정보 ] - 방에는 잘못된 방으로 향하는 특별한 출구 &quot;%1&quot; 이 있었습니다: %2 존재하지 않는 방입니다. 출구는 제거될 것입니다 (잘못된 대상 방 ID는 방 사용자 데이터에&quot;%3&quot;키로 저장됩니다).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1286"/>
@@ -2571,55 +2571,55 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1302"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation>[ 정보 ]  - 방 ID %1 에서 하나 이상의 초과 문 아이템이 제거되었습니다:
+      <translation>[ 정보 ] - 방 ID %1 에서 하나 이상의 초과 문 아이템이 제거되었습니다:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1309"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation>[ 정보 ]  - 방에 하나 이상의 초과 문 아이템이 제거되었습니다:%1.</translation>
+      <translation>[ 정보 ] - 방에 하나 이상의 초과 문 아이템이 제거되었습니다:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1325"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation>[ 정보 ]  - 방 ID %1 에서 하나 이상의 초과 무게 아이템이 제거되었습니다:
+      <translation>[ 정보 ] - 방 ID %1 에서 하나 이상의 초과 무게 아이템이 제거되었습니다:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1332"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation>[ 정보 ]  - 방에 하나 이상의 초과 무게 아이템이 제거되었습니다: %1.</translation>
+      <translation>[ 정보 ] - 방에 하나 이상의 초과 무게 아이템이 제거되었습니다: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1348"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation>[ 정보 ]  - 방 ID %1 에서 하나 이상의 초과 출구 잠금 아이템이 제거되었습니다:
+      <translation>[ 정보 ] - 방 ID %1 에서 하나 이상의 초과 출구 잠금 아이템이 제거되었습니다:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1355"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation>[ 정보 ]  - 방에 하나 이상의 초과 출구 잠금 아이템이 제거되었습니다: %1.</translation>
+      <translation>[ 정보 ] - 방에 하나 이상의 초과 출구 잠금 아이템이 제거되었습니다: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1434"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation>[ 정보 ]  - 방 ID %1 에서 하나 이상의 초과 사용자 정의 라인 요소가
+      <translation>[ 정보 ] - 방 ID %1 에서 하나 이상의 초과 사용자 정의 라인 요소가
 제거되었습니다: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1440"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation>[ 정보 ]  - 방에 하나 이상의 남는 사용자 지정 라인 요소가 제거되었습니다: %1.</translation>
+      <translation>[ 정보 ] - 방에 하나 이상의 남는 사용자 지정 라인 요소가 제거되었습니다: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1463"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[ 정보 ]  - 아이디가 %1 인 방에서 &quot;%2&quot; 방향으로 향하는
+      <translation>[ 정보 ] - 아이디가 %1 인 방에서 &quot;%2&quot; 방향으로 향하는
 번 방으로 가는 출구를 %3 번 방으로 수정했습니다: %4.</translation>
     </message>
     <message>
@@ -2760,7 +2760,7 @@ to be in this/these area(s)...</source>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ 정보 ]  - 누락된 지역은 이제 다음과 같이 불립니다:
+        <numerusform>[ 정보 ] - 누락된 지역은 이제 다음과 같이 불립니다:
 (ID) ==&gt; &quot;이름&quot;</numerusform>
       </translation>
     </message>
@@ -2775,24 +2775,24 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ 정보 ]  - 재번호가 매겨진 지역 id는 다음과 같습니다:
+      <translation>[ 정보 ] - 재번호가 매겨진 지역 id는 다음과 같습니다:
 이전 ==&gt; 새로운</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="796"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[ 정보 ]  - 이 잘못된 id를 가진 지역은 %1로 재번호가 매겨졌습니다.</translation>
+      <translation>[ 정보 ] - 이 잘못된 id를 가진 지역은 %1로 재번호가 매겨졌습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="797"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[ 정보 ]  - 이 지역은 잘못된 id %1에서 재번호가 매겨졌습니다.</translation>
+      <translation>[ 정보 ] - 이 지역은 잘못된 id %1에서 재번호가 매겨졌습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="834"/>
       <location filename="../src/TRoomDB.cpp" line="837"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ 정보 ]  - 지역 id 번호 부여가 만족스럽습니다.</translation>
+      <translation>[ 정보 ] - 지역 id 번호 부여가 만족스럽습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="845"/>
@@ -2835,47 +2835,47 @@ be in this/these area(s)...</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="873"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation>[ 정보 ]  - 이 잘못된 ID를 가진 방은 다음으로 번호가 변경되었습니다: %1.</translation>
+      <translation>[ 정보 ] - 이 잘못된 ID를 가진 방은 다음으로 번호가 변경되었습니다: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="874"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation>[ 정보 ]  - 이 방은 잘못된 ID에서 번호가 변경되었습니다: %1.</translation>
+      <translation>[ 정보 ] - 이 방은 잘못된 ID에서 번호가 변경되었습니다: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="910"/>
       <location filename="../src/TRoomDB.cpp" line="913"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ 정보 ]  - 방 ID 번호매기기가 만족스럽습니다.</translation>
+      <translation>[ 정보 ] - 방 ID 번호매기기가 만족스럽습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="933"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[ 정보 ]  - 방 ID %1에서 중복된 출구 스텁 식별자가 발견되었습니다. 이는
+      <translation>[ 정보 ] - 방 ID %1에서 중복된 출구 스텁 식별자가 발견되었습니다. 이는
 이상의 이상 현상이지만 쉽게 정리되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="938"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation>[ 정보 ]  - 방에서 중복된 출구 스텁 식별자가 발견되었습니다. 이는 이상 현상이지만 쉽게 정리되었습니다.</translation>
+      <translation>[ 정보 ] - 방에서 중복된 출구 스텁 식별자가 발견되었습니다. 이는 이상 현상이지만 쉽게 정리되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="947"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[ 정보 ]  - 방 ID %1에서 중복된 출구 잠금 식별자가 발견되었습니다. 이는
+      <translation>[ 정보 ] - 방 ID %1에서 중복된 출구 잠금 식별자가 발견되었습니다. 이는
 이상의 이상 현상이지만 쉽게 정리되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="952"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation>[ 정보 ]  - 방에서 중복된 출구 잠금 식별자가 발견되었습니다. 이는 이상 현상이지만 쉽게 정리되었습니다.</translation>
+      <translation>[ 정보 ] - 방에서 중복된 출구 잠금 식별자가 발견되었습니다. 이는 이상 현상이지만 쉽게 정리되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation>[ 정보 ]  - 이 방은 지역 ID %1에 속한다고 주장하지만 그에 대한 기록이 없습니다. 이 지역은 이 방을 포함하도록 업데이트되었습니다.</translation>
+      <translation>[ 정보 ] - 이 방은 지역 ID %1에 속한다고 주장하지만 그에 대한 기록이 없습니다. 이 지역은 이 방을 포함하도록 업데이트되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1031"/>
@@ -2890,12 +2890,12 @@ they have been added.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1039"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation>[ 정보 ]  - 이 지역에는 기록되어야 할 방들 중 %1 개의 방이 누락되었습니다. 누락된 방은 다음과 같습니다: %2개의 방이 추가되었습니다.</translation>
+      <translation>[ 정보 ] - 이 지역에는 기록되어야 할 방들 중 %1 개의 방이 누락되었습니다. 누락된 방은 다음과 같습니다: %2개의 방이 추가되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1060"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation>[ 정보 ]  - 이 방은 지역 ID: %1에서 주장되었지만 해당 지역에 속하지 않습니다. 이 지역은 이 방을 포함하지 않도록 업데이트되었습니다.</translation>
+      <translation>[ 정보 ] - 이 방은 지역 ID: %1에서 주장되었지만 해당 지역에 속하지 않습니다. 이 지역은 이 방을 포함하지 않도록 업데이트되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1066"/>
@@ -2910,7 +2910,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1074"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation>[ 정보 ]  - 이 지역에는 기록해야 할 것이 아닌 %1 개의 추가 방이 있었습니다. 이들은 %2이었으며 제거되었습니다.</translation>
+      <translation>[ 정보 ] - 이 지역에는 기록해야 할 것이 아닌 %1 개의 추가 방이 있었습니다. 이들은 %2이었으며 제거되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1173"/>
@@ -4136,7 +4136,7 @@ Mudlet은 ASCII 인코딩을 사용하여 데이터를 전송하려 시도하겠
       <location filename="../src/ctelnet.cpp" line="3413"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ 정보 ]  - 재생 파일 로딩 중:
+      <translation>[ 정보 ] - 재생 파일 로딩 중:
 &quot;%1&quot;.</translation>
     </message>
     <message>
