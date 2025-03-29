@@ -86,7 +86,6 @@ void MMCPServer::sendSnoopData(std::string& line)
         MMCPClient* cl = it.next();
         if (cl && cl->isSnooping()) {
             cl->writeData(outData);
-            break;
         }
     }
 }
