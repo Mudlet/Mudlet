@@ -339,7 +339,7 @@ public:
     inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
-    QList<WrapInfo> getWrapInfo(const QString& lineText);
+    QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline);
     void shrinkBuffer();
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();

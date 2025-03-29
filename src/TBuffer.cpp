@@ -2490,7 +2490,7 @@ int TBuffer::getCharWidth(const QChar& c)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText)
+QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline)
 {
     QList<WrapInfo> output;
     if (lineText.isEmpty()) {
@@ -2502,18 +2502,16 @@ QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText)
     QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
     int xPos = 0;
     int totalWidth = 0;
-    int totalWidthChar = 0;
     int firstChar = 0;
-    // TODO: better handling of indentation detection
-    bool isNewline = (lineText.at(0) != QChar::Space);
     bool needsIndent = isNewline;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
-    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
         const QChar c = lineText.at(indexOfChar);
-        // skip leading spaces
-        if (xPos == 0 and !isNewline and c == QChar::Space) {
+        // skip leading spaces for any wrapped lines
+        if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
             indexOfChar++;
+            firstChar = indexOfChar;
             boundaryFinder.setPosition(indexOfChar);
             continue;
         }
@@ -2529,14 +2527,21 @@ QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText)
         }
         int nextBoundary = boundaryFinder.toNextBoundary();
         const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-        uint unicode = getGraphemeBaseCharacter(grapheme);
-        int charWidth = getGraphemeWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
-        if (xPos + charWidth > mWrapAt - (isNewline ? indent : (needsIndent ? hangingIndent : 0))) {
+        const uint unicode = getGraphemeBaseCharacter(grapheme);
+        const int charWidth = getGraphemeWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
+        const int indentationHere = isNewline ? indent : hangingIndent;
+        if (xPos + charWidth > mWrapAt - (needsIndent ? indentationHere : 0)) {
             if (isNewline) {
                 needsIndent = true;
             }
             lineBreakFinder.setPosition(indexOfChar);
-            if (lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstChar) {
+            // we check c == QChar::Space since we are happy to break at -any- space, 
+            // unlike the indirect-linebreak permission of QTextBoundaryFinder::Line
+            // (see: https://www.unicode.org/reports/tr14/#LD9) which will only break at
+            // at the first char after 1+ space(s)
+            const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
+            if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
+                boundaryFinder.setPosition(indexOfChar);
                 output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             } else {
                 indexOfChar = lineBreakFinder.position();
@@ -2548,12 +2553,10 @@ QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText)
             needsIndent = true;
             xPos = 0;
             firstChar = indexOfChar;
+            continue;
         }
         xPos += charWidth;
-        if (nextBoundary > totalWidthChar) {
-            totalWidth += charWidth;
-            totalWidthChar = nextBoundary;
-        }
+        totalWidth += charWidth;
         indexOfChar = nextBoundary;
     }
     // it's possible that no wrapping is needed
@@ -2602,7 +2605,8 @@ inline int TBuffer::wrap(int startLine)
         int newBufferCharPosition = 0;
         const bool isPrompt = promptBuffer[i];
         const QString lineText = lineBuffer[i];
-        QList<WrapInfo> lineBreaks = getWrapInfo(lineText);
+        // a blank timestamp indicates a wrapped line
+        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, (time != csmBlankTimeStamp)); 
         if (lineBreaks.isEmpty()) {
             tempList.append(lineText);
             queue.push(buffer[i]);
