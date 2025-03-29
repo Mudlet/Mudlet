@@ -78,7 +78,8 @@ void MMCPServer::sendSnoopData(std::string& line)
                                     .arg(static_cast<char>(SnoopData))
                                     .arg(15, 2, 10) //foreground color
                                     .arg(0, 2, 10)  //background color
-                                    .arg(QString::fromStdString(line), static_cast<char>(End));
+                                    .arg(QString::fromStdString(line))
+                                    .arg(static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
