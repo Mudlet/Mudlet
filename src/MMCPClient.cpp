@@ -765,6 +765,10 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     // If the remote client has prepended color information,
     // skip over it as we'll be using our own.
     // MudMaster seems to do this, other clients (TT++) may not
+    if (mPeerVersion.contains("MudMaster")) {
+        inScan += 4;
+    }
+    /*
     if (*inScan == '\27' && (inScan + 1) < inEnd && *(inScan + 1) == '[') {
         for (; inScan < inEnd && *inScan != 'm'; inScan++) {
             // Empty loop body - just advancing inScan until we find 'm'
@@ -774,6 +778,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
             inScan++;
         }
     }
+    */
 
     for (; inScan < inEnd; inScan++) {
         char c = *inScan;

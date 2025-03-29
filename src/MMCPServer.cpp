@@ -74,10 +74,15 @@ void MMCPServer::sendSnoopData(std::string& line)
     //      ANSI color indices.  Don't ask me why. So I'll just use background BLACK
     //      foreground WHITE, defined in MudMaster Colors.h
 
-    const QString outData = qsl("%1%2%3\n%4%5")
+    const QString outData1 = qsl("%1%2%3\n%4%5")
                                     .arg(static_cast<char>(SnoopData))
                                     .arg(15, 2, 10) //foreground color
                                     .arg(0, 2, 10)  //background color
+                                    .arg(QString::fromStdString(line))
+                                    .arg(static_cast<char>(End));
+
+    const QString outData2 = qsl("%1\n%2%3")
+                                    .arg(static_cast<char>(SnoopData))
                                     .arg(QString::fromStdString(line))
                                     .arg(static_cast<char>(End));
 
@@ -85,7 +90,11 @@ void MMCPServer::sendSnoopData(std::string& line)
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
         if (cl && cl->isSnooping()) {
-            cl->writeData(outData);
+            if (cl->getVersion().contains("MudMaster")) {
+                cl->writeData(outData1);
+            } else {
+                cl->writeData(outData2);
+            }
         }
     }
 }
