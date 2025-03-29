@@ -94,13 +94,13 @@
       <location filename="../src/Host.cpp" line="1058"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ 확인 ]  - %1 공개 테스트 빌드를 사용해 주셔서 감사합니다!</translation>
+      <translation>[ 확인 ] - %1 공개 테스트 빌드를 사용해 주셔서 감사합니다!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1059"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ 확인 ]  - %1 문제를 보고하여 Mudlet을 개선할 수 있도록 도와주세요.</translation>
+      <translation>[ 확인 ] - %1 문제를 보고하여 Mudlet을 개선할 수 있도록 도와주세요.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1860"/>
@@ -1065,7 +1065,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4316"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation>[  확인  ]  - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
+      <translation>[  확인  ] - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
     </message>
   </context>
   <context>
@@ -2232,7 +2232,7 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1141"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation>[ 경고 ]  - 지도를 형식 버전 &quot;%1&quot; 에서 저장하고 있으며, 이 버전의 Mudlet에는 권장되는 지도 버전
+      <translation>[ 경고 ] - 지도를 형식 버전 &quot;%1&quot; 에서 저장하고 있으며, 이 버전의 Mudlet에는 권장되는 지도 버전
  %2 가 다릅니다.</translation>
     </message>
     <message>
@@ -2488,12 +2488,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1140"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation>[ 경고 ]  - 방 ID:%1 에서 유효하지 않은 (특수) 출구를 %2 (이름 없음!)으로 제거합니다.</translation>
+      <translation>[ 경고 ] - 방 ID:%1 에서 유효하지 않은 (특수) 출구를 %2 (이름 없음!)으로 제거합니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1144"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation>[ 경고 ]  - 방에 유효하지 않은 (특수) 출구가 있어 %1 (이름 없음!)으로 제거되었습니다.</translation>
+      <translation>[ 경고 ] - 방에 유효하지 않은 (특수) 출구가 있어 %1 (이름 없음!)으로 제거되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
@@ -4037,7 +4037,7 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="593"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation>[ 정보 ] - %1 의 IP 주소를 찾았습니다. IP 주소는 다음과 같습니다: %2</translation>
+      <translation>[ 정보 ] - %1 의 IP 주소를 찾았습니다. IP 주소: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="595"/>
