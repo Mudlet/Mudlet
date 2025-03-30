@@ -1187,29 +1187,48 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     lua_newtable(L);
 
-    TChar::AttributeFlags const format = result.second.allDisplayAttributes();
     lua_pushstring(L, "bold");
-    lua_pushboolean(L, format & TChar::Bold);
+    lua_pushboolean(L, result.second.isBold());
     lua_settable(L, -3);
 
     lua_pushstring(L, "italic");
-    lua_pushboolean(L, format & TChar::Italic);
+    lua_pushboolean(L, result.second.isItalic());
     lua_settable(L, -3);
 
     lua_pushstring(L, "overline");
-    lua_pushboolean(L, format & TChar::Overline);
+    lua_pushboolean(L, result.second.isOverlined());
     lua_settable(L, -3);
 
     lua_pushstring(L, "reverse");
-    lua_pushboolean(L, format & TChar::Reverse);
+    lua_pushboolean(L, result.second.isReversed());
     lua_settable(L, -3);
 
     lua_pushstring(L, "strikeout");
-    lua_pushboolean(L, format & TChar::StrikeOut);
+    lua_pushboolean(L, result.second.isStruckOut());
     lua_settable(L, -3);
 
     lua_pushstring(L, "underline");
-    lua_pushboolean(L, format & TChar::Underline);
+    lua_pushboolean(L, result.second.isUnderlined());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "blinking");
+    if (Q_UNLIKELY(result.second.isFastBlinking())) {
+        lua_pushstring(L, "fast");
+    } else {
+        if (Q_UNLIKELY(result.second.isBlinking())) {
+            lua_pushstring(L, "slow");
+        } else {
+            lua_pushstring(L, "none");
+        }
+    }
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "concealed");
+    lua_pushboolean(L, result.second.isConcealed());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "alternateFont");
+    lua_pushinteger(L, result.second.alternateFont());
     lua_settable(L, -3);
 
     const QColor foreground(result.second.foreground());
@@ -1242,6 +1261,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_pushnumber(L, 3);
     lua_pushnumber(L, background.blue());
     lua_settable(L, -3);
+
     lua_settable(L, -3);
 
     return 1;
