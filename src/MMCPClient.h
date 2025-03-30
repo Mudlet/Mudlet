@@ -152,6 +152,12 @@ private:
     QByteArray mPeerBuffer;
     QString mPeerVersion;
 
+    // Snoop color handling
+    std::string mLastSnoopColor;
+    std::string mLastSgrState;
+    bool mLastColorBold;
+    bool mNeedsColorTracking;
+    bool mNeedsColorSkip;
 
     void sendVersion();
     void handleConnectedState(const QByteArray&);
@@ -159,6 +165,7 @@ private:
     void handleIncomingChatEveryone(const QString&);
     void handleIncomingChatPersonal(const QString&);
     void handleIncomingChatGroup(const QString&);
+    void handleIncomingClientVersion(const QString&);
     void handleIncomingConnectionList(const QString&);
     void handleIncomingConnectionsRequest();
     void handleIncomingMessage(const QString&);
@@ -170,5 +177,7 @@ private:
     void handleIncomingSnoop();
     void handleIncomingSnoopData(const char*, quint16);
     void handleIncomingSideChannelData(const QString&);
+
+    void updateSgrState(const std::string&);
 };
 #endif // MUDLET_MMCPCLIENT_H

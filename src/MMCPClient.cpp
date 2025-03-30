@@ -47,6 +47,9 @@ MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
 : mpHost(pHost)
 , mpMMCPServer(pServer)
 , mTcpSocket(this)
+, mLastColorBold(false)
+, mNeedsColorTracking(false)
+, mNeedsColorSkip(false)
 {
     //Disable Nagle's algorithm
     mTcpSocket.setSocketOption(QAbstractSocket::LowDelayOption, 1);
@@ -459,7 +462,6 @@ void MMCPClient::writeData(const QByteArray& data)
  */
 void MMCPClient::snoop()
 {
-
     QByteArray snoopCmd;
     snoopCmd.append(static_cast<char>(Snoop));
     snoopCmd.append(static_cast<char>(End));
@@ -515,7 +517,7 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
             break;
 
         case MMCPChatCommand::Version:
-            mPeerVersion = stringData;
+            handleIncomingClientVersion(stringData);
             break;
 
         case MMCPChatCommand::PingRequest:
@@ -552,6 +554,20 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
 
         cmdIdx = endIdx + 1;
     }
+}
+
+
+void MMCPClient::handleIncomingClientVersion(const QString& version) {
+    mPeerVersion = version;
+
+    bool isMudMaster = mPeerVersion.contains("MudMaster");
+    bool isMudlet = mPeerVersion.contains("Mudlet");
+    bool isMUSHClient = mPeerVersion.contains("MUSHc");
+    bool isTinTin = mPeerVersion.contains("TinTin");
+
+    mNeedsColorTracking = isMudMaster || isMudlet || isMUSHClient || isTinTin;
+
+    mNeedsColorSkip = isMudMaster || isMUSHClient;
 }
 
 /**
@@ -762,32 +778,89 @@ void MMCPClient::handleIncomingSnoop()
     }
 }
 
+void MMCPClient::updateSgrState(const std::string &ansiSeq)
+{
+    // We expect SGR sequences of the form "\033[<codes>m"
+    if (ansiSeq.size() < 3 || ansiSeq.front() != '\033' || ansiSeq[1] != '[' || ansiSeq.back() != 'm')
+        return;
+
+    // Extract the inner code string (e.g., "1;35")
+    std::string codes = ansiSeq.substr(2, ansiSeq.size() - 3);
+
+    // If this is a full reset, clear our cumulative state.
+    if (codes == "0") {
+        mLastColorBold = false;
+        mLastSnoopColor = "";
+    }
+    else {
+        // Tokenize the codes by ';'
+        std::istringstream iss(codes);
+        std::string token;
+        while (std::getline(iss, token, ';')) {
+            if (token == "1") {
+                mLastColorBold = true;
+            }
+            else if (token == "22") { // Normal intensity – typically turns off bold.
+                mLastColorBold = false;
+            }
+            else {
+                // Check for standard foreground color codes (30-37 or 90-97).
+                try {
+                    int val = std::stoi(token);
+                    if ((val >= 30 && val <= 37) || (val >= 90 && val <= 97)) {
+                        mLastSnoopColor = token;
+                    }
+                } catch (...) {
+                    // ignore tokens that aren't numbers
+                }
+            }
+        }
+    }
+
+    // Reconstruct the cumulative ANSI sequence.
+    std::string newState = "\033[";
+    bool needSemicolon = false;
+    if (mLastColorBold) {
+        newState += "1";
+        needSemicolon = true;
+    }
+    if (!mLastSnoopColor.empty()) {
+        if (needSemicolon)
+            newState += ";";
+        newState += mLastSnoopColor;
+    }
+    newState += "m";
+    mLastSgrState = newState;
+}
+
 /**
  * Handle remote client incoming snoop data.
+ * 
+ * Client    | needsSkip | needsTrack | snoop Mudlet     | Mudlet can snoop
+ * Mudlet    | no          yes          yes                yes
+ * MudMaster | yes	       yes          yes                yes
+ * TinTin    | ?           yes          no?                yes
+ * MUSH      | yes         yes          yes (color issue)  yes
+ * Zmud      | ?           ?            ?                  ?	
+ * Cmud      | ?           ?            ?                  ?		
+ * 
+ * mNeedsColorSkip and mNeedsColorTracking are defined when we receive
+ * client version in handleIncomingClientVersion
+ * 
  */
 void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 {
     const char* inScan = sData;
     const char* inEnd = inScan + len;
     std::stringstream ss;
+    std::string outputMessage;
 
     // If the remote client has prepended color information,
     // skip over it as we'll be using our own.
     // MudMaster seems to do this, other clients (TT++) may not
-    if (mPeerVersion.contains("MudMaster")) {
+    if (mNeedsColorSkip) {
         inScan += 4;
     }
-    /*
-    if (*inScan == '\27' && (inScan + 1) < inEnd && *(inScan + 1) == '[') {
-        for (; inScan < inEnd && *inScan != 'm'; inScan++) {
-            // Empty loop body - just advancing inScan until we find 'm'
-        }
-        // Move past the 'm' character
-        if (inScan < inEnd) {
-            inScan++;
-        }
-    }
-    */
 
     for (; inScan < inEnd; inScan++) {
         char c = *inScan;
@@ -797,16 +870,69 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
         }
 
         if (c == '\n') {
-            ss << "\n";
+            // End of a line: get the current line.
+            std::string line = ss.str();
+
+            // For clients like MudMaster that do not resend the color,
+            // if the line does not begin with an ANSI escape sequence,
+            // prepend the last known color sequence.
+            if (mNeedsColorTracking && !line.empty()) {
+                line = mLastSgrState + line;
+            }
+
+            // Append the processed line
+            outputMessage += line;
+
+            ss.str("");
+            ss.clear();
+            continue;
+        }
+
+        // Look for ANSI escapes
+        if (c == '\033') {
+            std::string ansiSeq;
+            ansiSeq.push_back(c);
+
+            if (inScan + 1 < inEnd) {
+                inScan++;
+                char nextChar = *inScan;
+                ansiSeq.push_back(nextChar);
+
+                if (nextChar == '[') {
+
+                    // Read until we hit an m (yes while bad)
+                    while (inScan + 1 < inEnd) {
+                        inScan++;
+                        char ch = *inScan;
+                        ansiSeq.push_back(ch);
+
+                        if (ch == 'm') {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            updateSgrState(ansiSeq);
+
+            // Append the full ANSI sequence to the current line
+            ss << ansiSeq;
             continue;
         }
 
         ss << c;
     }
 
+    // Process any remaining data that didn't end with a newline
     std::string remaining = ss.str();
-    if (!remaining.empty()) {
-        mpMMCPServer->snoopMessage(remaining);
+    if (!remaining.empty() && mNeedsColorTracking) {
+        remaining = mLastSgrState + remaining;
+    }
+
+    outputMessage += remaining;
+
+    if (!outputMessage.empty()) {
+        mpMMCPServer->snoopMessage(outputMessage);
     }
 }
 

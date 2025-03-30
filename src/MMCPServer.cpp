@@ -68,8 +68,13 @@ void MMCPServer::receiveFromPlayer(std::string& str)
 /**
  * Send mud data from our mud to all clients snooping us
  */
-void MMCPServer::sendSnoopData(std::string& line)
+void MMCPServer::sendSnoopData(std::string& lines)
 {
+
+    // Split the block into individual lines
+    std::istringstream iss(lines);
+    std::string line;
+
     //Note: Fore and Back colors use MudMaster color indices which are NOT the same as
     //      ANSI color indices.  Don't ask me why. So I'll just use background BLACK
     //      foreground WHITE, defined in MudMaster Colors.h
@@ -77,28 +82,33 @@ void MMCPServer::sendSnoopData(std::string& line)
     // We're creating two byte arrays here, one that will be send to MudMaster
     // clients and the other (outData2) which will be send to all other clients
 
-    QByteArray outData1, outData2;
-    outData1.append(static_cast<char>(SnoopData));
-    outData2.append(static_cast<char>(SnoopData));
+    while (std::getline(iss, line)) {
+        QByteArray outData1, outData2;
+        outData1.append(static_cast<char>(SnoopData));
+        outData2.append(static_cast<char>(SnoopData));
 
-    char colorBuf[16];
-    snprintf(colorBuf, sizeof(colorBuf), "%02d%02d\n", 15, 0);
-    outData1.append(colorBuf);
+        char colorBuf[16];
+        snprintf(colorBuf, sizeof(colorBuf), "%02d%02d\n", 15, 0);
+        outData1.append(colorBuf);
 
-    outData1.append(line.data(), line.size());
-    outData2.append(line.data(), line.size());
-    
-    outData1.append(static_cast<char>(End));
-    outData2.append(static_cast<char>(End));
+        outData1.append(line.data(), line.size());
+        outData2.append(line.data(), line.size());
 
-    QListIterator<QPointer<MMCPClient>> it(mPeersList);
-    while (it.hasNext()) {
-        MMCPClient* cl = it.next();
-        if (cl && cl->isSnooping()) {
-            if (cl->getVersion().contains("MudMaster")) {
-                cl->writeData(outData1);
-            } else {
-                cl->writeData(outData2);
+        // If line already had an 0xff at the end, don't bother adding one back here
+        if (static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
+            outData1.append(static_cast<char>(End));
+            outData2.append(static_cast<char>(End));
+        }
+
+        QListIterator<QPointer<MMCPClient>> it(mPeersList);
+        while (it.hasNext()) {
+            MMCPClient* cl = it.next();
+            if (cl && cl->isSnooping()) {
+                if (cl->getVersion().contains("MudMaster")) {
+                    cl->writeData(outData1);
+                } else {
+                    cl->writeData(outData2);
+                }
             }
         }
     }
@@ -854,8 +864,8 @@ void MMCPServer::snoopMessage(const std::string& message)
     using namespace AnsiColors;
 
     std::stringstream ss;
-    ss << FBLDGRN << ">>" << RST << "\n";
-    ss << message << "\n" << FBLDGRN << "<<" << "\n";
+    ss << FBLDGRN << ">>" << RST;
+    ss << message << "\n";
 
     std::string outStr = ss.str();
 
