@@ -2263,11 +2263,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
-#else
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-#endif
     int lineEndPos = sub_end;
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;

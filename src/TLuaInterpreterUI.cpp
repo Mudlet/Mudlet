@@ -2388,11 +2388,6 @@ int TLuaInterpreter::setFont(lua_State* L)
     // TODO issue #4159: a nonexisting font breaks the console
 #endif
 
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Add Apple Color Emoji fallback.
-    QFont::insertSubstitution(font, qsl("Apple Color Emoji"));
-#endif
-
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
