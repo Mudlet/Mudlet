@@ -94,5 +94,5 @@ inline uint getBaseCharacter(const QString& str)
 
     return first.unicode();
 }
-} // namespace
+} // namespace graphemeInfo
 #endif // MUDLET_TTEXTPROPERTIES_H
