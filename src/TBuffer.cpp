@@ -2527,8 +2527,8 @@ QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline)
         }
         int nextBoundary = boundaryFinder.toNextBoundary();
         const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-        const uint unicode = getGraphemeBaseCharacter(grapheme);
-        const int charWidth = getGraphemeWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
+        const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+        const int charWidth = graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > mWrapAt - (needsIndent ? indentationHere : 0)) {
             if (isNewline) {
