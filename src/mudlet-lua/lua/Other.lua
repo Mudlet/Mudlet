@@ -5,6 +5,7 @@
 mudlet = mudlet or {}
 mudlet.supports = {
   coroutines = true,
+  mmcp = true,
   namedPatterns = true,
   osVersion = true
 }
