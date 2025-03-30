@@ -791,19 +791,16 @@ void MMCPClient::updateSgrState(const std::string &ansiSeq)
     if (codes == "0") {
         mLastColorBold = false;
         mLastSnoopColor = "";
-    }
-    else {
+    } else {
         // Tokenize the codes by ';'
         std::istringstream iss(codes);
         std::string token;
         while (std::getline(iss, token, ';')) {
             if (token == "1") {
                 mLastColorBold = true;
-            }
-            else if (token == "22") { // Normal intensity – typically turns off bold.
+            } else if (token == "22") { // Normal intensity – typically turns off bold.
                 mLastColorBold = false;
-            }
-            else {
+            } else {
                 // Check for standard foreground color codes (30-37 or 90-97).
                 try {
                     int val = std::stoi(token);
