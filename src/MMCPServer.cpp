@@ -74,17 +74,22 @@ void MMCPServer::sendSnoopData(std::string& line)
     //      ANSI color indices.  Don't ask me why. So I'll just use background BLACK
     //      foreground WHITE, defined in MudMaster Colors.h
 
-    const QString outData1 = qsl("%1%2%3\n%4%5")
-                                    .arg(static_cast<char>(SnoopData))
-                                    .arg(15, 2, 10) //foreground color
-                                    .arg(0, 2, 10)  //background color
-                                    .arg(QString::fromStdString(line))
-                                    .arg(static_cast<char>(End));
+    // We're creating two byte arrays here, one that will be send to MudMaster
+    // clients and the other (outData2) which will be send to all other clients
 
-    const QString outData2 = qsl("%1\n%2%3")
-                                    .arg(static_cast<char>(SnoopData))
-                                    .arg(QString::fromStdString(line))
-                                    .arg(static_cast<char>(End));
+    QByteArray outData1, outData2;
+    outData1.append(static_cast<char>(SnoopData));
+    outData2.append(static_cast<char>(SnoopData));
+
+    char colorBuf[16];
+    snprintf(colorBuf, sizeof(colorBuf), "%02d%02d\n", 15, 0);
+    outData1.append(colorBuf);
+
+    outData1.append(line.data(), line.size());
+    outData2.append(line.data(), line.size());
+    
+    outData1.append(static_cast<char>(End));
+    outData2.append(static_cast<char>(End));
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
@@ -97,6 +102,7 @@ void MMCPServer::sendSnoopData(std::string& line)
             }
         }
     }
+
 }
 
 /**
@@ -848,8 +854,8 @@ void MMCPServer::snoopMessage(const std::string& message)
     using namespace AnsiColors;
 
     std::stringstream ss;
-    ss << FBLDGRN << ">> " << RST;
-    ss << message << "\n";
+    ss << FBLDGRN << ">>" << RST << "\n";
+    ss << message << "\n" << FBLDGRN << "<<" << "\n";
 
     std::string outStr = ss.str();
 

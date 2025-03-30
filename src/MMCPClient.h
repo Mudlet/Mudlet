@@ -63,6 +63,7 @@ public:
     bool incoming(qintptr);
     void tryConnect(const QString&, quint16);
     void writeData(const QString&);
+    void writeData(const QByteArray&);
     void sendMessage(const QString&);
     void sendPingRequest();
     void sendPeekRequest();

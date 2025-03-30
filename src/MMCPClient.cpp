@@ -376,10 +376,11 @@ void MMCPClient::sendMessage(const QString& msg)
  */
 void MMCPClient::sendPingRequest()
 {
-    writeData(qsl("%1%2%3")
-                      .arg(static_cast<char>(PingRequest))
-                      .arg(QString::number(QDateTime::currentMSecsSinceEpoch()))
-                      .arg(static_cast<char>(End)));
+    QByteArray pingData;
+    pingData.append(static_cast<char>(PingRequest));
+    pingData.append(QByteArray::number(QDateTime::currentMSecsSinceEpoch()));
+    pingData.append(static_cast<char>(End));
+    writeData(pingData);
 
     const QString infoMsg = tr("[ CHAT ]  - Pinging %1...").arg(mPeerName);
     mpHost->postMessage(infoMsg);
@@ -390,9 +391,10 @@ void MMCPClient::sendPingRequest()
  */
 void MMCPClient::sendPeekRequest()
 {
-    writeData(qsl("%1%2")
-                      .arg(static_cast<char>(PeekConnections))
-                      .arg(static_cast<char>(End)));
+    QByteArray peekData;
+    peekData.append(static_cast<char>(PeekConnections));
+    peekData.append(static_cast<char>(End));
+    writeData(peekData);
 
     const QString infoMsg = tr("[ CHAT ]  - Attempting to peek at %1's public connections...").arg(mPeerName);
     mpHost->postMessage(infoMsg);
@@ -403,9 +405,9 @@ void MMCPClient::sendPeekRequest()
  */
 void MMCPClient::sendRequestConnections()
 {
-    writeData(qsl("%1%2")
-                      .arg(static_cast<char>(RequestConnections))
-                      .arg(static_cast<char>(End)));
+    QByteArray requestData;
+    requestData.append(static_cast<char>(RequestConnections));
+    requestData.append(static_cast<char>(End));
 
     const QString infoMsg = tr("[ CHAT ]  - Requested connections from %1").arg(mPeerName);
     mpHost->postMessage(infoMsg);
@@ -447,14 +449,21 @@ void MMCPClient::writeData(const QString& data)
     mTcpSocket.write(data.toLatin1());
 }
 
+void MMCPClient::writeData(const QByteArray& data)
+{
+    mTcpSocket.write(data);
+}
+
 /**
  * Attempt to snoop this client.
  */
 void MMCPClient::snoop()
 {
-    writeData(qsl("%1%2")
-                      .arg(static_cast<char>(Snoop))
-                      .arg(static_cast<char>(End)));
+
+    QByteArray snoopCmd;
+    snoopCmd.append(static_cast<char>(Snoop));
+    snoopCmd.append(static_cast<char>(End));
+    writeData(snoopCmd);
 }
 
 /**
@@ -788,17 +797,16 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
         }
 
         if (c == '\n') {
-            ss.clear();
-            ss.str("");
+            ss << "\n";
             continue;
         }
 
-        ss << *inScan;
+        ss << c;
     }
 
-    if (ss.tellp() > 0) {
-        qDebug() << "no CR";
-        mpMMCPServer->snoopMessage(ss.str());
+    std::string remaining = ss.str();
+    if (!remaining.empty()) {
+        mpMMCPServer->snoopMessage(remaining);
     }
 }
 
