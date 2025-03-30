@@ -1520,7 +1520,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2148"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation>&quot;%2&quot; 프로필을 위한 임베디드 창 &quot;%1&quot;.</translation>
+      <translation>&quot;%2&quot; 프로필에 대한 내장된 창 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2150"/>
@@ -1602,7 +1602,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4966"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
-      <translation>[ ERROR ] - Lua 모듈 %1을(를) 찾을 수 없습니다.%2%3%4</translation>
+      <translation>[ 오류 ] - Lua %1 모듈을 찾을 수 없습니다.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5604"/>
@@ -8905,7 +8905,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="57"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation>라인의 시작부터 찾을 텍스트</translation>
+      <translation>찾을 텍스트 (행의 시작부터):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="60"/>
