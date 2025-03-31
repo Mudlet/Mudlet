@@ -21,7 +21,7 @@ end
 --- Replaces the currently selected text.
 -- @param with The text to use as a replacement.
 function Geyser.MiniConsole:replace (with)
-  replace(self.name, with)
+  return replace(self.name, with)
 end
 
 --- Replaces the entire line the cursor is on
