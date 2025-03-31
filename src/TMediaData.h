@@ -80,6 +80,13 @@ public:
     static constexpr int MediaEndNotSet = 0;
     static constexpr int MediaFinishNotSet = 0;
 
+    static constexpr const char* MediaWidgetLabel = "label";
+    static constexpr const char* MediaWidgetWindow = "window";
+
+    enum MediaClose {
+        MediaCloseEnabled = true,
+        MediaCloseDefault = false};
+
     int mediaProtocol() const { return mMediaProtocol; }
     void setMediaProtocol(int mediaProtocol) { mMediaProtocol = mediaProtocol; }
 
@@ -188,6 +195,12 @@ public:
         }
     }
 
+    QString mediaWidget() const { return mMediaWidget; }
+    void setMediaWidget(QString mediaWidget) { mMediaWidget = mediaWidget; }
+
+    bool mediaClose() const { return mMediaClose; }
+    void setMediaClose(bool mediaClose) { mMediaClose = mediaClose; }
+
     QString mediaAbsolutePathFileName() const { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
@@ -206,9 +219,11 @@ private:
     bool mMediaContinue = MediaContinueDefault;
     bool mMediaFadeAway = MediaFadeAwayDefault;
     int mMediaEnd = MediaEndNotSet;
+    bool mMediaClose = MediaCloseDefault;
     QString mMediaTag;
     QString mMediaUrl;
     QString mMediaKey;
+    QString mMediaWidget = MediaWidgetLabel;
     QString mMediaAbsolutePathFileName;
 };
 

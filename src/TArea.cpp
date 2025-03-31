@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -77,21 +77,24 @@ int TArea::getAreaID()
 QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
 {
     QMap<int, QMap<int, QMultiMap<int, int>>> kS;
-    QList<TRoom*> const roomList = mpRoomDB->getRoomPtrList();
-    for (auto room : roomList) {
-        const int id = room->getId();
+    for (const auto id : std::as_const(rooms)) {
+        const auto room = mpRoomDB->getRoom(id);
+        if (!room) {
+            continue;
+        }
+
         const int x = room->x();
         const int y = room->y();
         const int z = room->z();
-        QMap<int, QMultiMap<int, int>> const _y;
-        QMultiMap<int, int> const _z;
-        if (!kS.contains(x)) {
-            kS[x] = _y;
+        if (!kS.contains(z)) {
+            const QMap<int, QMultiMap<int, int>> yMap;
+            kS[z] = yMap;
         }
-        if (!kS[x].contains(y)) {
-            kS[x][y] = _z;
+        if (!kS.value(z).contains(y)) {
+            const QMultiMap<int, int> xMap;
+            kS[z][y] = xMap;
         }
-        kS[x][y].insert(z, id);
+        kS[z][y].insert(x, id);
     }
     return kS;
 }
@@ -117,33 +120,30 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
     return dL;
 }
 
-QList<int> TArea::getCollisionNodes()
+QList<std::tuple<int, int, int>> TArea::getCollisionNodes()
 {
-    QList<int> problems;
-    QMap<int, QMap<int, QMultiMap<int, int>>> const kS = koordinatenSystem();
-    QMapIterator<int, QMap<int, QMultiMap<int, int>>> it(kS);
-    while (it.hasNext()) {
-        it.next();
-        QMap<int, QMultiMap<int, int>> const x_val = it.value();
-        QMapIterator<int, QMultiMap<int, int>> it2(x_val);
-        while (it2.hasNext()) {
-            it2.next();
-            QMultiMap<int, int> y_val = it2.value();
-            QMultiMapIterator<int, int> it3(y_val);
-            QList<int> z_coordinates;
-            while (it3.hasNext()) {
-                it3.next();
-                const int z = it3.key();
-                const int node = it3.value();
-
-                if (!z_coordinates.contains(node)) {
-                    z_coordinates.append(node);
-                } else {
-                    if (!problems.contains(node)) {
-                        auto it4 = y_val.find(z);
-                        problems.append(it4.value());
-                        //qDebug()<<"problem node="<<node;
-                    }
+    // Coordinates (x,y,z) where there are multiple rooms
+    QList<std::tuple<int, int, int>> problems;
+    const auto& zyx_map = koordinatenSystem();
+    QMapIterator<int, QMap<int, QMultiMap<int, int>>> itZ(zyx_map);
+    while (itZ.hasNext()) {
+        itZ.next();
+        const auto& yx_map = itZ.value();
+        QMapIterator<int, QMultiMap<int, int>> itY(yx_map);
+        while (itY.hasNext()) {
+            itY.next();
+            const QMultiMap<int, int>& x_map = itY.value();
+            const auto x_keysList = x_map.keys();
+            QSet<int> x_keys(x_keysList.constBegin(), x_keysList.constEnd());
+            QSetIterator<int> itX(x_keys);
+            while (itX.hasNext()) {
+                const auto x = itX.next();
+                const auto roomsHere = x_map.values(x);
+                if (roomsHere.count() > 1) {
+                    const auto y = itY.key();
+                    const auto z = itZ.key();
+                    const auto location = std::make_tuple(x, y, z);
+                    problems << location;
                 }
             }
         }

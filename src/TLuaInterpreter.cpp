@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -3923,6 +3924,12 @@ void TLuaInterpreter::setMatches(lua_State* L)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(void* pT)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -3948,7 +3955,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
         } else {
             if (mudlet::smDebugMode) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
             }
         }
         lua_pop(L, lua_gettop(L));
@@ -3992,6 +3999,12 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     lua_pushlightuserdata(L, pT);
@@ -4025,7 +4038,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 
             if (mudlet::smDebugMode) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
             }
         }
         lua_pop(L, lua_gettop(L));
@@ -4045,6 +4058,12 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 // to cut down on spammy output if things are okay.
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
     setMatches(L);
 
@@ -4066,7 +4085,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     } else {
         if (mudlet::smDebugMode && !muteDebugOutput) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4077,6 +4096,12 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
     bool returnValue = false;
 
@@ -4105,7 +4130,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
 
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4170,6 +4195,12 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     lua_getfield(L, LUA_GLOBALSINDEX, function.c_str());
@@ -4191,7 +4222,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
 
@@ -4209,6 +4240,12 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     if (!mMultiCaptureGroupList.empty()) {
@@ -4252,7 +4289,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4262,6 +4299,12 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     bool returnValue = false;
@@ -4307,7 +4350,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4393,14 +4436,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
                 ++iter;
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -4422,13 +4459,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         case (QEvent::Enter): {
             auto qME = static_cast<const QEnterEvent*>(qE);
             lua_newtable(L);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -4586,6 +4618,12 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
 // No documentation available in wiki - internal function
 double TLuaInterpreter::condenseMapLoad()
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     const QString luaFunction = qsl("condenseMapLoad");
     double loadTime = -1.0;
 
@@ -4610,7 +4648,7 @@ double TLuaInterpreter::condenseMapLoad()
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors in" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
 
@@ -5141,9 +5179,15 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getPlayingMusic", TLuaInterpreter::getPlayingMusic);
     lua_register(pGlobalLua, "getPlayingSounds", TLuaInterpreter::getPlayingSounds);
     lua_register(pGlobalLua, "getPlayingVideos", TLuaInterpreter::getPlayingVideos);
+    lua_register(pGlobalLua, "getPausedSounds", TLuaInterpreter::getPausedSounds);
+    lua_register(pGlobalLua, "getPausedMusic", TLuaInterpreter::getPausedMusic);
+    lua_register(pGlobalLua, "getPausedVideos", TLuaInterpreter::getPausedVideos);
     lua_register(pGlobalLua, "stopMusic", TLuaInterpreter::stopMusic);
     lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
     lua_register(pGlobalLua, "stopVideos", TLuaInterpreter::stopVideos);
+    lua_register(pGlobalLua, "pauseSounds", TLuaInterpreter::pauseSounds);
+    lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
+    lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);
@@ -5497,6 +5541,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfiles", TLuaInterpreter::getProfiles);
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     lua_register(pGlobalLua, "closeProfile", TLuaInterpreter::closeProfile);
+    lua_register(pGlobalLua, "getCollisionLocationsInArea", TLuaInterpreter::getCollisionLocationsInArea);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -5830,7 +5875,10 @@ void TLuaInterpreter::loadGlobal()
         // and in a "src" subdirectory (to match the relative source file
         // location to that top-level project file) of the main project
         // "mudlet" directory:
-        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
+        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // CMake builds from Qt Creator on Windows 11 appear to use this directory:
+        QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
 
     // Although it is relatively easy to detect whether something is #define d
@@ -5923,10 +5971,6 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     /*
      * FIXME: Qt Documentation for this method reports:
@@ -7137,6 +7181,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     } else {
         mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
     }
+    mudlet::self()->mTrayIcon.hide();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -7362,26 +7407,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("commandLineHistorySaveSize")) {
-        // This set of values needs to be the same as those put in the
-        // (QComboBox) dlgProfilePreferences::comboBox_commandLineHistorySaveSize
-        // widget:
-        static const QList<int> values{0, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000};
         const auto value = getVerifiedInt(L, __func__, 2, "value");
-        if (!values.contains(value)) {
-            static QStringList valuesAsStrings;
-            if (valuesAsStrings.isEmpty()) {
-                for (const auto& potentialValue : values) {
-                    valuesAsStrings << QString::number(potentialValue);
-                }
-            }
-            lua_pushnil(L);
-            // Use the original argument as a string, not what the
-            // getVerifiedInt(...) returns in case it is not a pure integer to
-            // start with:
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize number %s, it should be one of %s",
-                            lua_tostring(L, 2), valuesAsStrings.join(qsl(", ")).toUtf8().constData());
-            return 2;
-        }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
