@@ -757,6 +757,8 @@ void MMCPClient::handleIncomingSnoop()
 {
     if (!canSnoop()) {
         sendMessage(qsl("<CHAT> You do not have permission to snoop %1.").arg(mpMMCPServer->getChatName()));
+        const QString infoMsg = tr("[ CHAT ]  - %1 tried to snoop you but doesn't have permission.").arg(mPeerName);
+        mpHost->postMessage(infoMsg);
         return;
     }
 
