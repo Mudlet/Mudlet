@@ -689,8 +689,14 @@ void MMCPClient::handleIncomingPeekConnections()
  */
 void MMCPClient::handleIncomingPeekList(const QString& list)
 {
-    const QStringList parts = list.split("~");
-    if (parts.size() % 3 != 1) {
+    // Drop the trailing ~ if it exists so modulus will do the trick after
+    // a split
+    QString str = list;
+    if (str.endsWith("~")) {
+        str.chop(1);
+    }
+    const QStringList parts = str.split("~");
+    if (parts.size() % 3 != 0) {
         const QString infoMsg = tr("[ CHAT ]  - Badly formatted peek list from %1.").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
@@ -715,8 +721,9 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
     const QString listOut = tr("Id   Name                 Address         Port\n"
                                "==== ==================== =============== =====\n"
                                "%1\n"
-                               "==== ==================== =============== =====\n")
-                                    .arg(messageList.join(QChar::LineFeed));
+                               "%2==== ==================== =============== =====%3\n")
+                                    .arg(messageList.join(QChar::LineFeed))
+                                    .arg(FBLDRED).arg(RST);
     mpMMCPServer->clientMessage(listOut);
 }
 

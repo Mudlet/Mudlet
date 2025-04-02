@@ -933,7 +933,9 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
     if (!peerList.isEmpty()) {
         const QString cmdStr = peerList.join(QLatin1Char('~'))
                                        .prepend(static_cast<char>(PeekList))
+                                       .append(QLatin1Char('~'))
                                        .append(static_cast<char>(End));
+        
         pClient->writeData(cmdStr);
     } else {
         pClient->sendMessage(qsl("<CHAT> %1 doesn't have any other connections").arg(mChatName));
