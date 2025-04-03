@@ -1065,7 +1065,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4316"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation>[  확인  ] - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
+      <translation>[ 확인 ] - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
     </message>
   </context>
   <context>
@@ -2751,7 +2751,7 @@ Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[알림] - %n개의 지역이 지도에서 누락된 것으로 감지되었습니다. 해당 지역을 추가합니다. 이/이들 지역에 속한 방과 관련된 추가 메시지를 확인하세요.</numerusform>
+        <numerusform>[ 알림 ] - %n개의 지역이 지도에서 누락된 것으로 감지되었습니다. 해당 지역을 추가합니다. 이/이들 지역에 속한 방과 관련된 추가 메시지를 확인하세요.</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -2815,7 +2815,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="771"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation>[ 경고 ] - 맵에서 잘못된 (1보다 작고 예약된 -1이 아닌) 지역 ID가 발견되었습니다 (개수: %1). 해당 지역과 관련된 추가 메시지를 찾으십시오...</translation>
+      <translation>[ 알림 ] - 맵에서 잘못된 (1보다 작고 예약된 -1이 아닌) 지역 ID가 발견되었습니다 (개수: %1). 해당 지역과 관련된 추가 메시지를 찾으십시오...</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="722"/>
@@ -2830,7 +2830,7 @@ be in this/these area(s)...</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation>[ 경고 ] - 맵에서 잘못된 (1보다 작은) 방 ID가 발견되었습니다 (개수: %1). 해당 방과 관련된 추가 메시지를 찾으십시오...</translation>
+      <translation>[ 알림 ] - 맵에서 잘못된 (1보다 작은) 방 ID가 발견되었습니다 (개수: %1). 해당 방과 관련된 추가 메시지를 찾으십시오...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="873"/>
@@ -2981,7 +2981,7 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation>[  확인  ] - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
+      <translation>[ 확인 ] - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
   이 경우를 해결하기 위해, 여기에서 이름이 없는 영역(또는 미래에 생성된 경우)은 자동으로 &quot;%1&quot;이라는 이름이 지정됩니다.
   이러한 일이 여러 번 발생하면, 영역 이름의 중복으로 인해 처음 발견된 것을 제외한 모든 영역에 &quot;_###&quot; 스타일의 접미사가 추가되며, 여기서 각 &quot;###&quot;은 증가하는 숫자입니다; 이러한 이름들을 더 의미 있는 영역 이름으로 변경하실 수 있으며, 이는 전적으로 귀하의 선택에 달려 있습니다. 단, 한 영역의 이름을 해당 시점에 존재하는 다른 영역의 이름과 동일하게 설정할 수는 없습니다.</translation>
     </message>
