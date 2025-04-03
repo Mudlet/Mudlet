@@ -493,7 +493,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation>라인 %1: %2</translation>
+      <translation>%1 행: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
@@ -520,7 +520,7 @@ please wait...</source>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation>유효하지 않은 키 시퀀스 사용 %1</translation>
+      <translation>유효하지 않은 %1 키 시퀀스 사용</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
@@ -565,12 +565,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation>테마 %1구문 분석 오류:%2</translation>
+      <translation>%1 테마 구문 분석 오류:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation>테마 %1을(를) 찾을 수 없습니다.</translation>
+      <translation>%1 테마를 찾을 수 없습니다.</translation>
     </message>
   </context>
   <context>
@@ -1277,25 +1277,25 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2099"/>
       <source>Editor&apos;s error window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation>프로필&apos;의 에디터 오류 창 위쪽 콘텐츠.</translation>
+      <translation>프로필의 에디터 오류 창 위쪽 콘텐츠.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2101"/>
       <source>Editor&apos;s error window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation>프로필&apos;의 에디터 오류 창 실시간 콘텐츠.</translation>
+      <translation>프로필의 에디터 오류 창 실시간 콘텐츠.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2107"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>프로필 &quot;의 에디터 오류 창&apos;%1&quot;.</translation>
+      <translation>프로필 &quot;%1&quot;에 대한 에디터 오류 창</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Editor&apos;s error window</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation>프로필&apos;의 에디터 오류 창</translation>
+      <translation>프로필의 에디터 오류 창</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2117"/>
