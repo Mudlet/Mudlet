@@ -89,8 +89,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
 
-    checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -262,7 +260,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
     // included in compliation:
-    connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);
     connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
     connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
     connect(pMudlet, &mudlet::signal_setToolBarIconSize, this, &dlgProfilePreferences::slot_setToolBarIconSize);
@@ -453,8 +450,6 @@ void dlgProfilePreferences::disableHostDetails()
     label_loadMap->setEnabled(false);
     pushButton_loadMap->setEnabled(false);
     label_deleteMap->setEnabled(false);
-    checkBox_enablMapDeleteButton->setEnabled(false);
-    checkBox_enablMapDeleteButton->setChecked(false);
     pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
@@ -577,7 +572,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_loadMap->setEnabled(true);
     pushButton_loadMap->setEnabled(true);
     label_deleteMap->setEnabled(true);
-    checkBox_enablMapDeleteButton->setEnabled(true);
+    pushButton_deleteMap->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
 
@@ -1037,7 +1032,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
 
-        connect(checkBox_enablMapDeleteButton, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleMapDeleteButton);
         connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
@@ -3207,7 +3201,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pMudlet->setToolBarVisibility(enums::visibleAlways);
     }
 
-    pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
@@ -4178,12 +4171,6 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
 // opened for different Profiles then common (application wide) settings changed
 // in one of them is immediately updated in the others (so they do not get out
 // of sync):
-void dlgProfilePreferences::slot_changeEnableFullScreenMode(const bool state)
-{
-    if (checkBox_USE_SMALL_SCREEN->isChecked() != state) {
-        checkBox_USE_SMALL_SCREEN->setChecked(state);
-    }
-}
 
 // Connected to mudlet::signal_editorTextOptionsChanged which is emitted when
 // (void) mudlet::setEditorTextoptions(...) is called from this or another
@@ -4559,12 +4546,6 @@ void dlgProfilePreferences::slot_changeWrapAt()
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
-void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
-{
-    // Enable/Disable map deletion button:
-    pushButton_deleteMap->setEnabled(state);
-}
-
 void dlgProfilePreferences::slot_deleteMap()
 {
     Host* pHost = mpHost;
@@ -4573,7 +4554,6 @@ void dlgProfilePreferences::slot_deleteMap()
     }
 
     // Disable the button, but set it to be down until process is complete
-    pushButton_deleteMap->setEnabled(false);
     pushButton_deleteMap->setCheckable(true);
     pushButton_deleteMap->setChecked(true);
 
@@ -4591,9 +4571,6 @@ void dlgProfilePreferences::slot_deleteMap()
     // Reset the button but leave it disabled
     pushButton_deleteMap->setChecked(false);
     pushButton_deleteMap->setCheckable(false);
-
-    // Also reset the checkBox that enables the button:
-    checkBox_enablMapDeleteButton->setChecked(false);
 
     label_mapFileActionResult->setText(tr("Deleted map."));
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
