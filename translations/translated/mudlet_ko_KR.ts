@@ -1357,7 +1357,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="1874"/>
       <location filename="../src/TConsole.cpp" line="1913"/>
       <source>No search results, sorry!</source>
-      <translation>검색 결과가 없습니다, 죄송합니다!</translation>
+      <translation>죄송합니다, 검색 결과가 없습니다!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
@@ -1617,7 +1617,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5629"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation>utf8.* 루아 함수를 사용할 수 없습니다.</translation>
+      <translation>utf8.* Lua 함수를 사용할 수 없습니다.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5635"/>
@@ -4026,8 +4026,8 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="543"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation>[ 경고 ] - 소켓이 연결이 끊어졌습니다.
-           이유: </translation>
+      <translation>[ 경고 ] - 소켓 연결이 끊어졌습니다.
+이유: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
