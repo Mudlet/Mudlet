@@ -944,8 +944,9 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
 
 /**
  * Forward message to all clients.
+ * If onlyToServed is set, only send this message to served clients
  */
-void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg)
+void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg, bool onlyToServed)
 {
     const QString cmdStr = qsl("%1%2%3")
                                    .arg(static_cast<char>(TextEveryone))
@@ -955,27 +956,9 @@ void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg)
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl && cl != pClient) {
-            cl->writeData(cmdStr);
-        }
-    }
-}
-
-/**
- * Forward message to all served clients.
- */
-// DRY: This method is identical to sendServedMessage(...) EXCEPT for extra "&& cl->isServed()" test condition
-void MMCPServer::sendMessageToServed(MMCPClient* pClient, const QString& msg)
-{
-    const QString cmdStr = qsl("%1%2%3")
-                                   .arg(static_cast<char>(TextEveryone))
-                                   .arg(msg)
-                                   .arg(static_cast<char>(End));
-
-    QListIterator<QPointer<MMCPClient>> it(mPeersList);
-    while (it.hasNext()) {
-        MMCPClient* cl = it.next();
-        if (cl && cl != pClient && cl->isServed()) {
+        // If onlyToServed == false -> (!onlyToServed == true) -> send to all
+        // If onlyToServed == true -> only send if cl->isServed() is true
+        if (cl && cl != pClient && (!onlyToServed || cl->isServed())) {
             cl->writeData(cmdStr);
         }
     }

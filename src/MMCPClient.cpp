@@ -604,22 +604,25 @@ void MMCPClient::handleIncomingConnectionsRequest()
 
 /**
  * Display a chat all message and echo it to any clients we may be serving
+ * Or, if we're serving someone forward it to them
  */
 void MMCPClient::handleIncomingChatEveryone(const QString& msg)
 {
+    // We're ignoring chats from this person
     if (mIsIgnored) {
         return;
     }
 
     mpMMCPServer->clientMessage(msg);
 
-    if (mIsServed) {
-        //Echo this message to
-        mpMMCPServer->sendServedMessage(this, msg);
-    } else {
-        //Echo message to other clients we might be serving
-        mpMMCPServer->sendMessageToServed(this, msg);
-    }
+    // If mIsServed is true:
+    // We are serving this client, forward their message to everyone
+    // except them and ourself
+    // If mIsServed is false:
+    // Echo message to other clients we might be serving
+
+    // sendServedMessage expects an onlyToServed boolean
+    mpMMCPServer->sendServedMessage(this, msg, !mIsServed);
 }
 
 /**

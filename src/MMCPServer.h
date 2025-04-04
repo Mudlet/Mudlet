@@ -78,8 +78,7 @@ public:
 
     void sendPublicConnections(MMCPClient*);
     void sendPublicPeek(MMCPClient*);
-    void sendServedMessage(MMCPClient*, const QString&);
-    void sendMessageToServed(MMCPClient*, const QString&);
+    void sendServedMessage(MMCPClient*, const QString&, bool);
 
     bool autoAcceptIncomingCalls();
     quint16 addConnectedClient(MMCPClient*);
