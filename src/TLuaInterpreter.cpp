@@ -5577,6 +5577,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "ping");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatPrivate);
     lua_setfield(pGlobalLua, -2, "setPrivate");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatRequestConnections);
+    lua_setfield(pGlobalLua, -2, "request");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatServe);
     lua_setfield(pGlobalLua, -2, "serve");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatSetGroup);

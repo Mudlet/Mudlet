@@ -309,6 +309,24 @@ int TLuaInterpreter::chatPrivate(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::chatRequestConnections(lua_State* L)
+{
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    const auto result = pHost->mmcpServer->request(target);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::chatServe(lua_State* L)
 {
     const QString target = getVerifiedString(L, __func__, 1, "target");

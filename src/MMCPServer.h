@@ -62,6 +62,7 @@ public:
     QPair<bool, QString> ignore(const QString&);
     QPair<bool, QString> ping(const QVariant&);
     QPair<bool, QString> peek(const QVariant&);
+    QPair<bool, QString> request(const QVariant&);
     QPair<bool, QString> chatPrivate(const QVariant&);
     QPair<bool, QString> serve(const QVariant&);
     QPair<bool, QString> allowSnoop(const QVariant&);

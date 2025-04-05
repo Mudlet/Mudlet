@@ -216,6 +216,7 @@ public:
     static int chatPing(lua_State*);
     static int chatPeek(lua_State*);
     static int chatPrivate(lua_State*);
+    static int chatRequestConnections(lua_State*);
     static int chatServe(lua_State*);
     static int chatSetGroup(lua_State*);
     static int chatSideChannel(lua_State* L);

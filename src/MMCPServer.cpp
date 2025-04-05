@@ -611,6 +611,21 @@ QPair<bool, QString> MMCPServer::peek(const QVariant& target)
 }
 
 /**
+ * Script command, send connections request to a client
+ */
+QPair<bool, QString> MMCPServer::request(const QVariant& target)
+{
+    MMCPClient* pClient = clientByNameOrId(target);
+
+    if (pClient) {
+        pClient->sendRequestConnections();
+        return {true, QString()};
+    }
+
+    return {false, qsl("no client by that name or id")};
+}
+
+/**
  * Toggle a client's private state
  */
 QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target)

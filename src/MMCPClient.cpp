@@ -411,6 +411,7 @@ void MMCPClient::sendRequestConnections()
     QByteArray requestData;
     requestData.append(static_cast<char>(RequestConnections));
     requestData.append(static_cast<char>(End));
+    writeData(requestData);
 
     const QString infoMsg = tr("[ CHAT ]  - Requested connections from %1").arg(mPeerName);
     mpHost->postMessage(infoMsg);
@@ -573,11 +574,34 @@ void MMCPClient::handleIncomingClientVersion(const QString& version) {
 /**
  * We were sent a connection list, we're supposed to connect to the clients
  * given to us
+ * Maybe check option if we want to auto call everyone in this list
  */
 void MMCPClient::handleIncomingConnectionList(const QString& list)
 {
-    // Maybe check option if we want to auto call everyone in this list
-    mpMMCPServer->clientMessage(list);
+    QStringList parts = list.split(',');
+
+    if (parts.size() % 2 != 0) {
+        mpHost->postMessage(qsl("[ CHAT ]  - Badly formatted connection list from %1")
+            .arg(mPeerName));
+        return;
+    }
+    for (int i = 0; i < parts.size(); i++) {
+        const QString host = parts[i];
+        bool ok = false;
+        uint16_t port = parts[++i].toUInt(&ok);
+
+        if (!ok) {
+            mpHost->postMessage(qsl("[ CHAT ]  - Error parsing host value from connection: %1")
+                .arg(parts[i]));
+            continue;
+        }
+
+        mpHost->postMessage(qsl("[ CHAT ]  - Attempting to connect to %1:%2 provided by %3")
+            .arg(host).arg(port).arg(mPeerName));
+
+        mpMMCPServer->call(host, port);
+    }
+
 }
 
 /**
