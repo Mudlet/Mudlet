@@ -379,10 +379,8 @@ QPair<bool, QString> MMCPServer::chatList()
     using namespace AnsiColors;
 
     QStringList peersList;
-    //int peerCount = 0;
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
-        //peerCount++;
         MMCPClient* pClient = it.next();
        
         peersList << qsl("%1%2 %3%4 %5")
@@ -399,7 +397,7 @@ QPair<bool, QString> MMCPServer::chatList()
                                   "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private   n - Allow Snooping\n"
                                   "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude%1")
                                        .arg(RST,
-                                            peersList.join(QChar::LineFeed).append(peersList.isEmpty() ? QChar::Null : QChar::LineFeed),
+                                            peersList.isEmpty() ? QString() : peersList.join(QChar::LineFeed),
                                             FBLDGRN, FBLDYEL);
 
     clientMessage(strMessage);
