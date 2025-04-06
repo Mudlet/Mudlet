@@ -222,7 +222,7 @@ void MMCPClient::slot_readData()
                 } else {
                     mState = Pending;
 
-                    const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 is pending, use chatAccept(%4) or chatDeny(%4) to accept or deny.")
+                    const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 is pending, use mmcp.accept(%4) or mmcp.deny(%4) to accept or deny.")
                                                     .arg(mPeerName,
                                                         convertToIPv4(mTcpSocket.peerAddress()),
                                                         QString::number(mTcpSocket.peerPort()))
