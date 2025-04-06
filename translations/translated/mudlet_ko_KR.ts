@@ -2018,7 +2018,7 @@ area) not found, adding reserved -1 id.</source>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
       <translation>[ 정보 ] - 지도 파일을 성공적으로 읽었습니다 (%1s), 
-일부 일관성 세부 정보를 확인 중...</translation>
+  일부 일관성 세부 정보를 확인 중...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1889"/>
@@ -2274,8 +2274,8 @@ it but it will try! The file is: &quot;%2&quot;.</source>
 &quot;%2&quot;,
 please wait...</source>
       <translation>[ 정보 ] - 맵 읽는 중입니다. 형식 버전: %1. 파일:
-&quot;%2&quot;,
-기다려주세요...</translation>
+  &quot;%2&quot;,
+  기다려주세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
@@ -12646,7 +12646,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4007"/>
       <source>Force NEW_ENVIRON negotiation off</source>
-      <translation>NEW_ENVIRON 협상 강제 비활성화</translation>
+      <translation>NEW_ENVIRON 기능 무조건 끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4041"/>
@@ -13190,7 +13190,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4000"/>
       <source>Force CHARSET negotiation off</source>
-      <translation>CHARSET 협상 강제로 끄기</translation>
+      <translation>문자셋 기능 무조건 끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4144"/>
@@ -13210,7 +13210,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4126"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation>SGR...(3|4)8;2;...m 코드에서 색 공간 ID를 기대합니다</translation>
+      <translation>SGR...(3|4)8;2;...m 코드에 색상 공간 ID가 포함된 형식을 사용</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4133"/>
@@ -13391,7 +13391,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3968"/>
       <source>Force compression off</source>
-      <translation>압축 강제 해제</translation>
+      <translation>압축 기능 강제 비활성화</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3986"/>
@@ -13406,7 +13406,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3993"/>
       <source>Force MXP negotiation off</source>
-      <translation>MXP 협상 강제로 끄기</translation>
+      <translation>MXP 기능 무조건 끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3137"/>
@@ -13590,7 +13590,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4193"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation>타이머의 디버그 메시지를 표시하지 않을 크기를 설정하십시오:</translation>
+      <translation>다음 값 이상인 타이머에 대해 디버그 메시지 표시:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4190"/>
