@@ -7523,7 +7523,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="82"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;트리거는 게임 출력에 반응합니다. 새로운 트리거를 추가하려면:&lt;ol&gt;
+      <translation>&lt;p&gt;트리거는 게임 중 나타나는 텍스트에 반응합니다. 새로운 트리거를 추가하려면:&lt;ol&gt;
 &lt;li&gt;위쪽의 &apos;트리거 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
 &lt;li&gt;트리거로 사용할 &lt;strong&gt;패턴&lt;/strong&gt;을 정의하세요.&lt;/li&gt;
 &lt;li&gt;적절한 패턴 &lt;strong&gt;유형&lt;/strong&gt;을 선택하세요.&lt;/li&gt;
@@ -7531,7 +7531,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
 &lt;li&gt;&lt;strong&gt;트리거를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
 &lt;/ol&gt;&lt;/p&gt;
 
-&lt;p&gt;그게 다예요! 입력 줄에서 트리거를 생성하고 싶다면, &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;Command Line Simple Triggers and Aliases Script&lt;/a&gt;과 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Input line alias/trigger scripts&lt;/a&gt;라는 패키지가 도움이 될 수 있어요.&lt;/p&gt;
+&lt;p&gt;그게 다예요! 입력 줄에서 트리거를 생성하고 싶다면, &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;명령줄에서 간단한 트리거와 줄임말을 만드는 스크립트&lt;/a&gt;와 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;입력줄에서 사용하는 줄임말 및 트리거 스크립트&lt;/a&gt;라는 패키지가 도움이 될 수 있어요.&lt;/p&gt;
 
 &lt;p&gt;더 자세한 정보는 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.ED.8A.B8.EB.A6.AC.EA.B1.B0&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
     </message>
@@ -7770,17 +7770,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="91"/>
       <source>&lt;p&gt;Scripts organize code and can react to events. To add a new script:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;If needed, you can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;스크립트는 코드를 정리하고 이벤트에 반응할 수 있습니다. 새로운 스크립트를 추가하려면: &lt;ol&gt;
-&lt;li&gt;위쪽의 &apos;스크립트 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
-&lt;li&gt;아래 박스에 스크립트를 입력하세요. 예를 들어, 다른 트리거나 즐임말에서 호출할 &lt;strong&gt;함수&lt;/strong&gt;를 정의할 수 있습니다.&lt;/li&gt;
-&lt;li&gt;함수를 정의하지 않고 lua &lt;strong&gt;명령어&lt;/strong&gt;를 작성하면, Mudlet 시작 시와 스크립트를 편집할 때마다 실행됩니다.&lt;/li&gt;
-&lt;li&gt;필요한 경우, +와 - 기호로 &lt;strong&gt;이벤트&lt;/strong&gt; 목록을 등록할 수 있습니다. 이벤트가 발생하면, 스크립트 이름과 동일한 이름의 함수가 호출됩니다.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;스크립트를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
-&lt;/ol&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 스크립트는 비활성화되어 있어도 열람 시 자동으로 실행됩니다.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 이벤트는 메인 프로필 창의 명령줄에서 다음과 같이 추가할 수도 있습니다:&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;더 자세한 정보는 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;스크립트는 코드를 구성하고 이벤트에 반응할 수 있습니다. 새 스크립트를 추가하려면:&lt;ol&gt;&lt;li&gt;를 클릭하십시오. &apos;항목 추가&apos; 아이콘을 클릭합니다.&lt;/li&gt;&lt;li&gt;아래 상자에 스크립트를 입력합니다. 예를 들어 다음을 정의할 수 있습니다. &lt;strong&gt;함수&lt;/strong&gt; 다른 트리거, 별칭 등에 의해 호출됩니다.&lt;/li&gt;&lt;li&gt;lua를 쓰면 &lt;strong&gt;명령&lt;/strong&gt;을 함수를 정의하지 않으면 Mudlet 시작 시 그리고 편집을 위해 스크립트를 열 때마다 실행됩니다.&lt;/li&gt;&lt;li&gt;필요한 경우 다음 목록을 등록할 수 있습니다. &lt;strong&gt;이벤트&lt;/strong&gt;를 + 및 - 기호와 함께 사용합니다. 이러한 이벤트 중 하나가 발생하면 스크립트 항목 자체와 이름이 같은 함수가 호출됩니다.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;활성화&lt;/strong&gt; 스크립트.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;메모:&lt;/strong&gt; 스크립트는 비활성화된 경우에도 볼 때 자동으로 실행됩니다.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;메모:&lt;/strong&gt; 이벤트는 다음과 같이 기본 프로필 창의 명령줄에서 스크립트에 추가할 수도 있습니다.&lt;/p&gt;&lt;p&gt;&lt;code&gt; Lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;설명서를 확인하십시오. &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;추가 정보&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
