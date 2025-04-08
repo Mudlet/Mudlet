@@ -265,7 +265,7 @@ public:
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
-    int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
+    int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
@@ -275,7 +275,6 @@ public:
     QString& line(int lineNumber);
     int find(int line, const QString& what, int pos);
     int getCharWidth(const QChar& c);
-    int wrap(int);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);
@@ -340,7 +339,7 @@ public:
     inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
-    QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline);
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();

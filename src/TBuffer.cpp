@@ -854,7 +854,7 @@ COMMIT_LINE:
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
-            wrap(line);
+            wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
             // Start a new, but empty line in the various buffers
             log(lineBuffer.size() - 1, lineBuffer.size() - 1);
@@ -2219,9 +2219,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
     // optimization: if the lastLine length hasn't changed,
     // skip it and wrap subsequent lines
     if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
-        wrap(lastLineBeforeWrap + 1);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
     } else {
-        wrap(lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
     }
     while (mBatchDeleteSize > 0 && static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
@@ -2411,7 +2411,7 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 
     if (hasAppended && y != -1) {
         TChar format(mpConsole);
-        wrapLine(y, mWrapAt, mWrapIndent, format);
+        wrapLine(y, mWrapAt, mWrapIndent, mWrapHangingIndent);
     }
 }
 
@@ -2486,14 +2486,13 @@ int TBuffer::getCharWidth(const QChar& c)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline)
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, 
+    const int maxWidth, const int indent, const int hangingIndent)
 {
     QList<WrapInfo> output;
     if (lineText.isEmpty()) {
         return output;
     }
-    const int indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
-    const int hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
     int xPos = 0;
@@ -2526,7 +2525,7 @@ QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline)
         const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
         const int charWidth = graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
         const int indentationHere = isNewline ? indent : hangingIndent;
-        if (xPos + charWidth > mWrapAt - (needsIndent ? indentationHere : 0)) {
+        if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
             if (isNewline) {
                 needsIndent = true;
             }
@@ -2567,13 +2566,77 @@ QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline)
     return output;
 }
 
-inline int TBuffer::wrap(int startLine)
+// This only works on the Main Console for a profile
+void TBuffer::log(int fromLine, int toLine)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+
+    TBuffer* pB = &mpHost->mpConsole->buffer;
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+        return;
+    }
+
+    if (fromLine >= size() || fromLine < 0) {
+        return;
+    }
+    if (toLine >= size()) {
+        toLine = size() - 1;
+    }
+    if (toLine < 0) {
+        return;
+    }
+
+    // if we've been called to log the same line - which can happen when the user
+    // enters a command after in-game text - then skip recording the last line
+    if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
+        mpHost->mpConsole->mLogStream << lastTextToLog;
+        mpHost->mpConsole->mLogStream.flush();
+    }
+
+    QStringList linesToLog;
+    for (int i = fromLine; i <= toLine; ++i) {
+        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            // This only handles a single line of logged text at a time:
+            linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
+        } else {
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(csmTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+        }
+    }
+
+    // record the last log call into a temporary buffer - we'll actually log
+    // on the next iteration after duplication detection has run
+    lastTextToLog = linesToLog.join(QString());
+    lastLoggedFromLine = fromLine;
+    lastloggedToLine = toLine;
+}
+
+// logs the remaining output when logging gets stopped, without duplication checks
+void TBuffer::logRemainingOutput()
+{
+    mpHost->mpConsole->mLogStream << lastTextToLog;
+    mpHost->mpConsole->mLogStream.flush();
+}
+
+// logs a string directly to the log file
+void TBuffer::appendLog(const QString &text)
+{
+    TBuffer* pB = &mpHost->mpConsole->buffer;
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+        return;
+    }
+
+    mpHost->mpConsole->mLogStream << text;
+}
+
+// returns how many new lines have been inserted by the wrapping action
+int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
 {
     if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
     }
-    const QString lineBreaks = qsl(",.- ");
-    
+
     std::queue<std::deque<TChar>> queue;
     QStringList tempList;
     QStringList timeList;
@@ -2581,8 +2644,8 @@ inline int TBuffer::wrap(int startLine)
     int lineCount = 0;
     const TChar pSpace(mpConsole);
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    const int indent = (mWrapIndent < mWrapAt) ? mWrapIndent : 0;
-    const int hangingIndent = (mWrapHangingIndent < mWrapAt) ? mWrapHangingIndent : 0;
+    const int indent = (indentSize < maxWidth) ? indentSize : 0;
+    const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         lineCount++;
         std::deque<TChar> newBufferLine;
@@ -2603,7 +2666,7 @@ inline int TBuffer::wrap(int startLine)
         const QString lineText = lineBuffer[i];
         // a blank timestamp indicates a wrapped line
         const bool isNewline = (time != csmBlankTimeStamp);
-        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline); 
+        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent); 
         if (lineBreaks.isEmpty()) {
             tempList.append(lineText);
             queue.push(buffer[i]);
@@ -2686,177 +2749,6 @@ inline int TBuffer::wrap(int startLine)
         return insertedLines;
     }
     return 0;
-}
-
-// This only works on the Main Console for a profile
-void TBuffer::log(int fromLine, int toLine)
-{
-    if (mpHost.isNull()) {
-        return;
-    }
-
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
-        return;
-    }
-
-    if (fromLine >= size() || fromLine < 0) {
-        return;
-    }
-    if (toLine >= size()) {
-        toLine = size() - 1;
-    }
-    if (toLine < 0) {
-        return;
-    }
-
-    // if we've been called to log the same line - which can happen when the user
-    // enters a command after in-game text - then skip recording the last line
-    if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        mpHost->mpConsole->mLogStream << lastTextToLog;
-        mpHost->mpConsole->mLogStream.flush();
-    }
-
-    QStringList linesToLog;
-    for (int i = fromLine; i <= toLine; ++i) {
-        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            // This only handles a single line of logged text at a time:
-            linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
-        } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(csmTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
-        }
-    }
-
-    // record the last log call into a temporary buffer - we'll actually log
-    // on the next iteration after duplication detection has run
-    lastTextToLog = linesToLog.join(QString());
-    lastLoggedFromLine = fromLine;
-    lastloggedToLine = toLine;
-}
-
-// logs the remaining output when logging gets stopped, without duplication checks
-void TBuffer::logRemainingOutput()
-{
-    mpHost->mpConsole->mLogStream << lastTextToLog;
-    mpHost->mpConsole->mLogStream.flush();
-}
-
-// logs a string directly to the log file
-void TBuffer::appendLog(const QString &text)
-{
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
-        return;
-    }
-
-    mpHost->mpConsole->mLogStream << text;
-}
-
-// returns how many new lines have been inserted by the wrapping action
-int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format)
-{
-    if (startLine < 0) {
-        return 0;
-    }
-    if (static_cast<int>(buffer.size()) <= startLine) {
-        return 0;
-    }
-    std::queue<std::deque<TChar>> queue;
-    QStringList tempList;
-    int lineCount = 0;
-
-    for (int line = startLine, total = static_cast<int>(buffer.size()); line < total; ++line) {
-        if (line > startLine) {
-            break; //only wrap one line of text
-        }
-        std::deque<TChar> newLine;
-        QString lineText;
-
-        int indent = 0;
-        if (static_cast<int>(buffer[line].size()) >= screenWidth) {
-            for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
-                const TChar pSpace = format;
-                newLine.push_back(pSpace);
-                lineText.append(QChar::Space);
-            }
-            indent = indentSize;
-        }
-        int lastSpace = -1;
-        int wrapPos = -1;
-        auto lineLength = static_cast<int>(buffer[line].size());
-
-        for (int characterPosition = 0, total = static_cast<int>(buffer[line].size()); characterPosition < total;) {
-            if (lineLength - characterPosition > screenWidth - indent) {
-                wrapPos = calculateWrapPosition(line, characterPosition, characterPosition + screenWidth - indent);
-                lastSpace = qMax(-1, wrapPos);
-            } else {
-                lastSpace = -1;
-            }
-            for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
-                if (lastSpace > 0) {
-                    if (characterPosition >= lastSpace) {
-                        characterPosition++;
-                        break;
-                    }
-                }
-                if (characterPosition >= static_cast<int>(buffer[line].size())) {
-                    break;
-                }
-                if (lineBuffer[line][characterPosition] == QChar::LineFeed) {
-                    characterPosition++;
-
-                    if (newLine.empty()) {
-                        tempList.append(QString());
-                        std::deque<TChar> const emptyLine;
-                        queue.push(emptyLine);
-                    } else {
-                        queue.push(newLine);
-                        tempList.append(lineText);
-                    }
-                    goto OPT_OUT_CLEAN;
-                }
-                newLine.push_back(buffer[line][characterPosition]);
-                lineText.append(lineBuffer[line].at(characterPosition));
-                characterPosition++;
-            }
-            queue.push(newLine);
-            tempList.append(lineText);
-
-        OPT_OUT_CLEAN:
-            newLine.clear();
-            lineText.clear();
-            indent = 0;
-        }
-        lineCount++;
-    }
-
-    if (lineCount < 1) {
-        log(startLine, startLine);
-        return 0;
-    }
-
-    buffer.erase(buffer.begin() + startLine);
-    lineBuffer.removeAt(startLine);
-    const QString time = timeBuffer.at(startLine);
-    timeBuffer.removeAt(startLine);
-    const bool isPrompt = promptBuffer.at(startLine);
-    promptBuffer.removeAt(startLine);
-
-    const int insertedLines = queue.size() - 1;
-    int i = 0;
-    while (!queue.empty()) {
-        buffer.insert(buffer.begin() + startLine + i, queue.front());
-        queue.pop();
-        i++;
-    }
-
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        lineBuffer.insert(startLine + i, tempList[i]);
-        timeBuffer.insert(startLine + i, time);
-        promptBuffer.insert(startLine + i, isPrompt);
-    }
-    log(startLine, startLine + tempList.size() - 1);
-    return insertedLines > 0 ? insertedLines : 0;
 }
 
 bool TBuffer::moveCursor(QPoint& where)
