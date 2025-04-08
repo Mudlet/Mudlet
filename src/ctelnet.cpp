@@ -2667,7 +2667,8 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 }
 
 // Helper function to parse the GUI version from JSON
-QString cTelnet::parseGUIVersionFromJSON(const QJsonObject& json) {
+QString cTelnet::parseGUIVersionFromJSON(const QJsonObject& json)
+{
     QString version;
     auto versionJSON = json.value(qsl("version"));
 
@@ -2681,7 +2682,8 @@ QString cTelnet::parseGUIVersionFromJSON(const QJsonObject& json) {
 }
 
 // Helper function to parse the GUI URL from JSON
-QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
+QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json)
+{
     QString url;
     auto urlJSON = json.value(qsl("url"));
 
@@ -2693,7 +2695,8 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json) {
 }
 
 // Helper function to download and install the GUI package
-void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url) {
+void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url)
+{
     postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
 
     mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
@@ -2711,7 +2714,8 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
 }
 
 // Main logic for handling GUI package installation and upgrades
-void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document) {
+void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
+{
     // Parse the JSON response
     auto json = document.object();
     if (json.isEmpty()) {

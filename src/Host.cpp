@@ -1996,7 +1996,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 }
 
 
-QString Host::sanitizePackageName(const QString packageName) const {
+QString Host::sanitizePackageName(const QString packageName) const
+{
     auto tempName = packageName.section(qsl("/"), -1);
     tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
     tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
@@ -2030,7 +2031,8 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+void Host::removePackageInfo(const QString &packageName, const bool isModule)
+{
     if (isModule) {
         mModuleInfo.remove(packageName);
     } else {
@@ -4276,11 +4278,13 @@ void Host::setEditorShowBidi(const bool state)
     }
 }
 
-bool Host::caretEnabled() const {
+bool Host::caretEnabled() const
+{
     return mCaretEnabled;
 }
 
-void Host::setCaretEnabled(bool enabled) {
+void Host::setCaretEnabled(bool enabled)
+{
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
 }

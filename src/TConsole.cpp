@@ -1817,7 +1817,8 @@ void TConsole::slot_stopAllItems(bool b)
     }
 }
 
-void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY) {
+void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY)
+{
     mpHost->setCaretEnabled(true);
     mUpperPane->initializeCaret();
     moveCursor(searchX, searchY);

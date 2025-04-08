@@ -1145,7 +1145,8 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
     }
 }
 
-std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData) {
+std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
+{
     QList<std::shared_ptr<TMediaPlayer>>& mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (auto& existingPlayer : mediaPlayerList) {
