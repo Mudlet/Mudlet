@@ -28,7 +28,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.8.1'
+            qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
@@ -69,8 +69,9 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: true
-        modules: qt5compat qtmultimedia
+        cache: 'false'
+        setup-python: 'false'
+        modules: 'qt5compat qtmultimedia'
 
     - name: Restore Boost cache
       id: restore-boost
