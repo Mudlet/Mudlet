@@ -94,13 +94,13 @@
       <location filename="../src/Host.cpp" line="1058"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ 확인 ]  - %1 공개 테스트 빌드를 사용해 주셔서 감사합니다!</translation>
+      <translation>[ 확인 ] - %1 공개 테스트 빌드를 사용해 주셔서 감사합니다!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1059"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ 확인 ]  - %1 문제를 보고하여 Mudlet을 개선할 수 있도록 도와주세요.</translation>
+      <translation>[ 확인 ] - %1 문제를 보고하여 Mudlet을 개선할 수 있도록 도와주세요.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1860"/>
@@ -1065,7 +1065,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4316"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation>[  확인  ]  - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
+      <translation>[  확인  ] - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
     </message>
   </context>
   <context>
@@ -1520,7 +1520,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2148"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation>&quot;%2&quot; 프로필을 위한 임베디드 창 &quot;%1&quot;.</translation>
+      <translation>&quot;%2&quot; 프로필에 대한 내장된 창 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2150"/>
@@ -1602,7 +1602,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="4966"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
-      <translation>[ ERROR ] - Lua 모듈 %1을(를) 찾을 수 없습니다.%2%3%4</translation>
+      <translation>[ 오류 ] - Lua %1 모듈을 찾을 수 없습니다.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5604"/>
@@ -2232,7 +2232,7 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1141"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation>[ 경고 ]  - 지도를 형식 버전 &quot;%1&quot; 에서 저장하고 있으며, 이 버전의 Mudlet에는 권장되는 지도 버전
+      <translation>[ 경고 ] - 지도를 형식 버전 &quot;%1&quot; 에서 저장하고 있으며, 이 버전의 Mudlet에는 권장되는 지도 버전
  %2 가 다릅니다.</translation>
     </message>
     <message>
@@ -2488,12 +2488,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1140"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation>[ 경고 ]  - 방 ID:%1 에서 유효하지 않은 (특수) 출구를 %2 (이름 없음!)으로 제거합니다.</translation>
+      <translation>[ 경고 ] - 방 ID:%1 에서 유효하지 않은 (특수) 출구를 %2 (이름 없음!)으로 제거합니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1144"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation>[ 경고 ]  - 방에 유효하지 않은 (특수) 출구가 있어 %1 (이름 없음!)으로 제거되었습니다.</translation>
+      <translation>[ 경고 ] - 방에 유효하지 않은 (특수) 출구가 있어 %1 {이름 없음!}으로 제거되었습니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
@@ -2639,7 +2639,7 @@ and the exit will be turned into a stub.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1496"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation>[ 경고 ]  - 방에는 %2 으로 향하는 출구 &quot;%1&quot; 이 있지만 해당 방이 존재하지 않습니다. 출구는 제거될 것입니다 (대상 방 ID는 방 사용자 데이터에 &quot;%4&quot;키로 저장됩니다) 그리고 출구는 스텁으로 변환될 것입니다.</translation>
+      <translation>[ 경고 ] - 방에는 %2 으로 향하는 출구 &quot;%1&quot; 이 있지만 해당 방이 존재하지 않습니다. 출구는 제거될 것입니다 (대상 방 ID는 방 사용자 데이터에 &quot;%4&quot;키로 저장됩니다) 그리고 출구는 스텁으로 변환될 것입니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1540"/>
@@ -2695,13 +2695,13 @@ and the exit will be turned into a stub.</source>
       <location filename="../src/TRoom.cpp" line="1662"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation>[ 경고 ]  - 유효하지 않은 출구와 관련된 사용자 정의 출구 라인이 있었지만
+      <translation>[ 경고 ] - 유효하지 않은 출구와 관련된 사용자 정의 출구 라인이 있었지만
 복구할 수 없었습니다. 이것은 손실되었습니다!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1667"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation>[ 경고 ]  - 유효하지 않은 출구와 관련된 사용자 정의 출구 라인이 있었지만 이것을 복구할 수 없었습니다. 이것은 손실되었습니다!</translation>
+      <translation>[ 경고 ] - 유효하지 않은 출구와 관련된 사용자 정의 출구 라인이 있었지만 이것을 복구할 수 없었습니다. 이것은 손실되었습니다!</translation>
     </message>
   </context>
   <context>
@@ -2732,7 +2732,7 @@ Mudlet - is your system running out of memory?</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="634"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation>[ 경고 ]  - 이 방과 관련된 데이터 구조에 문제가 있습니다. 방&apos;의 데이터가 손실되어 id가 삭제됩니다. 이는 현재 실행 중인 Mudlet의 심각한 문제를 나타냅니다 - 시스템 메모리가 부족한 건 아닌지 확인해보세요.</translation>
+      <translation>[ 경고 ] - 이 방과 관련된 데이터 구조에 문제가 있습니다. 방의 데이터가 손실되어 ID가 삭제되고 있습니다. 이는 현재 실행 중인 Mudlet 버전에 심각한 문제가 있음을 시사합니다. 시스템의 메모리가 부족한 것 아닙니까?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="683"/>
@@ -2803,13 +2803,13 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="857"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation>[ INFO ]  - The renumbered rooms will be:</translation>
+      <translation>[ 정보 ] - 새롭게 번호가 변경된 방:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation>[ 확인 ]  - 적용된 변경 사항:
+      <translation>[ 확인 ] - 적용된 변경 사항:
 (ID) &quot;이전 이름&quot; ==&gt; &quot;새 이름&quot;</translation>
     </message>
     <message>
@@ -2981,7 +2981,7 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation>[  확인  ]  - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
+      <translation>[  확인  ] - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
   이 경우를 해결하기 위해, 여기에서 이름이 없는 영역(또는 미래에 생성된 경우)은 자동으로 &quot;%1&quot;이라는 이름이 지정됩니다.
   이러한 일이 여러 번 발생하면, 영역 이름의 중복으로 인해 처음 발견된 것을 제외한 모든 영역에 &quot;_###&quot; 스타일의 접미사가 추가되며, 여기서 각 &quot;###&quot;은 증가하는 숫자입니다; 이러한 이름들을 더 의미 있는 영역 이름으로 변경하실 수 있으며, 이는 전적으로 귀하의 선택에 달려 있습니다. 단, 한 영역의 이름을 해당 시점에 존재하는 다른 영역의 이름과 동일하게 설정할 수는 없습니다.</translation>
     </message>
@@ -4037,7 +4037,7 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="593"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation>[ 정보 ] - %1 의 IP 주소를 찾았습니다. IP 주소는 다음과 같습니다: %2</translation>
+      <translation>[ 정보 ] - %1 의 IP 주소를 찾았습니다. IP 주소: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="595"/>
@@ -4158,7 +4158,7 @@ Mudlet은 ASCII 인코딩을 사용하여 데이터를 전송하려 시도하겠
       <location filename="../src/ctelnet.cpp" line="3450"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation>[ 경고 ]  - 다른 재생을 수행할 수 없습니다.
+      <translation>[ 경고 ] - 다른 재생을 수행할 수 없습니다.
 완료될 때까지 다시 시도하세요.</translation>
     </message>
     <message>
@@ -8905,7 +8905,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="57"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation>라인의 시작부터 찾을 텍스트</translation>
+      <translation>찾을 텍스트 (행의 시작부터):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="60"/>
@@ -11925,7 +11925,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3120"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation>[  OK  ]  - 프로필 &quot;%1&quot; 오프라인 모드로 로드됨.</translation>
+      <translation>[ 확인 ] - 프로필 &quot;%1&quot; 오프라인 모드로 로드됨.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3405"/>
@@ -11959,7 +11959,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/mudlet.cpp" line="4099"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation>[ 경고 ]  - 다른 재생을 수행할 수 없습니다. 이미 진행 중인 재생이 있을 수 있습니다.
+      <translation>[ 경고 ] - 다른 재생을 수행할 수 없습니다. 이미 진행 중인 재생이 있을 수 있습니다.
 완료되면 다시 시도하십시오.</translation>
     </message>
   </context>
