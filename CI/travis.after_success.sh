@@ -22,7 +22,7 @@ else
   # Not a release build so include the details including the Git SHA1 in the message
   echo "Finished building Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
 fi
-if [ ! -z "${DEPLOY_URL}" ]; then
+if [ -n "${DEPLOY_URL}" ]; then
   echo "Deployed the output to ${DEPLOY_URL}"
 fi
 echo ""
