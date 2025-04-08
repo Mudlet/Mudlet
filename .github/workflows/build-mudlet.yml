@@ -23,32 +23,32 @@ jobs:
       matrix:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 12
-            qt: '6.9.0'
+            gcc_compiler_version: 10
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            gcc_compiler_version: 12
-            qt: '6.9.0'
+            gcc_compiler_version: 10
+            qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++ / lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++ / lua tests'
             triplet: arm64-osx
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -69,8 +69,6 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: 'false'
-        setup-python: 'false'
         modules: 'qt5compat qtmultimedia'
 
     - name: Restore Boost cache
