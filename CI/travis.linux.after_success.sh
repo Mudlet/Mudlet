@@ -66,7 +66,7 @@ then
   fi
 
   # Debug: print out the locations of all copies of the buult mudlet file
-  echo "Checking for the mudlet file we should have:
+  echo "Checking for the mudlet file we should have:"
   # Currently we seem to be looking in:
   # /home/runner/work/Mudlet/b/ninja/mudlet
   # but that doesn't seem to be correct now...
