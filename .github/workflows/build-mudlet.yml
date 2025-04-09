@@ -64,10 +64,10 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Manually install python wheel
+    - name: Manually install old version of the python wheel package
       run: |
-        pip install wheel
-        # We need to install wheel otherwise the below will fail
+        pip install 'wheel<0.46.0' --force-reinstall -v
+        # We need to install older wheel otherwise the below will fail
         # with "invalid command 'bdist_wheel'"
         # See https://github.com/jurplel/install-qt-action/issues/281
       shell: bash
