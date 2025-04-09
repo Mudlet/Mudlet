@@ -70,6 +70,7 @@ jobs:
         # We need to install wheel otherwise the below will fail
         # with "invalid command 'bdist_wheel'"
         # See https://github.com/jurplel/install-qt-action/issues/281
+      shell: bash
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
