@@ -23,11 +23,11 @@ jobs:
       matrix:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 12
             qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
@@ -35,7 +35,7 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 12
             qt: '6.8.1'
           - os: macos-13
             buildname: 'macos (x86_64) / c++ / lua tests'
@@ -63,14 +63,6 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-
-    - name: Manually install old version of the python wheel package
-      run: |
-        pip install 'wheel<0.46.0' --force-reinstall -v
-        # We need to install older wheel otherwise the below will fail
-        # with "invalid command 'bdist_wheel'"
-        # See https://github.com/jurplel/install-qt-action/issues/281
-      shell: bash
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
