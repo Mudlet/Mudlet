@@ -52,6 +52,18 @@ then
   # unset LD_LIBRARY_PATH as it upsets linuxdeployqt - CHECK whether linuxdeploy is also upset?
   # export LD_LIBRARY_PATH=
 
+  # The linuxdeploy-qt pluging to linuxdeploy needs to know the Qt version it
+  # is being run for when it is run inside the ./make-installer.sh script.
+  # This is established from the QMAKE environment variable - see:
+  # https://github.com/linuxdeploy/linuxdeploy-plugin-qt
+  # The (currently unused) installer repository file
+  # ${BUILD_DIR}/../installers/generic-linux/build-and-make-installer.sh sets
+  # this before it calls
+  # ${BUILD_DIR}/../installers/generic-linux/make-installer.sh
+  if [ -z "${QMAKE}" ]; then
+    QMAKE=$(which qmake6)
+    export QMAKE
+  fi
   if ! [[ "${GITHUB_REF}" =~ ^"refs/tags/" ]] && [ "${PUBLIC_TEST_BUILD}" != "true" ]; then
     echo "== Creating a snapshot build =="
     ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
