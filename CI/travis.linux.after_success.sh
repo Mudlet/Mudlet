@@ -43,7 +43,7 @@ then
   YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
   # TODO: revert to master branch once https://github.com/Mudlet/installers/pull/123 is merged:
-  git clone --branch Improve_switchTo_linuxdeploy https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
+  git clone --branch Improve_switchTo_linuxdeploy https://github.com/SlySven/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/generic-linux" || exit 1
 
