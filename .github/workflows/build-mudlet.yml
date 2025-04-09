@@ -38,14 +38,14 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.8.1'
           - os: macos-13
-            buildname: 'macos (x86_64) / c++ / lua tests'
+            buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '6.8.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
-            buildname: 'macos (arm64) / c++ / lua tests'
+            buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
             qt: '6.8.1'
