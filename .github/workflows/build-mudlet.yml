@@ -64,13 +64,11 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Install wheel manually to fix next steps
-    # We need to install wheel otherwise the below will fail
-    # with "invalid command 'bdist_wheel'"
-    # See https://github.com/jurplel/install-qt-action/issues/281
-    - run: pip install wheel
-
     - name: Install Qt
+      run: pip install wheel
+      # We need to install wheel otherwise the below will fail
+      # with "invalid command 'bdist_wheel'"
+      # See https://github.com/jurplel/install-qt-action/issues/281
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
