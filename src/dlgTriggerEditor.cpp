@@ -5275,7 +5275,7 @@ void dlgTriggerEditor::saveScript()
     pT->setEventHandlerList(handlerList);
     pT->setScript(script);
 
-    pT->compile();
+    pT->compileAll();
     mpHost->getTriggerUnit()->doCleanup();
     QIcon icon;
     QString itemDescription;
