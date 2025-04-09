@@ -64,6 +64,17 @@ then
     QMAKE=$(which qmake6)
     export QMAKE
   fi
+
+  # Debug: print out the locations of all copies of the buult mudlet file
+  echo "Checking for the mudlet file we should have:
+  # Currently we seem to be looking in:
+  # /home/runner/work/Mudlet/b/ninja/mudlet
+  # but that doesn't seem to be correct now...
+  find /home/runner/work -name mudlet -type f -print0 | xargs -0 ls -lh
+
+  # fail quickly now:
+  exit 1
+
   if ! [[ "${GITHUB_REF}" =~ ^"refs/tags/" ]] && [ "${PUBLIC_TEST_BUILD}" != "true" ]; then
     echo "== Creating a snapshot build =="
     ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
