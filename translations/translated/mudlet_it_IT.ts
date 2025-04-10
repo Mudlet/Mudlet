@@ -10735,7 +10735,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="3301"/>
       <source>[ INFO ]  - Compact input line set. Press &quot;%1&quot; to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
-      <translation>[ INFO ]  - Riga di input in modalità compatta. Premi &quot;%1&quot; per mostrare di nuovo i pulsanti in basso a destra.</translation>
+      <translation>[ INFO ]  - Riga dei comandi in modalità compatta. Premi &quot;%1&quot; per mostrare di nuovo i pulsanti in basso a destra.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3944"/>
@@ -12105,12 +12105,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="503"/>
       <source>&lt;p&gt;Use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Forza l'utilizzo delle terminazioni di riga UNIX per i vecchi server UNIX che non possono gestire correttamente quelle di Windows&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scrive il testo inviato nella finestra principale.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Questa opzione può essere disabilitata dal server di gioco se negozia l'utilizzo dell'opzione telnet ECHO.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
@@ -12120,7 +12120,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="564"/>
       <source>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Evidenzia il testo della riga dei comandi mentre visualizzi la cronologia, per facilitarne la cancellazione.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="574"/>
