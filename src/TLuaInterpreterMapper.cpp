@@ -3314,15 +3314,61 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "environmentID");
-    const int r = getVerifiedInt(L, __func__, 2, "r");
-    const int g = getVerifiedInt(L, __func__, 3, "g");
-    const int b = getVerifiedInt(L, __func__, 4, "b");
-    const int alpha = getVerifiedInt(L, __func__, 5, "a");
-    const Host& host = getHostFromLua(L);
-    host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
+    const int r = getVerifiedInt(L, __func__, 2, "red color component");
+    const int g = getVerifiedInt(L, __func__, 3, "green color component");
+    const int b = getVerifiedInt(L, __func__, 4, "blue color component");
+    int alpha = 255;
+    if (lua_gettop(L) > 4) {
+        alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
+    }
+
+    if ((r < 0) || (r > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "red color component %d out of range {0 to 255}", r);
+        return 2;
+    }
+    if ((g < 0) || (g > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "green color component %d out of range {0 to 255}", g);
+        return 2;
+    }
+    if ((b < 0) || (b > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "blue color component %d out of range {0 to 255}", b);
+        return 2;
+    }
+    if ((alpha < 0) || (alpha > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "alpha color component %d out of range {0 to 255}", alpha);
+        return 2;
+    }
+    const QColor& newColor = QColor(r, g, b, alpha);
+    Host& host = getHostFromLua(L);
+    host.mpMap->mCustomEnvColors[id] = newColor;
+    switch (id) { // See TMap::restore16ColorSet() for mapping of indexes:
+    case 257:   host.mRed_2 = newColor;             break;
+    case 258:   host.mGreen_2 = newColor;           break;
+    case 259:   host.mYellow_2 = newColor;          break;
+    case 260:   host.mBlue_2 = newColor;            break;
+    case 261:   host.mMagenta_2 = newColor;         break;
+    case 262:   host.mCyan_2 = newColor;            break;
+    case 263:   host.mWhite_2 = newColor;           break;
+    case 264:   host.mBlack_2 = newColor;           break;
+    case 265:   host.mLightRed_2 = newColor;        break;
+    case 266:   host.mLightGreen_2 = newColor;      break;
+    case 267:   host.mLightYellow_2 = newColor;     break;
+    case 268:   host.mLightBlue_2 = newColor;       break;
+    case 269:   host.mLightMagenta_2 = newColor;    break;
+    case 270:   host.mLightCyan_2 = newColor;       break;
+    case 271:   host.mLightWhite_2 = newColor;      break;
+    case 272:   host.mLightBlack_2 = newColor;      break;
+    default: {} // No-op
+    }
+
     host.mpMap->setUnsaved(__func__);
     host.mpMap->update();
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDoor

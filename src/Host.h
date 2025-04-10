@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2020, 2022-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -340,9 +340,8 @@ public:
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
-    std::pair<bool, QString> setDisplayFont(const QFont& font);
-    std::pair<bool, QString> setDisplayFont(const QString& fontName);
-    void setDisplayFontFromString(const QString& fontData);
+    std::pair<bool, QString> setDisplayFont(const QFont&);
+    void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
     void setDisplayFontSpacing(const qreal spacing);
     void setDisplayFontStyle(QFont::StyleStrategy s);
