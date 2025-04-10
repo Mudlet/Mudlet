@@ -2512,9 +2512,23 @@ void TTextEdit::slot_analyseSelection()
                 utf16Vals.append(
                         qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse))
-                                .arg(qsl("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
-                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
-                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(), 4, 16, zero));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+                                .arg(qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                                                mpBuffer->lineBuffer.at(line).at(index + 1))),
+                                                   4, 16, zero).toUpper())
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()),
+                                     4, 16, zero)
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()),
+                                     4, 16, zero));
+#else
+                                .arg(qsl("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                          mpBuffer->lineBuffer.at(line).at(index + 1)),
+                                                   4, 16, zero).toUpper())
+                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(),
+                                     4, 16, zero)
+                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(),
+                                     4, 16, zero));
+#endif
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
@@ -2586,8 +2600,15 @@ void TTextEdit::slot_analyseSelection()
 
                 utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
                                          .arg(QString::number(columnsToUse))
-                                         .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, QChar('0'))
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()),
+                                              4, 16, QChar('0'))
                                          .toUpper());
+#else
+                                         .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(),
+                                              4, 16, QChar('0'))
+                                         .toUpper());
+#endif
 
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>").arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
             }
