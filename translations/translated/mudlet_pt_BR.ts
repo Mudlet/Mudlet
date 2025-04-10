@@ -6557,7 +6557,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="872"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation/>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="877"/>
@@ -6856,7 +6856,7 @@ e há espaço suficiente. A operação de cópia falhou.</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="666"/>
       <source>Enable spell check using dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Ative a verificação ortográfica usando o dicionário:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="696"/>
@@ -7812,7 +7812,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="2953"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3142"/>
