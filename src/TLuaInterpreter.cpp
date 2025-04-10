@@ -5898,7 +5898,9 @@ void TLuaInterpreter::loadGlobal()
         // linuxdeployqt) has a quite LHS structure and we should look in
         // tempDir/usr/share/applications/mudlet/lua/ but do so for the executable
         // being in tempDir/usr/bin (and arrange for the files to be there):
+#if defined (Q_OS_LINUX)
         QDir::toNativeSeparators(qsl("%1/../share/applications/mudlet/lua/LuaGlobal.lua").arg(executablePath)),
+#endif
 
         // CMake builds from Qt Creator on Windows 11 appear to use this directory:
         QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
