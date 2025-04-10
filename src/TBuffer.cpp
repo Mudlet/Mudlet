@@ -2273,10 +2273,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         const QChar thisChar = text.at(i);
         if (thisChar == QChar::LineFeed) {
             firstChar = true;
-            // suppress prefixed newline if the current line is already empty
-            if (i == 0 && lineBuffer.back().isEmpty()) {
-                continue;
-            }
             appendEmptyLine();
             continue;
         }
@@ -2642,7 +2638,6 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    const TChar pSpace(mpConsole);
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
     const int indent = (indentSize < maxWidth) ? indentSize : 0;
     const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
@@ -2726,17 +2721,13 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     }
 
     const int insertedLines = queue.size() - 1;
-    while (!queue.empty()) {
-        buffer.push_back(queue.front());
-        queue.pop();
-    }
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
+    for (int i = 0; i <= insertedLines; ++i) {
         if (tempList[i].size() < 1) {
-            lineBuffer.append(QString());
-            // leave an empty timebuffer QString IFF we're at a dangling newline
-            timeBuffer.append((i == total - 1) ? QString() : csmBlankTimeStamp);
-            promptBuffer.push_back(false);
+            queue.pop();
+            appendEmptyLine();
         } else {
+            buffer.push_back(queue.front());
+            queue.pop();
             lineBuffer.append(tempList[i]);
             timeBuffer.append(timeList[i]);
             promptBuffer.push_back(promptList[i]);
