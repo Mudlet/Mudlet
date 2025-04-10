@@ -5568,7 +5568,7 @@ void TLuaInterpreter::initLuaGlobals()
     // sub-directory, library files in a ./lib/ one and other files in a
     // ./usr/share/application/mudlet tree - so we should have the lua binary
     // modules (libraries) in ../lib/ relative to executable:
-    additionalCPaths << qsl("../lib/?.so").arg(appPath);
+    additionalCPaths << qsl("%1/../lib/?.so").arg(appPath);
 #elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
@@ -5787,7 +5787,7 @@ void TLuaInterpreter::initIndenterGlobals()
     // sub-directory, library files in a ./lib/ one and other files in a
     // ./usr/share/application/mudlet tree - so we should have the lua binary
     // modules (libraries) in ../lib/ relative to executable:
-    additionalCPaths << qsl("../lib/?.so").arg(appPath);
+    additionalCPaths << qsl("%1/../lib/?.so").arg(appPath);
 #endif
 
     insertNativeSeparatorsFunction(pIndenterState.get());

@@ -550,6 +550,9 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Enable the features associated with reporting problems in processing Unicode
 #   codepoints that cannot be displayed on screen in a `TConsole`:
 # target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
+#
+# * Produce qDebug() messages about the loading of translation files
+target_compile_definitions(mudlet PRIVATE DEBUG_TRANSLATIONS_LOADING)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
