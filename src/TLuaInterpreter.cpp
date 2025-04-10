@@ -5814,9 +5814,9 @@ void TLuaInterpreter::initIndenterGlobals()
     //    "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
     additionalLuaPaths << qsl("%1/../../mudlet/3rdparty/?.lua").arg(appPath);
     // 6 New linuxdeploy (replacement for linuxdeployqt):
-    //    "<applicationDirectory>/../share/applications/mudlet/lcf/?.lua"
+    //    "<applicationDirectory>/../share/applications/mudlet/?.lua"
 #if defined (Q_OS_LINUX)
-    additionalLuaPaths << qsl("%1/../share/applications/mudlet/lcf/?.lua").arg(appPath);
+    additionalLuaPaths << qsl("%1/../share/applications/mudlet/?.lua").arg(appPath);
 #endif
 
     int error = luaL_dostring(pIndenterState.get(), qsl("package.path = toNativeSeparators([[%1;]] .. package.path)")

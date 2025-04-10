@@ -1274,7 +1274,9 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 void mudlet::scanForMudletTranslations(const QString& path)
 {
     mPathNameMudletTranslations = path;
-    // qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translation files:";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+    qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translation files:";
+#endif
     mTranslationsMap.clear();
 
     QDir translationDir(path);
@@ -1302,7 +1304,9 @@ void mudlet::scanForMudletTranslations(const QString& path)
 
         std::unique_ptr<QTranslator> pMudletTranslator = std::make_unique<QTranslator>();
         if (Q_LIKELY(pMudletTranslator->load(translationFileName, path))) {
-            // qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+            qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
+#endif
             if (!translationStats.isEmpty()) {
                 // For this to not be empty then we are reading the translations
                 // from the expected resource file and the translation
@@ -1376,7 +1380,9 @@ void mudlet::scanForMudletTranslations(const QString& path)
 void mudlet::scanForQtTranslations(const QString& path)
 {
     mPathNameQtTranslations = path;
-    // qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translation files:";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+    qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translation files:";
+#endif
     QMutableMapIterator<QString, translation> itTranslation(mTranslationsMap);
     while (itTranslation.hasNext()) {
         itTranslation.next();
@@ -1384,7 +1390,9 @@ void mudlet::scanForQtTranslations(const QString& path)
         std::unique_ptr<QTranslator> pQtTranslator = std::make_unique<QTranslator>();
         const QString translationFileName(qsl("qt_%1.qm").arg(languageCode));
         if (pQtTranslator->load(translationFileName, path)) {
-            // qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+            qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
+#endif
             /*
              * Unfortunately, success in this operation does not mean that
              * a qt_xx_YY.qm translation file has been located, as the
@@ -1400,7 +1408,9 @@ void mudlet::scanForQtTranslations(const QString& path)
             current.mQtTranslationFileName = translationFileName;
             itTranslation.setValue(current);
         } else {
-            // qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+            qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
+#endif
         }
     }
 }
@@ -1408,7 +1418,9 @@ void mudlet::scanForQtTranslations(const QString& path)
 void mudlet::loadTranslators(const QString& languageCode)
 {
     if (!mTranslatorsLoadedList.isEmpty()) {
-        // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling existing translation previously loaded...";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+        qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling existing translation previously loaded...";
+#endif
         QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
         itTranslator.toBack();
         while (itTranslator.hasPrevious()) {
@@ -1431,7 +1443,9 @@ void mudlet::loadTranslators(const QString& languageCode)
         // up the process of locating the file:
         const bool isOk = pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
         if (isOk && !pQtTranslator->isEmpty()) {
-            // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mPathNameQtTranslations << "/"<< qtTranslatorFileName << "\"...";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mPathNameQtTranslations << "/"<< qtTranslatorFileName << "\"...";
+#endif
             qApp->installTranslator(pQtTranslator);
             mTranslatorsLoadedList.append(pQtTranslator);
         }
@@ -1442,8 +1456,10 @@ void mudlet::loadTranslators(const QString& languageCode)
     if (!mudletTranslatorFileName.isEmpty()) {
         const bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
         if (isOk && !pMudletTranslator->isEmpty()) {
-//            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
-//                                         << mudletTranslatorFileName << "\"...";
+#if defined(DEBUG_TRANSLATIONS_LOADING)
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
+                                         << mudletTranslatorFileName << "\"...";
+#endif
             qApp->installTranslator(pMudletTranslator);
             mTranslatorsLoadedList.append(pMudletTranslator);
         }
