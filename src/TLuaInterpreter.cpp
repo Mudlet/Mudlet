@@ -5563,6 +5563,12 @@ void TLuaInterpreter::initLuaGlobals()
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
+    // Switching to linuxdeploy with the separate linuxdeploy-qt plugin puts
+    // in a more FHS sort of filesystem with the mudlet executable in a ./bin/
+    // sub-directory, library files in a ./lib/ one and other files in a
+    // ./usr/share/application/mudlet tree - so we should have the lua binary
+    // modules (libraries) in ../lib/ relative to executable:
+    additionalCPaths << qsl("../lib/?.so").arg(appPath);
 #elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
@@ -5776,6 +5782,12 @@ void TLuaInterpreter::initIndenterGlobals()
     // AppInstaller on Linux would like the search path for the binary modules
     // to also be set to a lib sub-directory of the application directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
+    // Switching to linuxdeploy with the separate linuxdeploy-qt plugin puts
+    // in a more FHS sort of filesystem with the mudlet executable in a ./bin/
+    // sub-directory, library files in a ./lib/ one and other files in a
+    // ./usr/share/application/mudlet tree - so we should have the lua binary
+    // modules (libraries) in ../lib/ relative to executable:
+    additionalCPaths << qsl("../lib/?.so").arg(appPath);
 #endif
 
     insertNativeSeparatorsFunction(pIndenterState.get());
@@ -5801,6 +5813,11 @@ void TLuaInterpreter::initIndenterGlobals()
     // 5 CMake shadow builds
     //    "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
     additionalLuaPaths << qsl("%1/../../mudlet/3rdparty/?.lua").arg(appPath);
+    // 6 New linuxdeploy (replacement for linuxdeployqt):
+    //    "<applicationDirectory>/../share/applications/mudlet/lcf/?.lua"
+#if defined (Q_OS_LINUX)
+    additionalLuaPaths << qsl("%1/../share/applications/mudlet/lcf/?.lua").arg(appPath);
+#endif
 
     int error = luaL_dostring(pIndenterState.get(), qsl("package.path = toNativeSeparators([[%1;]] .. package.path)")
                               .arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
@@ -5876,6 +5893,12 @@ void TLuaInterpreter::loadGlobal()
         // location to that top-level project file) of the main project
         // "mudlet" directory:
         QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // linuxdeploy with linuxdeploy-qt plugin (replacement for
+        // linuxdeployqt) has a quite LHS structure and we should look in
+        // tempDir/usr/share/applications/mudlet/lua/ but do so for the executable
+        // being in tempDir/usr/bin (and arrange for the files to be there):
+        QDir::toNativeSeparators(qsl("%1/../share/applications/mudlet/lua/LuaGlobal.lua").arg(executablePath)),
 
         // CMake builds from Qt Creator on Windows 11 appear to use this directory:
         QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
