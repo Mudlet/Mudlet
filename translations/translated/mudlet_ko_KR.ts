@@ -493,7 +493,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation>라인 %1: %2</translation>
+      <translation>%1 행: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
@@ -520,7 +520,7 @@ please wait...</source>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation>유효하지 않은 키 시퀀스 사용 %1</translation>
+      <translation>유효하지 않은 %1 키 시퀀스 사용</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
@@ -565,12 +565,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation>테마 %1구문 분석 오류:%2</translation>
+      <translation>%1 테마 구문 분석 오류:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation>테마 %1을(를) 찾을 수 없습니다.</translation>
+      <translation>%1 테마를 찾을 수 없습니다.</translation>
     </message>
   </context>
   <context>
@@ -1065,7 +1065,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4316"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation>[  확인  ] - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
+      <translation>[ 확인 ] - &quot;%1&quot; (%2) 지역을 맵에 추가했습니다.</translation>
     </message>
   </context>
   <context>
@@ -1277,25 +1277,25 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2099"/>
       <source>Editor&apos;s error window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation>프로필&apos;의 에디터 오류 창 위쪽 콘텐츠.</translation>
+      <translation>프로필의 에디터 오류 창 위쪽 콘텐츠.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2101"/>
       <source>Editor&apos;s error window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation>프로필&apos;의 에디터 오류 창 실시간 콘텐츠.</translation>
+      <translation>프로필의 에디터 오류 창 실시간 콘텐츠.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2107"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>프로필 &quot;의 에디터 오류 창&apos;%1&quot;.</translation>
+      <translation>프로필 &quot;%1&quot;에 대한 에디터 오류 창</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Editor&apos;s error window</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation>프로필&apos;의 에디터 오류 창</translation>
+      <translation>프로필의 에디터 오류 창</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2117"/>
@@ -1357,7 +1357,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="1874"/>
       <location filename="../src/TConsole.cpp" line="1913"/>
       <source>No search results, sorry!</source>
-      <translation>검색 결과가 없습니다, 죄송합니다!</translation>
+      <translation>죄송합니다, 검색 결과가 없습니다!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
@@ -1617,7 +1617,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5629"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation>utf8.* 루아 함수를 사용할 수 없습니다.</translation>
+      <translation>utf8.* Lua 함수를 사용할 수 없습니다.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5635"/>
@@ -2018,7 +2018,7 @@ area) not found, adding reserved -1 id.</source>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
       <translation>[ 정보 ] - 지도 파일을 성공적으로 읽었습니다 (%1s), 
-일부 일관성 세부 정보를 확인 중...</translation>
+  일부 일관성 세부 정보를 확인 중...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1889"/>
@@ -2274,8 +2274,8 @@ it but it will try! The file is: &quot;%2&quot;.</source>
 &quot;%2&quot;,
 please wait...</source>
       <translation>[ 정보 ] - 맵 읽는 중입니다. 형식 버전: %1. 파일:
-&quot;%2&quot;,
-기다려주세요...</translation>
+  &quot;%2&quot;,
+  기다려주세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
@@ -2751,7 +2751,7 @@ Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[알림] - %n개의 지역이 지도에서 누락된 것으로 감지되었습니다. 해당 지역을 추가합니다. 이/이들 지역에 속한 방과 관련된 추가 메시지를 확인하세요.</numerusform>
+        <numerusform>[ 알림 ] - %n개의 지역이 지도에서 누락된 것으로 감지되었습니다. 해당 지역을 추가합니다. 이/이들 지역에 속한 방과 관련된 추가 메시지를 확인하세요.</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -2815,7 +2815,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="771"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation>[ 경고 ] - 맵에서 잘못된 (1보다 작고 예약된 -1이 아닌) 지역 ID가 발견되었습니다 (개수: %1). 해당 지역과 관련된 추가 메시지를 찾으십시오...</translation>
+      <translation>[ 알림 ] - 맵에서 잘못된 (1보다 작고 예약된 -1이 아닌) 지역 ID가 발견되었습니다 (개수: %1). 해당 지역과 관련된 추가 메시지를 찾으십시오...</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="722"/>
@@ -2830,7 +2830,7 @@ be in this/these area(s)...</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation>[ 경고 ] - 맵에서 잘못된 (1보다 작은) 방 ID가 발견되었습니다 (개수: %1). 해당 방과 관련된 추가 메시지를 찾으십시오...</translation>
+      <translation>[ 알림 ] - 맵에서 잘못된 (1보다 작은) 방 ID가 발견되었습니다 (개수: %1). 해당 방과 관련된 추가 메시지를 찾으십시오...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="873"/>
@@ -2981,7 +2981,7 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation>[  확인  ] - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
+      <translation>[ 확인 ] - 과거에 일부 상황이 확인되지 않아, Mudlet은 이름이 없는 영역을 지도의 영역으로 허용했습니다. 이는 일부 혼동을 야기할 수 있으며, 이제는 허용되지 않습니다.
   이 경우를 해결하기 위해, 여기에서 이름이 없는 영역(또는 미래에 생성된 경우)은 자동으로 &quot;%1&quot;이라는 이름이 지정됩니다.
   이러한 일이 여러 번 발생하면, 영역 이름의 중복으로 인해 처음 발견된 것을 제외한 모든 영역에 &quot;_###&quot; 스타일의 접미사가 추가되며, 여기서 각 &quot;###&quot;은 증가하는 숫자입니다; 이러한 이름들을 더 의미 있는 영역 이름으로 변경하실 수 있으며, 이는 전적으로 귀하의 선택에 달려 있습니다. 단, 한 영역의 이름을 해당 시점에 존재하는 다른 영역의 이름과 동일하게 설정할 수는 없습니다.</translation>
     </message>
@@ -4026,8 +4026,8 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="543"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation>[ 경고 ] - 소켓이 연결이 끊어졌습니다.
-           이유: </translation>
+      <translation>[ 경고 ] - 소켓 연결이 끊어졌습니다.
+이유: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
@@ -7523,7 +7523,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="82"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;트리거는 게임 출력에 반응합니다. 새로운 트리거를 추가하려면:&lt;ol&gt;
+      <translation>&lt;p&gt;트리거는 게임 중 나타나는 텍스트에 반응합니다. 새로운 트리거를 추가하려면:&lt;ol&gt;
 &lt;li&gt;위쪽의 &apos;트리거 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
 &lt;li&gt;트리거로 사용할 &lt;strong&gt;패턴&lt;/strong&gt;을 정의하세요.&lt;/li&gt;
 &lt;li&gt;적절한 패턴 &lt;strong&gt;유형&lt;/strong&gt;을 선택하세요.&lt;/li&gt;
@@ -7531,7 +7531,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
 &lt;li&gt;&lt;strong&gt;트리거를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
 &lt;/ol&gt;&lt;/p&gt;
 
-&lt;p&gt;그게 다예요! 입력 줄에서 트리거를 생성하고 싶다면, &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;Command Line Simple Triggers and Aliases Script&lt;/a&gt;과 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Input line alias/trigger scripts&lt;/a&gt;라는 패키지가 도움이 될 수 있어요.&lt;/p&gt;
+&lt;p&gt;그게 다예요! 입력 줄에서 트리거를 생성하고 싶다면, &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;명령줄에서 간단한 트리거와 줄임말을 만드는 스크립트&lt;/a&gt;와 &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;입력줄에서 사용하는 줄임말 및 트리거 스크립트&lt;/a&gt;라는 패키지가 도움이 될 수 있어요.&lt;/p&gt;
 
 &lt;p&gt;더 자세한 정보는 &lt;a href=&apos;https://wiki.mudlet.org/w/Manual:Introduction/ko#.ED.8A.B8.EB.A6.AC.EA.B1.B0&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
     </message>
@@ -7770,17 +7770,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="91"/>
       <source>&lt;p&gt;Scripts organize code and can react to events. To add a new script:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;If needed, you can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;스크립트는 코드를 정리하고 이벤트에 반응할 수 있습니다. 새로운 스크립트를 추가하려면: &lt;ol&gt;
-&lt;li&gt;위쪽의 &apos;스크립트 추가&apos; 아이콘을 클릭하세요.&lt;/li&gt;
-&lt;li&gt;아래 박스에 스크립트를 입력하세요. 예를 들어, 다른 트리거나 즐임말에서 호출할 &lt;strong&gt;함수&lt;/strong&gt;를 정의할 수 있습니다.&lt;/li&gt;
-&lt;li&gt;함수를 정의하지 않고 lua &lt;strong&gt;명령어&lt;/strong&gt;를 작성하면, Mudlet 시작 시와 스크립트를 편집할 때마다 실행됩니다.&lt;/li&gt;
-&lt;li&gt;필요한 경우, +와 - 기호로 &lt;strong&gt;이벤트&lt;/strong&gt; 목록을 등록할 수 있습니다. 이벤트가 발생하면, 스크립트 이름과 동일한 이름의 함수가 호출됩니다.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;스크립트를 활성화&lt;/strong&gt;하세요.&lt;/li&gt;
-&lt;/ol&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 스크립트는 비활성화되어 있어도 열람 시 자동으로 실행됩니다.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;참고:&lt;/strong&gt; 이벤트는 메인 프로필 창의 명령줄에서 다음과 같이 추가할 수도 있습니다:&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;더 자세한 정보는 &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Mudlet 튜토리얼&lt;/a&gt;을 참고하세요.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;스크립트는 코드를 구성하고 이벤트에 반응할 수 있습니다. 새 스크립트를 추가하려면:&lt;ol&gt;&lt;li&gt;를 클릭하십시오. &apos;항목 추가&apos; 아이콘을 클릭합니다.&lt;/li&gt;&lt;li&gt;아래 상자에 스크립트를 입력합니다. 예를 들어 다음을 정의할 수 있습니다. &lt;strong&gt;함수&lt;/strong&gt; 다른 트리거, 별칭 등에 의해 호출됩니다.&lt;/li&gt;&lt;li&gt;lua를 쓰면 &lt;strong&gt;명령&lt;/strong&gt;을 함수를 정의하지 않으면 Mudlet 시작 시 그리고 편집을 위해 스크립트를 열 때마다 실행됩니다.&lt;/li&gt;&lt;li&gt;필요한 경우 다음 목록을 등록할 수 있습니다. &lt;strong&gt;이벤트&lt;/strong&gt;를 + 및 - 기호와 함께 사용합니다. 이러한 이벤트 중 하나가 발생하면 스크립트 항목 자체와 이름이 같은 함수가 호출됩니다.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;활성화&lt;/strong&gt; 스크립트.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;메모:&lt;/strong&gt; 스크립트는 비활성화된 경우에도 볼 때 자동으로 실행됩니다.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;메모:&lt;/strong&gt; 이벤트는 다음과 같이 기본 프로필 창의 명령줄에서 스크립트에 추가할 수도 있습니다.&lt;/p&gt;&lt;p&gt;&lt;code&gt; Lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;설명서를 확인하십시오. &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;추가 정보&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
@@ -12646,7 +12636,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4007"/>
       <source>Force NEW_ENVIRON negotiation off</source>
-      <translation>NEW_ENVIRON 협상 강제 비활성화</translation>
+      <translation>NEW_ENVIRON 기능 무조건 끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4041"/>
@@ -13190,7 +13180,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4000"/>
       <source>Force CHARSET negotiation off</source>
-      <translation>CHARSET 협상 강제로 끄기</translation>
+      <translation>문자셋 기능 무조건 끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4144"/>
@@ -13210,7 +13200,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4126"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation>SGR...(3|4)8;2;...m 코드에서 색 공간 ID를 기대합니다</translation>
+      <translation>SGR...(3|4)8;2;...m 코드에 색상 공간 ID가 포함된 형식을 사용</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4133"/>
@@ -13391,7 +13381,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3968"/>
       <source>Force compression off</source>
-      <translation>압축 강제 해제</translation>
+      <translation>압축 기능 강제 비활성화</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3986"/>
@@ -13406,7 +13396,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3993"/>
       <source>Force MXP negotiation off</source>
-      <translation>MXP 협상 강제로 끄기</translation>
+      <translation>MXP 기능 무조건 끄기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3137"/>
@@ -13590,7 +13580,7 @@ rr, gg, bb는 2자리 16진수 숫자(0에서 255 사이의 값)입니다. &amp;
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4193"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation>타이머의 디버그 메시지를 표시하지 않을 크기를 설정하십시오:</translation>
+      <translation>다음 값 이상인 타이머에 대해 디버그 메시지 표시:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4190"/>
