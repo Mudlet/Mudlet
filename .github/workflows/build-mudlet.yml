@@ -22,13 +22,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Note: using / in the "buildname" has significance - replacing the
+          # ',' in some of the following with a '/' seemed to cause extra
+          # spurious steps in the build and broke things! - SlySven
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-20.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
-            qt: '6.8.1'
+            qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
@@ -36,19 +39,19 @@ jobs:
             triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
-            qt: '6.8.1'
+            qt: '6.9.0'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '6.8.1'
+            qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
-            qt: '6.8.1'
+            qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
 
