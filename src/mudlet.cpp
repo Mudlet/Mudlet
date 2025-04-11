@@ -3874,6 +3874,11 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
             // unpacked/placed in a directory called 'mudlet'}:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(qsl("%1/../share/hunspell/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From later linuxdeploy installer builds that bundle dictionaries
+            // in a FHS directory:
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return qsl("%1/../share/hunspell/").arg(QCoreApplication::applicationDirPath());
         } else {
             // From build within ./src AND installer builds that bundle
             // dictionaries in the same directory as the executable:

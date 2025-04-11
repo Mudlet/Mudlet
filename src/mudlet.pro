@@ -1698,6 +1698,9 @@ OTHER_FILES += \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
+    ../templates/README \
+    ../templates/cpp \
+    ../templates/h \
     ../test/CMakeLists.txt \
     ../test/GUIConsoleTests.mpackage \
     ../test/TEntityHandlerTest.cpp \
