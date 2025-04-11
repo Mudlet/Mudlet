@@ -394,10 +394,10 @@ QPair<bool, QString> MMCPServer::chatList()
                                   "%2"
                                   "==== ==================== ==================== ===== =============== ======== ================\n"
                                   "Color Key: %3Connected  %4Pending%1\n"
-                                  "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private   n - Allow Snooping\n"
+                                  "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private,  n - Allow Snooping\n"
                                   "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude%1")
                                        .arg(RST,
-                                            peersList.isEmpty() ? QString() : peersList.join(QChar::LineFeed),
+                                            peersList.isEmpty() ? QString() : qsl("%1\n").arg(peersList.join(QChar::LineFeed)),
                                             FBLDGRN, FBLDYEL);
 
     clientMessage(strMessage);
