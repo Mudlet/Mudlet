@@ -101,7 +101,7 @@ jobs:
         key: ${{ steps.restore-boost.outputs.cache-primary-key }}
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.0.1
 
     - name: (macOS) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'macOS'
