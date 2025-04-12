@@ -31,7 +31,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             # 22.04 provides 10.5.0; 11.4.0 and 12.3.0; 20.04 provided 10.5.0
-            gcc_compiler_version: 12
+            gcc_compiler_version: 10
             qt: '6.9.0'
             # This triggers the process that ends up running the make-installer
             # script in the installer repository part:
