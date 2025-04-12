@@ -30,15 +30,22 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 10
+            # 22.04 provides 10.5.0; 11.4.0 and 12.3.0
+            # 20.04 provided 10.5.0
+            gcc_compiler_version: 12
             qt: '6.9.0'
+            # This triggers the process that ends up running the make-installer
+            # script in the installer repository part:
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
+            # 24.04 provides 16.0.6, 17.0.6, 18.1.3
+            # (with 19 being added and becoming the default from 2025-05-09)
             compiler: clang_64
-            gcc_compiler_version: 12
+            # 24.04 provides 12.3.0; 13.3.0 and 14.2.0
+            gcc_compiler_version: 14
             qt: '6.9.0'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
