@@ -652,6 +652,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         mmcpNode.append_attribute("prefixEmotes") = pHost->mMMCPPrefixEmotes ? "yes" : "no";
         mmcpNode.append_attribute("chatMessageNewline") = pHost->mMMCPAddChatMessageNewline ? "yes" : "no";
         mmcpNode.append_attribute("autoAcceptCalls") = pHost->mMMCPAutoAcceptCalls ? "yes" : "no";
+        mmcpNode.append_attribute("snoopInMain") = pHost->mMMCPShowSnoopInMainConsole ? "yes" : "no";
     }
     
     writeTriggerPackage(pHost, mudletPackage, true);

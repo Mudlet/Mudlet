@@ -250,8 +250,6 @@ public:
 
     void incomingStreamProcessor(const QString& paragraph, int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
-    void postMMCPMessage(const QString&);
-    void postChatChannelMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
     void enableTrigger(const QString&);
@@ -345,6 +343,7 @@ public:
     bool getMMCPPrefixEmotes();
     bool getMMCPAddChatMessageNewline();
     bool getMMCPAutoAcceptCalls();
+    bool getMMCPShowSnoopInMainConsole();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -865,6 +864,7 @@ private:
     bool mMMCPPrefixEmotes;
     bool mMMCPAddChatMessageNewline;
     bool mMMCPAutoAcceptCalls;
+    bool mMMCPShowSnoopInMainConsole;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

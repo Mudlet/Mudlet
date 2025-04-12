@@ -179,5 +179,8 @@ private:
     void handleIncomingSideChannelData(const QString&);
 
     void updateSgrState(const std::string&);
+
+    void postSnoopDataEvent(const QString&);
+    void postSideChannelMessage(const QString&, const QString&, const QString&);
 };
 #endif // MUDLET_MMCPCLIENT_H

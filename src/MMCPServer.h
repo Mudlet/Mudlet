@@ -70,6 +70,8 @@ public:
     QPair<bool, QString> unChat(const QVariant&);
 
     void clientMessage(const QString&);
+    void clientMessage(MMCPClient *, const QString&);
+    void clientMessage(const QString&, const QString&);
     void snoopMessage(const std::string&);
 
     QList<QPointer<MMCPClient>>* getClients() { return &mPeersList; }
@@ -103,6 +105,7 @@ private:
     MMCPClient* clientByNameOrId(const QVariant&);
     void sendSnoopData(std::string&);
     void sendAll(QString&);
+    void postChatMessage(const QString &, const QString&);
 
     Host* mpHost = nullptr;
     QString mChatName;

@@ -302,6 +302,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPPrefixEmotes(false)
 , mMMCPAddChatMessageNewline(true)
 , mMMCPAutoAcceptCalls(true)
+, mMMCPShowSnoopInMainConsole(true)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
@@ -1738,15 +1739,6 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     raiseEvent(event);
 }
 
-void Host::postChatChannelMessage(const QString& from, const QString& channel, const QString& message)
-{
-    TEvent event {};
-    event.mArgumentList << csMMCPChatSideChannelEvent;
-    event.mArgumentList << from << channel << message;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent(event);
-}
-
 void Host::enableTimer(const QString& name)
 {
     mTimerUnit.enableTimer(name);
@@ -2818,13 +2810,6 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
     }
 }
 
-void Host::postMMCPMessage(const QString& a) {
-    TEvent event {};
-    event.mArgumentList << QLatin1String("sysMMCPMessage");
-    event.mArgumentList << a;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent(event);
-}
 
 void Host::initMMCPServer() {
     if (mmcpServer) {
@@ -2881,6 +2866,10 @@ bool Host::getMMCPAddChatMessageNewline() {
 
 bool Host::getMMCPAutoAcceptCalls() {
     return mMMCPAutoAcceptCalls;
+}
+
+bool Host::getMMCPShowSnoopInMainConsole() {
+    return mMMCPShowSnoopInMainConsole;
 }
 
 QString  Host::getSpellDic()

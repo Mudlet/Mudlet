@@ -23,6 +23,7 @@
 #include "MMCP.h"
 #include "MMCPClient.h"
 #include "mudlet.h"
+#include "TEvent.h"
 
 #include <string>
 
@@ -240,7 +241,7 @@ QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg
         using namespace AnsiColors;
         //: %1 is the name of the peer receiving the message %2
 
-        clientMessage(tr("You chat to %1, '%2'")
+        clientMessage(pClient, tr("You chat to %1, '%2'")
                               .arg(pClient->chatName(), msg)
                               .prepend(FBLDRED + mpHost->getMMCPChatPrefix())
                               .append(RST));
@@ -817,6 +818,15 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
     }
 }
 
+void MMCPServer::postChatMessage(const QString &peerName, const QString& msg) {
+    TEvent event {};
+    event.mArgumentList << csMMCPChatChannelEvent;
+    event.mArgumentList << peerName;
+    event.mArgumentList << msg;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    mpHost->raiseEvent(event);
+}
+
 
 /**
  * Send a message to the terminal pane - coloration HAS to be done by the caller
@@ -824,6 +834,14 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
  * be done here.
  */
 void MMCPServer::clientMessage(const QString& message)
+{
+    clientMessage("System", message);
+}
+void MMCPServer::clientMessage(MMCPClient *fromClient, const QString& message)
+{
+    clientMessage(fromClient->chatName(), message);
+}
+void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
 {
     if (!mpHost || mpHost->isClosingDown()) {
         // Don't try to process any messages if the profile is dying - otherwise
@@ -845,7 +863,9 @@ void MMCPServer::clientMessage(const QString& message)
         .arg(RST)
         .prepend(mpHost->getMMCPAddChatMessageNewline() ? "\n" : "");
 
-    mpHost->postMMCPMessage(coloredStr);
+    // Raise MMCPChatMessage event with our client name and the trimmed & colorized message
+    // from the client
+    postChatMessage(fromStr, coloredStr);
 
     // This uses a UTF-8 encoding:
     std::string trimmedStdStr = coloredStr.toStdString();

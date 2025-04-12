@@ -21,6 +21,7 @@
 #include "MMCPClient.h"
 #include "Host.h"
 #include "MMCPServer.h"
+#include "TEvent.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -514,7 +515,7 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
             break;
 
         case MMCPChatCommand::Message:
-            mpMMCPServer->clientMessage(stringData);
+            mpMMCPServer->clientMessage(this, stringData);
             break;
 
         case MMCPChatCommand::Version:
@@ -637,7 +638,7 @@ void MMCPClient::handleIncomingChatEveryone(const QString& msg)
         return;
     }
 
-    mpMMCPServer->clientMessage(msg);
+    mpMMCPServer->clientMessage(this, msg);
 
     // If mIsServed is true:
     // We are serving this client, forward their message to everyone
@@ -654,7 +655,7 @@ void MMCPClient::handleIncomingChatEveryone(const QString& msg)
  */
 void MMCPClient::handleIncomingChatPersonal(const QString& msg)
 {
-    mpMMCPServer->clientMessage(msg);
+    mpMMCPServer->clientMessage(this, msg);
 }
 
 /**
@@ -675,7 +676,7 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
                                      .arg(groupStr)
                                      .arg(trimmedMsg);
 
-    mpMMCPServer->clientMessage(groupMsg);
+    mpMMCPServer->clientMessage(this, groupMsg);
 }
 
 /**
@@ -751,7 +752,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
                                "%2==== ==================== =============== =====%3\n")
                                     .arg(messageList.join(QChar::LineFeed))
                                     .arg(FBLDRED).arg(RST);
-    mpMMCPServer->clientMessage(listOut);
+    mpMMCPServer->clientMessage(this, listOut);
 }
 
 /**
@@ -965,13 +966,35 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     outputMessage += remaining;
 
     if (!outputMessage.empty()) {
-        mpMMCPServer->snoopMessage(outputMessage);
+        
+        postSnoopDataEvent(QString::fromStdString(outputMessage));
+
+        if (mpHost->getMMCPShowSnoopInMainConsole()) {
+            mpMMCPServer->snoopMessage(outputMessage);
+        }
     }
+}
+
+void MMCPClient::postSnoopDataEvent(const QString& message) {
+    TEvent event {};
+    event.mArgumentList << csMMCPChatSideChannelEvent;
+    event.mArgumentList << mPeerName << message;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    mpHost->raiseEvent(event);
+}
+
+void MMCPClient::postSideChannelMessage(const QString& from, const QString& channel, const QString& message)
+{
+    TEvent event {};
+    event.mArgumentList << csMMCPChatSideChannelEvent;
+    event.mArgumentList << from << channel << message;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    mpHost->raiseEvent(event);
 }
 
 /**
  * Handle incoming side channel data from this client.
- * Posts a sysChatChannelMessage event with arguments:
+ * Posts a sysMMCPSideChannelMessage event with arguments:
  *     chatname, channel, message
  */ 
 void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
@@ -981,7 +1004,7 @@ void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
     QRegularExpressionMatch match = chatChannel.match(stringData);
 
     if (match.hasMatch()) {
-        mpHost->postChatChannelMessage(mPeerName, match.captured(1), match.captured(2));
+        postSideChannelMessage(mPeerName, match.captured(1), match.captured(2));
     }
 
 }

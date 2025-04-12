@@ -3299,12 +3299,12 @@ you can use it but there could be issues with aligning columns of text</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
           <item row="2" column="5">
-           <widget class="QCheckBox" name="checkBox_mmcpLuaAPI">
+           <widget class="QCheckBox" name="checkBox_mmcpSnoopInMainConsole">
             <property name="toolTip">
-             <string>&lt;p&gt;Allow Lua to control MMCP connections&lt;/p&gt;</string>
+             <string>&lt;p&gt;Show Snoop data in main console window&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable Lua API</string>
+             <string>Show Snoop data in main console</string>
             </property>
             <property name="checked">
              <bool>true</bool>
