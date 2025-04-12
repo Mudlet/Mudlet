@@ -977,7 +977,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 
 void MMCPClient::postSnoopDataEvent(const QString& message) {
     TEvent event {};
-    event.mArgumentList << csMMCPChatSideChannelEvent;
+    event.mArgumentList << csMMCPIncomingSnoopEvent;
     event.mArgumentList << mPeerName << message;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     mpHost->raiseEvent(event);
