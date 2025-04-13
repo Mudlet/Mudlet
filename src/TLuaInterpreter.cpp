@@ -5593,6 +5593,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "stopServer");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatUnChat);
     lua_setfield(pGlobalLua, -2, "unChat");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatUnChat);
+    lua_setfield(pGlobalLua, -2, "disconnect");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatGetClientFlags);
     lua_setfield(pGlobalLua, -2, "getClientFlags");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::chatGetClientList);
