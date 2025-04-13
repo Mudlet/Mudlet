@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2022, 2025 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,6 +43,7 @@ public:
 
     void save();
     void restore();
+    void setFont(const QFont &);
 
 private slots:
     void slot_textWritten();
