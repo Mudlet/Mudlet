@@ -443,6 +443,7 @@
     "mmcp.startServer": "mmcp.startServer([port])",
     "mmcp.stopServer": "mmcp.stopServer()",
     "mmcp.unChat": "mmcp.unChat(target)",
+    "mmcp.getClientFlags": "mmcp.getClientFlags(target)",
     "mmcp.getClientList": "mmcp.getClientList()",
     "sendIrc": "sendIrc(target, message)",
     "sendMSDP": "sendMSDP(variable[, value][, value...])",

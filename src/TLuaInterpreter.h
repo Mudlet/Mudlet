@@ -209,6 +209,7 @@ public:
     static int chatDeny(lua_State*);
     static int chatDoNotDisturb(lua_State*);
     static int chatEmoteAll(lua_State*);
+    static int chatGetClientFlags(lua_State* L);
     static int chatGroup(lua_State*);
     static int chatIgnore(lua_State*);
     static int chatList(lua_State*);

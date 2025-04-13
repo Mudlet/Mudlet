@@ -60,6 +60,7 @@ public:
 // Not currently used:    QPair<bool, QString> chatRaw(const QString&);
     QPair<bool, QString> emoteAll(const QString&);
     QPair<bool, QString> ignore(const QString&);
+    QPair<bool, QString> getClientFlags(const QString&);
     QPair<bool, QString> ping(const QVariant&);
     QPair<bool, QString> peek(const QVariant&);
     QPair<bool, QString> request(const QVariant&);

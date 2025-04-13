@@ -557,6 +557,24 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
 }
 
 /**
+ * Script command, return client flags string
+ */
+QPair<bool, QString> MMCPServer::getClientFlags(const QString& target)
+{
+    if (mPeersList.isEmpty()) {
+        return {false, qsl("no connected clients")};
+    }
+
+    MMCPClient* pClient = clientByNameOrId(target);
+
+    if (!pClient) {
+        return {false, qsl("invalid client name or id: %1").arg(target)};
+    }
+
+    return {true, pClient->getFlagsString()};
+}
+
+/**
  * Ignore or un-ignore a person
  */
 QPair<bool, QString> MMCPServer::ignore(const QString& target)
@@ -718,6 +736,7 @@ QPair<bool, QString> MMCPServer::stopServer()
 
     return {false, qsl("unable to stop server, it is not listening")};
 }
+
 
 /**
  * Toggle the server's Do Not Disturb
