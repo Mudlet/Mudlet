@@ -26,7 +26,7 @@ jobs:
           # ',' in some of the following with a '/' seemed to cause extra
           # spurious steps in the build and broke things! - SlySven
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
