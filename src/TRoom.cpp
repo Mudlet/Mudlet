@@ -768,7 +768,11 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             } else if (oldCharacterCode > 32) {
                 // There is an old format unsigned short represeting a printable
                 // ASCII or ISO 8859-1 (Latin1) character:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+                mSymbol = QChar(static_cast<uint>(oldCharacterCode));
+#else
                 mSymbol = QChar(oldCharacterCode);
+#endif
             }
         }
     }
@@ -1137,11 +1141,11 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             const int exitRoomId = it.value();
             if (exitName.isEmpty()) {
                 if (mudlet::self()->showMapAuditErrors()) {
-                    const QString warnMsg = tr("[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}").arg(id, 6, QLatin1Char('0')).arg(exitRoomId, 6, QLatin1Char('0'));
+                    const QString warnMsg = tr("[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}").arg(id, 6, 10, QLatin1Char('0')).arg(exitRoomId, 6, 10, QLatin1Char('0'));
                     // If size is less than or equal to 0 then there is nothing to print!!!
                     mpRoomDB->mpMap->postMessage(warnMsg);
                 }
-                mpRoomDB->mpMap->appendRoomErrorMsg(id, tr("[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.").arg(exitRoomId, 6, QLatin1Char('0')));
+                mpRoomDB->mpMap->appendRoomErrorMsg(id, tr("[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.").arg(exitRoomId, 6, 10, QLatin1Char('0')));
                 it.remove();
                 continue;
             }
