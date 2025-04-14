@@ -13,7 +13,8 @@ function IDMgr:register(name, typ, object)
   local reg = {
     timers = tempTimer,
     events = registerAnonymousEventHandler,
-    triggers = tempTrigger
+    triggers = tempTrigger,
+    regexTriggers = tempRegexTrigger
   }
   self:stop(name, typ)
   local trigger, func, oneShot = object.trigger, object.func, object.oneShot
@@ -32,7 +33,8 @@ function IDMgr:stop(name, typ)
   local killfuncs = {
     timers = killTimer,
     events = killAnonymousEventHandler,
-    triggers = killTrigger
+    triggers = killTrigger,
+    regexTriggers = killTrigger
   }
   local object = self[typ][name]
   if not object then
@@ -74,8 +76,11 @@ end
 
 -- internal function, not documented
 function IDMgr:deleteAll(typ)
-  for name,_ in pairs(self[typ]) do
-    self:delete(name, typ)
+  print("Deleting all " .. typ .. "...")
+  if table.size(self[typ]) > 0 then
+    for name,_ in pairs(self[typ]) do
+      self:delete(name, typ)
+    end
   end
   return true
 end
@@ -101,7 +106,9 @@ function IDMgr:deleteAllTimers()
 end
 
 function IDMgr:deleteAllTriggers()
-  return self:deleteAll("triggers")
+  local regex = self:deleteAll("regexTriggers")
+  local substring = self:deleteAll("triggers")
+  return regex and substring
 end
 
 function IDMgr:registerTimer(name, time, func, oneShot)
@@ -119,6 +126,11 @@ function IDMgr:registerTrigger(name, substring, func, expireAfter)
   return self:register(name, "triggers", object)
 end
 
+function IDMgr:registerRegexTrigger(name, substring, func, expireAfter)
+  local object = makeObject(substring, func, expireAfter or nil)
+  return self:register(name, "regexTriggers", object)
+end
+
 function IDMgr:stopTimer(name)
   return self:stop(name, "timers")
 end
@@ -128,7 +140,9 @@ function IDMgr:stopEvent(name)
 end
 
 function IDMgr:stopTrigger(name)
-  return self:stop(name, "triggers")
+  if self:stop(name, "triggers") then return true end
+  if self:stop(name, "regexTriggers") then return true end
+  return false
 end
 
 function IDMgr:resumeTimer(name)
@@ -136,7 +150,9 @@ function IDMgr:resumeTimer(name)
 end
 
 function IDMgr:resumeTrigger(name)
-  return self:resume(name, "triggers")
+  if self:resume(name, "triggers") then return true end
+  if self:resume(name, "regexTriggers") then return true end
+  return false
 end
 
 function IDMgr:resumeEvent(name)
@@ -152,7 +168,9 @@ function IDMgr:deleteEvent(name)
 end
 
 function IDMgr:deleteTrigger(name)
-  return self:delete(name, "triggers")
+  if self:delete(name, "triggers") then return true end
+  if self:delete(name, "regexTriggers") then return true end
+  return false
 end
 
 function IDMgr:emergencyStop()
@@ -175,7 +193,7 @@ function IDMgr:getTimers()
 end
 
 function IDMgr:getTriggers()
-  local triggerNames = table.keys(self.triggers)
+  local triggerNames = table.update(table.keys(self.triggers), table.keys(self.regexTriggers))
   table.sort(triggerNames)
   return triggerNames
 end
@@ -184,7 +202,8 @@ function IDMgr:new()
   local mgr = {
     events = {},
     timers = {},
-    triggers = {}
+    triggers = {},
+    regexTriggers = {}
   }
   setmetatable(mgr, self)
   self.__index = self
@@ -457,6 +476,32 @@ function registerNamedTrigger(user, name, substring, handler, expireAfter)
   end
   local errMsg = extractUpstreamError("tempTrigger", err)
   printError("registerNamedTrigger: " .. errMsg, true, true)
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedRegexTrigger
+function registerNamedRegexTrigger(user, name, substring, handler, expireAfter)
+  local funcName = "registerNamedRegexTrigger"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  if type(substring) ~= "string" then
+    printError(funcName .. ": bad argument #3 type (substring as string expected, got " .. type(substring) .. "!)", true, true)
+  end
+  if type(handler) ~= "function" then
+    printError(funcName .. ": bad argument #4 type (function expected, got " .. type(handler) .. "!)", true, true)
+  end
+  local mgr = getManager(user)
+  local ok, err = mgr:registerRegexTrigger(name, substring, handler, expireAfter)
+  if ok then
+    return true
+  end
+  local errMsg = extractUpstreamError("tempRegexTrigger", err)
+  printError("registerNamedRegexTrigger: " .. errMsg, true, true)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopNamedTrigger
