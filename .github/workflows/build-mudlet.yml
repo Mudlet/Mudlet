@@ -34,6 +34,13 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+          - os: ubuntu-22.04
+            # Another try to use GCC12
+            buildname: 'ubuntu (x86_64)'
+            triplet: x64-linux
+            compiler: gcc_64
+            gcc_compiler_version: 12
+            qt: '6.9.0'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -64,7 +71,10 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
       with:
-        submodules: true
+        # This SHOULD NOT be needed both the CMAke and qmake metabuild systems
+        # contain conditional code to pull in the required submodules themselves
+        # submodules: true
+        submodules: 'false'
         fetch-depth: 0
 
     - name: Install Qt
