@@ -34,13 +34,6 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: ubuntu-22.04
-            # Just to check with the later GCC
-            buildname: 'ubuntu / gcc12'
-            triplet: x64-linux
-            compiler: gcc_64
-            gcc_compiler_version: 12
-            qt: '6.9.0'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
