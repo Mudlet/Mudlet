@@ -73,8 +73,8 @@ jobs:
       with:
         # This SHOULD NOT be needed both the CMAke and qmake metabuild systems
         # contain conditional code to pull in the required submodules themselves
-        # submodules: true
-        submodules: 'false'
+        # except vcpkg...
+        submodules: 'true'
         fetch-depth: 0
 
     - name: Install Qt
