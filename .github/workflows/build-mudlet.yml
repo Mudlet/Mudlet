@@ -79,6 +79,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         modules: 'qt5compat qtmultimedia'
+        setup-python: 'false'
 
     - name: Restore Boost cache
       id: restore-boost

@@ -37,6 +37,12 @@ if(NOT WIN32)
 #  message(STATUS "The environmental variable LANG is now set to: $ENV{LANG}")
 endif()
 
+message(STATUS "Using ${LRELEASE_LOCATION} version")
+execute_process(
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  COMMAND ${LRELEASE_LOCATION} -version
+)
+
 foreach(ts_file ${TS_FILES_NOEXT})
   string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" qm_file ${ts_file})
   execute_process(
