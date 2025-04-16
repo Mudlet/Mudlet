@@ -73,8 +73,9 @@ jobs:
       with:
         # This SHOULD NOT be needed both the CMAke and qmake metabuild systems
         # contain conditional code to pull in the required submodules themselves
-        # except vcpkg...
-        submodules: 'true'
+        # except vcpkg - if that can be handled we could avoid this setting that
+        # fetches everything...
+        submodules: true
         fetch-depth: 0
 
     - name: Install Qt
@@ -354,8 +355,8 @@ jobs:
         # Lua-based tests
         run-luarocks install --local busted
 
-        # necessary for Qt multimedia and modern Qt,
-        # libfuse2 is needed for linuxdeployqt on Ubuntu 22.04:
+        # necessary for Qt multimedia and modern Qt
+        # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
         fi
