@@ -38,6 +38,9 @@ isEmpty(QMAKE_LRELEASE) {
     }
 }
 
+message("Using lrelease executable:")
+system($$QMAKE_LRELEASE -version)
+
 write_file(lrelease_output.txt)
 message("Building translations")
 TS_FILES_NOEXT = $$replace(TS_FILES, ".ts", "")
