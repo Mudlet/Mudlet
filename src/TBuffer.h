@@ -158,6 +158,7 @@ public:
     bool isOverlined() const { return mFlags & Overline; }
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
+    bool isConcealed() const { return mFlags & Concealed; }
     bool isFound() const { return mFlags & Found; }
     // Special case - if fast blink is set then do NOT say that blink is set to
     // preserve priority of the former over the latter:
