@@ -823,18 +823,37 @@ quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 {
     mPeersList.append(pClient);
     pClient->setId(mPeersList.indexOf(pClient) + 1);
+
+    // Raise event after client has been added to mPeersList
+    // in case they want to use getClientList in response to the event
+    TEvent event {};
+    event.mArgumentList << csMMCPPeerUpdateEvent;
+    event.mArgumentList << pClient->chatName();
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    mpHost->raiseEvent(event);
+
     return pClient->id();
 }
 
 
 void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
 {
+
     mPeersList.removeOne(pClient);
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
         cl->setId(mPeersList.indexOf(cl) + 1);
     }
+
+    // Raise event after client has been removed from mPeersList
+    // in case they want to use getClientList in response to the event
+    TEvent event {};
+    event.mArgumentList << csMMCPPeerUpdateEvent;
+    event.mArgumentList << pClient->chatName();
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    mpHost->raiseEvent(event);
+
 }
 
 void MMCPServer::postChatMessage(const QString &peerName, const QString& msg) {

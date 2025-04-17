@@ -31,6 +31,7 @@ inline static QLatin1String csDefaultChatPrefix{"<CHAT>"};
 inline static QLatin1String csMMCPChatChannelEvent{"sysMMCPChatMessage"};
 inline static QLatin1String csMMCPChatSideChannelEvent{"sysMMCPSideChannelMessage"};
 inline static QLatin1String csMMCPIncomingSnoopEvent{"sysMMCPIncomingSnoopMessage"};
+inline static QLatin1String csMMCPPeerUpdateEvent{"sysMMCPeerUpdateEvent"};
 
 enum MMCPChatCommand {
     NameChange = 1,
