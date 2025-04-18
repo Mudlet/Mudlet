@@ -26,7 +26,7 @@ jobs:
           # ',' in some of the following with a '/' seemed to cause extra
           # spurious steps in the build and broke things! - SlySven
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
@@ -34,6 +34,13 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+          - os: ubuntu-22.04
+            # Another try to use GCC12
+            buildname: 'ubuntu (x86_64)'
+            triplet: x64-linux
+            compiler: gcc_64
+            gcc_compiler_version: 12
+            qt: '6.9.0'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -64,6 +71,10 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
       with:
+        # This SHOULD NOT be needed both the CMAke and qmake metabuild systems
+        # contain conditional code to pull in the required submodules themselves
+        # except vcpkg - if that can be handled we could avoid this setting that
+        # fetches everything...
         submodules: true
         fetch-depth: 0
 
@@ -345,8 +356,9 @@ jobs:
         run-luarocks install --local busted
 
         # necessary for Qt multimedia and modern Qt
+        # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
         if [ "${RUNNER_OS}" = "Linux" ]; then
-          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb -y
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
         fi
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
