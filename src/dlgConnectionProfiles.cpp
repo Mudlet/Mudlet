@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -81,6 +81,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // and certain architectures.
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
+    profiles_tree_widget->setUniformItemSizes(true);
     profiles_tree_widget->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // The default is TopToBottom
@@ -252,6 +253,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
+    connect(this, &QDialog::rejected, this, &dlgConnectionProfiles::slot_rejected);
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     connect(discord_optin_checkBox, &QCheckBox::checkStateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
@@ -1414,6 +1416,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profiles_tree_widget->currentItem()->setIcon(icon);
 }
+
 void dlgConnectionProfiles::slot_setCustomColor()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
@@ -2268,6 +2271,10 @@ void dlgConnectionProfiles::slot_toggleAutoAlignIcons()
 // Is to be run whenever an icon has finished being dragged...
 void dlgConnectionProfiles::slot_reorderItems()
 {
+    if (!profiles_tree_widget->count()) {
+        return;
+    }
+
     profiles_tree_widget->setUpdatesEnabled(false);
     // key.first = y-coordinate
     // key.second = x-coordinate
@@ -2298,77 +2305,62 @@ void dlgConnectionProfiles::slot_reorderItems()
      *                     +-------+-------->  +-------+ +-------+ +-------+
      *                    /                            \----------\---------\ These will not reorder
      * This will become B4
-     *
-     * The two values needed are set after the first time the items are laid out
-     * to get the size and offset needed to "bin" the y coordinate of the
-     * position of each item. If there are not sufficient items to fill the
-     * first row then we will have to estimate the second - to, say (2 x A) +
-     * the height of an icon:
-     *     +------------------------------~ =
-     *     |   /point we track       top|   #
-     * l0  |  #----+  #----+          #---~ 1  <-- top = v. position of top row
-     * ->  |  |    |  |    |  #----+  |h|   #  <--   h = item height
-     *     |  +----+  +----+  |    |  +---~ #
-     *     |                  +----+   s|   =  <--   s = spacing between items
-     * l1  |  #----+  #----+  #----+  #---~ #
-     * ->  |  |    |  |    |  |    |  |     2
-     *     |  +----+  +----+  +----+  +---~ #
-     * l2                                   =
-     * Starting from row 0 we want to check for the point (top left corner)
-     * y-coordinate to be less than limit lN = (top + s * N + h * (1 + 2N)/2)
-     *
      */
+
+    if (profiles_tree_widget->gridSize().isValid()) {
+        qDebug().nospace().noquote() << "dlgConnectionProfiles::slot_reorderItems() INFO - gridSize is: " << profiles_tree_widget->gridSize();
+    } else {
+        qDebug().nospace().noquote() << "dlgConnectionProfiles::slot_reorderItems() INFO - spacing is: " << profiles_tree_widget->spacing();
+    }
+    int s = profiles_tree_widget->spacing();
+    // The first run sets these two (from the initial automatically laid out
+    // grid) a praticular profile then it is not changed again for that one:
+    static int h = 0;
+    // The vertical distance between adjacent rows of icons:
+    static int halfGap = 0;
+    qDebug().nospace().noquote() << "                                                  uniformItemSizes is: " << profiles_tree_widget->uniformItemSizes();
+    qDebug().nospace().noquote() << "    item positions are:";
     QMap<QPair<int, int>, int> positionMap;
     for (qsizetype i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
         auto pItem = profiles_tree_widget->item(i);
         auto itemRect = profiles_tree_widget->visualItemRect(pItem);
-        const auto itemPos = itemRect.topLeft();
-        if (!mTopRowY.has_value()) {
-            mTopRowY = itemPos.y();
-        }
-        if (!mItemSpacing.has_value()) {
-            if (itemPos.y() > (mTopRowY.value() + (itemRect.height() / 2))) {
-                // This item is not on the first (0) row but another, presumably
-                // the second, so work out what the spacing between the rows is:
-                mItemSpacing = itemPos.y() - (mTopRowY.value() + itemRect.height());
-                qDebug().noquote().nospace() << "dlgConnectionProfiles::slot_reorderItems() INFO - it seems that the items are sized vertically so that:";
-                qDebug().noquote().nospace() << "     Top of first row: " << mTopRowY.value();
-                qDebug().noquote().nospace() << "  Height of each item: " << itemRect.height();
-                qDebug().noquote().nospace() << "   Space between rows: " << mItemSpacing.value();
+        if (!h) {
+            // Get the (common) items' height from the first item:
+            h = itemRect.height();
+            halfGap = qRound((h + s) / 2.0);
+            qDebug().nospace().noquote() << "   Bin limits:";
+            for (int i = 0; i < 10; ++i) {
+                qDebug().nospace().noquote() << "     "
+                                             << i
+                                             << ": "
+                                             << (s + halfGap + i * h - 1);
             }
         }
-
-        // "invert" because we swap to make the y-coordinate the first one:
-        QPair<int, int> itemInvertPos;
-        itemInvertPos = qMakePair(itemPos.y(), itemPos.x());
-
-        if (mItemSpacing.has_value()) {
-            // work out which "row" an item is in:
-            int row = -1;
-            qDebug().noquote().nospace() << "For item: " << pItem->data(csmNameRole).toString() << " at: " << itemPos << ".";
-            auto limit = [=](const int r, const int top, const int spacing, const int widgetHeight) {
-                return top + r * spacing + ((5 * r)/2) * widgetHeight;
-            };
-
-            do {
-                ++row;
-                qDebug().noquote().nospace() << "    checking against upper limit of:" <<  limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height());
-            } while (limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height()) < itemInvertPos.first);
-
-            qDebug().nospace().noquote() << "    Item: \"" << pItem->data(csmNameRole).toString() << "\" is on row: " << row;
-            // row should now indicate which row (0-based) the item should be in
-            // use that to "bin" the y-coordinate values:
-            qDebug().nospace().noquote() << "  Setting it's Y-value to: " << limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height());
-            itemInvertPos.first = limit(row, mTopRowY.value(), mItemSpacing.value(), itemRect.height());
+        // This works out which "line" the item is on:
+        int line = 0;
+        while (itemRect.top() > (s + halfGap + (line++ * h) - 1)) {
         }
-
-        // Nudges right an item slightly if there is already an item at the same
-        // y and x - once we determined the spacings between rows we have been
-        // able to "bin" the y-values so they will all be the same for items in
-        // same row - and this will then order them left to right:
-        while (positionMap.contains(itemInvertPos)) {
+        QPair<int, int> itemInvertPos = qMakePair(s + line * 2 * halfGap, itemRect.left());
+        while (Q_UNLIKELY(positionMap.contains(itemInvertPos))) {
+            // Break ties by repeatedly moving to the right until the item does
+            // not occupy the same space as any prior one:
             itemInvertPos.second += 1;
         }
+        qDebug().nospace().noquote() << "    Item: "
+                                     << i
+                                     << " at: ("
+                                     << itemRect.left()
+                                     << ", "
+                                     << itemRect.top()
+                                     << ") snapping to: ("
+                                     << itemInvertPos.second
+                                     << ", "
+                                     << itemInvertPos.first
+                                     << "), size: "
+                                     << itemRect.width()
+                                     << " x "
+                                     << itemRect.height()
+                                     << "  i.e. line: " << line;
         positionMap.insert(itemInvertPos, i);
     }
     // Now we have a sorted (by top-to-bottom, left-to-right) map where the
@@ -2397,15 +2389,9 @@ void dlgConnectionProfiles::slot_reorderItems()
     if (!items.isEmpty()) {
         itItem.toBack();
     }
-    qsizetype index = -1;
+    qsizetype index=-1;
     while (itItem.hasPrevious()) {
-        auto pItem = itItem.previous();
-        profiles_tree_widget->insertItem(++index, pItem);
-        // We also need to reapply our stored idea of whether the icon is hidden
-        // as the isHidden()/setHidden() being true does not survive the
-        // QListWidgetItem being pulled from a QListWidget, being stored
-        // elsewhere and then being reinserted.
-        pItem->setHidden(pItem->data(csmHiddenRole).toBool());
+        profiles_tree_widget->insertItem(++index, itItem.previous());
     }
     profiles_tree_widget->setUpdatesEnabled(true);
     profiles_tree_widget->update();
@@ -2419,4 +2405,11 @@ void dlgConnectionProfiles::reduceFontSize(QListWidgetItem* pItem) const
     auto font = pItem->font();
     font.setPointSize(1);
     pItem->setFont(font);
+}
+
+// Ensures the arrangement is saved even if we close out of it using the "Close"
+// dialog button or title bar button or ESC key:
+void dlgConnectionProfiles::slot_rejected()
+{
+    storeProfilesOrderAndDlgSize();
 }
