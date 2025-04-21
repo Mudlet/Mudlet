@@ -3298,13 +3298,13 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>MudMaster Chat options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="2" column="5">
+          <item row="3" column="6">
            <widget class="QCheckBox" name="checkBox_mmcpSnoopInMainConsole">
             <property name="toolTip">
-             <string>&lt;p&gt;Show Snoop data in main console window&lt;/p&gt;</string>
+             <string>&lt;p&gt;Show Snoop data in main console window.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Show Snoop data in main console</string>
+             <string>Show snoop data in main console</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -3321,13 +3321,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="5">
+          <item row="3" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
             <property name="toolTip">
-             <string>Allow others to peek your public connections</string>
+             <string>Allow others to peek and request your public connections.</string>
             </property>
             <property name="text">
-             <string>Allow Peek Requests</string>
+             <string>Allow Peek/Connection requests</string>
             </property>
            </widget>
           </item>
@@ -3344,7 +3344,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>Automatically start a chat server when your profile loads. Uses the default port setting.</string>
             </property>
             <property name="text">
-             <string>Auto-Start Server</string>
+             <string>Auto-Start server</string>
             </property>
            </widget>
           </item>
@@ -3361,6 +3361,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </spacer>
           </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblMMCPName">
+            <property name="text">
+             <string>Chat Name:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_mmcpChatName</cstring>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <widget class="QLabel" name="lblMMCPPort">
             <property name="text">
@@ -3371,33 +3384,20 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblMMCPName">
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblMMCPChatMsgPrefix">
             <property name="text">
-             <string>Chatname:</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-            <property name="buddy">
-             <cstring>lineEdit_mmcpChatName</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="5">
-           <widget class="QCheckBox" name="checkBox_mmcpAllowConnReq">
-            <property name="toolTip">
-             <string>Allow others to request your public connections</string>
-            </property>
-            <property name="text">
-             <string>Allow Connection Requests</string>
+             <string>Chat Message Prefix:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="6">
            <widget class="QCheckBox" name="checkBox_mmcpAddChatMessageNewline">
+            <property name="toolTip">
+             <string>Add an extra blank line to vertically space out chat messages.</string>
+            </property>
             <property name="text">
-             <string>Add Newline to Chat Messages</string>
+             <string>Add extra line to chat messages</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -3410,34 +3410,27 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>Prefix own EmoteAll messages with 'You emote to everybody'</string>
             </property>
             <property name="text">
-             <string>Prefix Emote Messages</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="lblMMCPChatMsgPrefix">
-            <property name="text">
-             <string>Chat Message Prefix:</string>
+             <string>Prefix emote messages</string>
             </property>
            </widget>
           </item>
           <item row="3" column="2">
            <widget class="QLineEdit" name="lineEdit_mmcpChatMessagePrefix">
             <property name="toolTip">
-             <string>Text to display in front of chat messages</string>
+             <string>Text to display in front of chat messages.</string>
             </property>
             <property name="text">
              <string>&lt;CHAT&gt;</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="6">
+          <item row="2" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpAutoAcceptCalls">
             <property name="toolTip">
-             <string>Automatically accept incoming calls from chat clients</string>
+             <string>Automatically accept incoming calls from chat clients.</string>
             </property>
             <property name="text">
-             <string>Auto-Accept Incoming Calls</string>
+             <string>Auto-Accept incoming calls</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -4644,6 +4637,15 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_discordServerAccessToState</tabstop>
   <tabstop>checkBox_discordServerAccessToTimerInfo</tabstop>
   <tabstop>lineEdit_discordUserDiscriminator</tabstop>
+  <tabstop>lineEdit_mmcpChatName</tabstop>
+  <tabstop>lineEdit_mmcpPort</tabstop>
+  <tabstop>lineEdit_mmcpChatMessagePrefix</tabstop>
+  <tabstop>checkBox_mmcpAutostartServer</tabstop>
+  <tabstop>checkBox_mmcpAutoAcceptCalls</tabstop>
+  <tabstop>checkBox_mmcpAllowPeekReq</tabstop>
+  <tabstop>checkBox_mmcpAddChatMessageNewline</tabstop>
+  <tabstop>checkBox_mmcpPrefixEmotes</tabstop>
+  <tabstop>checkBox_mmcpSnoopInMainConsole</tabstop>
   <tabstop>groupBox_ssl</tabstop>
   <tabstop>checkBox_self_signed</tabstop>
   <tabstop>checkBox_ignore_all</tabstop>

@@ -2082,7 +2082,6 @@ void XMLimport::readMMCPOptions() {
     mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
     mpHost->mMMCPChatPrefix = attributes().value(qsl("chatPrefix")).toString();
     mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
-    mpHost->mMMCPAllowConnectionRequests = attributes().value(qsl("allowConnectionRequests")) == YES;
     mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
     mpHost->mMMCPPrefixEmotes = attributes().value(qsl("prefixEmotes")) == YES;
     mpHost->mMMCPAddChatMessageNewline = attributes().value(qsl("chatMessageNewline")) == YES;

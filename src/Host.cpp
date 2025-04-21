@@ -296,7 +296,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(qsl("<CHAT>"))
 , mMMCPAutostartServer(false)
-, mMMCPAllowConnectionRequests(false)
 , mMMCPAllowPeekRequests(false)
 , mMMCPPrefixEmotes(false)
 , mMMCPAddChatMessageNewline(true)
@@ -2844,10 +2843,6 @@ QString Host::getMMCPChatPrefix() {
 
 bool Host::getMMCPAutoStartServer() {
     return mMMCPAutostartServer;
-}
-
-bool Host::getMMCPAllowConnectionRequests() {
-    return mMMCPAllowConnectionRequests;
 }
 
 bool Host::getMMCPAllowPeekRequests() {

@@ -824,7 +824,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
     checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
-    checkBox_mmcpAllowConnReq->setChecked(pHost->mMMCPAllowConnectionRequests);
     checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
     checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
     checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
@@ -3167,7 +3166,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
         
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
-        pHost->mMMCPAllowConnectionRequests = checkBox_mmcpAllowConnReq->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
         pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
         pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();

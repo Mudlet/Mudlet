@@ -338,7 +338,6 @@ public:
     quint16 getMMCPPort();
     QString getMMCPChatPrefix();
     bool getMMCPAutoStartServer();
-    bool getMMCPAllowConnectionRequests();
     bool getMMCPAllowPeekRequests();
     bool getMMCPPrefixEmotes();
     bool getMMCPAddChatMessageNewline();
@@ -858,7 +857,6 @@ private:
     QString mMMCPChatPrefix;
     quint16 mMMCPChatPort;
     bool mMMCPAutostartServer;
-    bool mMMCPAllowConnectionRequests;
     bool mMMCPAllowPeekRequests;
     bool mMMCPPrefixEmotes;
     bool mMMCPAddChatMessageNewline;

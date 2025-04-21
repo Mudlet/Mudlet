@@ -187,11 +187,6 @@ void MMCPClient::slot_readData()
         const QByteArray port = ipAndPort.right(5);
 
         QHostAddress host(QString::fromUtf8(ipAddress));
-        if (host.isNull()) {
-            mState = Disconnected;
-            disconnect();
-            return;
-        }
 
         if (mpMMCPServer->isDoNotDisturb()) {
             mState = Disconnected;
@@ -207,7 +202,9 @@ void MMCPClient::slot_readData()
         } else {
 
             mPeerName = QString::fromUtf8(peerName);
-            mPeerAddress = convertToIPv4(host);
+
+            // The ipAddress string to QHostAddress may have failed
+            mPeerAddress = host.isNull() ? "<Unknown>" : convertToIPv4(host);
             bool ok;
             mPeerPort = QString::fromUtf8(port).toUInt(&ok);
             if (!ok) {
@@ -616,7 +613,7 @@ void MMCPClient::handleIncomingConnectionsRequest()
         return;
     }
 
-    if (mpHost->getMMCPAllowConnectionRequests()) {
+    if (mpHost->getMMCPAllowPeekRequests()) {
         const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections...").arg(mPeerName);
         mpHost->postMessage(infoMsg);
 
