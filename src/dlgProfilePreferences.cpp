@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -1256,7 +1256,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
-        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=, this]() {
+        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence* newSequence = nullptr;
             if (sequenceEdit->keySequence().isEmpty()
                     || sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
@@ -1268,7 +1268,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             sequence->swap(*newSequence);
             delete newSequence;
         });
-        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=, this]() {
+        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
             sequenceEdit->setKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
             QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
             sequence->swap(*newSequence);
@@ -2495,7 +2495,7 @@ void dlgProfilePreferences::slot_saveMap()
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
     dialog->setAcceptMode(QFileDialog::AcceptSave);
     dialog->setDefaultSuffix(qsl("dat"));
-    connect(dialog,  &QFileDialog::filterSelected, this, [=, this](const QString& filter) {
+    connect(dialog,  &QFileDialog::filterSelected, this, [=](const QString& filter) {
         if (filter == datFilter) {
             dialog->setDefaultSuffix(qsl("dat"));
         }
@@ -3881,7 +3881,7 @@ void dlgProfilePreferences::generateDiscordTooltips()
         state = qsl("<br/>(\"%1\")").arg(state);
     }
 
-    auto setToolTip = [=, this](QWidget* widget, const QString& highlight) {
+    auto setToolTip = [=](QWidget* widget, const QString& highlight) {
         const QString tooltip = qsl(R"(
   <style type="text/css">
     .tg  {border-collapse:collapse;border-spacing:0;}
