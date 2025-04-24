@@ -600,14 +600,14 @@ end
 ---   <pre>
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
-function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
   if Ypos == nil then
     Ypos = Xpos
     Xpos = numberOfLines
     numberOfLines = charsPerLine
     charsPerLine = fontSize
     fontSize = consoleName
-    consoleName = windowname
+    consoleName = windowName
     windowname = "main"
   end
   assert(type(windowName) == 'string', 'createConsole: invalid type for windowName (expected string, got '..type(windowName)..'!)')
@@ -617,7 +617,7 @@ function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOf
   assert(type(numberOfLines) == 'number', 'createConsole: invalid type for numberOfLines (expected number, got '..type(numberOfLines)..'!)')
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
-  createMiniConsole(windowname, consoleName, 0, 0, 1, 1)
+  createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)

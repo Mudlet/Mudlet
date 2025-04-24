@@ -1300,7 +1300,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
 }
 
-bool XMLimport::readDefaultTrueBool(QString name) {
+bool XMLimport::readDefaultTrueBool(QString name)
+{
     return attributes().value(name) == YES || !attributes().hasAttribute(name);
 }
 

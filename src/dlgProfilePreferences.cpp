@@ -1013,8 +1013,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
         // Adjustable inner diameter not available for style '0' (original):
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
-        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
-        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
 
         connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
@@ -1443,8 +1443,6 @@ void dlgProfilePreferences::clearHostDetails()
         mpMenu = nullptr;
     }
 
-    pushButton_chooseProfiles->setEnabled(false);
-
     label_mapFileActionResult->hide();
 
     slot_hidePasswordMigrationLabel();
@@ -1613,55 +1611,56 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_black_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBlack_2.name()));
-        pushButton_Lblack_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightBlack_2.name()));
-        pushButton_green_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mGreen_2.name()));
-        pushButton_Lgreen_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightGreen_2.name()));
-        pushButton_red_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRed_2.name()));
-        pushButton_Lred_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightRed_2.name()));
-        pushButton_blue_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBlue_2.name()));
-        pushButton_Lblue_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightBlue_2.name()));
-        pushButton_yellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mYellow_2.name()));
-        pushButton_Lyellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightYellow_2.name()));
-        pushButton_cyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mCyan_2.name()));
-        pushButton_Lcyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightCyan_2.name()));
-        pushButton_magenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMagenta_2.name()));
-        pushButton_Lmagenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightMagenta_2.name()));
-        pushButton_white_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mWhite_2.name()));
-        pushButton_Lwhite_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightWhite_2.name()));
+        setButtonColor(pushButton_black_2, pHost->mBlack_2, true);
+        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
+        setButtonColor(pushButton_green_2, pHost->mGreen_2, true);
+        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
+        setButtonColor(pushButton_red_2, pHost->mRed_2, true);
+        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2, true);
+        setButtonColor(pushButton_blue_2, pHost->mBlue_2, true);
+        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
+        setButtonColor(pushButton_yellow_2, pHost->mYellow_2, true);
+        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
+        setButtonColor(pushButton_cyan_2, pHost->mCyan_2, true);
+        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
+        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2, true);
+        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
+        setButtonColor(pushButton_white_2, pHost->mWhite_2, true);
+        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
 
-        pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mFgColor_2.name()));
-        pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
-        pushButton_lowerLevelColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLowerLevelColor.name()));
-        pushButton_upperLevelColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mUpperLevelColor.name()));
-        pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
-        pushButton_mapInfoBg->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMapInfoBg.name()));
-        pushButton_roomCollisionBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomCollisionBorderColor.name()));
+        setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
+        setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
+        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
+        setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
+        setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
     } else {
-        pushButton_black_2->setStyleSheet(QString());
-        pushButton_Lblack_2->setStyleSheet(QString());
-        pushButton_green_2->setStyleSheet(QString());
-        pushButton_Lgreen_2->setStyleSheet(QString());
-        pushButton_red_2->setStyleSheet(QString());
-        pushButton_Lred_2->setStyleSheet(QString());
-        pushButton_blue_2->setStyleSheet(QString());
-        pushButton_Lblue_2->setStyleSheet(QString());
-        pushButton_yellow_2->setStyleSheet(QString());
-        pushButton_Lyellow_2->setStyleSheet(QString());
-        pushButton_cyan_2->setStyleSheet(QString());
-        pushButton_Lcyan_2->setStyleSheet(QString());
-        pushButton_magenta_2->setStyleSheet(QString());
-        pushButton_Lmagenta_2->setStyleSheet(QString());
-        pushButton_white_2->setStyleSheet(QString());
-        pushButton_Lwhite_2->setStyleSheet(QString());
+        // Using QColor() gives an "invalid" color:
+        setButtonColor(pushButton_black_2, QColor());
+        setButtonColor(pushButton_Lblack_2, QColor());
+        setButtonColor(pushButton_green_2, QColor());
+        setButtonColor(pushButton_Lgreen_2, QColor());
+        setButtonColor(pushButton_red_2, QColor());
+        setButtonColor(pushButton_Lred_2, QColor());
+        setButtonColor(pushButton_blue_2, QColor());
+        setButtonColor(pushButton_Lblue_2, QColor());
+        setButtonColor(pushButton_yellow_2, QColor());
+        setButtonColor(pushButton_Lyellow_2, QColor());
+        setButtonColor(pushButton_cyan_2, QColor());
+        setButtonColor(pushButton_Lcyan_2, QColor());
+        setButtonColor(pushButton_magenta_2, QColor());
+        setButtonColor(pushButton_Lmagenta_2, QColor());
+        setButtonColor(pushButton_white_2, QColor());
+        setButtonColor(pushButton_Lwhite_2, QColor());
 
-        pushButton_foreground_color_2->setStyleSheet(QString());
-        pushButton_background_color_2->setStyleSheet(QString());
-        pushButton_lowerLevelColor->setStyleSheet(QString());
-        pushButton_upperLevelColor->setStyleSheet(QString());
-        pushButton_roomBorderColor->setStyleSheet(QString());
-        pushButton_mapInfoBg->setStyleSheet(QString());
-        pushButton_roomCollisionBorderColor->setStyleSheet(QString());
+        setButtonColor(pushButton_foreground_color_2, QColor());
+        setButtonColor(pushButton_background_color_2, QColor());
+        setButtonColor(pushButton_lowerLevelColor, QColor());
+        setButtonColor(pushButton_upperLevelColor, QColor());
+        setButtonColor(pushButton_roomBorderColor, QColor());
+        setButtonColor(pushButton_mapInfoBg, QColor());
+        setButtonColor(pushButton_roomCollisionBorderColor, QColor());
     }
 }
 
@@ -1734,31 +1733,37 @@ void dlgProfilePreferences::slot_resetMapColors()
         return;
     }
 
-    pHost->mFgColor_2 = Qt::lightGray;
-    pHost->mBgColor_2 = Qt::black;
-    pHost->mLowerLevelColor = Qt::darkGray;
-    pHost->mUpperLevelColor = Qt::white;
-    pHost->mRoomBorderColor = Qt::lightGray;
-    pHost->mRoomCollisionBorderColor = Qt::yellow;
-    pHost->mBlack_2 = Qt::black;
-    pHost->mLightBlack_2 = Qt::darkGray;
-    pHost->mRed_2 = Qt::darkRed;
-    pHost->mLightRed_2 = Qt::red;
-    pHost->mGreen_2 = Qt::darkGreen;
-    pHost->mLightGreen_2 = Qt::green;
-    pHost->mBlue_2 = Qt::darkBlue;
-    pHost->mLightBlue_2 = Qt::blue;
-    pHost->mYellow_2 = Qt::darkYellow;
-    pHost->mLightYellow_2 = Qt::yellow;
-    pHost->mCyan_2 = Qt::darkCyan;
-    pHost->mLightCyan_2 = Qt::cyan;
-    pHost->mMagenta_2 = Qt::darkMagenta;
-    pHost->mLightMagenta_2 = Qt::magenta;
-    pHost->mWhite_2 = Qt::lightGray;
-    pHost->mLightWhite_2 = Qt::white;
+    // As per values in Host.h:
+    pHost->mFgColor_2 = QColorConstants::LightGray;
+    pHost->mBgColor_2 = QColorConstants::Black;
+    pHost->mLowerLevelColor = QColorConstants::DarkGray;
+    pHost->mUpperLevelColor = QColorConstants::White;
+    pHost->mRoomBorderColor = QColorConstants::LightGray;
+    pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
+    pHost->mBlack_2 = QColorConstants::Black;
+    pHost->mLightBlack_2 = QColorConstants::DarkGray;
+    pHost->mRed_2 = QColorConstants::DarkRed;
+    pHost->mLightRed_2 = QColorConstants::Red;
+    pHost->mGreen_2 = QColorConstants::DarkGreen;
+    pHost->mLightGreen_2 = QColorConstants::Green;
+    pHost->mBlue_2 = QColorConstants::DarkBlue;
+    pHost->mLightBlue_2 = QColorConstants::Blue;
+    pHost->mYellow_2 = QColorConstants::DarkYellow;
+    pHost->mLightYellow_2 = QColorConstants::Yellow;
+    pHost->mCyan_2 = QColorConstants::DarkCyan;
+    pHost->mLightCyan_2 = QColorConstants::Cyan;
+    pHost->mMagenta_2 = QColorConstants::DarkMagenta;
+    pHost->mLightMagenta_2 = QColorConstants::Magenta;
+    pHost->mWhite_2 = QColorConstants::LightGray;
+    pHost->mLightWhite_2 = QColorConstants::White;
     pHost->mMapInfoBg = QColor(150, 150, 150, 120);
 
+    // This aplies the above colors to the buttons on display:
     setColors2();
+
+    if (pHost->mpMap) {
+        pHost->mpMap->update();
+    }
 }
 
 void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
@@ -1799,10 +1804,37 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
             pHost->updateAnsi16ColorsInTable();
         }
 
+        const bool isAMapEnvColor = (button == pushButton_black_2 || button == pushButton_Lblack_2
+                                     || button == pushButton_red_2 || button == pushButton_Lred_2
+                                     || button == pushButton_green_2 || button == pushButton_Lgreen_2
+                                     || button == pushButton_yellow_2 || button == pushButton_Lyellow_2
+                                     || button == pushButton_blue_2 || button == pushButton_Lblue_2
+                                     || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2
+                                     || button == pushButton_cyan_2 || button == pushButton_Lcyan_2
+                                     || button == pushButton_white_2 || button == pushButton_Lwhite_2);
+
+        if (isAMapEnvColor
+                || button == pushButton_foreground_color_2
+                || button == pushButton_background_color_2
+                || button == pushButton_lowerLevelColor
+                || button == pushButton_upperLevelColor
+                || button == pushButton_mapInfoBg
+                || button == pushButton_roomBorderColor
+                || button == pushButton_roomCollisionBorderColor) {
+
+            if (pHost->mpMap) {
+                // Update the custom environment (room colors)
+                if (isAMapEnvColor) {
+                    pHost->mpMap->restore16ColorSet();
+                }
+                // Redraw the map with the modified color:
+                pHost->mpMap->update();
+            }
+        }
+
         // Also set a contrasting foreground color so text will always be
-        // visible - if the button is disabled the colors will be somewhat
-        // "greyed-out":
-        setButtonColor(button, color);
+        // visible:
+        setButtonColor(button, color, allowAlpha);
     }
 }
 
@@ -2123,7 +2155,7 @@ void dlgProfilePreferences::slot_setMapColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2);
+        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2, true);
     }
 }
 
@@ -2131,7 +2163,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2);
+        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
     }
 }
 
@@ -2139,7 +2171,7 @@ void dlgProfilePreferences::slot_setMapColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2);
+        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2, true);
     }
 }
 
@@ -2147,7 +2179,7 @@ void dlgProfilePreferences::slot_setMapColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2);
+        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2, true);
     }
 }
 
@@ -2155,7 +2187,7 @@ void dlgProfilePreferences::slot_setMapColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2);
+        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2, true);
     }
 }
 
@@ -2163,7 +2195,7 @@ void dlgProfilePreferences::slot_setMapColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
+        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
     }
 }
 
@@ -2171,7 +2203,7 @@ void dlgProfilePreferences::slot_setMapColorBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2);
+        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2, true);
     }
 }
 
@@ -2179,7 +2211,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2);
+        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
     }
 }
 
@@ -2187,7 +2219,7 @@ void dlgProfilePreferences::slot_setMapColorYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2);
+        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2, true);
     }
 }
 
@@ -2195,7 +2227,7 @@ void dlgProfilePreferences::slot_setMapColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
+        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
     }
 }
 
@@ -2203,7 +2235,7 @@ void dlgProfilePreferences::slot_setMapColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2);
+        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2, true);
     }
 }
 
@@ -2211,7 +2243,7 @@ void dlgProfilePreferences::slot_setMapColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
+        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
     }
 }
 
@@ -2219,7 +2251,7 @@ void dlgProfilePreferences::slot_setMapColorMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2);
+        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2, true);
     }
 }
 
@@ -2227,7 +2259,7 @@ void dlgProfilePreferences::slot_setMapColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
+        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
     }
 }
 
@@ -2235,7 +2267,7 @@ void dlgProfilePreferences::slot_setMapColorWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2);
+        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2, true);
     }
 }
 
@@ -2243,7 +2275,7 @@ void dlgProfilePreferences::slot_setMapColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
+        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
     }
 }
 
@@ -4039,17 +4071,17 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
     }
 }
 
-void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
+void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color, const bool hasAlpha)
 {
     if (color.isValid()) {
         if (button->isEnabled()) {
-            if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+            if (hasAlpha) {
 
-                // These two buttons show a color that may have transparency; so,
-                // instead of colouring the background, we include a generated
-                // black/white checkerboard pattern overlaid with the colour which
-                // when its alpha is not a 100% opaque will (partly) show the
-                // checkerboard.
+                // This is for buttons that show a color that may have
+                // transparency; so,instead of colouring the background, we
+                // include a generated black/white checkerboard pattern overlaid
+                // with the colour which, when its alpha is not 100% opaque,
+                // will (partly) show the checkerboard.
 
                 // Ensure the icon has a 3:1 aspect ratio:
                 if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
@@ -4075,15 +4107,8 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
         }
 
         const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
-        if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
-
-            // These two buttons show a color that may have transparency; so,
-            // instead of colouring the background, we include a generated
-            // black/white checkerboard pattern overlaid with the colour which
-            // when its alpha is not a 100% opaque will (partly) show the
-            // checkerboard.
-
-            // Ensure the icon has a 3:1 aspect ratio:
+        if (hasAlpha) {
+            // As above for buttons showing a potentially transparent color:
             if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
                 button->setIconSize(QSize(iconHeight * 3, iconHeight));
             }
@@ -4319,8 +4344,8 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
         pushButton_playerRoomSecondaryColor->setEnabled(false);
         spinBox_playerRoomInnerDiameter->setEnabled(false);
     }
-    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
-    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;

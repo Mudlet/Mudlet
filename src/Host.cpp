@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -243,7 +243,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
-, mF3SearchEnabled(false)
 , mIsRemoteEchoingActive(false)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
@@ -1044,9 +1043,14 @@ void Host::updateConsolesFont()
         mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
         mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
     }
+
     if (mudlet::self()->smpDebugArea) {
         mudlet::self()->smpDebugConsole->setFont(mDisplayFont.family());
         mudlet::self()->smpDebugConsole->setFontSize(mDisplayFont.pointSize());
+    }
+
+    if (mpNotePad) {
+        mpNotePad->setFont(mDisplayFont);
     }
 }
 
@@ -1103,17 +1107,11 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     return {true, QString()};
 }
 
-std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
-{
-    const auto result = setDisplayFont(QFont(fontName));
-    updateConsolesFont();
-    return result;
-}
-
 void Host::setDisplayFontFromString(const QString& fontData)
 {
-    mDisplayFont.fromString(fontData);
-    updateConsolesFont();
+    QFont font;
+    font.fromString(fontData);
+    setDisplayFont(font);
 }
 
 void Host::setDisplayFontSize(int size)
@@ -1996,7 +1994,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 }
 
 
-QString Host::sanitizePackageName(const QString packageName) const {
+QString Host::sanitizePackageName(const QString packageName) const
+{
     auto tempName = packageName.section(qsl("/"), -1);
     tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
     tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
@@ -2030,7 +2029,8 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+void Host::removePackageInfo(const QString &packageName, const bool isModule)
+{
     if (isModule) {
         mModuleInfo.remove(packageName);
     } else {
@@ -4276,11 +4276,13 @@ void Host::setEditorShowBidi(const bool state)
     }
 }
 
-bool Host::caretEnabled() const {
+bool Host::caretEnabled() const
+{
     return mCaretEnabled;
 }
 
-void Host::setCaretEnabled(bool enabled) {
+void Host::setCaretEnabled(bool enabled)
+{
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
 }
