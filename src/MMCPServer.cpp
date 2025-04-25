@@ -411,11 +411,11 @@ QPair<bool, QString> MMCPServer::chatList()
  */
 QPair<bool, QString> MMCPServer::chatName(const QString& name)
 {
-    QRegularExpression rx("^[^~]*$");
-    if (!rx.match(name).hasMatch()) {
-        const QString errorMsg = tr("[ CHAT ]  - Invalid chat name: tilde (~) is not allowed.");
+    QRegularExpression rx(qsl("~|,"));
+    if (rx.match(name).hasMatch()) {
+        const QString errorMsg = tr("[ CHAT ]  - Invalid chat name: tilde (~) and comma (,) are not allowed.");
         mpHost->postMessage(errorMsg);
-        return {false, qsl("Invalid chat name: tilde (~) is not allowed.")};
+        return {false, qsl("Invalid chat name: tilde (~) and comma (,) are not allowed.")};
     }
 
     setChatName(name);

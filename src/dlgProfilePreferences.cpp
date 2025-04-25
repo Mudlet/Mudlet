@@ -242,8 +242,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
     lineEdit_mmcpChatMessagePrefix->setPlaceholderText(csDefaultChatPrefix);
 
-    // Add validator for MMCP Chatname, disallow ~ character
-    QRegularExpression rx("^[^~]*$");
+    // Add validator for MMCP Chatname, disallow ~ and , characters
+    QRegularExpression rx("^[^~,]*$");
     QValidator *validator = new QRegularExpressionValidator(rx, this);
     lineEdit_mmcpChatName->setValidator(validator);
 
