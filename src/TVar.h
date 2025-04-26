@@ -82,7 +82,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TVar* var)
 {
   QDebugStateSaver saver(debug);
-  Q_UNUSED(saver);
+  Q_UNUSED(saver)
   debug.nospace() << "TVar(" << var->getName() << ")";
 
   switch (var->getKeyType()) {

@@ -219,7 +219,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     if (!trigger) {
         return debug << "TTrigger(0x0) ";

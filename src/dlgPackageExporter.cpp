@@ -980,7 +980,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     QMap<QString, QString> fileEntries;
     while (stagingFile.hasNext() && isOk) {
         const QString itEntry = stagingFile.next();
-        Q_UNUSED(itEntry);
+        Q_UNUSED(itEntry)
         // Dot and DotDot entries are no use to us so skip them
         if (!(stagingFile.fileName().compare(qsl(".")) && stagingFile.fileName().compare(qsl("..")))) {
             // Dot and DotDot entries are no use to us so skip them

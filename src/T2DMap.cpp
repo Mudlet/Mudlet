@@ -5155,7 +5155,7 @@ void T2DMap::slot_setCustomLine2()
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
 {
-    Q_UNUSED(column);
+    Q_UNUSED(column)
     if (!special_exit) {
         return;
     }

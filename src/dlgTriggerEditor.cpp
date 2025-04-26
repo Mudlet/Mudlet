@@ -7705,7 +7705,7 @@ void dlgTriggerEditor::saveOpenChanges()
 
 void dlgTriggerEditor::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (isActiveWindow()) {
         autoSave();
@@ -7783,7 +7783,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
-    Q_UNUSED(pE);
+    Q_UNUSED(pE)
 
     saveOpenChanges();
 }

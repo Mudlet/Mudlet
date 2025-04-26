@@ -2850,7 +2850,7 @@ void dlgProfilePreferences::slot_resetLogDir()
 
 void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
 {
-    Q_UNUSED(index);
+    Q_UNUSED(index)
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -3215,7 +3215,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
 void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
 {
-    Q_UNUSED(_action);
+    Q_UNUSED(_action)
 
     QMenu* _menu = pushButton_chooseProfiles->menu();
     QListIterator<QAction*> itAction(_menu->actions());
@@ -4243,7 +4243,7 @@ void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState sta
 // is changed by the user.
 void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
 {
-    Q_UNUSED(languageIndex);
+    Q_UNUSED(languageIndex)
 
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);

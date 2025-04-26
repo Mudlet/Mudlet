@@ -126,7 +126,7 @@ void dlgNotepad::slot_textWritten()
 
 void dlgNotepad::timerEvent(QTimerEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (!mNeedToSave) {
         return;
