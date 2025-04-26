@@ -130,7 +130,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
         return mMatchingTMediaDataList;
     }
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return mMatchingTMediaDataList;
@@ -184,7 +184,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
         return mMatchingTMediaDataList;
     }
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return mMatchingTMediaDataList;
@@ -235,7 +235,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         return;
     }
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return;
@@ -284,7 +284,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return;
@@ -418,7 +418,7 @@ bool TMedia::isMediaProtocolAllowed(const TMediaData& mediaData) const
     return true;
 }
 
-QList<std::shared_ptr<TMediaPlayer>>& TMedia::findMediaPlayersByCriteria(const TMediaData& mediaData)
+QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TMediaData& mediaData)
 {
     switch (mediaData.mediaProtocol()) {
         case TMediaData::MediaProtocolMSP:
@@ -426,8 +426,7 @@ QList<std::shared_ptr<TMediaPlayer>>& TMedia::findMediaPlayersByCriteria(const T
 
         case TMediaData::MediaProtocolGMCP:
             if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
-                static QList<std::shared_ptr<TMediaPlayer>> combinedList;
-                combinedList.clear();
+                QList<std::shared_ptr<TMediaPlayer>> combinedList;
                 combinedList.append(mGMCPSoundList);
                 combinedList.append(mGMCPMusicList);
                 combinedList.append(mGMCPVideoList);
@@ -439,8 +438,7 @@ QList<std::shared_ptr<TMediaPlayer>>& TMedia::findMediaPlayersByCriteria(const T
 
         case TMediaData::MediaProtocolAPI:
             if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
-                static QList<std::shared_ptr<TMediaPlayer>> combinedList;
-                combinedList.clear();
+                QList<std::shared_ptr<TMediaPlayer>> combinedList;
                 combinedList.append(mAPISoundList);
                 combinedList.append(mAPIMusicList);
                 combinedList.append(mAPIVideoList);
@@ -452,8 +450,7 @@ QList<std::shared_ptr<TMediaPlayer>>& TMedia::findMediaPlayersByCriteria(const T
 
         case TMediaData::MediaProtocolNotSet:
             if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
-                static QList<std::shared_ptr<TMediaPlayer>> combinedList;
-                combinedList.clear();
+                QList<std::shared_ptr<TMediaPlayer>> combinedList;
                 combinedList.append(mMSPSoundList);
                 combinedList.append(mMSPMusicList);
                 combinedList.append(mGMCPSoundList);
@@ -467,12 +464,10 @@ QList<std::shared_ptr<TMediaPlayer>>& TMedia::findMediaPlayersByCriteria(const T
             return (mediaData.mediaType() == TMediaData::MediaTypeSound) ? mMSPSoundList :
                    (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? mMSPMusicList :
                    (mediaData.mediaType() == TMediaData::MediaTypeVideo) ? mGMCPVideoList :
-                   *(new QList<std::shared_ptr<TMediaPlayer>>()); // Return an empty list.
+                   QList<std::shared_ptr<TMediaPlayer>>(); // Return empty list
     }
 
-    // Should never reach here
-    static QList<std::shared_ptr<TMediaPlayer>> emptyList;
-    return emptyList;
+    return {}; // Default empty list fallback
 }
 
 bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
@@ -507,7 +502,7 @@ bool TMedia::resume(TMediaData mediaData)
         return resumed;
     }
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mTMediaPlayerList.isEmpty()) {
         return resumed;
@@ -553,7 +548,7 @@ void TMedia::stopAllMediaPlayers()
     mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
     mediaData.setMediaType(TMediaData::MediaTypeNotSet);
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (const auto& pPlayer : mTMediaPlayerList) {
         if (!pPlayer) {
@@ -569,7 +564,7 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
     TMediaData mediaData{};
     mediaData.setMediaProtocol(mediaProtocol);
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (const auto& player : mTMediaPlayerList) {
         if (!player) {
@@ -1061,7 +1056,7 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
     int matchedMediaPlayerIndex = -1;
     TMediaData mediaData = player->mediaData();
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
         if (mTMediaPlayerList[i] && mTMediaPlayerList[i]->mediaPlayer() == player->mediaPlayer()) {
@@ -1147,7 +1142,7 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
 
 std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
 {
-    QList<std::shared_ptr<TMediaPlayer>>& mediaPlayerList = findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (auto& existingPlayer : mediaPlayerList) {
         if (!existingPlayer || !existingPlayer->mediaPlayer()) {
@@ -1216,7 +1211,7 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
 
 std::shared_ptr<TMediaPlayer> TMedia::matchMediaPlayer(TMediaData& mediaData)
 {
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
     for (auto& pTestPlayer : mTMediaPlayerList) {
         if (!pTestPlayer) {
@@ -1246,7 +1241,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 
     int maxMediaPriority = 0;
 
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
     for (const auto& pTestPlayer : mTMediaPlayerList) {
         if (!pTestPlayer) {
@@ -1282,7 +1277,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName)
 {
-    QList<std::shared_ptr<TMediaPlayer>>& mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = TMedia::findMediaPlayersByCriteria(mediaData);
 
     for (const auto& pTestPlayer : mTMediaPlayerList) {
         if (!pTestPlayer) {
