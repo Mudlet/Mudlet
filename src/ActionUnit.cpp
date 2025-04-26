@@ -125,6 +125,15 @@ void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPos
     mActionMap.insert(pT->getID(), pT);
 }
 
+
+void TLuaInterpreter::onDiscordStatus(const QJsonObject &status) {
+    const QString url  = status.value("url").toString();
+    const QString game = status.value("game").toString();            // new
+    const QString label = game.isEmpty() 
+                          ? tr("Game") 
+                          : game;
+    setDiscordGameUrl(url, label);                                  // updated
+}
 void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
     TAction* pOldParent = getActionPrivate(oldParentID);
