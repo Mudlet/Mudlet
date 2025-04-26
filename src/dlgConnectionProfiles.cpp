@@ -1566,6 +1566,16 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
+
+        Host* pActiveHost = mudlet::self()->getActiveHost();
+        if (pActiveHost && pActiveHost->getName() == profile_name) {
+            // The intention here is to do as little as possible if the same profile is chosen again
+            // this replicates function of mudlet::slot_reconnect to avoid #7395
+            pActiveHost->mTelnet.reconnect();
+            QDialog::accept();
+            return;
+        }
+        
         pHost->setName(profile_name);
 
         if (!host_name_entry->text().trimmed().isEmpty()) {

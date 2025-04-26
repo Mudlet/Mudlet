@@ -185,7 +185,7 @@ private:
     void setColors2();
     void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
-    void setButtonColor(QPushButton*, const QColor&);
+    void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();

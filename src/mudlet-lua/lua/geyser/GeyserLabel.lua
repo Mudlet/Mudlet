@@ -971,7 +971,7 @@ end
 -- @param[opt=false] cons.flyOut allows labels to show up when mouse is hovered over
 -- @param[opt=''] cons.message initial message to show on the label
 -- @param[opt='white'] cons.fgColor optional foreground colour - colour to use for text on the label
--- @param[opt='black'] cons.bgColor optional background colour - colour of the whole label
+-- @param[opt='dark grey'] cons.color optional background colour - colour of the whole label
 -- @param[opt=1] cons.fillBg 1 if the background is to be filled, 0 for no background
 -- @param container the container to add as a child
 function Geyser.Label:addChild(cons, container)

@@ -1593,8 +1593,12 @@ void dlgPackageExporter::slot_cancelExport()
 }
 
 //Description Class TextEdit
-dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW) : QTextEdit(pW) {}
-dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
+dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
+: QTextEdit(pW)
+{}
+
+dlgPackageExporterDescription::~dlgPackageExporterDescription()
+{}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {
