@@ -672,12 +672,10 @@ function replaceLine(window, text)
   assert(type(window) == 'string', 'replaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
   if not text then
     selectCurrentLine()
-    text = window
   else
     selectCurrentLine(window)
   end
-  replace("")
-  insertText(text)
+  replace(window, text)
 end
 
 
@@ -1994,7 +1992,7 @@ end
 do
   local oldreplace = replace
   function replace(arg1, arg2, arg3)
-    local windowname, text, keepcolor
+    local windowname, text, keepcolor = "main", nil, false
 
     if arg1 and arg2 and arg3 ~= nil then
       windowname, text, keepcolor = arg1, arg2, arg3
@@ -2006,27 +2004,18 @@ do
       text = arg1
     end
 
-    local selection = {getSelection()}
+    local selection = {getSelection(windowname)}
     if _comp(selection, {"", 0, 0}) then
       return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
     end
     text = text or ""
 
     if keepcolor then
-      if not windowname then
-        setBgColor(getBgColor())
-        setFgColor(getFgColor())
-      else
-        setBgColor(windowname, getBgColor(windowname))
-        setFgColor(windowname, getFgColor(windowname))
-      end
+      setBgColor(windowname, getBgColor(windowname))
+      setFgColor(windowname, getFgColor(windowname))
     end
 
-    if windowname then
-      oldreplace(windowname, text)
-    else
-      oldreplace(text)
-    end
+    oldreplace(windowname, text)
   end
 end
 
