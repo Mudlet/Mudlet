@@ -36,8 +36,12 @@ TScrollBox::TScrollBox(Host* pH, QWidget* pW)
 }
 
 
-TScrollBoxWidget::TScrollBoxWidget(QWidget* pW) : QWidget(pW) {}
-TScrollBoxWidget::~TScrollBoxWidget() {}
+TScrollBoxWidget::TScrollBoxWidget(QWidget* pW)
+: QWidget(pW)
+{}
+
+TScrollBoxWidget::~TScrollBoxWidget()
+{}
 
 void TScrollBoxWidget::childEvent(QChildEvent* event)
 {

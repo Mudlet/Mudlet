@@ -94,7 +94,7 @@ void unmarkQLineEdit(QLineEdit* lineEdit)
     lineEdit->blockSignals(false);
 }
 
-void markQTextEdit(QTextEdit* textEdit)
+void markQTextEdit(QPlainTextEdit* textEdit)
 {
     QString text = textEdit->toPlainText();
 
@@ -103,7 +103,7 @@ void markQTextEdit(QTextEdit* textEdit)
 
     textEdit->blockSignals(true);
     int cursorPos = textEdit->textCursor().position();
-    textEdit->setText(text);
+    textEdit->setPlainText(text);
 
     QTextCursor cursor = textEdit->textCursor();
     cursor.setPosition(cursorPos);
@@ -111,7 +111,7 @@ void markQTextEdit(QTextEdit* textEdit)
     textEdit->blockSignals(false);
 }
 
-void unmarkQTextEdit(QTextEdit* textEdit)
+void unmarkQTextEdit(QPlainTextEdit* textEdit)
 {
     QString text = textEdit->toPlainText();
 
@@ -119,7 +119,7 @@ void unmarkQTextEdit(QTextEdit* textEdit)
 
     textEdit->blockSignals(true);
     int cursorPos = textEdit->textCursor().position();
-    textEdit->setText(text);
+    textEdit->setPlainText(text);
 
     QTextCursor cursor = textEdit->textCursor();
     cursor.setPosition(cursorPos);

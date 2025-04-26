@@ -4182,7 +4182,8 @@ void T2DMap::slot_setUserData()
 {
 }
 
-void T2DMap::slot_loadMap() {
+void T2DMap::slot_loadMap()
+{
     if (!mpHost) {
         return;
     }

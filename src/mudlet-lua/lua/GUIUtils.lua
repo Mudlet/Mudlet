@@ -600,14 +600,14 @@ end
 ---   <pre>
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
-function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
   if Ypos == nil then
     Ypos = Xpos
     Xpos = numberOfLines
     numberOfLines = charsPerLine
     charsPerLine = fontSize
     fontSize = consoleName
-    consoleName = windowname
+    consoleName = windowName
     windowname = "main"
   end
   assert(type(windowName) == 'string', 'createConsole: invalid type for windowName (expected string, got '..type(windowName)..'!)')
@@ -617,7 +617,7 @@ function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOf
   assert(type(numberOfLines) == 'number', 'createConsole: invalid type for numberOfLines (expected number, got '..type(numberOfLines)..'!)')
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
-  createMiniConsole(windowname, consoleName, 0, 0, 1, 1)
+  createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
@@ -672,12 +672,10 @@ function replaceLine(window, text)
   assert(type(window) == 'string', 'replaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
   if not text then
     selectCurrentLine()
-    text = window
   else
     selectCurrentLine(window)
   end
-  replace("")
-  insertText(text)
+  replace(window, text)
 end
 
 
@@ -1994,7 +1992,7 @@ end
 do
   local oldreplace = replace
   function replace(arg1, arg2, arg3)
-    local windowname, text, keepcolor
+    local windowname, text, keepcolor = "main", nil, false
 
     if arg1 and arg2 and arg3 ~= nil then
       windowname, text, keepcolor = arg1, arg2, arg3
@@ -2006,27 +2004,18 @@ do
       text = arg1
     end
 
-    local selection = {getSelection()}
+    local selection = {getSelection(windowname)}
     if _comp(selection, {"", 0, 0}) then
       return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
     end
     text = text or ""
 
     if keepcolor then
-      if not windowname then
-        setBgColor(getBgColor())
-        setFgColor(getFgColor())
-      else
-        setBgColor(windowname, getBgColor(windowname))
-        setFgColor(windowname, getFgColor(windowname))
-      end
+      setBgColor(windowname, getBgColor(windowname))
+      setFgColor(windowname, getFgColor(windowname))
     end
 
-    if windowname then
-      oldreplace(windowname, text)
-    else
-      oldreplace(text)
-    end
+    oldreplace(windowname, text)
   end
 end
 
