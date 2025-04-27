@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -4139,9 +4139,7 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 
 QStringList mudlet::getAvailableFonts()
 {
-    const QFontDatabase database;
-
-    return database.families(QFontDatabase::Any);
+    return QFontDatabase::families(QFontDatabase::Any);
 }
 
 std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
@@ -5159,7 +5157,12 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
                                     : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+            return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+            // Deprecated in 6.9 and due for removal in 6.13:
             return original.mirrored(true, true);
+#endif
         }
     } else {
         return QImage(releaseVersion

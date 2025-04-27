@@ -94,7 +94,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TAlias* alias)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     if (!alias) {
         return debug << "TAlias(0x0) ";

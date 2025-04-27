@@ -3520,7 +3520,7 @@ void TMap::restore16ColorSet()
 void TMap::setUnsaved(const char* fromWhere)
 {
 #if !defined(DEBUG_MAPAUTOSAVE)
-    Q_UNUSED(fromWhere);
+    Q_UNUSED(fromWhere)
 #else
     QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";

@@ -106,9 +106,14 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
-
-
+# The location that windeployqt6 puts the Qt translation files by default is "./translations"
+# unfortunately this is not what
+# "QLibraryInfo::path(QLibraryInfo::TranslationsPath)" in the calls to
+# "QString mudlet::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
+# with "enums::qtTranslationsPath" as the first argument returns:
+# "./share/Qt6/translations" - which means the Qt translations were not getting
+# loaded for our Windows builds:
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
 
 # To determine which system libraries have to be copied in it requires
 # continually trying to run the executable on the target type system

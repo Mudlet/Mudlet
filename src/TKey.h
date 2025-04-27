@@ -107,7 +107,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TKey* key)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TKey(" << key->getName();
     debug.nospace() << ", keyCode=" << key->getKeyCode();
     debug.nospace() << ", keyModifiers=" << key->getKeyModifiers();
