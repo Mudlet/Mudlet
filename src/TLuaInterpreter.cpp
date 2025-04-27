@@ -5549,7 +5549,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     lua_register(pGlobalLua, "closeProfile", TLuaInterpreter::closeProfile);
     lua_register(pGlobalLua, "getCollisionLocationsInArea", TLuaInterpreter::getCollisionLocationsInArea);
-    lua_register(pGlobalLua, "dateStamp", TLuaInterpreter:: dateStamp);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -7643,16 +7642,4 @@ void TLuaInterpreter::updateEditor()
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mNeedUpdateData = true;
     }
-}
-
-int TLuaInterpreter::dateStamp(lua_State* L)
-{
-    QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    const int offset = iso8601timestamp.offsetFromUtc();
-    iso8601timestamp.setOffsetFromUtc(offset);
-    lua_pushstring(L, iso8601timestamp.toString(Qt::ISODate).toUtf8().constData());
-
-    lua_pushstring(L, utils::dateStamp().toUtf8().constData());
-
-    return 2;
 }
