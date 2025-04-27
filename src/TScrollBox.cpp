@@ -36,8 +36,12 @@ TScrollBox::TScrollBox(Host* pH, QWidget* pW)
 }
 
 
-TScrollBoxWidget::TScrollBoxWidget(QWidget* pW) : QWidget(pW) {}
-TScrollBoxWidget::~TScrollBoxWidget() {}
+TScrollBoxWidget::TScrollBoxWidget(QWidget* pW)
+: QWidget(pW)
+{}
+
+TScrollBoxWidget::~TScrollBoxWidget()
+{}
 
 void TScrollBoxWidget::childEvent(QChildEvent* event)
 {
@@ -54,7 +58,7 @@ void TScrollBoxWidget::childEvent(QChildEvent* event)
 
 bool TScrollBoxWidget::eventFilter(QObject* object, QEvent* event)
 {
-    Q_UNUSED(object);
+    Q_UNUSED(object)
 
     if (event->type() == QMoveEvent::Move || event->type() == QResizeEvent::Resize || event->type() == QHideEvent::Hide || event->type() == QShowEvent::Show)
     {
