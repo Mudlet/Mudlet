@@ -227,7 +227,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
 /**
  * Script command, Send private chat.
  */
-QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg)
+QPair<bool, QString> MMCPServer::chatTo(const QVariant& target, const QString& msg)
 {
     MMCPClient* pClient = clientByNameOrId(target);
 
@@ -375,7 +375,7 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
 /**
  * Script command, Display a list of connected chat clients on the main console
  */
-QPair<bool, QString> MMCPServer::chatList()
+QPair<bool, QString> MMCPServer::displayClientList()
 {
     using namespace AnsiColors;
 
@@ -444,7 +444,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
 /**
  * Script command, sends side channel data to all clients
  */
-QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const QString& msg)
+QPair<bool, QString> MMCPServer::sendSideChannel(const QString& channel, const QString& msg)
 {
     if (mPeersList.isEmpty()) {
         return {false, qsl("no connected clients")};
@@ -811,9 +811,9 @@ QPair<bool, QString> MMCPServer::snoop(const QVariant& target)
 }
 
 /**
- * Unchat someone by name or id
+ * Disconnect someone by name or id
  */
-QPair<bool, QString> MMCPServer::unChat(const QVariant& target)
+QPair<bool, QString> MMCPServer::disconnect(const QVariant& target)
 {
     MMCPClient* pClient = clientByNameOrId(target);
 

@@ -48,15 +48,15 @@ public:
 
     QPair<bool, QString> call(const QString&);
     QPair<bool, QString> call(const QString&, int);
-    QPair<bool, QString> chat(const QVariant&, const QString&);
+    QPair<bool, QString> chatTo(const QVariant&, const QString&);
     QPair<bool, QString> chatAll(const QString&);
     QPair<bool, QString> chatAccept(const QVariant&);
     QPair<bool, QString> chatDeny(const QVariant&);
     QPair<bool, QString> chatGroup(const QString&, const QString&);
     QPair<bool, QString> chatName(const QString&);
-    QPair<bool, QString> chatList();
+    QPair<bool, QString> displayClientList();
     QPair<bool, QString> chatSetGroup(const QVariant&, const QString&);
-    QPair<bool, QString> chatSideChannel(const QString&, const QString&);
+    QPair<bool, QString> sendSideChannel(const QString&, const QString&);
 // Not currently used:    QPair<bool, QString> chatRaw(const QString&);
     QPair<bool, QString> emoteAll(const QString&);
     QPair<bool, QString> ignore(const QString&);
@@ -68,7 +68,7 @@ public:
     QPair<bool, QString> serve(const QVariant&);
     QPair<bool, QString> allowSnoop(const QVariant&);
     QPair<bool, QString> snoop(const QVariant&);
-    QPair<bool, QString> unChat(const QVariant&);
+    QPair<bool, QString> disconnect(const QVariant&);
 
     void clientMessage(const QString&);
     void clientMessage(MMCPClient *, const QString&);
