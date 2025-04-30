@@ -159,7 +159,7 @@ void MMCPClient::slot_readData()
 {
     while (mTcpSocket.bytesAvailable()) {
         if (mPeerBuffer.length() > 0) {
-            qDebug().noquote().nospace() << "MMCPCLient::slot_readData() INFO - appending to previous partial buffer.";
+            qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - appending to previous partial buffer.";
         }
 
         mPeerBuffer.append(mTcpSocket.read(mTcpSocket.bytesAvailable()));
@@ -1010,44 +1010,18 @@ void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
 const QString MMCPClient::getFlagsString()
 {
     return qsl("%1%2%3%4%5%6%7%8")
-            //.arg(GetCommands() ? 'A' : ' ') - "Allow commands" - we don't do those
             .arg(QLatin1Char(' '))
-            //.arg(GetTransfers() ? 'T' : ' ') - "Allows transfers" - not exactly - we can't know that until a transfer has been accepted/rejected
             .arg(QLatin1Char(' '))
             .arg(QLatin1Char(mIsPrivate ? 'P' : ' ')) // "Private"
             .arg(QLatin1Char(mIsIgnored ? 'I' : ' ')) // "Ignored"
             .arg(QLatin1Char(mIsServed ? 'S' : ' ')) // "Serving"
-            //.arg(GetExcludeServe() ? 'X' : ' ') - "Serving excluded" - not suported?
             .arg(QLatin1Char((convertToIPv4(mTcpSocket.peerAddress()) != mPeerAddress) ? 'F' : ' ')) // "Firewall" - Humm?
             .arg(QLatin1Char(mIsSnooping ? 'N' : (mEnableSnooping ? 'n' : ' ')))
-            //.arg(' ') - something else?
             .arg(QLatin1Char(' '));
 }
 
 const QString MMCPClient::getInfoString()
 {
-    /*
-	QString strName;
-	
-	// Color the name to reflect the status of a transfer.
-	
-	switch(GetTransferType()) {
-		case CChat::TransferType::None:
-			strName = (GetName().GetLength() > 20 ? GetName().Left(20) : GetName());
-			break;
-
-		case CChat::TransferType::Send:
-			strName.Format("\x1b[1;32m%s\x1b[0;37m",
-				(GetName().GetLength() > 20 ? (LPCSTR)GetName().Left(20) : (LPCSTR)GetName()));
-			break;
-
-		case CChat::TransferType::Receive:
-			strName.Format("\x1b[1;34m%s\x1b[0;37m",
-				(GetName().GetLength() > 20 ? (LPCSTR)GetName().Left(20) : (LPCSTR)GetName()));
-			break;
-	}
-	*/
-
     using namespace AnsiColors;
 
     const QString groupStr = (mGroup == csDefaultMMCPGroupName) ? QString(QChar::Space).repeated(15) : mGroup;

@@ -390,13 +390,16 @@ QPair<bool, QString> MMCPServer::displayClientList()
                             .arg(RST, pClient->getInfoString(), pClient->getVersion());
     }
 
+    // Maybe one day we'll implement Transfers, although there are other/better ways of
+    // sharing scripts with Mudlet
+
     const QString strMessage = tr("%1Id   Name                 Address              Port  Group           Flags    ChatClient\n"
                                   "==== ==================== ==================== ===== =============== ======== ================\n"
                                   "%2"
                                   "==== ==================== ==================== ===== =============== ======== ================\n"
                                   "Color Key: %3Connected  %4Pending%1\n"
-                                  "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private,  n - Allow Snooping\n"
-                                  "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude%1")
+                                  "Flags:  F - Firewall,       I - Ignored,  P - Private,  S - Serving\n"
+                                  "        n - Allow Snooping, N - Being Snooped%1")
                                        .arg(RST,
                                             peersList.isEmpty() ? QString() : qsl("%1\n").arg(peersList.join(QChar::LineFeed)),
                                             FBLDGRN, FBLDYEL);
