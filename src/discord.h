@@ -137,7 +137,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
 {
     const QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     QString result = qsl("localDiscordPresence(\n"
                                     "    mDetails: \"%1\"  mState: \"%2\" mInstance: %3\n"

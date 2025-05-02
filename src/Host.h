@@ -129,7 +129,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
     const QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
                        .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
                             (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),

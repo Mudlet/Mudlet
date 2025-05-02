@@ -1281,7 +1281,7 @@ void XMLimport::readHost(Host* pHost)
                 // We still check for them so that we avoid falling into the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText());
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("mMapInfoContributors")) {
                 readLegacyMapInfoContributors();
             } else if (name() == qsl("mapInfoContributor")) {
