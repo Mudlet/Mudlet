@@ -1553,3 +1553,9 @@ void TCommandLine::slot_saveHistory()
         }
     }
 }
+
+void TCommandLine::setText(const QString &text)
+{
+    QString nonConstText = text;
+    mpConsole->printCommand(nonConstText);
+}

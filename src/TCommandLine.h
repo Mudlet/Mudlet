@@ -77,6 +77,7 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
+    void setText(const QString& text);
 
     int mActionFunction = 0;
     QPalette mRegularPalette;

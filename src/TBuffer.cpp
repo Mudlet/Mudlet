@@ -2155,6 +2155,47 @@ void TBuffer::decodeOSC(const QString& sequence)
             resetColors();
         }
         break;
+    case static_cast<quint8>('8'): {
+        // Handle OSC 8 (Anchor/Hyperlink)
+        QStringList parts = sequence.mid(2).split(';');
+
+        if (parts.size() >= 2) {
+            QString url = parts[1]; // Extract the URL
+            QString text = parts.size() > 2 ? parts[2] : QString(); // Extract optional display text
+
+            // If no display text is provided, use the URL as the text
+            if (text.isEmpty()) {
+                text = url;
+            }
+
+            // Check for `send:` or `prompt:` prefixes in the URL
+            QStringList command;
+            QStringList hint;
+
+            if (url.startsWith("send:")) {
+                QString sendCommand = url.mid(5); // Extract the command after "send:"
+                command = { QString("send([[%1]])").arg(sendCommand) };
+                hint = { QString("Send: %1").arg(sendCommand) };
+            } else if (url.startsWith("prompt:")) {
+                QString promptCommand = url.mid(7); // Extract the command after "prompt:"
+                command = { QString("sendCmdLine([[%1]])").arg(promptCommand) };
+                hint = { QString("Prompt: %1").arg(promptCommand) };
+            } else {
+                // Default behavior for standard hyperlinks
+                command = { QString("openUrl([[%1]])").arg(url) };
+                hint = { QString("%1").arg(url) };
+            }
+
+            // Create a clickable link in the console
+            TChar format(mpConsole); // Default formatting for the link
+            QVector<int> luaReference; // No Lua references needed here
+            addLink(false, text, command, hint, format, luaReference);
+        } else if (parts.size() == 1 && parts[0].isEmpty()) {
+            // OSC 8 ;; ST ends the hyperlink
+            // No specific action needed for now
+        }
+        break;
+    }
     default:
         qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unhandled <OSC>?...<ST> code, Mudlet will ignore it.";
     }
@@ -4191,9 +4232,6 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
             }
         } else {
             // Unable to decode it - no Qt decoder...!
-#if defined(DEBUG_BIG5_PROCESSING)
-            qDebug().nospace() << "No Qt decoder found...";
-#endif
             isValid = false;
             isToUseReplacementMark = true;
         }
@@ -4205,7 +4243,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         for (size_t i = 0; i < big5SequenceLength; ++i) {
             debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
-        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg;
+        qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
