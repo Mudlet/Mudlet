@@ -111,7 +111,7 @@ private slots:
 
 private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
-    QList<std::shared_ptr<TMediaPlayer>>& findMediaPlayersByCriteria(const TMediaData& mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
     void stopAllMediaPlayers();
