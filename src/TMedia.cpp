@@ -1047,9 +1047,48 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     });
 }
 
+void TMedia::purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList)
+{
+    mediaList.erase(std::remove_if(mediaList.begin(), mediaList.end(),
+                                   [](const std::shared_ptr<TMediaPlayer>& player) {
+                                       return player->getPlaybackState() == QMediaPlayer::StoppedState;
+                                   }),
+                    mediaList.end());
+}
+
+// Helper for updating media player lists (now a static TMedia method)
+template<typename T>
+void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player)
+{
+    if (index == -1) {
+        qDebug() << "TMedia::updateList() - Adding new player to list (index == -1)";
+        list.append(std::move(player));
+    } else if (index >= 0 && index < list.size()) {
+        qDebug() << "TMedia::updateList() - Replacing existing player at index:" << index;
+        list[index] = std::move(player);
+    } else {
+        qWarning() << "TMedia::updateList() - Invalid index:" << index
+                   << " for list size:" << list.size() << ". Appending instead.";
+        list.append(std::move(player));
+    }
+
+    if (list.size() > TMedia::MaxUnprunedPlayers) {
+        qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << TMedia::MaxUnprunedPlayers << "). Purging stopped players.";
+        TMedia::purgeStoppedMediaPlayers(list);
+
+        if (list.size() > TMedia::MaxUnprunedPlayers) {
+            qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
+            list.removeFirst(); // Evict the oldest player to enforce cap
+        }
+    }
+
+    qDebug() << "TMedia::updateList() - List size after update:" << list.size();
+}
+
 void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
 {
     if (!player) {
+        qDebug() << "TMedia::updateMediaPlayerList() - Player is null. Aborting update.";
         return;
     }
 
@@ -1058,6 +1097,7 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
 
     QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
+    qDebug() << "TMedia::updateMediaPlayerList() - Searching for existing player in list.";
     for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
         if (mTMediaPlayerList[i] && mTMediaPlayerList[i]->mediaPlayer() == player->mediaPlayer()) {
             matchedMediaPlayerIndex = i;
@@ -1065,78 +1105,35 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
             break;
         }
     }
+    if (matchedMediaPlayerIndex != -1) {
+        qDebug() << "TMedia::updateMediaPlayerList() - Found existing player at index:" << matchedMediaPlayerIndex;
+    } else {
+        qDebug() << "TMedia::updateMediaPlayerList() - No existing player found. Appending new one.";
+    }
 
+    QList<std::shared_ptr<TMediaPlayer>>* list = nullptr;
+
+    qDebug() << "TMedia::updateMediaPlayerList() - Updating list for protocol:"
+             << mediaData.mediaProtocol()
+             << "and type:" << mediaData.mediaType();
     switch (mediaData.mediaProtocol()) {
     case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            if (matchedMediaPlayerIndex == -1) {
-                mMSPSoundList.append(std::move(player));
-            } else {
-                mMSPSoundList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeMusic:
-            if (matchedMediaPlayerIndex == -1) {
-                mMSPMusicList.append(std::move(player));
-            } else {
-                mMSPMusicList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        }
+        list = (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? &mMSPMusicList : &mMSPSoundList;
         break;
-
     case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            if (matchedMediaPlayerIndex == -1) {
-                mGMCPSoundList.append(std::move(player));
-            } else {
-                mGMCPSoundList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeMusic:
-            if (matchedMediaPlayerIndex == -1) {
-                mGMCPMusicList.append(std::move(player));
-            } else {
-                mGMCPMusicList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeVideo:
-            if (matchedMediaPlayerIndex == -1) {
-                mGMCPVideoList.append(std::move(player));
-            } else {
-                mGMCPVideoList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        }
+        list = (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? &mGMCPMusicList :
+               (mediaData.mediaType() == TMediaData::MediaTypeVideo) ? &mGMCPVideoList : &mGMCPSoundList;
         break;
-
     case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            if (matchedMediaPlayerIndex == -1) {
-                mAPISoundList.append(std::move(player));
-            } else {
-                mAPISoundList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeMusic:
-            if (matchedMediaPlayerIndex == -1) {
-                mAPIMusicList.append(std::move(player));
-            } else {
-                mAPIMusicList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeVideo:
-            if (matchedMediaPlayerIndex == -1) {
-                mAPIVideoList.append(std::move(player));
-            } else {
-                mAPIVideoList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        }
+        list = (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? &mAPIMusicList :
+               (mediaData.mediaType() == TMediaData::MediaTypeVideo) ? &mAPIVideoList : &mAPISoundList;
         break;
+    }
+
+    if (list) {
+        TMedia::updateList<TMediaPlayer>(*list, matchedMediaPlayerIndex, std::move(player));
+    } else {
+        qWarning() << "TMedia::updateMediaPlayerList() - Could not determine appropriate list for player.";
     }
 }
 
@@ -1155,6 +1152,27 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
             existingPlayer->setMediaData(mediaData);
             return existingPlayer;  // Reuse existing player
         }
+    }
+
+    // Cap to prevent overflow per media type
+    int maxAllowed = MaxAllowedSoundPlayers; // Default fallback
+
+    switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeMusic:
+            maxAllowed = MaxAllowedMusicPlayers;
+            break;
+        case TMediaData::MediaTypeVideo:
+            maxAllowed = MaxAllowedVideoPlayers;
+            break;
+        case TMediaData::MediaTypeSound:
+        default:
+            maxAllowed = MaxAllowedSoundPlayers;
+            break;
+    }
+
+    if (mediaPlayerList.size() >= maxAllowed) {
+        qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
+        return nullptr;
     }
 
     // No available player, create a new one
