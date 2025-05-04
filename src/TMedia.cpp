@@ -1058,7 +1058,7 @@ void TMedia::purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& medi
 
 // Helper for updating media player lists (now a static TMedia method)
 template<typename T>
-void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player)
+void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player, TMedia* mediaInstance)
 {
     if (index == -1) {
         qDebug() << "TMedia::updateList() - Adding new player to list (index == -1)";
@@ -1072,11 +1072,11 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
         list.append(std::move(player));
     }
 
-    if (list.size() > TMedia::MaxUnprunedPlayers) {
-        qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << TMedia::MaxUnprunedPlayers << "). Purging stopped players.";
+    if (list.size() > mediaInstance->getMaxUnprunedPlayers()) {
+        qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << mediaInstance->getMaxUnprunedPlayers() << "). Purging stopped players.";
         TMedia::purgeStoppedMediaPlayers(list);
 
-        if (list.size() > TMedia::MaxUnprunedPlayers) {
+        if (list.size() > mediaInstance->getMaxUnprunedPlayers()) {
             qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
             list.removeFirst(); // Evict the oldest player to enforce cap
         }
@@ -1131,7 +1131,7 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
     }
 
     if (list) {
-        TMedia::updateList<TMediaPlayer>(*list, matchedMediaPlayerIndex, std::move(player));
+        TMedia::updateList<TMediaPlayer>(*list, matchedMediaPlayerIndex, std::move(player), this);
     } else {
         qWarning() << "TMedia::updateMediaPlayerList() - Could not determine appropriate list for player.";
     }
@@ -1155,18 +1155,18 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // Cap to prevent overflow per media type
-    int maxAllowed = MaxAllowedSoundPlayers; // Default fallback
+    int maxAllowed = getMaxAllowedSoundPlayers(); // Default fallback
 
     switch (mediaData.mediaType()) {
         case TMediaData::MediaTypeMusic:
-            maxAllowed = MaxAllowedMusicPlayers;
+            maxAllowed = getMaxAllowedMusicPlayers();
             break;
         case TMediaData::MediaTypeVideo:
-            maxAllowed = MaxAllowedVideoPlayers;
+            maxAllowed = getMaxAllowedVideoPlayers();
             break;
         case TMediaData::MediaTypeSound:
         default:
-            maxAllowed = MaxAllowedSoundPlayers;
+            maxAllowed = getMaxAllowedSoundPlayers();
             break;
     }
 
@@ -1188,6 +1188,27 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     mediaPlayerList.append(newPlayer);
 
     return newPlayer;
+}
+
+// Dynamic limits for media players, based on host count
+int TMedia::getMaxUnprunedPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(10, 25 / hostCount);
+}
+
+int TMedia::getMaxAllowedSoundPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(16, 65 / hostCount);
+}
+
+int TMedia::getMaxAllowedMusicPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(4, 20 / hostCount);
+}
+
+int TMedia::getMaxAllowedVideoPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(2, 10 / hostCount);
 }
 
 void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player)
