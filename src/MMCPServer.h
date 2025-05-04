@@ -35,7 +35,6 @@ class Host;
 class MMCPServer : public QTcpServer
 {
     Q_OBJECT
-    Q_PROPERTY(QString getChatName READ getChatName WRITE setChatName)
 
 public:
     explicit MMCPServer(Host*);

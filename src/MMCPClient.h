@@ -36,18 +36,6 @@ class Host;
 class MMCPClient : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(int id READ id WRITE setId)
-    Q_PROPERTY(bool canSnoop READ canSnoop WRITE setCanSnoop)
-    Q_PROPERTY(QString chatName READ chatName)
-    Q_PROPERTY(bool isIgnored READ isIgnored WRITE setIgnore)
-    Q_PROPERTY(bool isPrivate READ isPrivate WRITE setPrivate)
-    Q_PROPERTY(bool isServed READ isServed WRITE setServed)
-    Q_PROPERTY(bool isServing READ isServing WRITE setServing)
-    Q_PROPERTY(bool isSnooped READ isSnooped WRITE setSnooped)
-    Q_PROPERTY(bool isSnooping READ isSnooping WRITE setSnooping)
-    Q_PROPERTY(int state READ state)
-    Q_PROPERTY(QString host READ host)
-    Q_PROPERTY(quint16 port READ port)
 
     enum ClientState {
         Disconnected = 0,
