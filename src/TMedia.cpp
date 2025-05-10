@@ -1888,18 +1888,11 @@ TMediaData::MediaClose TMedia::parseJSONByMediaClose(QJsonObject& json)
     return mediaClose;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#desc
-QString TMedia::parseJSONByMediaDesc(QJsonObject& json)
+// Documentation: https://wiki.mudlet.org/w/Standards:MUD_Client_Media_Protocol#caption
+QString TMedia::parseJSONByMediaCaption(QJsonObject& json)
 {
-    // Returns the 'desc' field if present, else empty string
-    return json.contains("desc") && json["desc"].isString() ? json["desc"].toString() : QString();
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#sfx
-QString TMedia::parseJSONByMediaSfx(QJsonObject& json)
-{
-    // Returns the 'sfx' field if present, else empty string
-    return json.contains("sfx") && json["sfx"].isString() ? json["sfx"].toString() : QString();
+    // Returns the 'caption' field if present, else empty string
+    return json.contains("caption") && json["caption"].isString() ? json["caption"].toString() : QString();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
@@ -1924,6 +1917,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
     mediaData.setMediaUrl(TMedia::parseJSONByMediaUrl(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
     mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
+    mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
 
     mediaData.setMediaFileName(mediaData.mediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
@@ -1969,8 +1963,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
     mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
-    mediaData.setMediaDesc(TMedia::parseJSONByMediaDesc(json));
-    mediaData.setMediaSfx(TMedia::parseJSONByMediaSfx(json));
+    mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
 
     TMedia::playMedia(mediaData);
 }
@@ -2003,8 +1996,7 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaFadeAway(TMedia::parseJSONByMediaFadeAway(json));
     mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
-    mediaData.setMediaDesc(TMedia::parseJSONByMediaDesc(json));
-    mediaData.setMediaSfx(TMedia::parseJSONByMediaSfx(json));
+    mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
 
     TMedia::stopMedia(mediaData);
 }
