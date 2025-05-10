@@ -329,6 +329,22 @@ void TMedia::stopMedia(TMediaData& mediaData)
             const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
             const int endPosition = currentPosition + endDuration;
 
+            if (mpHost->mEnableClosedCaption) {
+                if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
+                    mpHost->mpConsole->print(qsl("\n[%1 fades]\n").arg(pPlayer->mediaData().mediaCaption()));
+                } else {
+                    const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                    const QString mediaKey = pPlayer->mediaData().mediaKey();
+                    const QString mediaFileName = pPlayer->mediaData().mediaFileName();
+
+                    if (mediaKey.isEmpty()) {
+                        mpHost->mpConsole->print(qsl("\n[%1 \"%2\" fades]\n").arg(mediaType, mediaFileName));
+                    } else {
+                        mpHost->mpConsole->print(qsl("\n[%1 %2 \"%3\" fades]\n").arg(mediaType, mediaKey, mediaFileName));
+                    }
+                }
+            }
+
             TMediaData updateMediaData = pPlayer->mediaData();
             updateMediaData.setMediaFadeOut(endDuration);
             updateMediaData.setMediaEnd(endPosition);
@@ -1996,7 +2012,6 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaFadeAway(TMedia::parseJSONByMediaFadeAway(json));
     mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
-    mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
 
     TMedia::stopMedia(mediaData);
 }
