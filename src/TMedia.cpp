@@ -274,6 +274,22 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
+        if (mpHost->mEnableClosedCaption) {
+            if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
+                mpHost->mpConsole->print(qsl("[%1 pauses]\n").arg(pPlayer->mediaData().mediaCaption()));
+            } else {
+                const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                const QString mediaKey = pPlayer->mediaData().mediaKey();
+                const QString mediaFileName = pPlayer->mediaData().mediaFileName();
+
+                if (mediaKey.isEmpty()) {
+                    mpHost->mpConsole->print(qsl("[%1 \"%2\" pauses]\n").arg(mediaType, mediaFileName));
+                } else {
+                    mpHost->mpConsole->print(qsl("[%1 %2 \"%3\" pauses]\n").arg(mediaType, mediaKey, mediaFileName));
+                }
+            }
+        }
+
         pPlayer->mediaPlayer()->pause();
     }
 }
@@ -331,16 +347,16 @@ void TMedia::stopMedia(TMediaData& mediaData)
 
             if (mpHost->mEnableClosedCaption) {
                 if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
-                    mpHost->mpConsole->print(qsl("\n[%1 fades]\n").arg(pPlayer->mediaData().mediaCaption()));
+                    mpHost->mpConsole->print(qsl("[%1 fades]\n").arg(pPlayer->mediaData().mediaCaption()));
                 } else {
                     const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
                     const QString mediaKey = pPlayer->mediaData().mediaKey();
                     const QString mediaFileName = pPlayer->mediaData().mediaFileName();
 
                     if (mediaKey.isEmpty()) {
-                        mpHost->mpConsole->print(qsl("\n[%1 \"%2\" fades]\n").arg(mediaType, mediaFileName));
+                        mpHost->mpConsole->print(qsl("[%1 \"%2\" fades]\n").arg(mediaType, mediaFileName));
                     } else {
-                        mpHost->mpConsole->print(qsl("\n[%1 %2 \"%3\" fades]\n").arg(mediaType, mediaKey, mediaFileName));
+                        mpHost->mpConsole->print(qsl("[%1 %2 \"%3\" fades]\n").arg(mediaType, mediaKey, mediaFileName));
                     }
                 }
             }
@@ -352,6 +368,22 @@ void TMedia::stopMedia(TMediaData& mediaData)
             TMedia::updateMediaPlayerList(std::move(pPlayer));
 
             continue;
+        }
+
+        if (mpHost->mEnableClosedCaption && pPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
+            if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
+                mpHost->mpConsole->print(qsl("[%1 stops]\n").arg(pPlayer->mediaData().mediaCaption()));
+            } else {
+                const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                const QString mediaKey = pPlayer->mediaData().mediaKey();
+                const QString mediaFileName = pPlayer->mediaData().mediaFileName();
+
+                if (mediaKey.isEmpty()) {
+                    mpHost->mpConsole->print(qsl("[%1 \"%2\" stops]\n").arg(mediaType, mediaFileName));
+                } else {
+                    mpHost->mpConsole->print(qsl("[%1 %2 \"%3\" stops]\n").arg(mediaType, mediaKey, mediaFileName));
+                }
+            }
         }
 
         // **Stop the player but keep it for reuse**
@@ -550,6 +582,22 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
+        if (mpHost->mEnableClosedCaption) {
+            if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
+                mpHost->mpConsole->print(qsl("[%1 resumes]\n").arg(pPlayer->mediaData().mediaCaption()));
+            } else {
+                const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                const QString mediaKey = pPlayer->mediaData().mediaKey();
+                const QString mediaFileName = pPlayer->mediaData().mediaFileName();
+
+                if (mediaKey.isEmpty()) {
+                    mpHost->mpConsole->print(qsl("[%1 \"%2\" resumes]\n").arg(mediaType, mediaFileName));
+                } else {
+                    mpHost->mpConsole->print(qsl("[%1 %2 \"%3\" resumes]\n").arg(mediaType, mediaKey, mediaFileName));
+                }
+            }
+        }
+
         pPlayer->mediaPlayer()->play();
         resumed = true;
     }
@@ -569,6 +617,22 @@ void TMedia::stopAllMediaPlayers()
     for (const auto& pPlayer : mTMediaPlayerList) {
         if (!pPlayer) {
             continue;
+        }
+
+        if (mpHost->mEnableClosedCaption && pPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
+            if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
+                mpHost->mpConsole->print(qsl("[%1 stops]\n").arg(pPlayer->mediaData().mediaCaption()));
+            } else {
+                const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                const QString mediaKey = pPlayer->mediaData().mediaKey();
+                const QString mediaFileName = pPlayer->mediaData().mediaFileName();
+
+                if (mediaKey.isEmpty()) {
+                    mpHost->mpConsole->print(qsl("[%1 \"%2\" stops]\n").arg(mediaType, mediaFileName));
+                } else {
+                    mpHost->mpConsole->print(qsl("[%1 %2 \"%3\" stops]\n").arg(mediaType, mediaKey, mediaFileName));
+                }
+            }
         }
 
         pPlayer->mediaPlayer()->stop();
@@ -987,9 +1051,26 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         if (auto lockedPlayer = weakPlayer.lock()) {
             if (mediaStatus == QMediaPlayer::EndOfMedia) {
                 if (lockedPlayer->playlist() && !lockedPlayer->playlist()->isEmpty()) {
+                    QPointer<Host> lockedPlayerHost = lockedPlayer->host();
                     QUrl nextMedia = lockedPlayer->playlist()->next();
 
                     if (!nextMedia.isEmpty()) {
+                        if (lockedPlayerHost->mEnableClosedCaption) {
+                            if (!lockedPlayer->mediaData().mediaCaption().isEmpty()) {
+                                lockedPlayerHost->mpConsole->print(qsl("[%1 plays]\n").arg(lockedPlayer->mediaData().mediaCaption()));
+                            } else {
+                                const QString mediaType = lockedPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : lockedPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                                const QString mediaKey = lockedPlayer->mediaData().mediaKey();
+                                const QString mediaFileName = lockedPlayer->mediaData().mediaFileName();
+
+                                if (mediaKey.isEmpty()) {
+                                    lockedPlayerHost->mpConsole->print(qsl("[%1 \"%2\" plays]\n").arg(mediaType, mediaFileName));
+                                } else {
+                                    lockedPlayerHost->mpConsole->print(qsl("[%1 %2 \"%3\" plays]\n").arg(mediaType, mediaKey, mediaFileName));
+                                }
+                            }
+                        }
+
                         lockedPlayer->mediaPlayer()->setSource(nextMedia);
                         lockedPlayer->mediaPlayer()->play();
                     } else if (lockedPlayer->playlist()->playbackMode() == TMediaPlaylist::Loop) {
@@ -1006,6 +1087,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     disconnect(player->mediaPlayer(), &QMediaPlayer::playbackStateChanged, nullptr, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::playbackStateChanged, this, 
             [this, weakPlayer](QMediaPlayerPlaybackState playbackState) {
+                auto host = this->mpHost;
                 if (auto lockedPlayer = weakPlayer.lock()) {
                     handlePlayerPlaybackStateChanged(playbackState, lockedPlayer);
                 }
@@ -1032,6 +1114,24 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
+                QPointer<Host> lockedPlayerHost = lockedPlayer->host();
+
+                if (lockedPlayerHost->mEnableClosedCaption && lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
+                    if (!lockedPlayer->mediaData().mediaCaption().isEmpty()) {
+                        lockedPlayerHost->mpConsole->print(qsl("[%1 stops]\n").arg(lockedPlayer->mediaData().mediaCaption()));
+                    } else {
+                        const QString mediaType = lockedPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : lockedPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+                        const QString mediaKey = lockedPlayer->mediaData().mediaKey();
+                        const QString mediaFileName = lockedPlayer->mediaData().mediaFileName();
+
+                        if (mediaKey.isEmpty()) {
+                            lockedPlayerHost->mpConsole->print(qsl("[%1 \"%2\" stops]\n").arg(mediaType, mediaFileName));
+                        } else {
+                            lockedPlayerHost->mpConsole->print(qsl("[%1 %2 \"%3\" stops]\n").arg(mediaType, mediaKey, mediaFileName));
+                        }
+                    }
+                }
+
                 lockedPlayer->mediaPlayer()->stop();
             } else {
                 if (fadeInUsed) {
@@ -1634,6 +1734,22 @@ void TMedia::play(TMediaData& mediaData)
     // Handle video setup if applicable
     if (mediaData.mediaType() == TMediaData::MediaTypeVideo && !setupVideo(pPlayer)) {
         return;
+    }
+
+    if (mpHost->mEnableClosedCaption && mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
+        if (!pPlayer->mediaData().mediaCaption().isEmpty()) {
+            mpHost->mpConsole->print(qsl("[%1 plays]\n").arg(pPlayer->mediaData().mediaCaption()));
+        } else {
+            const QString mediaType = pPlayer->mediaData().mediaType() == TMediaData::MediaTypeMusic ? tr("music") : pPlayer->mediaData().mediaType() == TMediaData::MediaTypeVideo ? tr("video") : tr("sound");
+            const QString mediaKey = pPlayer->mediaData().mediaKey();
+            const QString mediaFileName = pPlayer->mediaData().mediaFileName();
+
+            if (mediaKey.isEmpty()) {
+                mpHost->mpConsole->print(qsl("[%1 \"%2\" plays]\n").arg(mediaType, mediaFileName));
+            } else {
+                mpHost->mpConsole->print(qsl("[%1 %2 \"%3\" plays]\n").arg(mediaType, mediaKey, mediaFileName));
+            }
+        }
     }
 
     pPlayer->mediaPlayer()->play();
