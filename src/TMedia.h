@@ -154,6 +154,8 @@ private:
     static QString parseJSONByMediaKey(QJsonObject& json);
     static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
     static TMediaData::MediaClose parseJSONByMediaClose(QJsonObject& json);
+    static QString parseJSONByMediaDesc(QJsonObject& json);
+    static QString parseJSONByMediaSfx(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
