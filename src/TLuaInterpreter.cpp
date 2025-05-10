@@ -7373,6 +7373,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableClosedCaption")) {
+        host.mEnableClosedCaption = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("blankLinesBehaviour")) {
         static const QStringList behaviours{"show", "hide", "replacewithspace"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");

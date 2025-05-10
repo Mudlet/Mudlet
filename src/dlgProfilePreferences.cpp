@@ -487,6 +487,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_enableClosedCaption->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -598,6 +599,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_enableClosedCaption->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -744,6 +746,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
+
+    checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
+    connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption);
 
     // Block signals before setting initial state to prevent toggled signal
     checkBox_f3SearchEnabled->blockSignals(true);
@@ -1473,6 +1478,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_enableClosedCaption->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -3142,6 +3148,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
+        pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
@@ -4505,6 +4512,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         pHost->mAdvertiseScreenReader = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    }
+}
+
+void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
+{
+    if (mpHost && mpHost->mEnableClosedCaption != state) {
+        mpHost->mEnableClosedCaption = state;
     }
 }
 
