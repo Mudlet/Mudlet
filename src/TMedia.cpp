@@ -1047,9 +1047,56 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     });
 }
 
+void TMedia::purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList)
+{
+    mediaList.erase(std::remove_if(mediaList.begin(), mediaList.end(),
+                                   [](const std::shared_ptr<TMediaPlayer>& player) {
+                                       return player->getPlaybackState() == QMediaPlayer::StoppedState;
+                                   }),
+                    mediaList.end());
+}
+
+// Helper for updating media player lists (now a static TMedia method)
+template<typename T>
+void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player, TMedia* mediaInstance)
+{
+    if (index == -1) {
+        qDebug() << "TMedia::updateList() - Adding new player to list (index == -1)";
+        list.append(std::move(player));
+    } else if (index >= 0 && index < list.size()) {
+        qDebug() << "TMedia::updateList() - Replacing existing player at index:" << index;
+        list[index] = std::move(player);
+    } else {
+        qWarning() << "TMedia::updateList() - Invalid index:" << index
+                   << " for list size:" << list.size() << ". Appending instead.";
+        list.append(std::move(player));
+    }
+
+    if (list.size() > mediaInstance->getMaxUnprunedPlayers()) {
+        qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << mediaInstance->getMaxUnprunedPlayers() << "). Purging stopped players.";
+        TMedia::purgeStoppedMediaPlayers(list);
+
+        if (mudlet::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+            mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
+        }
+
+        if (list.size() > mediaInstance->getMaxUnprunedPlayers()) {
+            qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
+            list.removeFirst(); // Evict the oldest player to enforce cap
+
+            if (mudlet::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+                mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
+            }
+        }
+    }
+
+    qDebug() << "TMedia::updateList() - List size after update:" << list.size();
+}
+
 void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
 {
     if (!player) {
+        qDebug() << "TMedia::updateMediaPlayerList() - Player is null. Aborting update.";
         return;
     }
 
@@ -1058,6 +1105,7 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
 
     QList<std::shared_ptr<TMediaPlayer>> mTMediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
+    qDebug() << "TMedia::updateMediaPlayerList() - Searching for existing player in list.";
     for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
         if (mTMediaPlayerList[i] && mTMediaPlayerList[i]->mediaPlayer() == player->mediaPlayer()) {
             matchedMediaPlayerIndex = i;
@@ -1065,78 +1113,35 @@ void TMedia::updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player)
             break;
         }
     }
+    if (matchedMediaPlayerIndex != -1) {
+        qDebug() << "TMedia::updateMediaPlayerList() - Found existing player at index:" << matchedMediaPlayerIndex;
+    } else {
+        qDebug() << "TMedia::updateMediaPlayerList() - No existing player found. Appending new one.";
+    }
 
+    QList<std::shared_ptr<TMediaPlayer>>* list = nullptr;
+
+    qDebug() << "TMedia::updateMediaPlayerList() - Updating list for protocol:"
+             << mediaData.mediaProtocol()
+             << "and type:" << mediaData.mediaType();
     switch (mediaData.mediaProtocol()) {
     case TMediaData::MediaProtocolMSP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            if (matchedMediaPlayerIndex == -1) {
-                mMSPSoundList.append(std::move(player));
-            } else {
-                mMSPSoundList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeMusic:
-            if (matchedMediaPlayerIndex == -1) {
-                mMSPMusicList.append(std::move(player));
-            } else {
-                mMSPMusicList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        }
+        list = (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? &mMSPMusicList : &mMSPSoundList;
         break;
-
     case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            if (matchedMediaPlayerIndex == -1) {
-                mGMCPSoundList.append(std::move(player));
-            } else {
-                mGMCPSoundList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeMusic:
-            if (matchedMediaPlayerIndex == -1) {
-                mGMCPMusicList.append(std::move(player));
-            } else {
-                mGMCPMusicList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeVideo:
-            if (matchedMediaPlayerIndex == -1) {
-                mGMCPVideoList.append(std::move(player));
-            } else {
-                mGMCPVideoList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        }
+        list = (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? &mGMCPMusicList :
+               (mediaData.mediaType() == TMediaData::MediaTypeVideo) ? &mGMCPVideoList : &mGMCPSoundList;
         break;
-
     case TMediaData::MediaProtocolAPI:
-        switch (mediaData.mediaType()) {
-        case TMediaData::MediaTypeSound:
-            if (matchedMediaPlayerIndex == -1) {
-                mAPISoundList.append(std::move(player));
-            } else {
-                mAPISoundList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeMusic:
-            if (matchedMediaPlayerIndex == -1) {
-                mAPIMusicList.append(std::move(player));
-            } else {
-                mAPIMusicList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        case TMediaData::MediaTypeVideo:
-            if (matchedMediaPlayerIndex == -1) {
-                mAPIVideoList.append(std::move(player));
-            } else {
-                mAPIVideoList[matchedMediaPlayerIndex] = std::move(player);
-            }
-            break;
-        }
+        list = (mediaData.mediaType() == TMediaData::MediaTypeMusic) ? &mAPIMusicList :
+               (mediaData.mediaType() == TMediaData::MediaTypeVideo) ? &mAPIVideoList : &mAPISoundList;
         break;
+    }
+
+    if (list) {
+        TMedia::updateList<TMediaPlayer>(*list, matchedMediaPlayerIndex, std::move(player), this);
+    } else {
+        qWarning() << "TMedia::updateMediaPlayerList() - Could not determine appropriate list for player.";
     }
 }
 
@@ -1157,6 +1162,32 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
         }
     }
 
+    // Cap to prevent overflow per media type
+    int maxAllowed = getMaxAllowedSoundPlayers(); // Default fallback
+
+    switch (mediaData.mediaType()) {
+        case TMediaData::MediaTypeMusic:
+            maxAllowed = getMaxAllowedMusicPlayers();
+            break;
+        case TMediaData::MediaTypeVideo:
+            maxAllowed = getMaxAllowedVideoPlayers();
+            break;
+        case TMediaData::MediaTypeSound:
+        default:
+            maxAllowed = getMaxAllowedSoundPlayers();
+            break;
+    }
+
+    if (mediaPlayerList.size() >= maxAllowed) {
+        qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
+
+        if (mudlet::smDebugMode && mpHost && mpHost->mpConsole) {
+            mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
+        }
+
+        return nullptr;
+    }
+
     // No available player, create a new one
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
@@ -1170,6 +1201,27 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     mediaPlayerList.append(newPlayer);
 
     return newPlayer;
+}
+
+// Dynamic limits for media players, based on host count
+int TMedia::getMaxUnprunedPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(10, 25 / hostCount);
+}
+
+int TMedia::getMaxAllowedSoundPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(16, 65 / hostCount);
+}
+
+int TMedia::getMaxAllowedMusicPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(4, 20 / hostCount);
+}
+
+int TMedia::getMaxAllowedVideoPlayers() const {
+    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    return std::max(2, 10 / hostCount);
 }
 
 void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player)

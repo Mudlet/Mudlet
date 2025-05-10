@@ -96,6 +96,11 @@ public:
     TMedia(Host* pHost, const QString& profileName);
     ~TMedia() = default;
 
+    int getMaxUnprunedPlayers() const;
+    int getMaxAllowedSoundPlayers() const;
+    int getMaxAllowedMusicPlayers() const;
+    int getMaxAllowedVideoPlayers() const;
+
     void playMedia(TMediaData& mediaData);
     QList<TMediaData> playingMedia(TMediaData& mediaData);
     QList<TMediaData> pausedMedia(TMediaData& mediaData);
@@ -128,6 +133,9 @@ private:
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
+    static void purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList);
+    template<typename T>
+    static void updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player, TMedia* mediaInstance);
     void updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player);
     std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
     std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
