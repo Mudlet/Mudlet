@@ -985,7 +985,6 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         if (auto lockedPlayer = weakPlayer.lock()) {
             if (mediaStatus == QMediaPlayer::EndOfMedia) {
                 if (lockedPlayer->playlist() && !lockedPlayer->playlist()->isEmpty()) {
-                    auto lockedPlayerHost = lockedPlayer->host();
                     QUrl nextMedia = lockedPlayer->playlist()->next();
 
                     if (!nextMedia.isEmpty()) {
@@ -1016,7 +1015,6 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     disconnect(player->mediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::positionChanged, this, [this, weakPlayer](qint64 progress) {
         if (auto lockedPlayer = weakPlayer.lock()) { // Ensure the player is still valid
-            auto lockedPlayerHost = lockedPlayer->host();
             const int volume = lockedPlayer->mediaData().mediaVolume();
             const int duration = lockedPlayer->mediaPlayer()->duration();
             const int fadeInDuration = lockedPlayer->mediaData().mediaFadeIn();

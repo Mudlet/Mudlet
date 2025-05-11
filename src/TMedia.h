@@ -69,9 +69,6 @@ public:
     void setVolume(int volume) const {
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
     }
-    QPointer<Host> host() const {
-        return mpHost;
-    }
     TMediaPlaylist* playlist() const {
         return mPlaylist;
     }
