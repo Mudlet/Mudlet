@@ -274,8 +274,6 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        printClosedCaption(pPlayer->mediaData(), tr("pauses"));
-
         pPlayer->mediaPlayer()->pause();
     }
 }
@@ -340,10 +338,6 @@ void TMedia::stopMedia(TMediaData& mediaData)
             TMedia::updateMediaPlayerList(std::move(pPlayer));
 
             continue;
-        }
-
-        if (pPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
-            printClosedCaption(pPlayer->mediaData(), tr("stops"));
         }
 
         // **Stop the player but keep it for reuse**
@@ -542,8 +536,6 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
-        printClosedCaption(pPlayer->mediaData(), tr("resumes"));
-
         pPlayer->mediaPlayer()->play();
         resumed = true;
     }
@@ -563,10 +555,6 @@ void TMedia::stopAllMediaPlayers()
     for (const auto& pPlayer : mTMediaPlayerList) {
         if (!pPlayer) {
             continue;
-        }
-
-        if (pPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
-            printClosedCaption(pPlayer->mediaData(), tr("stops"));
         }
 
         pPlayer->mediaPlayer()->stop();
@@ -988,8 +976,6 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
                     QUrl nextMedia = lockedPlayer->playlist()->next();
 
                     if (!nextMedia.isEmpty()) {
-                        this->printClosedCaption(lockedPlayer->mediaData(), tr("plays"));
-
                         lockedPlayer->mediaPlayer()->setSource(nextMedia);
                         lockedPlayer->mediaPlayer()->play();
                     } else if (lockedPlayer->playlist()->playbackMode() == TMediaPlaylist::Loop) {
@@ -1032,10 +1018,6 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
-                if (lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
-                    printClosedCaption(lockedPlayer->mediaData(), tr("stops"));
-                }
-
                 lockedPlayer->mediaPlayer()->stop();
             } else {
                 if (fadeInUsed) {
@@ -1278,6 +1260,42 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
                 }
             }
         }
+
+        printClosedCaption(player->mediaData(), tr("stops"));
+        return;
+    } else if (playbackState == QMediaPlayer::PlayingState && player->mediaData().mediaVolume() != TMediaData::MediaVolumePreload) {
+        TEvent mediaStarted{};
+        mediaStarted.mArgumentList.append("sysMediaStarted");
+
+        const QUrl mediaUrl = player->mediaPlayer()->source();
+        mediaStarted.mArgumentList.append(mediaUrl.fileName());
+        mediaStarted.mArgumentList.append(mediaUrl.path());
+        mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaStarted.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        if (mpHost) {
+            mpHost->raiseEvent(mediaStarted);
+        }
+
+        printClosedCaption(player->mediaData(), tr("plays"));
+        return;
+    } else if (playbackState == QMediaPlayer::PausedState) {
+        TEvent mediaPaused{};
+        mediaPaused.mArgumentList.append("sysMediaPaused");
+
+        const QUrl mediaUrl = player->mediaPlayer()->source();
+        mediaPaused.mArgumentList.append(mediaUrl.fileName());
+        mediaPaused.mArgumentList.append(mediaUrl.path());
+        mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaPaused.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        if (mpHost) {
+            mpHost->raiseEvent(mediaPaused);
+        }
+
+        printClosedCaption(player->mediaData(), tr("pauses"));
     }
 }
 
@@ -1638,10 +1656,6 @@ void TMedia::play(TMediaData& mediaData)
     // Handle video setup if applicable
     if (mediaData.mediaType() == TMediaData::MediaTypeVideo && !setupVideo(pPlayer)) {
         return;
-    }
-
-    if (mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
-        printClosedCaption(pPlayer->mediaData(), tr("plays"));
     }
 
     pPlayer->mediaPlayer()->play();
