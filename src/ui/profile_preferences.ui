@@ -3860,7 +3860,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_enableClosedCaption">
             <property name="text">
-             <string>Enable closed caption for media (MCMP, Lua API, MXP, MSP)</string>
+             <string>Enable closed caption for media</string>
             </property>
            </widget>
           </item>
