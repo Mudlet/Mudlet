@@ -113,6 +113,7 @@ public:
     bool purgeMediaCache();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
+    void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
