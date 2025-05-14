@@ -119,6 +119,7 @@ export LUA_CPATH
 
 echo ""
 echo "Adjusting LUA paths for Lua 5.1:"
+export CXXFLAGS="-I/mingw64/include/lua5.1 $CXXFLAGS"
 echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
