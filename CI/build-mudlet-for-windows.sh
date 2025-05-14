@@ -119,7 +119,23 @@ export LUA_CPATH
 
 echo ""
 echo "Adjusting LUA paths for Lua 5.1:"
-export CXXFLAGS="-I/mingw64/include/lua5.1 $CXXFLAGS"
+
+# Error if the lua5.1 path doesn't exist
+if [ ! -d /mingw64/include/lua5.1 ]; then
+    echo "ERROR: /mingw64/include/lua5.1 does not exist!"
+    exit 1
+fi
+
+echo "Contents of /mingw64/include/lua5.1:"
+ls -l /mingw64/include/lua5.1
+
+# Erfror if lua.h isn't in that directory
+if [ ! -f /mingw64/include/lua5.1/lua.h ]; then
+    echo "ERROR: lua.h not found in /mingw64/include/lua5.1"
+    exit 1
+fi
+
+export QAMAKE_CXXFLAGS="-I/mingw64/include/lua5.1 $CXXFLAGS"
 echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
