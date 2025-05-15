@@ -133,7 +133,15 @@ moveToUploadDir() {
   fi
 
   echo "=== Copying files to upload directory ==="
-  rsync -avR "${PACKAGE_DIR}"/./* "${uploadDirUnix}"
+
+  # Rsync started complaining about source and destination both being remote
+  # This might be because of the C: prefix? Attempt to convert them to POSIX
+  # paths...
+  SRC_POSIX=$(cygpath -u "$PACKAGE_DIR")
+  DST_POSIX=$(cygpath -u "$uploadDirUnix")
+
+  cd "$SRC_POSIX"
+  rsync -avR ./ "${DST_POSIX}"
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   {
