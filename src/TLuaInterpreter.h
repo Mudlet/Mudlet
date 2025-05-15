@@ -49,11 +49,14 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
+/*
 extern "C" {
     #include <lauxlib.h>
     #include <lua.h>
     #include <lualib.h>
 }
+*/
+#include "lua_wrapper.h"
 
 #include <list>
 #include <string>

@@ -27,16 +27,15 @@
 
 #include <csetjmp>
 
+/*
 extern "C" {
     #include <lauxlib.h>
     #include <lua.h>
     #include <lualib.h>
 }
-#ifndef STRINGIFY
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
-#endif
-#pragma message("Using LUA version: " TOSTRING(LUA_VERSION))
+*/
+#include "lua_wrapper.h"
+
 
 static jmp_buf buf;
 

@@ -26,9 +26,12 @@
 #include <QListWidgetItem>
 #include "post_guard.h"
 
+/*
 extern "C" {
     #include <lua.h>
 }
+*/
+#include "lua_wrapper.h"
 
 dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
 : QWidget(pParentWidget)
