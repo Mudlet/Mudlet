@@ -32,7 +32,11 @@ extern "C" {
     #include <lua.h>
     #include <lualib.h>
 }
-#pragma message("Using LUA version: " LUA_VERSION)
+#ifndef STRINGIFY
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#endif
+#pragma message("Using LUA version: " TOSTRING(LUA_VERSION))
 
 static jmp_buf buf;
 
