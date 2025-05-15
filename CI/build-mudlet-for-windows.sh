@@ -177,10 +177,13 @@ echo ""
 
 # Despite the mingw32 prefix mingw32-make.exe IS the make we want.
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  mingw32-make -j "${NUMBER_OF_PROCESSORS}"
+  mingw32-make -j "${NUMBER_OF_PROCESSORS}" CXXFLAGS="-H" 2> include_trace.log
 else
   mingw32-make
 fi
+
+# Look for lua.h in the include log
+grep lua.h include_trace.log
 
 echo " ... make finished"
 echo ""
