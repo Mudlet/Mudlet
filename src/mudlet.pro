@@ -397,6 +397,14 @@ unix:!macx {
         INCLUDEPATH += \
             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
             $${MINGW_BASE_DIR_TEST}/include/pugixml
+
+        LIBS += \
+            -lpcre-1 \
+            -lzip \                 # for dlgPackageExporter
+            -lz \                   # for ctelnet.cpp
+            -lpugixml \
+            -lws2_32 \
+            -loleaut32
     } else {
         # For CI building with MSYS2 for Windows in a GH Workflow:
         contains(QMAKE_HOST.arch, x86_64) {
@@ -423,15 +431,18 @@ unix:!macx {
                 D:\\a\\_temp\\msys64\\mingw32/include \
                 $${MINGW_BASE_DIR_TEST}/include/pugixml
         }
+        # Try including -lpcre instead of -lpcre-1 because apparently
+        # /mingw64/lib/libpcre-1.dll.a doesn't exist in the msys2 package?
+        LIBS += \
+            -lpcre \
+            -lzip \                 # for dlgPackageExporter
+            -lz \                   # for ctelnet.cpp
+            -lpugixml \
+            -lws2_32 \
+            -loleaut32
     }
 
-    LIBS += \
-        -lpcre-1 \
-        -lzip \                 # for dlgPackageExporter
-        -lz \                   # for ctelnet.cpp
-        -lpugixml \
-        -lws2_32 \
-        -loleaut32
+
 
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
