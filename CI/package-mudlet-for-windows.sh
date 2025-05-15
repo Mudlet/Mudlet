@@ -198,14 +198,24 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
+
+# Preserve path before we cd to work around rsync issues
+ORIGINAL_PATH=$(pwd)
+
+#rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
+cd "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua"
+rsync -avR ./ "${UPLOAD_DIR_UNIX}/mudlet-lua/"
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
+cd "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf"
+rsync -avR ./ "${UPLOAD_DIR_UNIX}/lcf/"
+#rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
 echo ""
+
+cd "$ORIGINAL_PATH"
 
 echo "Copying Lua translation files in..."
 mkdir -p ./translations/lua/translated
