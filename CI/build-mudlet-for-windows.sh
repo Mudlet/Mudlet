@@ -158,7 +158,7 @@ else
 fi
 
 # Look for lua5.1 in the Makefile
-grep lua5.1 Makefile
+grep lua5.1 Makefile.Release
 
 echo " ... qmake done."
 echo ""
@@ -177,13 +177,14 @@ echo ""
 
 # Despite the mingw32 prefix mingw32-make.exe IS the make we want.
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  mingw32-make -j "${NUMBER_OF_PROCESSORS}" CXXFLAGS="-H" 2> include_trace.log
+  # mingw32-make -j "${NUMBER_OF_PROCESSORS}" CXXFLAGS="-H" 2> include_trace.log
+  mingw32-make -j "${NUMBER_OF_PROCESSORS}"
 else
   mingw32-make
 fi
 
 # Look for lua.h in the include log
-grep lua.h include_trace.log
+#grep lua.h include_trace.log
 
 echo " ... make finished"
 echo ""
