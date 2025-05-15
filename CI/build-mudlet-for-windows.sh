@@ -135,7 +135,7 @@ if [ ! -f /mingw64/include/lua5.1/lua.h ]; then
     exit 1
 fi
 
-export QAMAKE_CXXFLAGS="-I/mingw64/include/lua5.1 $CXXFLAGS"
+export QMAKE_CXXFLAGS="-I/mingw64/include/lua5.1 $CXXFLAGS"
 echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
