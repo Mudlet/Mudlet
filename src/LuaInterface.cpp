@@ -32,6 +32,7 @@ extern "C" {
     #include <lua.h>
     #include <lualib.h>
 }
+#pragma message("Using LUA version: " LUA_VERSION)
 
 static jmp_buf buf;
 
