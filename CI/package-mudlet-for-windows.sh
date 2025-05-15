@@ -202,7 +202,7 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Preserve path before we cd to work around rsync issues
 #ORIGINAL_PATH=$(pwd)
 
-SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE}/src/mudlet-lua")
+SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua")
 DST_POSIX=$(cygpath -u "${UPLOAD_DIR_UNIX}")
 
 #rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
@@ -217,7 +217,7 @@ echo "Copying Lua code formatter Lua files in..."
 #cd "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf"
 #rsync -avR ./ "${UPLOAD_DIR_UNIX}/lcf/"
 #rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
-SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE}/3rdparty/lcf")
+SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf")
 rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}/lcf/"
 echo ""
 
