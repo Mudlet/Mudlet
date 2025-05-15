@@ -200,22 +200,28 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # ones:
 
 # Preserve path before we cd to work around rsync issues
-ORIGINAL_PATH=$(pwd)
+#ORIGINAL_PATH=$(pwd)
+
+SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE}/src/mudlet-lua")
+DST_POSIX=$(cygpath -u "${UPLOAD_DIR_UNIX}")
 
 #rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
-cd "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua"
-rsync -avR ./ "${UPLOAD_DIR_UNIX}/mudlet-lua/"
+#cd "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua"
+#rsync -avR ./ "${UPLOAD_DIR_UNIX}/mudlet-lua/"
+rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}/mudlet-lua/"
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-cd "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf"
-rsync -avR ./ "${UPLOAD_DIR_UNIX}/lcf/"
+#cd "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf"
+#rsync -avR ./ "${UPLOAD_DIR_UNIX}/lcf/"
 #rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
+SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE}/3rdparty/lcf")
+rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}/lcf/"
 echo ""
 
-cd "$ORIGINAL_PATH"
+#cd "$ORIGINAL_PATH"
 
 echo "Copying Lua translation files in..."
 mkdir -p ./translations/lua/translated
