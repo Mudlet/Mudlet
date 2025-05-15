@@ -408,7 +408,7 @@ unix:!macx {
                 -llibhunspell-1.7
 
             INCLUDEPATH += \
-                D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                D:\\a\\_temp\\msys64\\mingw64/include/lua5.1 \
                 D:\\a\\_temp\\msys64\\mingw64/include \
                 $${MINGW_BASE_DIR_TEST}/include/pugixml
         } else {
