@@ -203,12 +203,15 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 #ORIGINAL_PATH=$(pwd)
 
 SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua")
-DST_POSIX=$(cygpath -u "${UPLOAD_DIR_UNIX}")
+DST_POSIX=$(cygpath -u "${UPLOAD_DIR_UNIX}/mudlet-lua/")
+
+echo "SRC_POSIX=$SRC_POSIX"
+echo "DST_POSIX=$DST_POSIX"
 
 #rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
 #cd "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua"
 #rsync -avR ./ "${UPLOAD_DIR_UNIX}/mudlet-lua/"
-rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}/mudlet-lua/"
+rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}"
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
@@ -217,8 +220,12 @@ echo "Copying Lua code formatter Lua files in..."
 #cd "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf"
 #rsync -avR ./ "${UPLOAD_DIR_UNIX}/lcf/"
 #rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
+
 SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf")
-rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}/lcf/"
+DST_POSIX=$(cygpath -u "${UPLOAD_DIR_UNIX}/lcf/")
+echo "SRC_POSIX=$SRC_POSIX"
+echo "DST_POSIX=$DST_POSIX"
+rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}"
 echo ""
 
 #cd "$ORIGINAL_PATH"
