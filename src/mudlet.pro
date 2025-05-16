@@ -380,58 +380,25 @@ unix:!macx {
         # although it might be possible for dedicated parties to build them
         # locally for a while:
         error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
-        "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
-        "application build) typically this is one of:\\n"\
-        "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
-        "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
-        "'C:\msys64\mingw64' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+        "the MINGW64/CLANG64/UCRT64 part typically this:\\n"\
+        "'C:\msys64\mingw64' {64 Bit (MINGW64) Mudlet built on a 64 Bit Host}\\n"))
     }
-    GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
-    isEmpty( GITHUB_WORKSPACE_TEST ) {
-        # For users/developers building with MSYS2 on Windows:
-        LIBS +=  \
-            -L$${MINGW_BASE_DIR_TEST}/bin \
-            -llua5.1 \
-            -llibhunspell-1.7
-
-        INCLUDEPATH += \
-            $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
-            $${MINGW_BASE_DIR_TEST}/include/pugixml
-    } else {
-        # For CI building with MSYS2 for Windows in a GH Workflow:
-        contains(QMAKE_HOST.arch, x86_64) {
-
-            LIBS +=  \
-                -LD:\\a\\_temp\\msys64\\mingw64/lib \
-                -LD:\\a\\_temp\\msys64\\mingw64/bin \
-                -llua5.1 \
-                -llibhunspell-1.7
-
-            INCLUDEPATH += \
-                D:\\a\\_temp\\msys64\\mingw64/include \
-                D:/a/_temp/msys64/mingw64/include/lua5.1 \
-                $${MINGW_BASE_DIR_TEST}/include/pugixml
-        } else {
-            LIBS +=  \
-                -LD:\\a\\_temp\\msys64\\mingw32/lib \
-                -LD:\\a\\_temp\\msys64\\mingw32/bin \
-                -llua5.1 \
-                -llibhunspell-1.7
-
-            INCLUDEPATH += \
-                D:\\a\\_temp\\msys64\\mingw32/include \
-                D:/a/_temp/msys64/mingw32/include/lua5.1 \
-                $${MINGW_BASE_DIR_TEST}/include/pugixml
-        }
-    }
-
-    LIBS += \
+    # For users/developers building with MSYS2 on Windows:
+    # AND for CI building with MSYS2 for Windows in a GH Workflow:
+    LIBS +=  \
+        -L$${MINGW_BASE_DIR_TEST}/bin \
+        -llua5.1 \
+        -llibhunspell-1.7 \
         -lpcre-1 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lpugixml \
         -lws2_32 \
         -loleaut32
+
+    INCLUDEPATH += \
+        $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+        $${MINGW_BASE_DIR_TEST}/include/pugixml
 
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
