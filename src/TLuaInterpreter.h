@@ -50,9 +50,17 @@
 #include "post_guard.h"
 
 extern "C" {
-    #include <lauxlib.h>
-    #include <lua.h>
-    #include <lualib.h>
+#if defined(Q_OS_WINDOWS)
+// We need to be version specific here as the Windows CI/CB environment
+// includes Lua 5.4 in the "standard" place
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lualib.h>
+#else // Not Windows
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#endif
 }
 
 #include <list>

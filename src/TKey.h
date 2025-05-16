@@ -32,7 +32,13 @@
 #include "post_guard.h"
 
 extern "C" {
-    #include <lua.h>
+#if defined(Q_OS_WINDOWS)
+// We need to be version specific here as the Windows CI/CB environment
+// includes Lua 5.4 in the "standard" place
+#include <lua5.1/lua.h>
+#else // Not Windows
+#include <lua.h>
+#endif
 }
 
 class Host;
