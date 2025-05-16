@@ -123,9 +123,9 @@ moveToUploadDir() {
   local uploadFilename=$1
   local unzip=$2
   echo "=== Setting up upload directory ==="
-  local uploadDir="${GITHUB_WORKSPACE}\\upload"
+  local uploadDir="${GITHUB_WORKSPACE}/upload"
   local uploadDirUnix
-  uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
+  uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
 
   # Check if the upload directory exists, if not, create it
   if [[ ! -d "${uploadDirUnix}" ]]; then
@@ -137,7 +137,7 @@ moveToUploadDir() {
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   {
-    echo "FOLDER_TO_UPLOAD=${uploadDir}\\"
+    echo "FOLDER_TO_UPLOAD=${uploadDir}/"
     echo "UPLOAD_FILENAME=${uploadFilename}"
     echo "PARAM_UNZIP=${unzip}"
   } >> "${GITHUB_ENV}"
