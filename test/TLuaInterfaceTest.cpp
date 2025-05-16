@@ -23,13 +23,11 @@
 #include <QtTest/QtTest>
 
 extern "C" {
-#if defined(Q_OS_WINDOWS)
-// We need to be version specific here as the Windows CI/CB environment
-// includes Lua 5.4 in the "standard" place
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
 #include <lua5.1/lua.h>
 #include <lua5.1/lualib.h>
-#else // Not Windows
+#else
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>

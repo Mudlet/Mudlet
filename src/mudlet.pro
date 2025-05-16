@@ -171,6 +171,20 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+# Some use-cases - currently Windows builds in a MSYS2+Mingw-w64 environment
+# put the Lua 5.1 headers in a version numbered sub-directory of the main/normal
+# system "includes" (header files) location and if there are newer version files
+# they could be put in that main/normal location - in which case the wrong ones
+# will be used if we don't modify the '#include' lines.
+win32 {
+    MSYSTEM_TEST = $$(MSYSTEM)
+    # At some point in the future we might also want to check for CLANGARM64
+    # as GH Actions is going to add that...
+    equals(MSYSTEM_TEST, "MINGW64") | equals(MSYSTEM_TEST, "CLANG64") | equals(MSYSTEM_TEST, "UCRT64") {
+        DEFINES += INCLUDE_VERSIONED_LUA_HEADERS
+    }
+}
+
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
