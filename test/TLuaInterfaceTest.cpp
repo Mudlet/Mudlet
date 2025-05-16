@@ -22,9 +22,17 @@
 #include <VarUnit.h>
 #include <QtTest/QtTest>
 
-#include "lua_wrapper.h"
-#include <lauxlib.h>
-#include <lualib.h>
+extern "C" {
+#if defined(__MINGW64__)
+    #include <lua5.1/lauxlib.h>
+    #include <lua5.1/lua.h>
+    #include <lua5.1/lualib.h>
+#else
+    #include <lauxlib.h>
+    #include <lua.h>
+    #include <lualib.h>
+#endif
+}
 
 class TVarTest : public QObject {
 Q_OBJECT

@@ -785,7 +785,6 @@ HEADERS += \
     HostManager.h \
     ircmessageformatter.h \
     KeyUnit.h \
-    lua_wrapper.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
