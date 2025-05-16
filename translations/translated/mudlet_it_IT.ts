@@ -2400,52 +2400,52 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TMedia.cpp" line="332"/>
       <source>fades</source>
-      <translation type="unfinished"/>
+      <translation>ombre</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1082"/>
       <source>Too many stopped media players. Purging stopped players.</source>
-      <translation type="unfinished"/>
+      <translation>Troppi lettori multimediali in pausa. Elimino i lettori inutilizzati.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1090"/>
       <source>Too many stopped media players. Removed oldest active player.</source>
-      <translation type="unfinished"/>
+      <translation>Troppi lettori multimediali in pausa. Elimino i lettori attivi più vecchi.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1187"/>
       <source>Maximum allowed active media players reached for media type. Cannot play additional media.</source>
-      <translation type="unfinished"/>
+      <translation>Raggiunto il numero massimo di lettori multimediali attivi per questo tipo di media. Impossibile riprodurre media aggiuntivi.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1264"/>
       <source>stops</source>
-      <translation type="unfinished"/>
+      <translation>stop</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1281"/>
       <source>plays</source>
-      <translation type="unfinished"/>
+      <translation>riproduci</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1298"/>
       <source>pauses</source>
-      <translation type="unfinished"/>
+      <translation>pausa</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2051"/>
       <source>music</source>
-      <translation type="unfinished"/>
+      <translation>musica</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>video</source>
-      <translation type="unfinished"/>
+      <translation>video</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>sound</source>
-      <translation type="unfinished"/>
+      <translation>suoni</translation>
     </message>
   </context>
   <context>
@@ -12208,7 +12208,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="806"/>
       <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Usa l'anti-aliasing sui caratteri. Rende i caratteri più leggibili se hai uno schermo ad alta risoluzione, inoltre permette di usare dimensioni di carattere superiori. Attenzione: utilizzando basse risoluzioni e dimensioni ridotte del carattere potrebbero crearsi delle sfocature.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="809"/>
@@ -12289,7 +12289,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1163"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Righe consecutive che vanno a capo, saranno indentate di questo valore&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1205"/>
@@ -12355,7 +12355,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1458"/>
       <source>&lt;p&gt;Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostra i caratteri Unicode invisibili di controllo bidirezionali, ma possono essere utilizzati per cambiare il significato del codice sorgente&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1495"/>
@@ -12621,7 +12621,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3863"/>
       <source>Enable closed caption for media</source>
-      <translation type="unfinished"/>
+      <translation>Abilita titolo compatto per i media</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3933"/>
