@@ -30,7 +30,13 @@
 #include <QSet>
 #include "post_guard.h"
 
-#include "lua_wrapper.h"
+extern "C" {
+#if defined(__MINGW64__)
+    #include <lua5.1/lua.h>
+#else
+    #include <lua.h>
+#endif
+}
 
 
 class Host;
