@@ -389,7 +389,7 @@ unix:!macx {
         -L$${MINGW_BASE_DIR_TEST}/bin \
         -llua5.1 \
         -llibhunspell-1.7 \
-        -lpcre-1 \
+        -lpcre \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lpugixml \
