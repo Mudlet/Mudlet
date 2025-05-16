@@ -135,7 +135,6 @@ if [ ! -f /mingw64/include/lua5.1/lua.h ]; then
     exit 1
 fi
 
-export QMAKE_CXXFLAGS="-I/mingw64/include/lua5.1 $QMAKE_CXXFLAGS"
 echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
@@ -156,9 +155,6 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
 else
     qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 fi
-
-# Look for lua5.1 in the Makefile
-grep lua5.1 Makefile.Release
 
 echo " ... qmake done."
 echo ""

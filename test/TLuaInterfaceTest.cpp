@@ -22,14 +22,9 @@
 #include <VarUnit.h>
 #include <QtTest/QtTest>
 
-/*
-extern "C" {
-    #include <lauxlib.h>
-    #include <lua.h>
-    #include <lualib.h>
-}
-*/
 #include "lua_wrapper.h"
+#include <lauxlib.h>
+#include <lualib.h>
 
 class TVarTest : public QObject {
 Q_OBJECT

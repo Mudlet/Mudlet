@@ -30,11 +30,6 @@
 #include <QSet>
 #include "post_guard.h"
 
-/*
-extern "C" {
-    #include <lua.h>
-}
-*/
 #include "lua_wrapper.h"
 
 

@@ -202,22 +202,15 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua")
 DST_POSIX=$(cygpath -u "./mudlet-lua/")
 
-echo "SRC_POSIX=$SRC_POSIX"
-echo "DST_POSIX=$DST_POSIX"
-
-#rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
 rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}"
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-#rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
-
 SRC_POSIX=$(cygpath -u "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf")
 DST_POSIX=$(cygpath -u "./lcf/")
-echo "SRC_POSIX=$SRC_POSIX"
-echo "DST_POSIX=$DST_POSIX"
+
 rsync -avR "${SRC_POSIX}/./"* "${DST_POSIX}"
 echo ""
 

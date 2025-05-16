@@ -27,15 +27,9 @@
 
 #include <csetjmp>
 
-/*
-extern "C" {
-    #include <lauxlib.h>
-    #include <lua.h>
-    #include <lualib.h>
-}
-*/
 #include "lua_wrapper.h"
-
+#include <lauxlib.h>
+#include <lualib.h>
 
 static jmp_buf buf;
 
