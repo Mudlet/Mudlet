@@ -2273,14 +2273,14 @@ it but it will try! The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ 정보 ] - 맵 읽는 중입니다. 형식 버전: %1. 파일:
+      <translation>[ 정보 ] - 맵을 읽는 중입니다. 형식 버전: %1. 파일:
   &quot;%2&quot;,
   기다려주세요...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation>[ 정보 ] - 맵 읽는 중입니다. 형식 버전: %1. 파일: &quot;%2&quot;.</translation>
+      <translation>[ 정보 ] - 맵을 읽는 중입니다. 형식 버전: %1. 파일: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1949"/>
@@ -10751,17 +10751,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="3220"/>
       <location filename="../src/mudlet.cpp" line="3223"/>
       <source>Unmute all media</source>
-      <translation>Unmute all media</translation>
+      <translation>소리끄기</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3238"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use &quot;%1&quot; to unmute.</source>
-      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거되었습니다. 음소거를 해제하려면 &quot;%1&quot;을 사용하십시오.</translation>
+      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거되었습니다. 음소거를 해제하려면 &quot;%1&quot; 키를 누르십시오.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3239"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use &quot;%1&quot; to mute.</source>
-      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거 해제되었습니다. 음소거하려면 &quot;%1&quot;을 사용하십시오.</translation>
+      <translation>[ 정보 ] - Mudlet과 게임 소리가 음소거 해제되었습니다. 음소거하려면 &quot;%1&quot;를 누르십시오.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3301"/>
@@ -11915,7 +11915,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3120"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation>[ 확인 ] - 프로필 &quot;%1&quot; 오프라인 모드로 로드됨.</translation>
+      <translation>[ 확인 ] - &quot;%1&quot; 프로필을 오프라인 모드로 불러왔습니다.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3405"/>
