@@ -1670,18 +1670,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MSDP) {
             //MSDP support
-            std::string output;
             if (!mpHost->mEnableMSDP) {
-                output += TN_IAC;
-                output += TN_DONT;
-                output += OPT_MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
-                // This will be unaffected by Mud Server encoding:
-                socketOutRaw(output);
-#ifdef DEBUG_TELNET
-                qDebug() << "WE send telnet IAC DONT MSDP";
-#endif
+                sendTelnetOption(TN_DONT, OPT_MSDP);
+
+                if (enableMSDP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+                }
+
+                enableMSDP = false;
                 break;
             } else {
+                std::string output;
+
                 enableMSDP = true;
                 sendTelnetOption(TN_DO, OPT_MSDP);
                 //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
@@ -1724,8 +1724,14 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_ATCP) {
             // ATCP support
-            //FIXME: this is a bug, some muds offer both atcp + gmcp
             if (mpHost->mEnableGMCP) {
+                sendTelnetOption(TN_DONT, OPT_ATCP);
+
+                if (enableATCP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "ATCP");
+                }
+
+                enableATCP = false;
                 break;
             }
 
@@ -1737,7 +1743,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
-            // mudlet::self()->mAppBuild could, conceivably contain a non ASCII character:
             std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
             output += encodeAndCookBytes(atcpOptions);
             output += TN_IAC;
@@ -1750,6 +1755,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_GMCP) {
             if (!mpHost->mEnableGMCP) {
+                sendTelnetOption(TN_DONT, OPT_GMCP);
+
+                if (enableGMCP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+                }
+
+                enableGMCP = false;
                 break;
             }
 
@@ -1792,6 +1804,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MSSP) {
             if (!mpHost->mEnableMSSP) {
+                sendTelnetOption(TN_DONT, OPT_MSSP);
+
+                if (enableMSSP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+                }
+
+                enableMSSP = false;
                 break;
             }
 
@@ -1804,6 +1823,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MSP) {
             if (!mpHost->mEnableMSP) {
+                sendTelnetOption(TN_DONT, OPT_MSP);
+
+                if (enableMSP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MSP");
+                }
+
+                enableMSP = false;
                 break;
             }
 
@@ -1820,6 +1846,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 mpHost->mServerMXPenabled = true;
                 mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
+                break;
+            } else {
+                sendTelnetOption(TN_DONT, OPT_MXP);
+
+                if (mpHost->mServerMXPenabled) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MXP");
+                }
+
+                mpHost->mServerMXPenabled = false;
                 break;
             }
         }
@@ -2031,6 +2066,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             sendTelnetOption(TN_WILL, OPT_MSDP);
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
+        } else if (option == OPT_MSDP) {
+            sendTelnetOption(TN_WONT, OPT_MSDP);
+
+            if (enableMSDP) {
+                raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+            }
+
+            enableMSDP = false;
+            break;
         }
 
         if (option == OPT_ATCP && !mpHost->mEnableGMCP) {
@@ -2038,6 +2082,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             enableATCP = true;
             sendTelnetOption(TN_WILL, OPT_ATCP);
             raiseProtocolEvent("sysProtocolEnabled", "ATCP");
+            break;
+        } else if (option == OPT_ATCP) {
+            sendTelnetOption(TN_WONT, OPT_ATCP);
+
+            if (enableATCP) {
+                raiseProtocolEvent("sysProtocolDisabled", "ATCP");
+            }
+
+            enableATCP = false;
             break;
         }
 
@@ -2047,6 +2100,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             sendTelnetOption(TN_WILL, OPT_GMCP);
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
+        } else if (option == OPT_GMCP) {
+            sendTelnetOption(TN_WONT, OPT_GMCP);
+
+            if (enableGMCP) {
+                raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+            }
+
+            enableGMCP = false;
+            break;
         }
 
         if (option == OPT_MSSP && mpHost->mEnableMSSP) {
@@ -2054,6 +2116,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             enableMSSP = true;
             sendTelnetOption(TN_WILL, OPT_MSSP);
             raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+            break;
+        } else if (option == OPT_MSSP) {
+            sendTelnetOption(TN_WONT, OPT_MSSP);
+
+            if (enableMSSP) {
+                raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+            }
+
+            enableMSSP = false;
             break;
         }
 
@@ -2063,13 +2134,26 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             sendTelnetOption(TN_WILL, OPT_MSP);
             raiseProtocolEvent("sysProtocolEnabled", "MSP");
             break;
+        } else if (option == OPT_MSP) {
+            sendTelnetOption(TN_WONT, OPT_MSP);
+
+            if (enableMSP) {
+                raiseProtocolEvent("sysProtocolDisabled", "MSP");
+            }
+
+            enableMSP = false;
+            break;
         }
 
         if (option == OPT_MXP && !mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
             // MXP support
             sendTelnetOption(TN_WILL, OPT_MXP);
-            mpHost->mpConsole->print("\n<MXP support enabled>\n");
+            mpHost->mpConsole->print(tr("\n<MXP support enabled>\n"));
             raiseProtocolEvent("sysProtocolEnabled", "MXP");
+            break;
+        } else if (option == OPT_MXP) {
+            sendTelnetOption(TN_WONT, OPT_MXP);
+            raiseProtocolEvent("sysProtocolDisabled", "MXP");
             break;
         }
 
