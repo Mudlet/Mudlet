@@ -2067,9 +2067,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MSDP);
+
                 if (enableMSDP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MSDP");
                 }
+
                 enableMSDP = false;
             }
             break;
@@ -2082,9 +2084,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "ATCP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_ATCP);
+
                 if (enableATCP) {
                     raiseProtocolEvent("sysProtocolDisabled", "ATCP");
                 }
+
                 enableATCP = false;
             }
             break;
@@ -2097,9 +2101,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_GMCP);
+
                 if (enableGMCP) {
                     raiseProtocolEvent("sysProtocolDisabled", "GMCP");
                 }
+
                 enableGMCP = false;
             }
             break;
@@ -2112,9 +2118,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "MSSP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MSSP);
+
                 if (enableMSSP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MSSP");
                 }
+
                 enableMSSP = false;
             }
             break;
@@ -2127,9 +2135,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "MSP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MSP);
+
                 if (enableMSP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MSP");
                 }
+
                 enableMSP = false;
             }
             break;
