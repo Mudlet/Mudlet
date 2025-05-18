@@ -2060,100 +2060,90 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             break;
         }
 
-        if (option == OPT_MSDP && mpHost->mEnableMSDP) {
-            // MSDP support
-            enableMSDP = true;
-            sendTelnetOption(TN_WILL, OPT_MSDP);
-            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
-            break;
-        } else if (option == OPT_MSDP) {
-            sendTelnetOption(TN_WONT, OPT_MSDP);
-
-            if (enableMSDP) {
-                raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+        if (option == OPT_MSDP) {
+            if (mpHost->mEnableMSDP) {
+                enableMSDP = true;
+                sendTelnetOption(TN_WILL, OPT_MSDP);
+                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+            } else {
+                sendTelnetOption(TN_WONT, OPT_MSDP);
+                if (enableMSDP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+                }
+                enableMSDP = false;
             }
-
-            enableMSDP = false;
             break;
         }
 
-        if (option == OPT_ATCP && !mpHost->mEnableGMCP) {
-            // ATCP support, enable only if GMCP is off as GMCP is better
-            enableATCP = true;
-            sendTelnetOption(TN_WILL, OPT_ATCP);
-            raiseProtocolEvent("sysProtocolEnabled", "ATCP");
-            break;
-        } else if (option == OPT_ATCP) {
-            sendTelnetOption(TN_WONT, OPT_ATCP);
-
-            if (enableATCP) {
-                raiseProtocolEvent("sysProtocolDisabled", "ATCP");
+        if (option == OPT_ATCP) {
+            if (!mpHost->mEnableGMCP) {
+                enableATCP = true;
+                sendTelnetOption(TN_WILL, OPT_ATCP);
+                raiseProtocolEvent("sysProtocolEnabled", "ATCP");
+            } else {
+                sendTelnetOption(TN_WONT, OPT_ATCP);
+                if (enableATCP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "ATCP");
+                }
+                enableATCP = false;
             }
-
-            enableATCP = false;
             break;
         }
 
-        if (option == OPT_GMCP && mpHost->mEnableGMCP) {
-            // GMCP support
-            enableGMCP = true;
-            sendTelnetOption(TN_WILL, OPT_GMCP);
-            raiseProtocolEvent("sysProtocolEnabled", "GMCP");
-            break;
-        } else if (option == OPT_GMCP) {
-            sendTelnetOption(TN_WONT, OPT_GMCP);
-
-            if (enableGMCP) {
-                raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+        if (option == OPT_GMCP) {
+            if (mpHost->mEnableGMCP) {
+                enableGMCP = true;
+                sendTelnetOption(TN_WILL, OPT_GMCP);
+                raiseProtocolEvent("sysProtocolEnabled", "GMCP");
+            } else {
+                sendTelnetOption(TN_WONT, OPT_GMCP);
+                if (enableGMCP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+                }
+                enableGMCP = false;
             }
-
-            enableGMCP = false;
             break;
         }
 
-        if (option == OPT_MSSP && mpHost->mEnableMSSP) {
-            // MSSP support
-            enableMSSP = true;
-            sendTelnetOption(TN_WILL, OPT_MSSP);
-            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
-            break;
-        } else if (option == OPT_MSSP) {
-            sendTelnetOption(TN_WONT, OPT_MSSP);
-
-            if (enableMSSP) {
-                raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+        if (option == OPT_MSSP) {
+            if (mpHost->mEnableMSSP) {
+                enableMSSP = true;
+                sendTelnetOption(TN_WILL, OPT_MSSP);
+                raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+            } else {
+                sendTelnetOption(TN_WONT, OPT_MSSP);
+                if (enableMSSP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+                }
+                enableMSSP = false;
             }
-
-            enableMSSP = false;
             break;
         }
 
-        if (option == OPT_MSP && mpHost->mEnableMSP) {
-            // MSP support
-            enableMSP = true;
-            sendTelnetOption(TN_WILL, OPT_MSP);
-            raiseProtocolEvent("sysProtocolEnabled", "MSP");
-            break;
-        } else if (option == OPT_MSP) {
-            sendTelnetOption(TN_WONT, OPT_MSP);
-
-            if (enableMSP) {
-                raiseProtocolEvent("sysProtocolDisabled", "MSP");
+        if (option == OPT_MSP) {
+            if (mpHost->mEnableMSP) {
+                enableMSP = true;
+                sendTelnetOption(TN_WILL, OPT_MSP);
+                raiseProtocolEvent("sysProtocolEnabled", "MSP");
+            } else {
+                sendTelnetOption(TN_WONT, OPT_MSP);
+                if (enableMSP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MSP");
+                }
+                enableMSP = false;
             }
-
-            enableMSP = false;
             break;
         }
 
-        if (option == OPT_MXP && !mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
-            // MXP support
-            sendTelnetOption(TN_WILL, OPT_MXP);
-            mpHost->mpConsole->print(tr("\n<MXP support enabled>\n"));
-            raiseProtocolEvent("sysProtocolEnabled", "MXP");
-            break;
-        } else if (option == OPT_MXP) {
-            sendTelnetOption(TN_WONT, OPT_MXP);
-            raiseProtocolEvent("sysProtocolDisabled", "MXP");
+        if (option == OPT_MXP) {
+            if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+                sendTelnetOption(TN_WILL, OPT_MXP);
+                mpHost->mpConsole->print(tr("\n<MXP support enabled>\n"));
+                raiseProtocolEvent("sysProtocolEnabled", "MXP");
+            } else {
+                sendTelnetOption(TN_WONT, OPT_MXP);
+                raiseProtocolEvent("sysProtocolDisabled", "MXP");
+            }
             break;
         }
 
