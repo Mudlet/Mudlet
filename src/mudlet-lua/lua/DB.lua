@@ -1542,26 +1542,32 @@ end
 
 --- Closes all databases.
 --- @return boolean result Returns true if all databases closed successfully and false otherwise 
---- @return string messsage
+--- @return string message
 function db:_closeAll()
   if db.__env == nil then
     return false, "database environment is nil, did you forget to call db:create?"
   end
 
-  for _, c in pairs(db.__conn) do
-    c:close()
+  local result, msgs = true, {}
+  for db_name, conn in pairs(db.__conn) do
+    if not conn:close() then
+      result = false
+      table.insert(msgs, "database object for "..db_name.." is already closed.")
+    end
   end
+
   db.__conn = {}
   db.__env:close()
   db.__env = nil
-  return result, ""
+
+  return result, table.concat(msgs, "\n")
 end
 
 
 --- Closes the named database or all databases if no name is provided.
 --- @param db_name string|nil The name of the database to close.
 --- @return boolean result Returns true in case of success and false otherwise.
---- @return string messsage Why the database failed to close.
+--- @return string message Why the database failed to close.
 function db:close(db_name)
   if db.__env == nil then
     return false, "database environment is nil, did you forget to call db:create?"
@@ -1571,14 +1577,26 @@ function db:close(db_name)
     return db:_closeAll()
   end
 
-  assert(type(db_name) == "string", "expected db_name to be string or nil but recieved "..type(db_name))
+  assert(
+    type(db_name) == "string",
+    "expected db_name to be string or nil but recieved "..type(db_name).."."
+  )
+
   db_name = db:safe_name(db_name)
   if not db:_isActiveDBName(db_name) then
     return false, "can not close "..db_name.." because it does not exist.  Did you forget to call db:create?"
   end
 
-  db.__conn[db_name]:close()
-  return true, ""
+  if db.__conn[db_name]:close() then
+    db.__conn[db_name] = nil
+    
+    return true, ""
+  else
+    
+    return false, "database object is already closed."
+  end
+
+  
 end
 
 
