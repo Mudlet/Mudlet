@@ -595,7 +595,7 @@ function db:_build_create_table_sql(schema, s_name)
   -- and into unique_table_constraints when columns are grouped together.
   if type(schema.options._unique) == "string" then
     table.insert(unique_column_constraints, schema.options._unique)
-  elseif type(schema.options._unique == "table") then
+  elseif type(schema.options._unique) == "table" then
     for _, unique_constraint in ipairs(schema.options._unique) do
       if type(unique_constraint) == "string" then
         table.insert(unique_column_constraints, unique_constraint)
