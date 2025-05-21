@@ -341,21 +341,22 @@ function db:create(db_name, sheets, force)
     local columns = {}
     local options = {}
 
+    -- the sheet was provided in {"column1", "column2"} format
+    if sheet[1] ~= nil then
+      -- assume field types are text, and should default to ""
+      for _, col_name in pairs(sheet) do
+        columns[col_name] = ""
+      end
+
     -- sheet provided in {"column1" = default} format
-    if sheet[1] == nil then
+    else
       for key, value in pairs(sheet) do
+
         if string.starts(key, "_") then
           options[key] = value
         else
           columns[key] = value
         end
-      end
-
-    -- the sheet was provided in {"column1", "column2"} format
-    else
-      -- assume field types are text, and should default to ""
-      for _, col_name in pairs(sheet) do
-        columns[col_name] = ""
       end
     end
 
