@@ -582,7 +582,7 @@ function db:_build_create_table_sql(schema, s_name)
 
   local on_conflict = "ON CONFLICT "..schema.options._violations
 
-  local sql_chunks = { '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
+  local sql_chunks = { '"_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
 
   local unique_column_constraints = {}
   local unique_table_constraints = {}
@@ -602,7 +602,7 @@ function db:_build_create_table_sql(schema, s_name)
       elseif type(unique_constraint) == "table" then
         table.insert(
           unique_table_constraints,
-          "UNIQUE("..table.concat(unique_constraint, ", ")..") "..on_conflict
+          'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
         )
       end
     end
@@ -627,7 +627,7 @@ function db:_build_create_table_sql(schema, s_name)
     sql_chunks[#sql_chunks + 1] = "UNIQUE("..table.concat(unique_table_constraint, ", ")..")"
   end
 
-  return "CREATE TABLE " .. s_name.. "("..table.concat(sql_chunks, ", ")..")"
+  return "CREATE TABLE " .. s_name.. " ("..table.concat(sql_chunks, ", ")..")"
 end
 
 
