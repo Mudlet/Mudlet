@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2022-2023 by Stephen Lyons             *
+ *   Copyright (C) 2016, 2018-2019, 2022-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
@@ -216,7 +216,7 @@ public slots:
         bool changeSymbol, QString newSymbol,
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
-        bool changeLockStatus, bool newLockStatus,
+        bool changeLockStatus, std::optional<bool> newLockStatus,
         QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();

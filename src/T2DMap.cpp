@@ -3966,7 +3966,7 @@ void T2DMap::slot_setRoomProperties(
     bool changeSymbol, QString newSymbol,
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
-    bool changeLockStatus, bool newLockStatus,
+    bool changeLockStatus, std::optional<bool> newLockStatus,
     QSet<TRoom*> rooms)
 {
     if (newName.isEmpty()) {
@@ -4010,8 +4010,8 @@ void T2DMap::slot_setRoomProperties(
         if (changeWeight) {
             room->setWeight(newWeight);
         }
-        if (changeLockStatus) {
-            room->isLocked = newLockStatus;
+        if (changeLockStatus && newLockStatus.has_value()) {
+            room->isLocked = newLockStatus.value();
         }
     }
     if (changeWeight || changeLockStatus) {
@@ -4384,7 +4384,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         mpMap->mLeftDown = false;
     }
     if (mpMap->m2DPanMode) {
-        const QPointF panNewPosition = event->localPos();
+        const QPointF panNewPosition = event->position();
         mShiftMode = true;
         const QPointF movement = mpMap->m2DPanStart - panNewPosition;
         mMapCenterX += movement.x() / mRoomWidth;
@@ -5183,7 +5183,7 @@ void T2DMap::slot_setCustomLine2()
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
 {
-    Q_UNUSED(column);
+    Q_UNUSED(column)
     if (!special_exit) {
         return;
     }

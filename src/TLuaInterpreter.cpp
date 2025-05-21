@@ -570,8 +570,8 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(exitStatus);
+    Q_UNUSED(exitCode)
+    Q_UNUSED(exitStatus)
 
     objectsToDelete.append(sender());
 }
@@ -7371,6 +7371,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("advertiseScreenReader")) {
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableClosedCaption")) {
+        host.mEnableClosedCaption = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {

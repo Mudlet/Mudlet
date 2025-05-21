@@ -480,6 +480,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
+    host.append_attribute("enableClosedCaption") = pHost->mEnableClosedCaption ? "yes" : "no";
     host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(
             static_cast<int>(pHost->mCaretShortcut));
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
@@ -853,7 +854,7 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpTrigger) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
@@ -936,7 +937,7 @@ void XMLexport::exportToClipboard(TAlias* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpAlias) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
@@ -989,7 +990,7 @@ void XMLexport::exportToClipboard(TAction* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpAction) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto actionPackage = mudletPackage.append_child("ActionPackage");
@@ -1058,7 +1059,7 @@ void XMLexport::exportToClipboard(TTimer* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpTimer) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto timerPackage = mudletPackage.append_child("TimerPackage");
@@ -1114,7 +1115,7 @@ void XMLexport::exportToClipboard(TScript* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpScript) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
@@ -1169,7 +1170,7 @@ void XMLexport::exportToClipboard(TKey* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpKey) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto keyPackage = mudletPackage.append_child("KeyPackage");

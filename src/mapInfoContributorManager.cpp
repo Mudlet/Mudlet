@@ -86,8 +86,8 @@ QList<QString> &MapInfoContributorManager::getContributorKeys()
 
 MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
 {
-    Q_UNUSED(selectionSize);
-    Q_UNUSED(displayAreaId);
+    Q_UNUSED(selectionSize)
+    Q_UNUSED(displayAreaId)
 
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
