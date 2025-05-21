@@ -579,7 +579,7 @@ function db:_build_create_table_sql(schema, s_name)
   local sql_column = '"%s" %s NULL'
   local sql_column_default = sql_column .. ' DEFAULT %s'
 
-  local on_conflict = "ON CONFLICT "..schema.options._violation
+  local on_conflict = "ON CONFLICT "..schema.options._violations
 
   local sql_chunks = { '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
 
