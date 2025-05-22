@@ -291,8 +291,11 @@ end
 ---
 --- @see loadVars
 function saveVars()
+  local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
-    _sep = "/" else _sep = "\\"
+    _sep = "/"
+  else
+    _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
   for k, _ in pairs(_saveTable) do
