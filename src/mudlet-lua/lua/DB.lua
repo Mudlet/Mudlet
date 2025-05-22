@@ -3,24 +3,6 @@
 ----------------------------------------------------------------------------------
 
 
--- TODO will be already loaded in LuaGlobal
------------------------------------------------------------------------------
--- General-purpose useful tools that were needed during development:
------------------------------------------------------------------------------
-if package.loaded["rex_pcre"] then
-  rex = require "rex_pcre"
-end
-
-if not display then
-  require "DebugTools"
-end
-if not table.contains then
-  require "TableUtils"
-end
-if not string.trim then
-  require "StringUtils"
-end
-
 -- TODO those functions are already definde elsewhere
 function string.starts(String, Start)
   return string.sub(String, 1, string.len(Start)) == Start
