@@ -1478,6 +1478,7 @@ db.__DatabaseMT = {
     end
 
     local db_name = rawget(t, "_db_name")
+    local rt
     if assert(db.__schema[db_name][k], "Attempt to access sheet '" .. k .. "'in db '" .. db_name .. "' that does not exist.") then
       rt = setmetatable({ _db_name = db_name, _sht_name = k }, db.__SheetMT)
       rawset(t, k, rt)
