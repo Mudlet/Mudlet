@@ -49,7 +49,7 @@ local function scrapeLuaFunctions(htmlbody)
     end
   end
 
-  jsonText = lunajson.encode(funcsHash)
+  local jsonText = lunajson.encode(funcsHash)
   print(count .. " functions in the API.")
 
   return jsonText
