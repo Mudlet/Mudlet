@@ -111,11 +111,11 @@ end
 -- The column_spec is either a string or an indexed table. This function returns either "column" or
 -- "column1", "column2" for use in the column specification of INSERT.
 function db:_sql_columns(value)
+  local col_chunks = {}
   local colstr = ''
   local t = type(value)
 
   if t == "table" then
-    col_chunks = {}
     for _, v in ipairs(value) do
       -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
       if v:lower() == "desc" or v:lower() == "asc" then
