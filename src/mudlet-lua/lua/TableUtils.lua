@@ -399,7 +399,7 @@ end
 ---   }
 ---   </pre>
 function table.intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
