@@ -728,22 +728,6 @@ function deleteMultiline(maxLines)
   return true
 end
 
-function shms(seconds, bool)
-  local seconds = tonumber(seconds)
-  assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
-
-  local s = seconds
-  local ss = string.format("%02d", math.fmod(s, 60))
-  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
-  local hh = string.format("%02d", (s / (60 * 60)))
-
-  if bool then
-    cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
-  else
-    return hh, mm, ss
-  end
-end
-
 -- returns true if your Mudlet is older than the given version
 -- for example, it'll return true if you're on 2.1 and you do mudletOlderThan(3,1)
 -- it'll return false if you're on 4.0 and you do mudletOlderThan(4,0,0)

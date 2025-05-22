@@ -56,6 +56,7 @@ function datetime:calculate_UTCdiff(ts)
   return os.difftime(time(lcl), time(utc))
 end
 
+
 -- NOT LUADOC
 -- The rex.match function does not return named patterns even if you use named capture
 -- groups, but the r:tfind does -- but this only operates on compiled patterns. So,
@@ -74,7 +75,6 @@ function datetime:_get_pattern(format)
 
   return datetime._pattern_cache[format]
 end
-
 
 
 --- Parses the specified source string, according to the format if given, to return a representation of
@@ -149,5 +149,22 @@ function datetime:parse(source, format, as_epoch)
     end
   else
     return nil
+  end
+end
+
+
+function shms(seconds, bool)
+  local seconds = tonumber(seconds)
+  assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
+
+  local s = seconds
+  local ss = string.format("%02d", math.fmod(s, 60))
+  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
+  local hh = string.format("%02d", (s / (60 * 60)))
+
+  if bool then
+    cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
+  else
+    return hh, mm, ss
   end
 end
