@@ -2849,7 +2849,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="834"/>
       <location filename="../src/TRoomDB.cpp" line="837"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Area ID numbering is satisfactory.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="845"/>
@@ -2902,7 +2902,7 @@ be in these areas...</numerusform>
     <message>
       <location filename="../src/TRoomDB.cpp" line="874"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - This room was renumbered from the bad ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="910"/>
