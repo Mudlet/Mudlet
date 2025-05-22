@@ -715,7 +715,7 @@ end
 --- @see fg
 --- @see showColors
 function bg(console, colorName)
-  local colorName = colorName or console
+  colorName = colorName or console
   if colorName == nil then
     error("bg: bad argument #1 type (color name as string expected, got nil)!")
   end
