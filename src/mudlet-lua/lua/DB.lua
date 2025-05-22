@@ -110,12 +110,12 @@ function datetime:parse(source, format, as_epoch)
     format = "^%Y-%m-%d %H:%M:%S$"
   end
 
+  local dt = {}
   local fmt = datetime:_get_pattern(format)
   local m = { fmt:tfind(source) }
 
   if m and m[3] then
     m = m[3]
-    dt = {}
 
     if m.year_half then
       dt.year = tonumber("20" .. m.year_half)
