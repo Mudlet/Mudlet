@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018, 2020, 2024 by Stephen Lyons                 *
+ *   Copyright (C) 2016, 2018, 2020, 2024, 2025 by Stephen Lyons           *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -162,12 +162,12 @@ HostManager::Iter::Iter(HostManager* manager, bool at_start)
     }
 }
 
-bool HostManager::Iter::operator== (const Iter& other)
+bool HostManager::Iter::operator== (const Iter& other) const
 {
     return it == other.it;
 }
 
-bool HostManager::Iter::operator!= (const Iter& other)
+bool HostManager::Iter::operator!= (const Iter& other) const
 {
     return it != other.it;
 }

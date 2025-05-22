@@ -154,7 +154,8 @@ Tree<T>::~Tree()
 }
 
 template <class T>
-void Tree<T>::setTemporary(const bool state) {
+void Tree<T>::setTemporary(const bool state)
+{
     mTemporary = state;
 }
 

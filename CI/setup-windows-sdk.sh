@@ -186,13 +186,19 @@ for ROCK in "${WANTED_ROCKS[@]}"; do
     # This rock is not present
     echo "    ${ROCK}..."
     echo ""
-    ${ROCKCOMMAND} install "${ROCK}"
-	if [ "$(luarocks --lua-version 5.1 list | grep -c "${ROCK}")" -eq 0 ]; then
-	    echo "    ${ROCK} didn't get installed - try rerunning this script..."
-		success="false"
-	else
-        echo "    ${ROCK} now installed"
-	fi
+    # We need to force a particular version for the moment as 2.7.0-1 doesn't
+    # seem to work on Windows:
+    if [ "${ROCK}" = "luasql-sqlite3" ];  then
+      ${ROCKCOMMAND} install "${ROCK}" "2.6.1"
+    else
+      ${ROCKCOMMAND} install "${ROCK}"
+    fi
+    if [ "$(luarocks --lua-version 5.1 list | grep -c "${ROCK}")" -eq 0 ]; then
+      echo "    ${ROCK} didn't get installed - try rerunning this script..."
+      success="false"
+    else
+      echo "    ${ROCK} now installed"
+    fi
   else
     # We have it already
     echo "    ${ROCK} is already present"

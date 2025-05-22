@@ -28,7 +28,8 @@ TriggerHighlighter::TriggerHighlighter(QTextDocument *parent)
     setTheme("Mudlet"); // start with the default theme
 }
 
-void TriggerHighlighter::setHighlightingEnabled(bool enabled) {
+void TriggerHighlighter::setHighlightingEnabled(bool enabled)
+{
     highlightingEnabled = enabled;
     rehighlight();
 }
@@ -107,7 +108,8 @@ void TriggerHighlighter::setTheme(const QString& themeName)
     rehighlight();
 }
 
-void TriggerHighlighter::applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule) {
+void TriggerHighlighter::applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule)
+{
     QColor foreground = rule->foregroundColor();
     QColor background = rule->backgroundColor();
 

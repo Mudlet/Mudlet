@@ -27,7 +27,11 @@
 #include "post_guard.h"
 
 extern "C" {
-    #include <lua.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
 }
 
 dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
