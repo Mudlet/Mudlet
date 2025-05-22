@@ -1472,7 +1472,7 @@ db.__DatabaseMT = {
       return v
     end
 
-    local v = rawget(db.Database, k)
+    v = rawget(db.Database, k)
     if v then
       return v
     end
