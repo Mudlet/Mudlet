@@ -1553,7 +1553,7 @@ function db:get_database(db_name)
   db_name = db:safe_name(db_name)
   assert(db.__schema[db_name], "Attempt to access database that does not exist.")
 
-  db_inst = { _db_name = db_name }
+  local db_inst = { _db_name = db_name }
   return setmetatable(db_inst, db.__DatabaseMT)
 end
 
