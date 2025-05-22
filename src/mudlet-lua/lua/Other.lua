@@ -631,7 +631,8 @@ end
 
 --- <b><u>TODO</u></b> getColorWildcard(color)
 function getColorWildcard(color)
-  local color, results, startc, endc = tonumber(color), {}, nil, nil
+  color = tonumber(color)
+  local results, startc, endc = {}, nil, nil
 
   for i = 0, string.len(line) do
     selectSection(i, 1)
