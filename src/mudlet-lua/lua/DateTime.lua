@@ -154,7 +154,7 @@ end
 
 
 function shms(seconds, bool)
-  local seconds = tonumber(seconds)
+  seconds = tonumber(seconds)
   assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
 
   local s = seconds
