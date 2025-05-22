@@ -499,7 +499,7 @@ end
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
 function speedwalk(dirString, backwards, delay, show)
-  local dirString = dirString:lower()
+  dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
   speedwalkShow = show
