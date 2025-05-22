@@ -608,7 +608,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
     charsPerLine = fontSize
     fontSize = consoleName
     consoleName = windowName
-    windowname = "main"
+    windowName = "main"
   end
   assert(type(windowName) == 'string', 'createConsole: invalid type for windowName (expected string, got '..type(windowName)..'!)')
   assert(type(consoleName) == 'string', 'createConsole: invalid type for consoleName (expected string, got '..type(consoleName)..'!)')
