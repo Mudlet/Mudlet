@@ -1446,13 +1446,14 @@ db.__SheetMT = {
     local errormsg = "Attempt to access field '%s' which does not exist (in sheet '%s' within database '%s')"
 
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
+    local field_type = ""
     if assert(field, errormsg:format(k, sht_name, db_name)) then
-      type_ = type(field)
-      if type_ == "table" and field._timestamp then
-        type_ = "datetime"
+      field_type = type(field)
+      if field_type == "table" and field._timestamp then
+        field_type = "datetime"
       end
 
-      rt = setmetatable({ database = db_name, sheet = sht_name, type = type_, name = f_name }, db.__FieldMT)
+      rt = setmetatable({ database = db_name, sheet = sht_name, type = field_type, name = f_name }, db.__FieldMT)
       rawset(t, k, rt)
       return rt
     end
