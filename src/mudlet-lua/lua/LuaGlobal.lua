@@ -127,13 +127,14 @@ local packages = {
 -- method) to report on the determination of what path to use to load the other
 -- Mudlet and Geyser provided Lua files...
 debugLoading = debugLoading or false
+local sep = package.config:sub(1,1)
 
 -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
 -- directory if nil.
 if debugLoading then
-  echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
+  echo("Path separator is: '" .. sep .. "'\n\n")
   if luaGlobalPath == nil then
-    luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
+    luaGlobalPath = lfs.currentdir() .. sep .. "LuaGlobal.lua"
     echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
   else
     echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
@@ -143,19 +144,19 @@ if debugLoading then
 
   local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
-    packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
+    packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
     echo("Trying to load: \"" .. packagePath .. "\"\n")
     status, result = pcall(dofile, packagePath)
     assert(status, "Error attempting to load package("..packageName..") file:\n" .. result .. ".\n\n")
     echo("Loaded: \"" .. packageName .. "\".\n\n")
   end
 else
-  luaGlobalPath = luaGlobalPath or lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
+  luaGlobalPath = luaGlobalPath or lfs.currentdir() .. sep .. "LuaGlobal.lua"
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
   local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
-    packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
+    packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
     status, result = pcall(dofile, packagePath)
     assert(status, "Error attempting to load package("..packageName..") file:\n" .. result .. ".\n\n")
   end
