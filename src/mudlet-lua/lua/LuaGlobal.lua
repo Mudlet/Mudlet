@@ -7,17 +7,15 @@ debugLoading = debugLoading or false
 
 -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
 -- directory if nil.
-if luaGlobalPath == nil then
-  luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
-  if debugLoading then
-    echo([[luaGlobalPath was nil so has been defaulted to: "]] .. luaGlobalPath .. [[".
-
-]])
+if debugLoading then
+  if luaGlobalPath == nil then
+    luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
+    echo('luaGlobalPath was nil so has been defaulted to: "' .. luaGlobalPath .. '".\n\n')
+  else
+    echo('luaGlobalPath has been preset to: "' .. luaGlobalPath .. '".\n\n')
   end
-elseif debugLoading then
-  echo([[luaGlobalPath has been preset to: "]] .. luaGlobalPath .. [[".
-
-]])
+else
+  luaGlobalPath = luaGlobalPath or lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
 end
 
 if package.loaded["rex_pcre"] then
