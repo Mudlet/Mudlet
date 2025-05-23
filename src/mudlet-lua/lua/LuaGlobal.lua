@@ -132,8 +132,8 @@ local sep = package.config:sub(1,1)
 if debugLoading then
   echo("Path separator is: '" .. sep .. "'\n\n")
 
--- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
--- directory if nil.
+  -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+  -- directory if nil.
   if luaGlobalPath == nil then
     luaGlobalPath = lfs.currentdir()
     echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
