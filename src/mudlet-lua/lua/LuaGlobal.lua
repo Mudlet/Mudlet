@@ -145,11 +145,7 @@ nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
 if debugLoading then
   echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
-  echo([[Directory separator conversion gives: "]] .. nativeLuaGlobalPath .. [[".
-
-Current directory is: "]] .. lfs.currentdir() .. [[".
-
-]])
+  echo("Directory separator conversion gives: \"" .. nativeLuaGlobalPath .. "\".\n\nCurrent directory is: \"" .. lfs.currentdir() .. "\".\n\n")
 end
 
 for _, packageName in ipairs(packages) do
