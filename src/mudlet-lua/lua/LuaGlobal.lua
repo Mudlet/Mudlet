@@ -10,9 +10,9 @@ debugLoading = debugLoading or false
 if debugLoading then
   if luaGlobalPath == nil then
     luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
-    echo('luaGlobalPath was nil so has been defaulted to: "' .. luaGlobalPath .. '".\n\n')
+    echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
   else
-    echo('luaGlobalPath has been preset to: "' .. luaGlobalPath .. '".\n\n')
+    echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
   end
 else
   luaGlobalPath = luaGlobalPath or lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
@@ -151,20 +151,14 @@ end
 for _, packageName in ipairs(packages) do
   local packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
   if debugLoading then
-    echo([[Trying to load: "]] .. packagePath .. [["
-]])
+    echo("Trying to load: \"" .. packagePath .. "\"\n")
   end
   local result, msg = pcall(dofile, packagePath)
   if debugLoading then
     if result then
-      echo([[Loaded: "]] .. packageName .. [[".
-
-]])
+      echo("Loaded: \"" .. packageName .. "\".\n\n")
     else
-      echo([[Error attempting to load file:
-  ]] .. msg .. [[.
-
-]])
+      echo("Error attempting to load file:\n" .. msg .. ".\n\n")
     end
   end
   assert(result, msg)
