@@ -129,10 +129,11 @@ local packages = {
 debugLoading = debugLoading or false
 local sep = package.config:sub(1,1)
 
--- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
--- directory if nil.
 if debugLoading then
   echo("Path separator is: '" .. sep .. "'\n\n")
+
+-- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+-- directory if nil.
   if luaGlobalPath == nil then
     luaGlobalPath = lfs.currentdir() .. sep .. "LuaGlobal.lua"
     echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
@@ -151,6 +152,8 @@ if debugLoading then
     echo("Loaded: \"" .. packageName .. "\".\n\n")
   end
 else
+  -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+  -- directory if nil.
   luaGlobalPath = luaGlobalPath or lfs.currentdir() .. sep .. "LuaGlobal.lua"
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
