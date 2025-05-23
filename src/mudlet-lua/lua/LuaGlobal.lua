@@ -1,23 +1,5 @@
 -- Mudlet Lua packages loader
 
--- Set to true (possibly via code in the C++ TLuaInterpreter::loadGlobal()
--- method) to report on the determination of what path to use to load the other
--- Mudlet and Geyser provided Lua files...
-debugLoading = debugLoading or false
-
--- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
--- directory if nil.
-if debugLoading then
-  if luaGlobalPath == nil then
-    luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
-    echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
-  else
-    echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
-  end
-else
-  luaGlobalPath = luaGlobalPath or lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
-end
-
 if package.loaded["rex_pcre"] then
   rex = require "rex_pcre"
 end
@@ -141,10 +123,23 @@ local packages = {
   "IDManager.lua",
 }
 
-nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
+-- Set to true (possibly via code in the C++ TLuaInterpreter::loadGlobal()
+-- method) to report on the determination of what path to use to load the other
+-- Mudlet and Geyser provided Lua files...
+debugLoading = debugLoading or false
 
+-- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+-- directory if nil.
 if debugLoading then
   echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
+  if luaGlobalPath == nil then
+    luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
+    echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
+  else
+    echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
+  end
+
+  nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
   echo("Directory separator conversion gives: \"" .. nativeLuaGlobalPath .. "\".\n\nCurrent directory is: \"" .. lfs.currentdir() .. "\".\n\n")
 
   for _, packageName in ipairs(packages) do
@@ -155,6 +150,8 @@ if debugLoading then
     echo("Loaded: \"" .. packageName .. "\".\n\n")
   end
 else
+  luaGlobalPath = luaGlobalPath or lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
+  nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
   for _, packageName in ipairs(packages) do
     local packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
     local result, msg = pcall(dofile, packagePath)
