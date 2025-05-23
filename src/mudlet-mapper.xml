@@ -5927,7 +5927,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "25.5.3"
+local newversion = "25.5.4"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -7187,8 +7187,31 @@ registerAnonymousEventHandler("mmp clear externals", "mmp.removeWings")</script>
 					<name>Achaea</name>
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsAchaea")
-
-
+        
+local universeLocations = {
+  ['Main'] = {
+    azdun = 1772,
+    blackrock = 10573,
+    bitterfork = 25093,
+    genji = 10091,
+    manusha = 8730,
+    newthera = 20386,
+    caerwitrin = 17678,
+    shastaan = 2855,
+    mannaseh = 1745,
+    manara = 9124,
+    brasslantern = 30383,
+    mhojave = 39103,
+    thraasi = 35703,
+    newhope = 25581,
+  },
+  ['Meropis'] = {
+    rageteeth = 1226,
+    seleucar  = 29755,
+    judgement = 35450,
+    yggdrasil = 12207,
+  }
+}
 
 function mmp.addWingsAchaea()
   --Trimmed down version of the original function, meant to only be used for wings. (Where the command varies based on several MCONFIGS)
@@ -7299,36 +7322,26 @@ function mmp.addWingsAchaea()
     end
   end
   --universe tarot
-  if mmp.settings.universe and mmp.oncontinent(area, "Main") then
-    local tarotLocations =
-      {
-        azdun = 1772,
-        blackrock = 10573,
-        bitterfork = 25093,
-        genji = 10091,
-        manusha = 8730,
-        newthera = 20386,
-        caerwitrin = 17678,
-        shastaan = 2855,
-        mannaseh = 1745,
-        manara = 9124,
-        brasslantern = 30383,
-        mhojave = 39103,
-        thraasi = 35703,
-        newhope = 25581,
-      }
-    for village, roomnum in pairs(tarotLocations) do
-      mmp.tempSpecialExit(
-        roomnum,
-        [=[script:
-        mmp.customwalkdelay(4.5)
-        send("fling universe at ground",false)
-        tempTimer(4,[[send("touch ]=] ..
-        village ..
-        [=[",false)]])
-        ]=],
-        10
-      )
+  if mmp.settings.universe then
+    local continents = mmp.getareacontinents(area)
+    
+    for _, continent in ipairs(continents) do
+      local universeExits = universeLocations[continent]
+      if universeExits then
+        for village, roomnum in pairs(universeExits) do
+          mmp.tempSpecialExit(
+            roomnum,
+            [=[script:
+            mmp.customwalkdelay(4.5)
+            send("fling universe at ground",false)
+            tempTimer(4,[[send("touch ]=] ..
+            village ..
+            [=[",false)]])
+            ]=],
+            10
+          )
+        end
+      end
     end
   end
   --gare
