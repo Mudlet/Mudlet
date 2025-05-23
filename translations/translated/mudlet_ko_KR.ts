@@ -486,89 +486,89 @@ please wait...</source>
       <translation>%1 초</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="53"/>
       <source>Start element not found!</source>
       <translation>시작 요소를 찾을 수 없습니다!</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="65"/>
       <source>line %1: %2</source>
       <translation>%1 행: %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="147"/>
       <source>Expected %1 while parsing</source>
       <translation>파싱 중 %1 을(를) 기대했습니다</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="143"/>
       <source>%1 @ line %2</source>
       <translation>%1 @ 라인 %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="80"/>
       <source>No data found!</source>
       <translation>데이터를 찾을 수 없습니다!</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="87"/>
       <source>Expected object in keymap
 </source>
       <translation>키맵에서 예상되는 객체</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="127"/>
       <source>Invalid keysequence used %1
 </source>
       <translation>유효하지 않은 %1 키 시퀀스 사용</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="377"/>
       <source>Error parsing %1: %2 </source>
       <translation>파일 %1: %2 읽기 오류 </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="306"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="304"/>
       <source>Error reading file %1:%2</source>
       <translation>파일 %1:%2읽기 오류</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>%1 ranges</source>
       <translation>%1 범위</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="447"/>
       <source>Line %1, Column %2</source>
       <translation>%1 행, %2 열</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="450"/>
       <source>, Offset %1</source>
       <translation>오프셋 %1</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="454"/>
       <source> | %1 chars selected</source>
       <translation> | %1 개의 문자 선택됨</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="458"/>
       <source> | scope: </source>
       <translation> | 범위: </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="468"/>
       <source> (%1)</source>
       <translation> (%1)</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="397"/>
       <source>Error parsing theme %1:%2</source>
       <translation>%1 테마 구문 분석 오류:%2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="402"/>
       <source>Error theme not found %1.</source>
       <translation>%1 테마를 찾을 수 없습니다.</translation>
     </message>
@@ -4119,115 +4119,122 @@ Mudlet은 ASCII 인코딩을 사용하여 데이터를 전송하려 시도하겠
 참고: 이 경고는 인코딩이 변경될 때까지 한 번만 표시됩니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2390"/>
-      <location filename="../src/ctelnet.cpp" line="2752"/>
+      <location filename="../src/ctelnet.cpp" line="2151"/>
+      <source>
+&lt;MXP support enabled&gt;
+</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="2474"/>
+      <location filename="../src/ctelnet.cpp" line="2836"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
       <translation>[ 정보 ] - GUI를 버전 &apos;%2&apos;에서 새 버전 &apos;%1&apos;(url=&apos;%3&apos;)으로 업그레이드합니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2700"/>
+      <location filename="../src/ctelnet.cpp" line="2784"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
       <translation>[ 정보 ] - 패키지 &apos;%1&apos;(url=&apos;%2&apos;)를 다운로드하고 설치 중입니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2709"/>
+      <location filename="../src/ctelnet.cpp" line="2793"/>
       <source>Cancel</source>
       <translation>취소</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2709"/>
+      <location filename="../src/ctelnet.cpp" line="2793"/>
       <source>Downloading game GUI from server...</source>
       <translation>게임 GUI를 서버에서 다운로드 중...</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3005"/>
+      <location filename="../src/ctelnet.cpp" line="3089"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
       <translation>[ 정보 ] - 포트 %1에서 더 안전한 연결을 사용할 수 있습니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3010"/>
+      <location filename="../src/ctelnet.cpp" line="3094"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
       <translation>데이터 전송 보호와 개인정보 보호를 위해 이 연결은 안전한 포트를 알립니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3011"/>
+      <location filename="../src/ctelnet.cpp" line="3095"/>
       <source>Update to port %1 and connect with encryption?</source>
       <translation>포트 %1로 업데이트하고 암호화된 연결을 시도하시겠습니까?</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3161"/>
+      <location filename="../src/ctelnet.cpp" line="3245"/>
       <source>ERROR</source>
       <extracomment>Keep the capitalisation, the translated text at 7 letters max so it aligns nicely</extracomment>
       <translation>오류</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3174"/>
+      <location filename="../src/ctelnet.cpp" line="3258"/>
       <source>LUA</source>
       <translation>Lua</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3186"/>
+      <location filename="../src/ctelnet.cpp" line="3270"/>
       <source>WARN</source>
       <translation>경고</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3198"/>
+      <location filename="../src/ctelnet.cpp" line="3282"/>
       <source>ALERT</source>
       <translation>경고</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3210"/>
+      <location filename="../src/ctelnet.cpp" line="3294"/>
       <source>INFO</source>
       <translation>정보</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3222"/>
+      <location filename="../src/ctelnet.cpp" line="3306"/>
       <source>OK</source>
       <translation>확인</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3417"/>
+      <location filename="../src/ctelnet.cpp" line="3501"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
       <translation>[ 정보 ] - 재생 파일 로딩 중:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3441"/>
+      <location filename="../src/ctelnet.cpp" line="3525"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
       <translation>&quot;%1&quot;파일을 재생할 수 없습니다. 오류 메시지: &quot;리플레이 파일이 손상되었습니다.&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3443"/>
+      <location filename="../src/ctelnet.cpp" line="3527"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
       <translation>[ 경고 ] - 파일이 손상되어 리플레이가 중단되었습니다.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3452"/>
+      <location filename="../src/ctelnet.cpp" line="3536"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
       <translation>다른 재생을 수행할 수 없습니다. 완료될 때까지 다시 시도하세요.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3454"/>
+      <location filename="../src/ctelnet.cpp" line="3538"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
       <translation>[ 경고 ] - 다른 재생을 수행할 수 없습니다.
 완료될 때까지 다시 시도하세요.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3462"/>
+      <location filename="../src/ctelnet.cpp" line="3546"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
       <translation>파일 &quot;%1&quot;을(를) 읽을 수 없습니다. 오류 메시지: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3465"/>
+      <location filename="../src/ctelnet.cpp" line="3549"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
       <translation>[ 오류 ] - 파일 읽기 실패 &quot;%1&quot;,
 오류 메시지: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3504"/>
+      <location filename="../src/ctelnet.cpp" line="3588"/>
       <source>[  OK  ]  - The replay has ended.</source>
       <translation>[ 확인 ] - 재생이 종료되었습니다.</translation>
     </message>
@@ -8964,53 +8971,53 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
   <context>
     <name>dlgVarsMainArea</name>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
-      <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="56"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>Auto-Type</source>
       <translation>자동입력</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="57"/>
       <source>key (string)</source>
       <translation>키 (문자열)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="58"/>
       <source>index (integer number)</source>
       <translation>인덱스 (정수)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="59"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
       <translation>테이블 (추가 그룹&quot; 을 사용하여 &quot;을 생성)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="56"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="60"/>
       <source>function (cannot create from GUI)</source>
       <translation>함수 (GUI에서 생성할 수 없음)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="84"/>
       <source>string</source>
       <translation>문자열</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="85"/>
       <source>number</source>
       <translation>숫자</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="86"/>
       <source>boolean</source>
       <translation>부울</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="87"/>
       <source>table</source>
       <translation>테이블</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="84"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="88"/>
       <source>function</source>
       <translation>함수</translation>
     </message>
@@ -9018,22 +9025,22 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
   <context>
     <name>edbee::TextEditorComponent</name>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="585"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="583"/>
       <source>Cut</source>
       <translation>잘라내기</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="586"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="584"/>
       <source>Copy</source>
       <translation>복사</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="587"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="585"/>
       <source>Paste</source>
       <translation>붙여넣기</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="589"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="587"/>
       <source>Select All</source>
       <translation>모두 선택</translation>
     </message>
