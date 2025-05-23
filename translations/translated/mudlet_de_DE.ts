@@ -488,91 +488,91 @@ Bitte warten...</translation>
       <translation>%1 Sekunden</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="53"/>
       <source>Start element not found!</source>
       <translation>Start-Element nicht gefunden!</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="65"/>
       <source>line %1: %2</source>
       <translation>Zeile %1: %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="147"/>
       <source>Expected %1 while parsing</source>
       <translation>%1 erwartet während der Analyse</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="143"/>
       <source>%1 @ line %2</source>
       <translation>%1 @ Zeile %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="80"/>
       <source>No data found!</source>
       <translation>Keine Daten gefunden!</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="87"/>
       <source>Expected object in keymap
 </source>
       <translation>Erwartetes Objekt in 'keymap'
 </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="127"/>
       <source>Invalid keysequence used %1
 </source>
       <translation>Ungültige Tastenfolge verwendet %1
 </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="377"/>
       <source>Error parsing %1: %2 </source>
       <translation>Fehler beim Parsen von %1: %2 </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="306"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="304"/>
       <source>Error reading file %1:%2</source>
       <translation>Fehler beim Lesen der Datei %1:%2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>%1 ranges</source>
       <translation>%1 Bereiche</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="447"/>
       <source>Line %1, Column %2</source>
       <translation>Zeile %1, Spalte %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="450"/>
       <source>, Offset %1</source>
       <translation>, Versatz %1</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="454"/>
       <source> | %1 chars selected</source>
       <translation> | %1 Zeichen ausgewählt</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="458"/>
       <source> | scope: </source>
       <translation> | Umfang: </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="468"/>
       <source> (%1)</source>
       <translation> (%1)</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="397"/>
       <source>Error parsing theme %1:%2</source>
       <translation>Fehler beim Analysieren des Themas %1:%2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="402"/>
       <source>Error theme not found %1.</source>
       <translation>Fehler: Thema nicht gefunden %1.</translation>
     </message>
@@ -4162,114 +4162,121 @@ changed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2390"/>
-      <location filename="../src/ctelnet.cpp" line="2752"/>
+      <location filename="../src/ctelnet.cpp" line="2151"/>
+      <source>
+&lt;MXP support enabled&gt;
+</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="2474"/>
+      <location filename="../src/ctelnet.cpp" line="2836"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos; (url=&apos;%3&apos;).</source>
       <translation>[ INFO ]  -  GUI wird aktualisiert auf die neue Version &apos;%1&apos; von Version &apos;%2&apos; (url=&apos;%3&apos;).</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2700"/>
+      <location filename="../src/ctelnet.cpp" line="2784"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos; (url=&apos;%2&apos;).</source>
       <translation>[ INFO ]  - Lade und installiere das Paket &apos;%1&apos; (url=&apos;%2&apos;).</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2709"/>
+      <location filename="../src/ctelnet.cpp" line="2793"/>
       <source>Cancel</source>
       <translation>Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2709"/>
+      <location filename="../src/ctelnet.cpp" line="2793"/>
       <source>Downloading game GUI from server...</source>
       <translation>Spiel-GUI wird vom Server geladen...</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3005"/>
+      <location filename="../src/ctelnet.cpp" line="3089"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
       <translation>[ INFO ]  - Es ist eine sicherere Verbindung auf Port %1 verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3010"/>
+      <location filename="../src/ctelnet.cpp" line="3094"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
       <translation>Von dieser Verbindung wird ein gesicherter Port angeboten, um die Datenübertragung und die Privatsphäre zu schützen.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3011"/>
+      <location filename="../src/ctelnet.cpp" line="3095"/>
       <source>Update to port %1 and connect with encryption?</source>
       <translation>Auf Port %1 wechseln und mit Verschlüsselung verbinden?</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3161"/>
+      <location filename="../src/ctelnet.cpp" line="3245"/>
       <source>ERROR</source>
       <extracomment>Keep the capitalisation, the translated text at 7 letters max so it aligns nicely</extracomment>
       <translation>FEHLER</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3174"/>
+      <location filename="../src/ctelnet.cpp" line="3258"/>
       <source>LUA</source>
       <translation>LUA</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3186"/>
+      <location filename="../src/ctelnet.cpp" line="3270"/>
       <source>WARN</source>
       <translation>WARNUNG</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3198"/>
+      <location filename="../src/ctelnet.cpp" line="3282"/>
       <source>ALERT</source>
       <translation>ACHTUNG</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3210"/>
+      <location filename="../src/ctelnet.cpp" line="3294"/>
       <source>INFO</source>
       <translation>INFO</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3222"/>
+      <location filename="../src/ctelnet.cpp" line="3306"/>
       <source>OK</source>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3417"/>
+      <location filename="../src/ctelnet.cpp" line="3501"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
       <translation>[ INFO ]  - Lade Wiederholung aus Datei: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3441"/>
+      <location filename="../src/ctelnet.cpp" line="3525"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
       <translation>Die Datei &quot;%1&quot;kann nicht wiedergegeben werden. Die Fehlermeldung war: &quot;Die Wiederholungsdatei scheint beschädigt zu sein.&quot;</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3443"/>
+      <location filename="../src/ctelnet.cpp" line="3527"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
       <translation>[ WARNUNG ] - Die Wiederholung wurde abgebrochen, da die Datei beschädigt zu sein scheint.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3452"/>
+      <location filename="../src/ctelnet.cpp" line="3536"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
       <translation>Kann Wiederholung nicht anzeigen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3454"/>
+      <location filename="../src/ctelnet.cpp" line="3538"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
       <translation>[ WARNUNG ]  - Kann Wiederholung nicht ausführen. Eine andere könnte 
 bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3462"/>
+      <location filename="../src/ctelnet.cpp" line="3546"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
       <translation>Kann Datei &quot;%1&quot; nicht lesen, Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3465"/>
+      <location filename="../src/ctelnet.cpp" line="3549"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
       <translation>[FEHLER] - Kann Datei &quot;%1&quot; nicht lesen,
 Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="3504"/>
+      <location filename="../src/ctelnet.cpp" line="3588"/>
       <source>[  OK  ]  - The replay has ended.</source>
       <translation>[  OK  ]  - Wiederholung beendet.</translation>
     </message>
@@ -8870,53 +8877,53 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
   <context>
     <name>dlgVarsMainArea</name>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
-      <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="56"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>Auto-Type</source>
       <translation>Automatisch</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="57"/>
       <source>key (string)</source>
       <translation>Schlüsselwert (String)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="58"/>
       <source>index (integer number)</source>
       <translation>Index (Zahl)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="59"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
       <translation>Tabelle (benutze &quot;Gruppe hinzufügen&quot; zum Erstellen)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="56"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="60"/>
       <source>function (cannot create from GUI)</source>
       <translation>Funktion (nicht in GUI erstellbar)</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="84"/>
       <source>string</source>
       <translation>String</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="85"/>
       <source>number</source>
       <translation>Zahl</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="86"/>
       <source>boolean</source>
       <translation>Boolean</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="87"/>
       <source>table</source>
       <translation>Tabelle</translation>
     </message>
     <message>
-      <location filename="../src/dlgVarsMainArea.cpp" line="84"/>
+      <location filename="../src/dlgVarsMainArea.cpp" line="88"/>
       <source>function</source>
       <translation>Funktion</translation>
     </message>
@@ -8924,22 +8931,22 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
   <context>
     <name>edbee::TextEditorComponent</name>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="585"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="583"/>
       <source>Cut</source>
       <translation>Ausschneiden</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="586"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="584"/>
       <source>Copy</source>
       <translation>Kopieren</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="587"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="585"/>
       <source>Paste</source>
       <translation>Einfügen</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="589"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="587"/>
       <source>Select All</source>
       <translation>Alles auswählen</translation>
     </message>
