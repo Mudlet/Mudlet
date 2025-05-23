@@ -135,7 +135,7 @@ if debugLoading then
 -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
 -- directory if nil.
   if luaGlobalPath == nil then
-    luaGlobalPath = lfs.currentdir() .. sep .. "LuaGlobal.lua"
+    luaGlobalPath = lfs.currentdir()
     echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
   else
     echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
@@ -154,7 +154,7 @@ if debugLoading then
 else
   -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
   -- directory if nil.
-  luaGlobalPath = luaGlobalPath or lfs.currentdir() .. sep .. "LuaGlobal.lua"
+  luaGlobalPath = luaGlobalPath or lfs.currentdir()
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
   local packagePath, status, result = "", false, ""
