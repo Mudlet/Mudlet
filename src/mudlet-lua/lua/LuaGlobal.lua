@@ -141,13 +141,10 @@ local packages = {
   "IDManager.lua",
 }
 
-if debugLoading then
-   echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
-end
-
 nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
 if debugLoading then
+  echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
   echo([[Directory separator conversion gives: "]] .. nativeLuaGlobalPath .. [[".
 
 Current directory is: "]] .. lfs.currentdir() .. [[".
