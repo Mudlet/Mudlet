@@ -97,7 +97,7 @@ jobs:
         queries: security-extended, security-and-quality
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.0.2
 
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
