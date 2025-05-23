@@ -138,23 +138,25 @@ if debugLoading then
   else
     echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
   end
-
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
   echo("Directory separator conversion gives: \"" .. nativeLuaGlobalPath .. "\".\n\nCurrent directory is: \"" .. lfs.currentdir() .. "\".\n\n")
 
+  local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
-    local packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
+    packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
     echo("Trying to load: \"" .. packagePath .. "\"\n")
-    local result, msg = pcall(dofile, packagePath)
-    assert(result, "Error attempting to load package("..packageName..") file:\n" .. msg .. ".\n\n")
+    status, result = pcall(dofile, packagePath)
+    assert(status, "Error attempting to load package("..packageName..") file:\n" .. result .. ".\n\n")
     echo("Loaded: \"" .. packageName .. "\".\n\n")
   end
 else
   luaGlobalPath = luaGlobalPath or lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
+
+  local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
-    local packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
-    local result, msg = pcall(dofile, packagePath)
-    assert(result, "Error attempting to load package("..packageName..") file:\n" .. msg .. ".\n\n")
+    packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
+    status, result = pcall(dofile, packagePath)
+    assert(status, "Error attempting to load package("..packageName..") file:\n" .. result .. ".\n\n")
   end
 end
