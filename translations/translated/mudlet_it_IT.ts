@@ -4205,7 +4205,9 @@ non sarà variata nuovamente.</translation>
       <source>
 &lt;MXP support enabled&gt;
 </source>
-      <translation type="unfinished"/>
+      <translation>
+&lt;Abilita supporto MXP&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2474"/>
