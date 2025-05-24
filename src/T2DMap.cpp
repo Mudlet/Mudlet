@@ -2655,6 +2655,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true);
         popup->setAttribute(Qt::WA_DeleteOnClose);
+        connect(popup, &QMenu::aboutToHide, this, [this]() { mPopupMenu = false; });
 
         if (mCustomLinesRoomFrom > 0) {
             if (mDialogLock) {
@@ -3283,11 +3284,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 mHelpMsg.clear();
             }
 
-        } else { // In popup menu, so end that
-            mPopupMenu = false;
         }
-
-    }
 
     TEvent sysMapWindowMousePressEvent{};
     sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
