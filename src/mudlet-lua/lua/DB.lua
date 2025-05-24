@@ -386,7 +386,15 @@ function db:safe_name(name)
   return name
 end
 
+function db:_isActiveDBName(db_name)
+  db_name = db:safe_name(db_name)
 
+  return (
+    db.__conn[db_name]
+    and db.__conn[db_name] ~= 'SQLite3 connection (closed)'
+    and io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+  )
+end
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
@@ -443,7 +451,7 @@ function db:create(db_name, sheets, force)
 
   db_name = db:safe_name(db_name)
 
-  if not db.__conn[db_name] or db.__conn[db_name] == 'SQLite3 connection (closed)' or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
+  if not db:_isActiveDBName(db_name) then
     db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
     db.__conn[db_name]:setautocommit(false)
     db.__autocommit[db_name] = true
@@ -1532,15 +1540,63 @@ function db:OR(left, right)
 end
 
 
-
---- <b><u>TODO</u></b>
-function db:close()
-  for _, c in pairs(db.__conn) do
-    c:close()
+--- Closes all databases.
+--- @return boolean result Returns true if all databases closed successfully and false otherwise 
+--- @return string message
+function db:_closeAll()
+  if db.__env == nil then
+    return false, "database environment is nil, did you forget to call db:create?"
   end
+
+  local result, msgs = true, {}
+  for db_name, conn in pairs(db.__conn) do
+    if not conn:close() then
+      result = false
+      table.insert(msgs, "database object for "..db_name.." is already closed.")
+    end
+  end
+
   db.__conn = {}
   db.__env:close()
   db.__env = nil
+
+  return result, table.concat(msgs, "\n")
+end
+
+
+--- Closes the named database or all databases if no name is provided.
+--- @param db_name string|nil The name of the database to close.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the database failed to close.
+function db:close(db_name)
+  if db.__env == nil then
+    return false, "database environment is nil, did you forget to call db:create?"
+  end
+
+  if db_name == nil then
+    return db:_closeAll()
+  end
+
+  assert(
+    type(db_name) == "string",
+    "expected db_name to be string or nil but recieved "..type(db_name).."."
+  )
+
+  db_name = db:safe_name(db_name)
+  if not db:_isActiveDBName(db_name) then
+    return false, "can not close "..db_name.." because it does not exist.  Did you forget to call db:create?"
+  end
+
+  if db.__conn[db_name]:close() then
+    db.__conn[db_name] = nil
+    
+    return true, ""
+  else
+    
+    return false, "database object is already closed."
+  end
+
+  
 end
 
 
