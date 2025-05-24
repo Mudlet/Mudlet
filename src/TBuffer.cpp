@@ -2219,6 +2219,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
     // optimization: if the lastLine length hasn't changed,
     // skip it and wrap subsequent lines
     if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
         wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
     } else {
         wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
