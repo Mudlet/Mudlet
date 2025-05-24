@@ -196,8 +196,9 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         QPointer<Host> safeHost(mpHost);
         QPointer<XMLexport> safeExport(this);
         auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
-        auto watcher = new QFutureWatcher<bool>(mpHost ? mpHost : this);
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost ? mpHost : this, [=]() {
+        QObject* parent = mpHost ? static_cast<QObject*>(mpHost) : static_cast<QObject*>(this);
+        auto watcher = new QFutureWatcher<bool>(parent);
+        connect(watcher, &QFutureWatcher<bool>::finished, parent, [=]() {
             if (!safeHost || !safeExport) return;
             safeHost->xmlSaved(fileName);
         });
@@ -216,8 +217,9 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     QPointer<Host> safeHost(mpHost);
     QPointer<XMLexport> safeExport(this);
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
-    auto watcher = new QFutureWatcher<bool>(mpHost ? mpHost : this);
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost ? mpHost : this, [=]() {
+    QObject* parent = mpHost ? static_cast<QObject*>(mpHost) : static_cast<QObject*>(this);
+    auto watcher = new QFutureWatcher<bool>(parent);
+    connect(watcher, &QFutureWatcher<bool>::finished, parent, [=]() {
         if (!safeHost || !safeExport) return;
         safeHost->xmlSaved(qsl("profile"));
     });
@@ -785,8 +787,9 @@ bool XMLexport::exportProfile(const QString& exportFileName)
         QPointer<Host> safeHost(mpHost);
         QPointer<XMLexport> safeExport(this);
         auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
-        auto watcher = new QFutureWatcher<bool>(mpHost ? mpHost : this);
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost ? mpHost : this, [=]() {
+        QObject* parent = mpHost ? static_cast<QObject*>(mpHost) : static_cast<QObject*>(this);
+        auto watcher = new QFutureWatcher<bool>(parent);
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, parent, [=]() {
             if (!safeHost || !safeExport) return;
             safeHost->xmlSaved(qsl("profile"));
         });
