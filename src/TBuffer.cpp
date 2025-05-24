@@ -945,6 +945,11 @@ COMMIT_LINE:
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
+        if (mHyperlinkActive) {
+            c.mLinkIndex = mCurrentHyperlinkLinkId;
+            c.mFlags |= TChar::Underline;
+        }
+
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
             c.mFlags |= TChar::Underline;
@@ -2156,43 +2161,60 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
-        // Handle OSC 8 (Anchor/Hyperlink)
+        // OSC 8 ;params;URI [;optional text]
         QStringList parts = sequence.mid(2).split(';');
 
-        if (parts.size() >= 2) {
-            QString url = parts[1]; // Extract the URL
-            QString text = parts.size() > 2 ? parts[2] : QString(); // Extract optional display text
+        // OSC 8 ;; ST closes the hyperlink
+        if ((parts.size() == 3 && parts[0].isEmpty() && parts[1].isEmpty() && parts[2].isEmpty()) ||
+            (parts.size() == 2 && parts[0].isEmpty() && parts[1].isEmpty()) ||
+            (parts.size() == 1 && parts[0].isEmpty())) {
+            mCurrentHyperlinkUrl.clear();
+            mCurrentHyperlinkCommand.clear();
+            mCurrentHyperlinkHint.clear();
+            mCurrentHyperlinkLinkId = 0;
+            mHyperlinkActive = false;
+            break;
+        }
 
-            // If no display text is provided, use the URL as the text
-            if (text.isEmpty()) {
-                text = url;
+        if (parts.size() >= 2) {
+            // Validation logic for hyperlink URL
+            QString url = parts[1];
+
+            if (url.length() > 2048) {
+                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << url;
+                return;
             }
 
-            // Check for `send:` or `prompt:` prefixes in the URL
+            QUrl qurl(url);
+            const QString scheme = qurl.scheme().toLower();
+
+            if (!(scheme == "http" || scheme == "https" || url.startsWith("send:") || url.startsWith("prompt:"))) {
+                qWarning() << "TBuffer::decodeOSC(...) - Blocked unsupported or unsafe URL scheme:" << url;
+                return;
+            }
+
             QStringList command;
             QStringList hint;
 
             if (url.startsWith("send:")) {
-                QString sendCommand = url.mid(5); // Extract the command after "send:"
+                QString sendCommand = url.mid(5);
                 command = { QString("send([[%1]])").arg(sendCommand) };
-                hint = { QString("Send: %1").arg(sendCommand) };
+                hint = { QString("%1: %2").arg(QObject::tr("Send"), sendCommand) };
             } else if (url.startsWith("prompt:")) {
-                QString promptCommand = url.mid(7); // Extract the command after "prompt:"
+                QString promptCommand = url.mid(7);
                 command = { QString("sendCmdLine([[%1]])").arg(promptCommand) };
-                hint = { QString("Prompt: %1").arg(promptCommand) };
+                hint = { QString("%1: %2").arg(QObject::tr("Prompt"), promptCommand) };
             } else {
-                // Default behavior for standard hyperlinks
                 command = { QString("openUrl([[%1]])").arg(url) };
-                hint = { QString("%1").arg(url) };
+                hint = { QString("%1: %2").arg(QObject::tr("Open browser to"), url) };
             }
 
-            // Create a clickable link in the console
-            TChar format(mpConsole); // Default formatting for the link
-            QVector<int> luaReference; // No Lua references needed here
-            addLink(false, text, command, hint, format, luaReference);
-        } else if (parts.size() == 1 && parts[0].isEmpty()) {
-            // OSC 8 ;; ST ends the hyperlink
-            // No specific action needed for now
+            // Update hyperlink state for subsequent text
+            mCurrentHyperlinkUrl = url;
+            mCurrentHyperlinkCommand = command;
+            mCurrentHyperlinkHint = hint;
+            mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+            mHyperlinkActive = true;
         }
         break;
     }
@@ -3068,6 +3090,12 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
+    mCurrentHyperlinkUrl.clear();
+    mCurrentHyperlinkCommand.clear();
+    mCurrentHyperlinkHint.clear();
+    mCurrentHyperlinkLinkId = 0;
+    mHyperlinkActive = false;
+
     while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;

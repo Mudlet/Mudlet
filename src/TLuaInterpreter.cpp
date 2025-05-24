@@ -2960,6 +2960,16 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendCmdLine
+int TLuaInterpreter::sendCmdLine(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "command");
+    Host& host = getHostFromLua(L);
+    host.sendCmdLine(text);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send
 // Note this is registered as send NOT sendRaw - see initLuaGlobals()
 // It converts the bytes in the command (the first argument) from Utf-8 to be
@@ -5070,6 +5080,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
+    lua_register(pGlobalLua, "sendCmdLine", TLuaInterpreter::sendCmdLine);
     lua_register(pGlobalLua, "send", TLuaInterpreter::sendRaw);
     lua_register(pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup);
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
