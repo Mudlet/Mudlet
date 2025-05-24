@@ -4288,7 +4288,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         for (size_t i = 0; i < big5SequenceLength; ++i) {
             debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
-        qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
+        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg;
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
