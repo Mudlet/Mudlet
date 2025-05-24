@@ -2161,13 +2161,32 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
-        // OSC 8 ;params;URI [;optional text]
-        QStringList parts = sequence.mid(2).split(';');
+        // Handle OSC 8 hyperlinks in the form: "8;params;URI"
+        // Skip the selector "8" but retain semicolons for parsing
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC 8] Raw sequence: " << sequence;
+        qDebug().noquote() << "[OSC 8] Raw hex: " << sequence.toUtf8().toHex(' ');
+#endif
+        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
+        int firstSemi = rest.indexOf(';');
 
-        // OSC 8 ;; ST closes the hyperlink
-        if ((parts.size() == 3 && parts[0].isEmpty() && parts[1].isEmpty() && parts[2].isEmpty()) ||
-            (parts.size() == 2 && parts[0].isEmpty() && parts[1].isEmpty()) ||
-            (parts.size() == 1 && parts[0].isEmpty())) {
+        if (firstSemi == -1) {
+            qWarning() << "OSC 8: Missing first semicolon";
+            return;
+        }
+
+        int secondSemi = rest.indexOf(';', firstSemi + 1);
+
+        if (secondSemi == -1) {
+            qWarning() << "OSC 8: Missing second semicolon";
+            return;
+        }
+
+        QString param = rest.left(firstSemi).toString();
+        QString url = rest.mid(secondSemi + 1).toString();
+
+        // OSC 8 ;; with empty param and URI closes the hyperlink
+        if ((param.isEmpty() && url.isEmpty())) {
             mCurrentHyperlinkUrl.clear();
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
@@ -2176,10 +2195,8 @@ void TBuffer::decodeOSC(const QString& sequence)
             break;
         }
 
-        if (parts.size() >= 2) {
-            // Validation logic for hyperlink URL
-            QString url = parts[1];
-
+        if (!url.isEmpty()) {
+            // Reject unsupported or overly long URLs
             if (url.length() > 2048) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << url;
                 return;
@@ -2209,7 +2226,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 hint = { QString("%1: %2").arg(QObject::tr("Open browser to"), url) };
             }
 
-            // Update hyperlink state for subsequent text
+            // Register hyperlink and associate it with upcoming text
             mCurrentHyperlinkUrl = url;
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
