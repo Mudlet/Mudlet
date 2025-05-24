@@ -2205,25 +2205,23 @@ void TBuffer::decodeOSC(const QString& sequence)
             QUrl qurl(url);
             const QString scheme = qurl.scheme().toLower();
 
-            if (!(scheme == "http" || scheme == "https" || url.startsWith("send:") || url.startsWith("prompt:"))) {
-                qWarning() << "TBuffer::decodeOSC(...) - Blocked unsupported or unsafe URL scheme:" << url;
-                return;
-            }
-
             QStringList command;
             QStringList hint;
 
-            if (url.startsWith("send:")) {
-                QString sendCommand = url.mid(5);
+            if (scheme == "send") {
+                QString sendCommand = qurl.path(); // or url.mid(5);
                 command = { QString("send([[%1]])").arg(sendCommand) };
                 hint = { QString("%1: %2").arg(QObject::tr("Send"), sendCommand) };
-            } else if (url.startsWith("prompt:")) {
-                QString promptCommand = url.mid(7);
+            } else if (scheme == "prompt") {
+                QString promptCommand = qurl.path(); // or url.mid(7);
                 command = { QString("sendCmdLine([[%1]])").arg(promptCommand) };
                 hint = { QString("%1: %2").arg(QObject::tr("Prompt"), promptCommand) };
-            } else {
+            } else if (scheme == "http" || scheme == "https") {
                 command = { QString("openUrl([[%1]])").arg(url) };
                 hint = { QString("%1: %2").arg(QObject::tr("Open browser to"), url) };
+            } else {
+                qWarning() << "TBuffer::decodeOSC(...) - Blocked unsupported or unsafe URL scheme:" << url;
+                return;
             }
 
             // Register hyperlink and associate it with upcoming text
