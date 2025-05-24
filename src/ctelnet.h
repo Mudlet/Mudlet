@@ -220,6 +220,7 @@ public:
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
+    bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
@@ -397,6 +398,7 @@ private:
     bool enableMSSP = false;
     bool enableMSDP = false;
     bool enableMSP = false;
+    bool enableMXP = false;
     bool enableChannel102 = false;
     bool mDontReconnect = false;
     bool mAutoReconnect = false;

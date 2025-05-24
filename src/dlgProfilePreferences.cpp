@@ -626,7 +626,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
-    mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
@@ -893,6 +892,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
+
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP->setCheckable(true);
+    mEnableMXP->setChecked(pHost->mEnableMXP);
+    protocolMenu->addAction(mEnableMXP);
 
     mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
     mEnableMTTS->setCheckable(true);
@@ -1230,6 +1234,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
@@ -1350,6 +1355,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSP, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
 
@@ -1382,7 +1388,6 @@ void dlgProfilePreferences::clearHostDetails()
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
 
-    mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
@@ -2919,6 +2924,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mEnableMSP = mEnableMSP->isChecked();
+        pHost->mEnableMXP = mEnableMXP->isChecked();
         pHost->mEnableMTTS = mEnableMTTS->isChecked();
         pHost->mEnableMNES = mEnableMNES->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
@@ -2950,7 +2956,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-        pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();

@@ -222,6 +222,7 @@ private:
     QPointer<QAction> mEnableMSDP;
     QPointer<QAction> mEnableMSSP;
     QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
 

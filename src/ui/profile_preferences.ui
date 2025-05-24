@@ -3995,9 +3995,9 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="mFORCE_MXP_NEGOTIATION_OFF">
+           <widget class="QCheckBox" name="mForceNewEnvironNegotiationOff">
             <property name="text">
-             <string>Force MXP negotiation off</string>
+             <string>Force NEW_ENVIRON negotiation off</string>
             </property>
            </widget>
           </item>
@@ -4005,13 +4005,6 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QCheckBox" name="mFORCE_CHARSET_NEGOTIATION_OFF">
             <property name="text">
              <string>Force CHARSET negotiation off</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="mForceNewEnvironNegotiationOff">
-            <property name="text">
-             <string>Force NEW_ENVIRON negotiation off</string>
             </property>
            </widget>
           </item>
@@ -4517,7 +4510,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
-  <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
   <tabstop>mForceNewEnvironNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
