@@ -52,6 +52,7 @@
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
+#include <QPointer>
 
 using namespace std::chrono_literals;
 
@@ -3524,16 +3525,16 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
+                        QPointer<dlgProfilePreferences> safeThis(this);
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
-                        auto watcher = new QFutureWatcher<bool>;
-                        connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
+                        auto watcher = new QFutureWatcher<bool>(this);
+                        connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
+                            if (!safeThis) return;
                             if (future.result()) {
-                                populateThemesList();
-
-                                emit signal_themeUpdateCompleted();
+                                safeThis->populateThemesList();
+                                emit safeThis->signal_themeUpdateCompleted();
                             }
-
-                            theme_download_label->hide();
+                            safeThis->theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                         });
                         watcher->setFuture(future);

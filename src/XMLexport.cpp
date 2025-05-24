@@ -41,6 +41,7 @@
 #include <QFile>
 #include <sstream>
 #include "post_guard.h"
+#include <QPointer>
 
 XMLexport::XMLexport( Host * pH )
 : mpHost(pH)
@@ -192,13 +193,13 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         helpPackage.append_child("helpURL").text().set("");
     }
     if (async) {
+        QPointer<Host> safeHost(mpHost);
+        QPointer<XMLexport> safeExport(this);
         auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
-        auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
-            if (!mpHost) {
-                return;
-            }
-            mpHost->xmlSaved(fileName);
+        auto watcher = new QFutureWatcher<bool>(mpHost ? mpHost : this);
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost ? mpHost : this, [=]() {
+            if (!safeHost || !safeExport) return;
+            safeHost->xmlSaved(fileName);
         });
         watcher->setFuture(future);
         saveFutures.append(future);
@@ -212,14 +213,13 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 {
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
+    QPointer<Host> safeHost(mpHost);
+    QPointer<XMLexport> safeExport(this);
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
-
-    auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
-        if (!mpHost) {
-            return;
-        }
-        mpHost->xmlSaved(qsl("profile"));
+    auto watcher = new QFutureWatcher<bool>(mpHost ? mpHost : this);
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost ? mpHost : this, [=]() {
+        if (!safeHost || !safeExport) return;
+        safeHost->xmlSaved(qsl("profile"));
     });
     watcher->setFuture(future);
     saveFutures.append(future);
@@ -782,13 +782,13 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     auto mudletPackage = writeXmlHeader();
 
     if (writeGenericPackage(mpHost, mudletPackage)) {
+        QPointer<Host> safeHost(mpHost);
+        QPointer<XMLexport> safeExport(this);
         auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
-        auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
-            if (!mpHost) {
-                return;
-            }
-            mpHost->xmlSaved(qsl("profile"));
+        auto watcher = new QFutureWatcher<bool>(mpHost ? mpHost : this);
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost ? mpHost : this, [=]() {
+            if (!safeHost || !safeExport) return;
+            safeHost->xmlSaved(qsl("profile"));
         });
         watcher->setFuture(future);
         saveFutures.append(future);

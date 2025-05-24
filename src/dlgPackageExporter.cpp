@@ -40,6 +40,7 @@
 #include <QInputDialog>
 #include <QMimeData>
 #include "post_guard.h"
+#include <QPointer>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -613,21 +614,23 @@ void dlgPackageExporter::slot_exportPackage()
             isOk = false;
         } else {
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
-            auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
-                mExportingPackage = false;
-                checkToEnableExportButton();
+            QPointer<dlgPackageExporter> safeThis(this);
+            auto watcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=]() {
+                if (!safeThis) return;
+                safeThis->mExportingPackage = false;
+                safeThis->checkToEnableExportButton();
 
                 if (auto [isOk, errorMsg] = future.result(); !isOk) {
-                    displayResultMessage(errorMsg, false);
+                    safeThis->displayResultMessage(errorMsg, false);
                 } else {
-                    displayResultMessage(tr("Package \"%1\" exported to: %2")
+                    safeThis->displayResultMessage(tr("Package \"%1\" exported to: %2")
                                                  .arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>")
                                                                             .arg(getActualPath().toHtmlEscaped())),
                                          true);
                 }
-                mCancelButton->setVisible(false);
-                mCloseButton->setVisible(true);
+                safeThis->mCancelButton->setVisible(false);
+                safeThis->mCloseButton->setVisible(true);
                 QApplication::restoreOverrideCursor();
             });
             watcher->setFuture(future);

@@ -62,6 +62,7 @@
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
+#include <QPointer>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -433,6 +434,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    waitForProfileSave(); // Ensure all async operations are finished before destruction
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
@@ -939,18 +941,20 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     emit profileSaveStarted();
     qApp->processEvents();
 
-    auto watcher = new QFutureWatcher<void>;
+    auto watcher = new QFutureWatcher<void>(this); // Set parent to Host
+    QPointer<Host> safeHost(this); // Guard for lambda
     mModuleFuture = QtConcurrent::run([=, this]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+        if (!safeHost) return; // Host may have been deleted
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
-            reloadModules();
+            safeHost->reloadModules();
         }
-        mWritingHostAndModules = false;
+        safeHost->mWritingHostAndModules = false;
     });
     watcher->setFuture(mModuleFuture);
     return {true, filename_xml, QString()};
