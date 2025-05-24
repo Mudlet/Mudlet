@@ -703,6 +703,8 @@ public:
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
+    bool mEnableClosedCaption = false;
+
     enum class BlankLineBehaviour {
         Show,
         Hide,
