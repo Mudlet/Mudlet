@@ -321,8 +321,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // option areas
     mpErrorConsole = new TConsole(mpHost, qsl("errors_%1").arg(hostName), TConsole::ErrorConsole, this);
     mpErrorConsole->setWrapAt(100);
-    mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
-    mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
+    mpErrorConsole->slot_toggleTimeStamps(true);
     mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);

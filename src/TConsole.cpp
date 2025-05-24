@@ -88,6 +88,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // which has its own title and icon set.
         setWindowTitle(tr("Debug Console"));
         mWrapAt = 50;
+        mShowTimeStamps = true;
     } else if (mType == MainConsole) {
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
@@ -309,8 +310,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     timeStampButton->setIcon(QIcon(qsl(":/icons/dialog-information.png")));
     timeStampButton->setToolTip(utils::richText(tr("Toggle time stamps")));
 
-    connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
-    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
+    // Using the QAbstractButton::clicked rather than QAbstractButton::toggled
+    // so that we can set the state of the button without getting the signal
+    // being raised:
+    connect(timeStampButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleTimeStamps);
 
     replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -2440,4 +2443,80 @@ void TConsole::clearSplit()
     mUpperPane->mIsTailMode = true;
     mUpperPane->updateScreenView();
     mUpperPane->forceUpdate();
+}
+
+void TConsole::raiseMudletResizeEvent()
+{
+    // Hiding the TConsole - particularly the main one, multiview is not active
+    // and the profile is being switched away from causes a zero column count
+    // even though the TConsole is not actually resized - so don't raise the
+    // Mudlet TEvent in that case:
+    auto characterDimensions = QSize(mUpperPane->getColumnCount(), mUpperPane->getRowCount());
+    if (!characterDimensions.width()) {
+        return;
+    }
+
+    // Showing, Hiding and then Showing the console will produce three resize
+    // events - whilst the prior step will prevent this method from generating
+    // and event for the hiding one the two successive showing ones will
+    // still get to here - so we also need to check that there HAS been an
+    // actual change in the dimensions - and abort if there hasn't:
+    if (mDimensions == characterDimensions) {
+        return;
+    }
+    mDimensions = characterDimensions;
+
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(qsl("sysConsoleSizeChanged"));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentList.append(mConsoleName);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentList.append(QString::number(characterDimensions.width()));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentList.append(QString::number(characterDimensions.height()));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentList.append(QString::number(mShowTimeStamps ? mudlet::smTimeStampFormat.size() : 0));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(mudletEvent);
+}
+
+void TConsole::slot_toggleTimeStamps(const bool state)
+{
+    if (mShowTimeStamps == state) {
+        return;
+    }
+
+    mShowTimeStamps = state;
+    if (mType == TConsole::MainConsole) {
+        if (timeStampButton->isChecked() != state) {
+            // using this will NOT cause the QAbstractButton::checked signal
+            // to be raised - which is why we use that rather than the
+            // QAbstractButton::toggled one
+            timeStampButton->setChecked(state);
+        }
+        const auto filePath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+        QSaveFile file(filePath);
+        if (state) {
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file);
+            if (!file.commit()) {
+                qDebug() << "TConsole::slot_toggleTimeStamps: error saving timestamp state: " << file.errorString();
+            }
+        } else {
+            QFile::remove(filePath);
+        }
+    }
+
+    // These hardly do anything now - just forces a redraw
+    mUpperPane->toggleTimeStamps(state);
+    mLowerPane->toggleTimeStamps(state);
+
+    if (mpHost && mType == TConsole::MainConsole) {
+        // Update and send out the NAWS data:
+        mpHost->updateDisplayDimensions();
+    }
+
+    if (mType & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole)) {
+        raiseMudletResizeEvent();
+    }
 }

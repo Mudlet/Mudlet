@@ -821,7 +821,7 @@ COMMIT_LINE:
                     lineBuffer << QString();
                 }
                 buffer.push_back(mMudBuffer);
-                timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+                timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
@@ -838,7 +838,7 @@ COMMIT_LINE:
                     lineBuffer.back().append(QString());
                 }
                 buffer.back() = mMudBuffer;
-                timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+                timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
@@ -2218,7 +2218,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2238,7 +2238,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << csmBlankTimeStamp;
+            timeBuffer << mudlet::smBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2271,7 +2271,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << csmBlankTimeStamp;
+                    timeBuffer << mudlet::smBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2289,7 +2289,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                 linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2319,7 +2319,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2338,7 +2338,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << csmBlankTimeStamp;
+            timeBuffer << mudlet::smBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2372,7 +2372,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << csmBlankTimeStamp;
+                    timeBuffer << mudlet::smBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2386,7 +2386,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2415,7 +2415,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
         promptBuffer << false;
         lastLine = 0;
     }
@@ -2435,7 +2435,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2770,7 +2770,7 @@ void TBuffer::log(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(csmTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(mudlet::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
 
@@ -3318,7 +3318,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(csmTimeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(mudlet::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200, 150, 0);

@@ -735,7 +735,7 @@ void cTelnet::checkNAWS()
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
     // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->mUpperPane->mShowTimeStamps ? TBuffer::csmTimeStampFormat.size() : 0);
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
