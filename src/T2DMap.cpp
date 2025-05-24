@@ -3293,6 +3293,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     updateSelectionWidget();
     update();
+    }
 }
 
 void T2DMap::updateSelectionWidget()
