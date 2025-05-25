@@ -163,9 +163,6 @@ else
   local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
-    status, result = pcall(dofile, packagePath)
-    if (status == false) then
-        error("Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
-    end
+    assert(pcall(dofile, packagePath))
   end
 end
