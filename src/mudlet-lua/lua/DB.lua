@@ -680,35 +680,55 @@ end
 ---   )
 ---   </pre>
 function db:add(sheet, ...)
+  assert(type(sheet) == "table", "db:add - first argument to must be a Sheet object.")
+  assert(sheet._db_name, "db:add - first argument to db:add must be a proper Sheet object.  _db_name is missing.")
+  assert(sheet._sht_name, "db:add - first argument to db:add must be a proper Sheet object.  _sht_name is missing.")
+  assert(db:_isActiveDBName(sheet._db_name), "db:add - Can not add to db("..sheet._db_name..") because it does not exist.  Did you forget to call db:create?")
+
+  local raw_records = {...}
+  assert(raw_records[1], "db:add - Called with no records.")
+  for _, t in ipairs(raw_records) do
+    assert(type(t) == "table", "db:add - Records must be a table of key-value pairs.")
+  end
+
+  local clean_records = {}
   local db_name = sheet._db_name
   local s_name = sheet._sht_name
-  assert(s_name, "First argument to db:add must be a proper Sheet object.")
+  local sql = ""
 
   local conn = db.__conn[db_name]
   local sql_insert = "INSERT INTO %s %s VALUES %s"
 
-  for _, t in ipairs({ ... }) do
-    if t._row_id then
-      -- You are not permitted to change a _row_id
-      t._row_id = nil
+  -- Create a copy of provided records so we
+  -- do not modify user's records.
+  for i, t in ipairs(raw_records) do
+    clean_records[i] = {}
+    for k, v in pairs(t) do
+      clean_records[i][k] = v
     end
+    -- You are not permitted to change a _row_id
+    clean_records[i]._row_id = nil
+  end
 
-    local sql = sql_insert:format(
+  for _, t in ipairs(clean_records) do
+    sql = sql + sql_insert:format(
       s_name,
       db:_sql_fields(t),
       db:_sql_values(t)
     )
-    db:echo_sql(sql)
-
-    local result, msg = conn:execute(sql)
-    if result == nil then
-      printError(msg, true, false)
-      return nil, msg
-    end
   end
+
+  db:echo_sql(sql)
+  local result, msg = conn:execute(sql)
+  if result == nil then
+    printError(msg, true, false)
+    return nil, msg
+  end
+
   if db.__autocommit[db_name] then
     conn:commit()
   end
+
   return true
 end
 
