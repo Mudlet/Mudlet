@@ -274,7 +274,6 @@ public:
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
     int find(int line, const QString& what, int pos);
-    int getCharWidth(const QChar& c);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);

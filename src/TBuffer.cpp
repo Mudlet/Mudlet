@@ -2474,14 +2474,6 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
     return offset;
 }
 
-int TBuffer::getCharWidth(const QChar& c)
-{
-    if (c == QChar::Tabulation) {
-        return 8;
-    }
-    return std::max(1, widechar_wcwidth(c.unicode()));
-}
-
 // find lindbreaks and indents (if not necessary, return empty list)
 inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, 
     const int maxWidth, const int indent, const int hangingIndent)
