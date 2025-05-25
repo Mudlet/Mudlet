@@ -121,6 +121,7 @@ public slots:
 
     // Media
     void slot_purgeMediaCache();
+    void slot_toggleEnableClosedCaption(const bool);
 
     // Log.
     void slot_setLogDir();
@@ -150,7 +151,6 @@ private slots:
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
-    void slot_changeEnableFullScreenMode(const bool);
     void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
     void slot_changeAutomaticUpdates(const bool);
@@ -169,7 +169,6 @@ private slots:
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
     void slot_enableDarkEditor(const QString&);
-    void slot_toggleMapDeleteButton(const bool);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
     void slot_deleteMap();
@@ -187,7 +186,7 @@ private:
     void setColors2();
     void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
-    void setButtonColor(QPushButton*, const QColor&);
+    void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -209,7 +208,6 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
 
-
     int mFontSize = 10;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
@@ -219,6 +217,13 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence*> currentShortcuts;
+    QPointer<QMenu> protocolMenu;
+    QPointer<QAction> mEnableGMCP;
+    QPointer<QAction> mEnableMSDP;
+    QPointer<QAction> mEnableMSSP;
+    QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMTTS;
+    QPointer<QAction> mEnableMNES;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

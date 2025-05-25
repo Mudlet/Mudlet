@@ -740,7 +740,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    painter.drawText(textRect, Qt::AlignCenter|Qt::TextDontClip|Qt::TextSingleLine, grapheme);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -1175,11 +1175,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     bool isOutOfbounds = false;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto eventPos = event->pos();
-#else
     auto eventPos = event->position().toPoint();
-#endif
     int lineIndex = std::max(0, (eventPos.y() / mFontHeight) + imageTopLine());
     int tCharIndex = convertMouseXToBufferX(eventPos.x(), lineIndex, &isOutOfbounds);
 
@@ -1260,11 +1256,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 // If a special tooltip hint was given, use that one.
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QToolTip::showText(event->globalPos(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
-#else
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
-#endif
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
@@ -1386,13 +1378,8 @@ void TTextEdit::slot_popupMenu()
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
     //new event to get mouse position on the parent window
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto eventPos = event->pos();
-    auto eventGlobalPos = event->globalPos();
-#else
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
-#endif
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(eventGlobalPos), eventGlobalPos, event->button(), event->buttons(), event->modifiers());
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
@@ -1868,13 +1855,8 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto eventPos = event->pos();
-    auto eventGlobalPos = event->globalPos();
-#else
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
-#endif
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
@@ -2530,9 +2512,23 @@ void TTextEdit::slot_analyseSelection()
                 utf16Vals.append(
                         qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse))
-                                .arg(qsl("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
-                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
-                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(), 4, 16, zero));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+                                .arg(qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                                                mpBuffer->lineBuffer.at(line).at(index + 1))),
+                                                   4, 16, zero).toUpper())
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()),
+                                     4, 16, zero)
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()),
+                                     4, 16, zero));
+#else
+                                .arg(qsl("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
+                                                                          mpBuffer->lineBuffer.at(line).at(index + 1)),
+                                                   4, 16, zero).toUpper())
+                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(),
+                                     4, 16, zero)
+                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(),
+                                     4, 16, zero));
+#endif
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
@@ -2604,8 +2600,15 @@ void TTextEdit::slot_analyseSelection()
 
                 utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
                                          .arg(QString::number(columnsToUse))
-                                         .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, QChar('0'))
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()),
+                                              4, 16, QChar('0'))
                                          .toUpper());
+#else
+                                         .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(),
+                                              4, 16, QChar('0'))
+                                         .toUpper());
+#endif
 
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>").arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
             }
