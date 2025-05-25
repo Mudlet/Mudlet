@@ -121,6 +121,7 @@ public slots:
 
     // Media
     void slot_purgeMediaCache();
+    void slot_toggleEnableClosedCaption(const bool);
 
     // Log.
     void slot_setLogDir();

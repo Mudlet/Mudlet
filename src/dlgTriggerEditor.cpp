@@ -7705,7 +7705,7 @@ void dlgTriggerEditor::saveOpenChanges()
 
 void dlgTriggerEditor::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (isActiveWindow()) {
         autoSave();
@@ -7783,7 +7783,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
-    Q_UNUSED(pE);
+    Q_UNUSED(pE)
 
     saveOpenChanges();
 }
@@ -10060,7 +10060,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
         connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
         // don't coalesce the format text action - not that it matters for us since we we only change
         // the text once during the undo group
-        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_None, false);
+        controller->endUndoGroup(edbee::CoalesceId_None, false);
     });
 
     menu->addAction(formatAction);

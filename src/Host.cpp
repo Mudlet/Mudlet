@@ -80,7 +80,11 @@ stopWatch::stopWatch()
 , mEffectiveStartDateTime()
 , mElapsedTime()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    mEffectiveStartDateTime.setTimeZone(QTimeZone::UTC);
+#else
     mEffectiveStartDateTime.setTimeSpec(Qt::UTC);
+#endif
 }
 
 bool stopWatch::start()
@@ -565,7 +569,7 @@ void Host::startMapAutosave(const int interval)
 
 void Host::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     autoSaveMap();
 }
@@ -1187,7 +1191,7 @@ bool Host::checkForCustomSpeedwalk()
 void Host::startSpeedWalk()
 {
     const int totalWeight = assemblePath();
-    Q_UNUSED(totalWeight);
+    Q_UNUSED(totalWeight)
     const QString f = qsl("doSpeedWalk");
     const QString n = QString();
     mLuaInterpreter.call(f, n);
@@ -2829,7 +2833,7 @@ void Host::setSpellDic(const QString& newDict)
 // DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
 void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
 {
-    Q_UNUSED(_useDictionary);
+    Q_UNUSED(_useDictionary)
     const bool useDictionary = true;
     bool dictionaryChanged {};
     // Copy the value while we have the lock:

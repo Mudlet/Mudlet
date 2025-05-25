@@ -2378,7 +2378,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         const int totalWeight = host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
-        Q_UNUSED(totalWeight);
+        Q_UNUSED(totalWeight)
         return warnArgumentValue(L, __func__, qsl("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
     host.startSpeedWalk();
@@ -2655,7 +2655,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
     auto& host = getHostFromLua(L);
     host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
-        Q_UNUSED(infoColor);
+        Q_UNUSED(infoColor)
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
