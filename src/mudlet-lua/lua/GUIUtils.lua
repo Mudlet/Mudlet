@@ -608,7 +608,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
     charsPerLine = fontSize
     fontSize = consoleName
     consoleName = windowName
-    windowname = "main"
+    windowName = "main"
   end
   assert(type(windowName) == 'string', 'createConsole: invalid type for windowName (expected string, got '..type(windowName)..'!)')
   assert(type(consoleName) == 'string', 'createConsole: invalid type for consoleName (expected string, got '..type(consoleName)..'!)')
@@ -715,7 +715,7 @@ end
 --- @see fg
 --- @see showColors
 function bg(console, colorName)
-  local colorName = colorName or console
+  colorName = colorName or console
   if colorName == nil then
     error("bg: bad argument #1 type (color name as string expected, got nil)!")
   end
@@ -743,7 +743,7 @@ end
 --- @see bg
 --- @see showColors
 function fg(console, colorName)
-  local colorName = colorName or console
+  colorName = colorName or console
   if colorName == nil then
     error("fg: bad argument #1 type (color name as string expected, got nil)!")
   end

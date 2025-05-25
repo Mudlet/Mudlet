@@ -110,6 +110,7 @@ local packages = {
   "TableUtils.lua",
   -- "Logging.lua", -- never documented and fails to load now
   "DebugTools.lua",
+  "DateTime.lua",
   "DB.lua",
   "geyser/Geyser.lua",
   "geyser/GeyserGeyser.lua",
