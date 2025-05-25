@@ -163,6 +163,6 @@ else
   local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
-    assert(pcall(dofile, packagePath))
+    dofile(packagePath)
   end
 end
