@@ -150,7 +150,7 @@ if debugLoading then
     echo("Trying to load: \"" .. packagePath .. "\"\n")
     status, result = pcall(dofile, packagePath)
     if (status == false) then
-        assert(status, "Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
+        error("Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
     end
     echo("Loaded: \"" .. packageName .. "\".\n\n")
   end
@@ -165,7 +165,7 @@ else
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
     status, result = pcall(dofile, packagePath)
     if (status == false) then
-        assert(status, "Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
+        error("Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
     end
   end
 end
