@@ -39,6 +39,11 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
         return 2;
     }
 
+    // fix to make red heart width 2
+    if (unicode == 0x2764) {
+        return 2;
+    }
+
     switch (widechar_wcwidth(unicode)) {
     case 1: // Draw as normal/narrow
         return 1;
