@@ -2162,7 +2162,6 @@ void TBuffer::decodeOSC(const QString& sequence)
         break;
     case static_cast<quint8>('8'): {
         // Handle OSC 8 hyperlinks in the form: "8;params;URI"
-        // Skip the selector "8" but retain semicolons for parsing
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug().noquote() << "[OSC 8] Raw sequence: " << sequence;
         qDebug().noquote() << "[OSC 8] Raw hex: " << sequence.toUtf8().toHex(' ');
@@ -2183,10 +2182,16 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         QString param = rest.left(firstSemi).toString();
-        QString url = rest.mid(secondSemi + 1).toString();
 
-        // OSC 8 ;; with empty param and URI closes the hyperlink
-        if ((param.isEmpty() && url.isEmpty())) {
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!param.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC 8] Params provided (not used by Mudlet but shown for debugging): \"" << param << "\"";
+        }
+#endif
+        QString rawUrl = rest.mid(secondSemi + 1).toString();
+
+        // OSC 8 ;; closes the hyperlink
+        if ((param.isEmpty() && rawUrl.isEmpty())) {
             mCurrentHyperlinkUrl.clear();
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
@@ -2195,37 +2200,39 @@ void TBuffer::decodeOSC(const QString& sequence)
             break;
         }
 
-        if (!url.isEmpty()) {
-            // Reject unsupported or overly long URLs
-            if (url.length() > 2048) {
-                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << url;
+        if (!rawUrl.isEmpty()) {
+            if (rawUrl.length() > 2048) {
+                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
             }
-
-            QUrl qurl(url);
-            const QString scheme = qurl.scheme().toLower();
 
             QStringList command;
             QStringList hint;
 
-            if (scheme == "send") {
-                QString sendCommand = qurl.path(); // or url.mid(5);
-                command = { qsl("send([[%1]])").arg(sendCommand) };
-                hint = { qsl("%1: %2").arg(QObject::tr("Send"), sendCommand) };
-            } else if (scheme == "prompt") {
-                QString promptCommand = qurl.path(); // or url.mid(7);
-                command = { qsl("sendCmdLine([[%1]])").arg(promptCommand) };
-                hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), promptCommand) };
-            } else if (scheme == "http" || scheme == "https") {
-                command = { qsl("openUrl([[%1]])").arg(url) };
-                hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), url) };
+            if (rawUrl.startsWith("send:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(5).toUtf8());
+                command = { qsl("send([[%1]])").arg(innerCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
+                mCurrentHyperlinkUrl = innerCommand;
+            } else if (rawUrl.startsWith("prompt:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(7).toUtf8());
+                command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
+                mCurrentHyperlinkUrl = innerCommand;
             } else {
-                qWarning() << "TBuffer::decodeOSC(...) - Blocked unsupported or unsafe URL scheme:" << url;
-                return;
+                QUrl qurl(rawUrl);
+                QString scheme = qurl.scheme().toLower();
+
+                if (scheme == "http" || scheme == "https" || scheme == "ftp") {
+                    command = { qsl("openUrl([[%1]])").arg(rawUrl) };
+                    hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), rawUrl) };
+                    mCurrentHyperlinkUrl = rawUrl;
+                } else {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
+                    return;
+                }
             }
 
-            // Register hyperlink and associate it with upcoming text
-            mCurrentHyperlinkUrl = url;
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
             mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
