@@ -2210,15 +2210,15 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (scheme == "send") {
                 QString sendCommand = qurl.path(); // or url.mid(5);
-                command = { QString("send([[%1]])").arg(sendCommand) };
-                hint = { QString("%1: %2").arg(QObject::tr("Send"), sendCommand) };
+                command = { qsl("send([[%1]])").arg(sendCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Send"), sendCommand) };
             } else if (scheme == "prompt") {
                 QString promptCommand = qurl.path(); // or url.mid(7);
-                command = { QString("sendCmdLine([[%1]])").arg(promptCommand) };
-                hint = { QString("%1: %2").arg(QObject::tr("Prompt"), promptCommand) };
+                command = { qsl("sendCmdLine([[%1]])").arg(promptCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), promptCommand) };
             } else if (scheme == "http" || scheme == "https") {
-                command = { QString("openUrl([[%1]])").arg(url) };
-                hint = { QString("%1: %2").arg(QObject::tr("Open browser to"), url) };
+                command = { qsl("openUrl([[%1]])").arg(url) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), url) };
             } else {
                 qWarning() << "TBuffer::decodeOSC(...) - Blocked unsupported or unsafe URL scheme:" << url;
                 return;
