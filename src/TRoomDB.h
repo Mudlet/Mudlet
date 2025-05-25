@@ -49,6 +49,7 @@ class TRoomDB
 
 public:
     explicit TRoomDB(TMap*);
+    ~TRoomDB();
 
     TRoom* getRoom(int id);
     TArea* getArea(int id);

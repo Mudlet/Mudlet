@@ -1196,7 +1196,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             alertText = tr("[ ALERT ] - Empty and duplicate area names detected in Map file!");
             informativeText = tr("[ INFO ]  - Mudlet had previously allowed the map to have more than one area\n"
                                   "with the same or no name. To resolve these cases, an area without a name\n"
-                                  "here (or created in the future) will automatically be assigned the name \"%1\".\n"
+                                  "here (or created in the future) will automatically be assigned the name "%1".\n"
                                   "Duplicated area names will cause all but the first encountered one to gain a\n"
                                   "\"_###\" style suffix.\n"
                                  "%2").arg(mpMap->getUnnamedAreaName(), extraTextForMatchingSuffixAlreadyUsed);
@@ -1225,10 +1225,10 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "allowed the map to have an area with no name. This can make some\n"
                                  "things confusing and is now disallowed.\n"
                                  "  To resolve this case, the area without a name here (or one created\n"
-                                 "in the future) will automatically be assigned the name \"%1\".\n"
+                                 "in the future) will automatically be assigned the name "%1".\n"
                                  "  If this happens more then once the duplication of area names will\n"
-                                 "cause all but the first encountered one to gain a \"_###\" style\n"
-                                 "suffix where each \"###\" is an increasing number; you may wish to\n"
+                                 "cause all but the first encountered one to gain a "_###" style\n"
+                                 "suffix where each "###" is an increasing number; you may wish to\n"
                                  "change these, perhaps by adding more meaningful area names but it is\n"
                                  "entirely up to you what is used, other then you will not be able to\n"
                                  "set one area's name to that of another that exists at the time.")
@@ -1246,7 +1246,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
     if (!areaNamesMap.contains(-1)) {
         areaNamesMap.insert(-1, mpMap->getDefaultAreaName());
         const QString defaultAreaNameInsertionMsg = tr("[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an\n"
-                                                 "area) not found, adding \"%1\" against the reserved -1 id.")
+                                                 "area) not found, adding "%1" against the reserved -1 id.")
                                                       .arg(mpMap->getDefaultAreaName());
         mpMap->mpHost->postMessage(defaultAreaNameInsertionMsg);
         mpMap->appendErrorMsgWithNoLf(defaultAreaNameInsertionMsg, false);
@@ -1323,4 +1323,22 @@ qreal TRoomDB::get2DMapZoom(const int areaId) const
         return T2DMap::csmDefaultXYZoom;
     }
     return pA->get2DMapZoom();
+}
+
+TRoomDB::~TRoomDB()
+{
+    // Delete all rooms
+    for (auto room : rooms) {
+        delete room;
+    }
+    rooms.clear();
+    // Delete all areas
+    for (auto area : areas) {
+        delete area;
+    }
+    areas.clear();
+    areaNamesMap.clear();
+    entranceMap.clear();
+    hashToRoomID.clear();
+    roomIDToHash.clear();
 }
