@@ -718,6 +718,8 @@ function db:add(sheet, ...)
     )
   end
 
+  sql = sql .. "COMMIT;"
+
   db:echo_sql(sql)
   local result, msg = conn:execute(sql)
   if result == nil then
