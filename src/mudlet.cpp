@@ -5060,7 +5060,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
-                                                      qsl("ashyriamud.com"),
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
