@@ -160,7 +160,7 @@ else
   luaGlobalPath = luaGlobalPath or lfs.currentdir()
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
-  local packagePath, status, result = "", false, ""
+  local packagePath = ""
   for _, packageName in ipairs(packages) do
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
     dofile(packagePath)
