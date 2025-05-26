@@ -4282,6 +4282,9 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
             }
         } else {
             // Unable to decode it - no Qt decoder...!
+#if defined(DEBUG_BIG5_PROCESSING)
+            qDebug().nospace() << "No Qt decoder found...";
+#endif
             isValid = false;
             isToUseReplacementMark = true;
         }
