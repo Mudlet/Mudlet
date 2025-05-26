@@ -269,8 +269,11 @@ end
 ---
 --- @see remember
 function loadVars()
+  local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
-    _sep = "/" else _sep = "\\"
+    _sep = "/"
+  else
+    _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
   local lt_VariableHolder = {}
@@ -288,8 +291,11 @@ end
 ---
 --- @see loadVars
 function saveVars()
+  local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
-    _sep = "/" else _sep = "\\"
+    _sep = "/"
+  else
+    _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
   for k, _ in pairs(_saveTable) do
@@ -493,7 +499,7 @@ end
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
 function speedwalk(dirString, backwards, delay, show)
-  local dirString = dirString:lower()
+  dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
   speedwalkShow = show
@@ -625,7 +631,8 @@ end
 
 --- <b><u>TODO</u></b> getColorWildcard(color)
 function getColorWildcard(color)
-  local color, results, startc, endc = tonumber(color), {}, nil, nil
+  color = tonumber(color)
+  local results, startc, endc = {}, nil, nil
 
   for i = 0, string.len(line) do
     selectSection(i, 1)
@@ -726,22 +733,6 @@ function deleteMultiline(maxLines)
     moveCursorUp()
   end
   return true
-end
-
-function shms(seconds, bool)
-  local seconds = tonumber(seconds)
-  assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
-
-  local s = seconds
-  local ss = string.format("%02d", math.fmod(s, 60))
-  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
-  local hh = string.format("%02d", (s / (60 * 60)))
-
-  if bool then
-    cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
-  else
-    return hh, mm, ss
-  end
 end
 
 -- returns true if your Mudlet is older than the given version

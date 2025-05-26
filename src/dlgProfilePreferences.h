@@ -39,6 +39,7 @@
 #include <QDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
+#include <QFontDialog>
 #include <QMap>
 #include "post_guard.h"
 
@@ -209,6 +210,7 @@ private:
     void fillOutMapHistory();
 
     int mFontSize = 10;
+    QFont mDisplayFont;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;

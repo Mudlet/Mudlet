@@ -3178,7 +3178,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             setMouseTracking(false);
             mRoomBeingMoved = false;
-        } else if (!mPopupMenu) {
+        } else {
+            mPopupMenu = false;
             // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
             mMultiSelection = !mMapViewOnly;
             mMultiRect = QRect(event->pos(), event->pos());
@@ -3282,11 +3283,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 mMultiSelection = false;
                 mHelpMsg.clear();
             }
-
-        } else { // In popup menu, so end that
-            mPopupMenu = false;
         }
-
     }
 
     TEvent sysMapWindowMousePressEvent{};

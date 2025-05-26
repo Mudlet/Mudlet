@@ -191,7 +191,7 @@ end
 ---setMovie allows to set a gif animation on a label
 -- @param fileName the path to the gif file
 function Geyser.Label:setMovie(fileName)
-  result, error = setMovie(self.name, fileName)
+  local result, error = setMovie(self.name, fileName)
   self:autoAdjustSize()
   return result, error
 end
