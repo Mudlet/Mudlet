@@ -399,7 +399,7 @@ end
 ---   }
 ---   </pre>
 function table.intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
@@ -437,7 +437,7 @@ end
 ---   This is an intersection of unique values. The order and keys of the input tables are
 ---   not preserved.
 function table.n_intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
