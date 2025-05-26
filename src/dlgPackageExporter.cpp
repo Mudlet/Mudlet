@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2022, 2024 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2022, 2024-2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -866,13 +866,9 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("description"), packageDescription);
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
-    QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    const int offset = iso8601timestamp.offsetFromUtc();
-    iso8601timestamp.setOffsetFromUtc(offset);
-    QDateTime iso8601time(QDateTime::currentDateTime());
-    iso8601time.setTimeSpec(Qt::OffsetFromUTC);
-    mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
-    mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
+    const auto iso8601timestamp = utils::dateStamp();
+    mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp));
+    mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp));
 
     const QString luaConfig = qsl("%1/config.lua").arg(stagingDirName);
     QSaveFile configFile(luaConfig);
@@ -980,7 +976,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     QMap<QString, QString> fileEntries;
     while (stagingFile.hasNext() && isOk) {
         const QString itEntry = stagingFile.next();
-        Q_UNUSED(itEntry);
+        Q_UNUSED(itEntry)
         // Dot and DotDot entries are no use to us so skip them
         if (!(stagingFile.fileName().compare(qsl(".")) && stagingFile.fileName().compare(qsl("..")))) {
             // Dot and DotDot entries are no use to us so skip them
@@ -1144,14 +1140,14 @@ void dlgPackageExporter::slot_addFiles()
     if (dialogListView) {
         dialogListView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         //button would be disabled if no folder is selected
-        connect(dialogListView, &QListView::clicked, this, [=, this] { button->setEnabled(true); });
+        connect(dialogListView, &QListView::clicked, this, [=] { button->setEnabled(true); });
     }
     QTreeView* dialogTreeView = fDialog->findChild<QTreeView*>();
     if (dialogTreeView) {
         dialogTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        connect(dialogTreeView, &QTreeView::clicked, this, [=, this] { button->setEnabled(true); });
+        connect(dialogTreeView, &QTreeView::clicked, this, [=] { button->setEnabled(true); });
     }
-    connect(button, &QPushButton::clicked, this, [=, this] { fDialog->QDialog::accept(); });
+    connect(button, &QPushButton::clicked, this, [=] { fDialog->QDialog::accept(); });
     if (fDialog->exec()) {
         selectedFiles = fDialog->selectedFiles();
     }
@@ -1593,8 +1589,12 @@ void dlgPackageExporter::slot_cancelExport()
 }
 
 //Description Class TextEdit
-dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW) : QTextEdit(pW) {}
-dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
+dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
+: QTextEdit(pW)
+{}
+
+dlgPackageExporterDescription::~dlgPackageExporterDescription()
+{}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {

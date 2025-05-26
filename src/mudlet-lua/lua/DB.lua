@@ -2,200 +2,10 @@
 --- Mudlet DB
 ----------------------------------------------------------------------------------
 
-
--- TODO will be already loaded in LuaGlobal
------------------------------------------------------------------------------
--- General-purpose useful tools that were needed during development:
------------------------------------------------------------------------------
-if package.loaded["rex_pcre"] then
-  rex = require "rex_pcre"
-end
-
-if not display then
-  require "DebugTools"
-end
-if not table.contains then
-  require "TableUtils"
-end
-if not string.trim then
-  require "StringUtils"
-end
-
--- TODO those functions are already definde elsewhere
-function string.starts(String, Start)
-  return string.sub(String, 1, string.len(Start)) == Start
-end
-
-function string.ends(String, End)
-  return End == '' or string.sub(String, -string.len(End)) == End
-end
-
-
-
-
--- TODO move to StringUtils?
------------------------------------------------------------------------------
--- Some Date / Time parsing functions.
------------------------------------------------------------------------------
-datetime = {
-  _directives = {
-    ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-    ["%B"] = "(?P<month_name>january|february|march|april|may|june|july|august|september|october|november|december)",
-    ["%d"] = "(?P<day_of_month>\\d{2})",
-    ["%H"] = "(?P<hour_24>\\d{2})",
-    ["%I"] = "(?P<hour_12>\\d{2})",
-    ["%m"] = "(?P<month>\\d{2})",
-    ["%M"] = "(?P<minute>\\d{2})",
-    ["%p"] = "(?P<ampm>am|pm)",
-    ["%S"] = "(?P<second>\\d{2})",
-    ["%y"] = "(?P<year_half>\\d{2})",
-    ["%Y"] = "(?P<year_full>\\d{4})"
-  },
-  _pattern_cache = {},
-  _month_names = {
-    ["january"] = 1,
-    ["february"] = 2,
-    ["march"] = 3,
-    ["april"] = 4,
-    ["may"] = 5,
-    ["june"] = 6,
-    ["july"] = 7,
-    ["august"] = 8,
-    ["september"] = 9,
-    ["october"] = 10,
-    ["november"] = 11,
-    ["december"] = 12
-  },
-  _abbrev_month_names = {
-    ["jan"] = 1,
-    ["feb"] = 2,
-    ["mar"] = 3,
-    ["apr"] = 4,
-    ["may"] = 5,
-    ["jun"] = 6,
-    ["jul"] = 7,
-    ["aug"] = 8,
-    ["sep"] = 9,
-    ["oct"] = 10,
-    ["nov"] = 11,
-    ["dec"] = 12
-  }
-}
-
--- the timestamp is stored in UTC time, so work out the difference in seconds
--- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
-function datetime:calculate_UTCdiff(ts)
-  local date, time = os.date, os.time
-  local utc = date('!*t', ts)
-  local lcl = date('*t', ts)
-  lcl.isdst = os.date("*t")["isdst"]
-  return os.difftime(time(lcl), time(utc))
-end
-
--- NOT LUADOC
--- The rex.match function does not return named patterns even if you use named capture
--- groups, but the r:tfind does -- but this only operates on compiled patterns. So,
--- we are caching the conversion of 'simple format' date patterns into a regex, and
--- then compiling them.
-function datetime:_get_pattern(format)
-  if not datetime._pattern_cache[format] then
-    local fmt = rex.gsub(format, "(%[A-Za-z])",
-    function(m)
-      return datetime._directives[m] or m
-    end
-    )
-
-    datetime._pattern_cache[format] = rex.new(fmt, rex.flags().CASELESS)
-  end
-
-  return datetime._pattern_cache[format]
-end
-
-
-
---- Parses the specified source string, according to the format if given, to return a representation of
---- the date/time. The default format if not specified is: "^%Y-%m-%d %H:%M:%S$" <br/><br/>
----
---- If as_epoch is provided and true, the return value will be a Unix epoch -- the number
---- of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch
---- is false, then a Lua time table will be returned. Details of the time tables are provided
---- in the http://www.lua.org/pil/22.1.html. <br/><br/>
----
---- Supported Format Codes
----   </pre>
----   %b   Abbreviated Month Name
----   %B   Full Month Name
----   %d   Day of Month
----   %H   Hour (24-hour format)
----   %I   Hour (12-hour format, requires %p as well)
----   %p   AM or PM
----   %m   2-digit month (01-12)
----   %M   2-digit minutes (00-59)
----   %S   2-digit seconds (00-59)
----   %y   2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
----   %Y   4-digit year.
----   </pre>
-function datetime:parse(source, format, as_epoch)
-  if not format then
-    format = "^%Y-%m-%d %H:%M:%S$"
-  end
-
-  local fmt = datetime:_get_pattern(format)
-  local m = { fmt:tfind(source) }
-
-  if m and m[3] then
-    m = m[3]
-    dt = {}
-
-    if m.year_half then
-      dt.year = tonumber("20" .. m.year_half)
-    elseif m.year_full then
-      dt.year = tonumber(m.year_full)
-    end
-
-    if m.month then
-      dt.month = tonumber(m.month)
-    elseif m.month_name then
-      dt.month = datetime._month_names[m.month_name:lower()]
-    elseif m.abbrev_month_name then
-      dt.month = datetime._abbrev_month_names[m.abbrev_month_name:lower()]
-    end
-
-    dt.day = m.day_of_month
-
-    if m.hour_12 then
-      assert(m.ampm, "You must use %p (AM|PM) with %I (12-hour time)")
-      if m.ampm == "PM" then
-        dt.hour = 12 + tonumber(m.hour_12)
-      else
-        dt.hour = tonumber(m.hour_12)
-      end
-    else
-      dt.hour = tonumber(m.hour_24)
-    end
-
-    dt.min = tonumber(m.minute)
-    dt.sec = tonumber(m.second)
-    dt.isdst = os.date("*t")["isdst"]
-
-    if as_epoch then
-      return os.time(dt)
-    else
-      return dt
-    end
-  else
-    return nil
-  end
-end
-
-
-
------------------------------------------------------------------------------
--- The database wrapper library
------------------------------------------------------------------------------
 if package.loaded["luasql.sqlite3"] then
   luasql = require "luasql.sqlite3"
 end
+
 
 db = {}
 db.__autocommit = {}
@@ -301,11 +111,11 @@ end
 -- The column_spec is either a string or an indexed table. This function returns either "column" or
 -- "column1", "column2" for use in the column specification of INSERT.
 function db:_sql_columns(value)
+  local col_chunks = {}
   local colstr = ''
   local t = type(value)
 
   if t == "table" then
-    col_chunks = {}
     for _, v in ipairs(value) do
       -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
       if v:lower() == "desc" or v:lower() == "asc" then
@@ -386,7 +196,15 @@ function db:safe_name(name)
   return name
 end
 
+function db:_isActiveDBName(db_name)
+  db_name = db:safe_name(db_name)
 
+  return (
+    db.__conn[db_name]
+    and db.__conn[db_name] ~= 'SQLite3 connection (closed)'
+    and io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+  )
+end
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
@@ -443,7 +261,7 @@ function db:create(db_name, sheets, force)
 
   db_name = db:safe_name(db_name)
 
-  if not db.__conn[db_name] or db.__conn[db_name] == 'SQLite3 connection (closed)' or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
+  if not db:_isActiveDBName(db_name) then
     db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
     db.__conn[db_name]:setautocommit(false)
     db.__autocommit[db_name] = true
@@ -1532,15 +1350,63 @@ function db:OR(left, right)
 end
 
 
-
---- <b><u>TODO</u></b>
-function db:close()
-  for _, c in pairs(db.__conn) do
-    c:close()
+--- Closes all databases.
+--- @return boolean result Returns true if all databases closed successfully and false otherwise 
+--- @return string message
+function db:_closeAll()
+  if db.__env == nil then
+    return false, "database environment is nil, did you forget to call db:create?"
   end
+
+  local result, msgs = true, {}
+  for db_name, conn in pairs(db.__conn) do
+    if not conn:close() then
+      result = false
+      table.insert(msgs, "database object for "..db_name.." is already closed.")
+    end
+  end
+
   db.__conn = {}
   db.__env:close()
   db.__env = nil
+
+  return result, table.concat(msgs, "\n")
+end
+
+
+--- Closes the named database or all databases if no name is provided.
+--- @param db_name string|nil The name of the database to close.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the database failed to close.
+function db:close(db_name)
+  if db.__env == nil then
+    return false, "database environment is nil, did you forget to call db:create?"
+  end
+
+  if db_name == nil then
+    return db:_closeAll()
+  end
+
+  assert(
+    type(db_name) == "string",
+    "expected db_name to be string or nil but recieved "..type(db_name).."."
+  )
+
+  db_name = db:safe_name(db_name)
+  if not db:_isActiveDBName(db_name) then
+    return false, "can not close "..db_name.." because it does not exist.  Did you forget to call db:create?"
+  end
+
+  if db.__conn[db_name]:close() then
+    db.__conn[db_name] = nil
+    
+    return true, ""
+  else
+    
+    return false, "database object is already closed."
+  end
+
+  
 end
 
 
@@ -1636,13 +1502,15 @@ db.__SheetMT = {
     local errormsg = "Attempt to access field '%s' which does not exist (in sheet '%s' within database '%s')"
 
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
+    local field_type = ""
+    local rt
     if assert(field, errormsg:format(k, sht_name, db_name)) then
-      type_ = type(field)
-      if type_ == "table" and field._timestamp then
-        type_ = "datetime"
+      field_type = type(field)
+      if field_type == "table" and field._timestamp then
+        field_type = "datetime"
       end
 
-      rt = setmetatable({ database = db_name, sheet = sht_name, type = type_, name = f_name }, db.__FieldMT)
+      rt = setmetatable({ database = db_name, sheet = sht_name, type = field_type, name = f_name }, db.__FieldMT)
       rawset(t, k, rt)
       return rt
     end
@@ -1660,12 +1528,13 @@ db.__DatabaseMT = {
       return v
     end
 
-    local v = rawget(db.Database, k)
+    v = rawget(db.Database, k)
     if v then
       return v
     end
 
     local db_name = rawget(t, "_db_name")
+    local rt
     if assert(db.__schema[db_name][k], "Attempt to access sheet '" .. k .. "'in db '" .. db_name .. "' that does not exist.") then
       rt = setmetatable({ _db_name = db_name, _sht_name = k }, db.__SheetMT)
       rawset(t, k, rt)
@@ -1740,7 +1609,7 @@ function db:get_database(db_name)
   db_name = db:safe_name(db_name)
   assert(db.__schema[db_name], "Attempt to access database that does not exist.")
 
-  db_inst = { _db_name = db_name }
+  local db_inst = { _db_name = db_name }
   return setmetatable(db_inst, db.__DatabaseMT)
 end
 

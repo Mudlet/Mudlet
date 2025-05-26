@@ -72,9 +72,8 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 
 void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(exitStatus);
-
+    Q_UNUSED(exitCode)
+    Q_UNUSED(exitStatus)
     running = false;
 }
 

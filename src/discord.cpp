@@ -259,7 +259,7 @@ void Discord::setParty(Host* pHost, int partySize, int partyMax)
 
 void Discord::timerEvent(QTimerEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (mLoaded) {
         Discord_RunCallbacks();

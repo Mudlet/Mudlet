@@ -133,7 +133,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TTimer* timer)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TTimer("
                     << "name= " << timer->getName()
                     << " time= " << timer->getTime()
