@@ -1055,6 +1055,18 @@ describe("Tests DB.lua functions", function()
     end)
 
 
+    it("should fetch the same current timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.current:as_number(), input.current:as_number())
+      assert.are.same(result.current:as_string(), input.current:as_string())
+      assert.are.same(result.current:as_table(), input.current:as_table())
+    end)
+
     it("should fetch the same epoch timestamp as what was put in.",
     function()
       db:add(mydb.sheet, input)
@@ -1086,6 +1098,8 @@ describe("Tests DB.lua functions", function()
       assert.is_true(#results == 1)
 
       local result = results[1]
+      display(input)
+      display(result)
       assert.are.same(result.niled._timestamp, input.niled._timestamp)
     end)
 
