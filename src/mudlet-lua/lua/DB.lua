@@ -170,7 +170,7 @@ function db:_sql_values(values)
       if not v._timestamp then
         s = "NULL"
       elseif v._timestamp == "CURRENT_TIMESTAMP" then
-        s = "datetime('now', 'unixepoch')"
+        s = "datetime('now')"
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
