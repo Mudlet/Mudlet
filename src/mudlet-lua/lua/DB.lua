@@ -169,6 +169,8 @@ function db:_sql_values(values)
     elseif t == "table" and v._timestamp ~= nil then
       if not v._timestamp then
         s = "NULL"
+      elseif v._timestamp == "CURRENT_TIMESTAMP" then
+        s = "datetime('now', 'unixepoch')"
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
