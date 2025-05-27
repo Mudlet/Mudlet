@@ -140,7 +140,7 @@ function datetime:parse(source, format, as_epoch)
 
     dt.min = tonumber(m.minute)
     dt.sec = tonumber(m.second)
-    dt.isdst = os.date("*t")["isdst"]
+    dt.isdst = os.date("*t", os.time(dt))["isdst"]
 
     if as_epoch then
       return os.time(dt)
