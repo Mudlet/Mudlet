@@ -1083,6 +1083,8 @@ function db:_coerce(field, value)
   elseif field.type == "datetime" then
     if value._timestamp == false then
       return "NULL"
+    elseif value._timestamp == "CURRENT_TIMESTAMP" then
+      return "datetime('now')"
     else
       return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
     end
