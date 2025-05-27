@@ -52,7 +52,7 @@ function datetime:calculate_UTCdiff(ts)
   local date, time = os.date, os.time
   local utc = date('!*t', ts)
   local lcl = date('*t', ts)
-  lcl.isdst = os.date("*t")["isdst"]
+  lcl.isdst = false
   return os.difftime(time(lcl), time(utc))
 end
 
