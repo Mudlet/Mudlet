@@ -751,7 +751,9 @@ function db:aggregate(field, fn, query, distinct)
       return count
     end
     -- Only datetime left
-    return db:Timestamp(count)
+    local utc_epoch = datetime:parse(count, nil, true)
+    local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+    return db:Timestamp(utc_epoch + locale_diff)
   else
     return 0
   end
@@ -1060,7 +1062,10 @@ function db:_coerce_sheet(columns, sheet, tbl)
           if (tbl[k] == nil) then
             tbl[k] = db:Timestamp(nil)
           else
-            tbl[k] = db:Timestamp(tbl[k])
+            -- the value, tbl[k], is a UTC timestamp
+            local utc_epoch = datetime:parse(tbl[k], nil, true)
+            local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+            tbl[k] = db:Timestamp(utc_epoch + locale_diff)
           end
         end
       end
