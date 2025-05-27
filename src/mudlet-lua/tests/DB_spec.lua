@@ -1033,4 +1033,86 @@ describe("Tests DB.lua functions", function()
       assert.are.same(results, test)
     end)
   end)
+
+  describe("Tests, if timestamp handling works as intended",
+  function()
+    local input = {
+      current = db:Timestamp("CURRENT_TIMESTAMP"),
+      niled = db:Timestamp(nil),
+      epoched = db:Timestamp(1748288082), -- 2025-05-26T19:34:42+00:00
+      tabled = db:Timestamp({year=1970, month=1, day=1, hour=10, sec=1})
+    }
+
+    before_each(function()
+      mydb = db:create("mydbttimestamptesting", { sheet = input })
+    end)
+
+    after_each(function()
+      db:close()
+      local filename = getMudletHomeDir() .. "/mydbttimestamptesting.db"
+      os.remove(filename)
+      mydb = nil
+    end)
+
+
+    it("should fetch the same epoch timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.epoched:as_number(), input.epoched:as_number())
+      assert.are.same(result.epoched:as_string(), input.epoched:as_string())
+      assert.are.same(result.epoched:as_table(), input.epoched:as_table())
+    end)
+
+    it("should fetch the same table timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.tabled:as_number(), input.tabled:as_number())
+      assert.are.same(result.tabled:as_string(), input.tabled:as_string())
+      assert.are.same(result.tabled:as_table(), input.tabled:as_table())
+    end)
+
+    it("should fetch the same niled timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.niled._timestamp, input.niled._timestamp)
+    end)
+
+    it("should update without changing a timestamp's value.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      db:update(mydb.sheet, results[1])
+      results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+      local result = results[1]
+
+      assert.are.same(result.current:as_number(), input.current:as_number())
+      assert.are.same(result.current:as_string(), input.current:as_string())
+      assert.are.same(result.current:as_table(), input.current:as_table())
+
+      assert.are.same(result.epoched:as_number(), input.epoched:as_number())
+      assert.are.same(result.epoched:as_string(), input.epoched:as_string())
+      assert.are.same(result.epoched:as_table(), input.epoched:as_table())
+
+      assert.are.same(result.tabled:as_number(), input.tabled:as_number())
+      assert.are.same(result.tabled:as_string(), input.tabled:as_string())
+      assert.are.same(result.tabled:as_table(), input.tabled:as_table())
+
+      assert.are.same(result.niled._timestamp, result.niled._timestamp)
+    end)
+  end)
 end)
