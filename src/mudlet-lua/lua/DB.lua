@@ -613,10 +613,11 @@ function db:fetch_sql(sheet, sql)
   -- if we had a syntax error in our SQL, cur will be nil
   if cur and cur ~= 0 then
     local results = {}
+    local columns = cur:getcolnames()
     local row = cur:fetch({}, "a")
 
     while row do
-      results[#results + 1] = db:_coerce_sheet(sheet, row)
+      results[#results + 1] = db:_coerce_sheet(columns, sheet, row)
       row = cur:fetch({}, "a")
     end
     cur:close()
@@ -1050,20 +1051,24 @@ end
 -- After a table so retrieved from the database, this function coerces values to
 -- their proper types. Specifically, numbers and datetimes become the proper
 -- types.
-function db:_coerce_sheet(sheet, tbl)
+function db:_coerce_sheet(columns, sheet, tbl)
   if tbl then
     tbl._row_id = tonumber(tbl._row_id)
 
-    for k, v in pairs(tbl) do
+    for _, k in pairs(columns) do
       if k ~= "_row_id" then
         local field = sheet[k]
         if field.type == "number" then
           tbl[k] = tonumber(tbl[k]) or tbl[k]
         elseif field.type == "datetime" then
-          -- the value, tbl[k], is currently in a UTC timestamp
-          local localtime = datetime:parse(tbl[k], nil, true)
-          -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-          tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
+          if (tbl[k] == nil) then
+            tbl[k] = db:Timestamp(nil)
+          else
+            -- the value, tbl[k], is currently in a UTC timestamp
+            local localtime = datetime:parse(tbl[k], nil, true)
+            -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
+            tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
+          end
         end
       end
     end
