@@ -1049,7 +1049,7 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      local filename = getMudletHomeDir() .. "/mydbttimestamptesting.db"
+      local filename = getMudletHomeDir() .. "/Database_mydbttimestamptesting.db"
       os.remove(filename)
       mydb = nil
     end)
