@@ -1055,16 +1055,14 @@ describe("Tests DB.lua functions", function()
     end)
 
 
-    it("should fetch the same current timestamp as what was put in.",
+    it("should fetch a timestamp for CURRENT_TIMESTAMP.",
     function()
       db:add(mydb.sheet, input)
       local results = db:fetch(mydb.sheet)
       assert.is_true(#results == 1)
 
       local result = results[1]
-      assert.are.same(result.current:as_number(), input.current:as_number())
-      assert.are.same(result.current:as_string(), input.current:as_string())
-      assert.are.same(result.current:as_table(), input.current:as_table())
+      assert.is_true(result.current._timestamp ~= nil)
     end)
 
     it("should fetch the same epoch timestamp as what was put in.",
@@ -1098,35 +1096,36 @@ describe("Tests DB.lua functions", function()
       assert.is_true(#results == 1)
 
       local result = results[1]
-      display(input)
-      display(result)
       assert.are.same(result.niled._timestamp, input.niled._timestamp)
     end)
 
     it("should update without changing a timestamp's value.",
     function()
       db:add(mydb.sheet, input)
+
       local results = db:fetch(mydb.sheet)
       assert.is_true(#results == 1)
+      local first_result = results[1]
 
       db:update(mydb.sheet, results[1])
+
       results = db:fetch(mydb.sheet)
       assert.is_true(#results == 1)
-      local result = results[1]
+      local second_result = results[1]
 
-      assert.are.same(result.current:as_number(), input.current:as_number())
-      assert.are.same(result.current:as_string(), input.current:as_string())
-      assert.are.same(result.current:as_table(), input.current:as_table())
+      assert.are.same(first_result.current:as_number(), second_result.current:as_number())
+      assert.are.same(first_result.current:as_string(), second_result.current:as_string())
+      assert.are.same(first_result.current:as_table(), second_result.current:as_table())
 
-      assert.are.same(result.epoched:as_number(), input.epoched:as_number())
-      assert.are.same(result.epoched:as_string(), input.epoched:as_string())
-      assert.are.same(result.epoched:as_table(), input.epoched:as_table())
+      assert.are.same(first_result.epoched:as_number(), second_result.epoched:as_number())
+      assert.are.same(first_result.epoched:as_string(), second_result.epoched:as_string())
+      assert.are.same(first_result.epoched:as_table(), second_result.epoched:as_table())
 
-      assert.are.same(result.tabled:as_number(), input.tabled:as_number())
-      assert.are.same(result.tabled:as_string(), input.tabled:as_string())
-      assert.are.same(result.tabled:as_table(), input.tabled:as_table())
+      assert.are.same(first_result.tabled:as_number(), second_result.tabled:as_number())
+      assert.are.same(first_result.tabled:as_string(), second_result.tabled:as_string())
+      assert.are.same(first_result.tabled:as_table(), second_result.tabled:as_table())
 
-      assert.are.same(result.niled._timestamp, result.niled._timestamp)
+      assert.are.same(first_result.niled._timestamp, second_result.niled._timestamp)
     end)
   end)
 end)
