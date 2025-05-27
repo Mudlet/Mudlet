@@ -751,11 +751,7 @@ function db:aggregate(field, fn, query, distinct)
       return count
     end
     -- Only datetime left
-    -- the value, count, is currently in a UTC timestamp
-    local localtime = datetime:parse(count, nil, true)
-    -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-    count = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
-    return count
+    return db:Timestamp(count)
   else
     return 0
   end
@@ -1064,10 +1060,7 @@ function db:_coerce_sheet(columns, sheet, tbl)
           if (tbl[k] == nil) then
             tbl[k] = db:Timestamp(nil)
           else
-            -- the value, tbl[k], is currently in a UTC timestamp
-            local localtime = datetime:parse(tbl[k], nil, true)
-            -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-            tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
+            tbl[k] = db:Timestamp(tbl[k])
           end
         end
       end
@@ -1467,17 +1460,22 @@ end
 --- <b><u>TODO</u></b>
 function db:Timestamp(ts, fmt)
   local dt = {}
-  if type(ts) == "table" then
-    dt._timestamp = os.time(ts)
-  elseif type(ts) == "number" then
-    dt._timestamp = ts
-  elseif type(ts) == "string" and
-  assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
-    dt._timestamp = "CURRENT_TIMESTAMP"
-  elseif ts == nil then
-    dt._timestamp = false
+
+  if ts == nil then
+      dt._timestamp = false
+  elseif ts == "CURRENT_TIMESTAMP" then
+      dt._timestamp = "CURRENT_TIMESTAMP"
   else
-    assert(nil, "Invalid value passed to db.Timestamp()")
+    local t = type(ts)
+    if t == "table" then
+      dt._timestamp = os.time(ts)
+    elseif t == "number" then
+      dt._timestamp = ts
+    elseif t == "string" then
+      dt._timestamp = datetime:parse(ts, fmt, true)
+    else
+      error("Invalid value passed to db.Timestamp()")
+    end
   end
   return setmetatable(dt, db.__TimestampMT)
 end
