@@ -7317,6 +7317,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMXP")) {
+        host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7347,10 +7351,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("specialForceCharsetNegotiationOff")) {
         host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
-    if (key == qsl("specialForceMxpNegotiationOff")) {
-        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
@@ -7515,6 +7515,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
+        { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
         { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
@@ -7523,7 +7524,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
