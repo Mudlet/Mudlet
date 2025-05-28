@@ -36,7 +36,7 @@
 #                                                                          #
 ############################################################################
 
-if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 1)) {
+if(lessThan(QT_MAJOR_VERSION,6)) {
     error("Mudlet requires Qt 6.0 or later")
 }
 
