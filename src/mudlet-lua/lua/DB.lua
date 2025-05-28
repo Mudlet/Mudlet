@@ -697,11 +697,7 @@ function db:add(sheet, ...)
       db:_sql_values(t)
     )
     db:echo_sql(sql)
-
-    local result, msg = conn:execute(sql)
-    if not result then
-      return nil, msg
-    end
+    assert(conn:execute(sql))
   end
   if db.__autocommit[db_name] then
     conn:commit()
