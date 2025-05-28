@@ -27,5 +27,8 @@
     "type_traits": "cpp",
     "utility": "cpp",
     "variant": "cpp"
+  },
+  "[lua]": {
+    "editor.tabSize": 2
   }
 }
