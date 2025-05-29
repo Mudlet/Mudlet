@@ -228,7 +228,7 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
         return debug << "TRoom(0x0) ";
     }
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
 
     debug.nospace() << "TRoom(" << room->getId() << ")";
     debug.nospace() << ", name=" << room->name;

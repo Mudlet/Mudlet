@@ -1553,3 +1553,4 @@ void TCommandLine::slot_saveHistory()
         }
     }
 }
+

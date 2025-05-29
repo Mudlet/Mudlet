@@ -96,6 +96,11 @@ public:
     TMedia(Host* pHost, const QString& profileName);
     ~TMedia() = default;
 
+    int getMaxUnprunedPlayers() const;
+    int getMaxAllowedSoundPlayers() const;
+    int getMaxAllowedMusicPlayers() const;
+    int getMaxAllowedVideoPlayers() const;
+
     void playMedia(TMediaData& mediaData);
     QList<TMediaData> playingMedia(TMediaData& mediaData);
     QList<TMediaData> pausedMedia(TMediaData& mediaData);
@@ -105,13 +110,14 @@ public:
     bool purgeMediaCache();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
+    void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
-    QList<std::shared_ptr<TMediaPlayer>>& findMediaPlayersByCriteria(const TMediaData& mediaData);
+    QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
     void stopAllMediaPlayers();
@@ -128,6 +134,9 @@ private:
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
+    static void purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList);
+    template<typename T>
+    static void updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_ptr<T> player, TMedia* mediaInstance);
     void updateMediaPlayerList(std::shared_ptr<TMediaPlayer> player);
     std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
     std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
@@ -154,6 +163,7 @@ private:
     static QString parseJSONByMediaKey(QJsonObject& json);
     static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
     static TMediaData::MediaClose parseJSONByMediaClose(QJsonObject& json);
+    static QString parseJSONByMediaCaption(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);

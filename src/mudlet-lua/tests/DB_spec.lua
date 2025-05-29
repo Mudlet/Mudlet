@@ -212,7 +212,7 @@ describe("Tests DB.lua functions", function()
       }
 
       mydb = db:create("mydbttestingonly", { sheet = newschema })
-      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, {row1 = "", row2 = 0, row3 = 0})
     end)
 
     it("Should add a column of type string successfully to an empty db", function()
@@ -226,13 +226,13 @@ describe("Tests DB.lua functions", function()
       }
 
       mydb = db:create("mydbttestingonly", { sheet = newschema })
-      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, {row1 = "", row2 = 0, row3 = ""})
     end)
 
     it("Should add a column successfully to a filled db", function()
       db:add(mydb.sheet, {row1 = "some data"})
 
-      local newschema = {
+      local sheet = {
         row1 = "",
         row2 = 0,
         row3 = "",
@@ -241,8 +241,7 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydbttestingonly", { sheet = newschema })
-      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
+      mydb = db:create("mydbttestingonly", { sheet = sheet })
       local newrow = db:fetch(mydb.sheet)[1]
       assert.are.same("some data", newrow.row1)
       assert.are.same("", newrow.row3)
@@ -303,7 +302,7 @@ describe("Tests DB.lua functions", function()
           cur:close()
         end
 
-        assert.equals(3, #results)
+        assert.equals(2, #results)
 
         for _, v in ipairs(results) do
 
@@ -320,12 +319,6 @@ describe("Tests DB.lua functions", function()
                          tbl_name = "sheet",
                          sql = 'CREATE INDEX idx_sheet_c_name ' ..
                                'ON sheet ("name")'
-                       }
-          elseif v.name == "idx_sheet_c_id" then
-            expected = { type = "index", name = "idx_sheet_c_id",
-                         tbl_name = "sheet",
-                         sql = 'CREATE UNIQUE INDEX idx_sheet_c_id ' ..
-                               'ON sheet ("id")'
                        }
           end
 

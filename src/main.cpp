@@ -157,6 +157,7 @@ QTranslator* loadTranslationsForCommandLine()
 #ifdef Q_OS_WINDOWS
 void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
+    Q_UNUSED(context)
     switch (type) {
     case QtDebugMsg:
     case QtInfoMsg:

@@ -211,6 +211,9 @@ void ScriptUnit::compileAll(bool saveLoadingError)
             script->compileAll(saveLoadingError);
         }
     }
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->doCleanReset();
+    }
 }
 
 std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)

@@ -24,15 +24,20 @@
 #include "post_guard.h"
 
 TMediaPlaylist::TMediaPlaylist()
-    : mCurrentIndex(0), mPlaybackMode(Sequential) {}
+: mCurrentIndex(0)
+, mPlaybackMode(Sequential)
+{}
 
-TMediaPlaylist::~TMediaPlaylist() {}
+TMediaPlaylist::~TMediaPlaylist()
+{}
 
-void TMediaPlaylist::addMedia(const QUrl &url) {
+void TMediaPlaylist::addMedia(const QUrl &url)
+{
     mMediaList.append(url);
 }
 
-void TMediaPlaylist::removeMedia(int startIndex, int endIndex) {
+void TMediaPlaylist::removeMedia(int startIndex, int endIndex)
+{
     if (endIndex >= startIndex && startIndex >= 0 && endIndex < mMediaList.size()) {
         for (int i = endIndex; i >= startIndex; --i) {
             mMediaList.removeAt(i);
@@ -40,11 +45,13 @@ void TMediaPlaylist::removeMedia(int startIndex, int endIndex) {
     }
 }
 
-void TMediaPlaylist::clear() {
+void TMediaPlaylist::clear()
+{
     mMediaList.clear();
 }
 
-int TMediaPlaylist::mediaCount() const {
+int TMediaPlaylist::mediaCount() const
+{
     return mMediaList.count();
 }
 
@@ -52,22 +59,26 @@ bool TMediaPlaylist::isEmpty() const {
     return mMediaList.isEmpty();
 }
 
-void TMediaPlaylist::setPlaybackMode(PlaybackMode mode) {
+void TMediaPlaylist::setPlaybackMode(PlaybackMode mode)
+{
     mPlaybackMode = mode;
 }
 
-TMediaPlaylist::PlaybackMode TMediaPlaylist::playbackMode() const {
+TMediaPlaylist::PlaybackMode TMediaPlaylist::playbackMode() const
+{
     return mPlaybackMode;
 }
 
-QUrl TMediaPlaylist::currentMedia() const {
+QUrl TMediaPlaylist::currentMedia() const
+{
     if (!mMediaList.isEmpty() && mCurrentIndex >= 0 && mCurrentIndex < mMediaList.size()) {
         return mMediaList.at(mCurrentIndex);
     }
     return QUrl();
 }
 
-bool TMediaPlaylist::setCurrentIndex(int index) {
+bool TMediaPlaylist::setCurrentIndex(int index)
+{
     if (index >= 0 && index < mMediaList.size()) {
         mCurrentIndex = index;
         return true;
@@ -75,11 +86,13 @@ bool TMediaPlaylist::setCurrentIndex(int index) {
     return false;
 }
 
-int TMediaPlaylist::currentIndex() const {
+int TMediaPlaylist::currentIndex() const
+{
     return mCurrentIndex;
 }
 
-int TMediaPlaylist::nextIndex() const {
+int TMediaPlaylist::nextIndex() const
+{
     if (mPlaybackMode == Loop && (mCurrentIndex + 1 == mMediaList.size())) {
         return 0;
     } else if (mPlaybackMode == Random) {
@@ -90,7 +103,8 @@ int TMediaPlaylist::nextIndex() const {
     return -1; // No valid next index if out of range
 }
 
-QUrl TMediaPlaylist::next() {
+QUrl TMediaPlaylist::next()
+{
     if (mMediaList.isEmpty()) {
         return QUrl();
     }
@@ -110,7 +124,8 @@ QUrl TMediaPlaylist::next() {
     return QUrl();
 }
 
-QUrl TMediaPlaylist::previous() {
+QUrl TMediaPlaylist::previous()
+{
     if (mPlaybackMode == Loop && mCurrentIndex == 0) {
         mCurrentIndex = mMediaList.size() - 1;
     } else {
