@@ -1477,6 +1477,11 @@ void TMainConsole::showStatistics()
         subjects << tr("Channel102 events:");
         tables << QLatin1String("channel102");
     }
+    if (pHost->mTelnet.isMXPEnabled()) {
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("MXP events:");
+        tables << QLatin1String("mxp");
+    }
     if (pHost->mTelnet.isMSSPEnabled()) {
         //: Heading for the system's statistics information displayed in the console
         subjects << tr("MSSP events:");

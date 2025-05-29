@@ -1252,6 +1252,7 @@ function getConfig(...)
       "enableMSP",
       "enableMSSP",
       "enableMTTS",
+      "enableMXP",
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
@@ -1267,7 +1268,6 @@ function getConfig(...)
       "specialForceCompressionOff",
       "specialForceCharsetNegotiationOff",
       "specialForceGAOff",
-      "specialForceMxpNegotiationOff",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

@@ -433,6 +433,8 @@ public:
         }
     }
 
+    void sendCmdLine(const QString& cmd);
+
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
     QPointer<dlgPackageManager> mpPackageManager;
@@ -459,7 +461,7 @@ public:
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
-    bool mServerMXPenabled = true;
+    bool mEnableMXP = true;
     bool mAskTlsAvailable = true;
     int mMSSPTlsPort = 0;
     QString mMSSPHostName;
@@ -669,7 +671,6 @@ public:
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
     bool mMapperShowRoomBorders;
-    bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     bool mForceNewEnvironNegotiationOff = false;
     QSet<QChar> mDoubleClickIgnore;

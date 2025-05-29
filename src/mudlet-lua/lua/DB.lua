@@ -196,6 +196,7 @@ function db:safe_name(name)
   return name
 end
 
+
 function db:_isActiveDBName(db_name)
   db_name = db:safe_name(db_name)
 
@@ -205,6 +206,73 @@ function db:_isActiveDBName(db_name)
     and io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
   )
 end
+
+
+local VALIDATION_OPTIONS = {
+  "ABORT",
+  "FAIL",
+  "IGNORE",
+  "REPLACE",
+  "ROLLBACK"
+}
+
+---@param validations string
+---@return boolean is_valid
+---@return string msg
+function db:_validate_validations(validations)
+  if type(validations) ~= "string" then
+    return false, "_validations must be a string. Received "..type(validations)
+  elseif table.contains(VALIDATION_OPTIONS, validations) then
+    return true, ""
+  end
+
+  return false, '_validations must be one of: {"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}.  Received: '..validations
+end
+
+
+---@param unique_constraints string|table
+---@return boolean is_valid
+---@return string msg
+function db:_validate_unique_contraints(unique_constraints)
+  local is_valid, msg = true, ""
+
+  local type_of = type(unique_constraints)
+  local is_string = type_of == "string"
+  local is_table = type_of == "table"
+
+  if is_string then
+    -- pass
+  elseif is_table then
+    local msgs = {}
+    for _, unique_constraint in ipairs(unique_constraints) do
+      type_of = type(unique_constraint)
+      is_string = type_of == "string"
+      is_table = type_of == "table"
+      if is_string then
+        -- pass
+      elseif is_table then
+        for _, value in ipairs(unique_constraint) do
+          type_of = type(value)
+          if type_of ~= "string" then
+            is_valid = false
+            table.insert(msgs, "Multi-column definitions for _unique must be a list of strings, for example: _unique = { {'foo', 'bar'} }.  Received "..type_of..".")
+          end
+        end
+      else
+        is_valid = false
+        table.insert(msgs, "Members of _unique must be a string or table. Received ".. type_of..".")
+      end
+    end
+
+    msg = table.concat(msgs, "\n")
+  else
+    is_valid = false
+    msg = "_unique must be a string or a table.  Received "..type_of.."."
+  end
+
+  return is_valid, msg
+end
+
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
@@ -259,7 +327,61 @@ function db:create(db_name, sheets, force)
     db.__env = luasql.sqlite3()
   end
 
+  local is_valid, msgs = true, {}
+  local schema = {}
   db_name = db:safe_name(db_name)
+
+
+  -- We need to separate the actual column configuration from the meta-configuration of the desired
+  -- sheet. {sheet={"column"}} verses {sheet={"column"}, _index={"column"}}. In the former we are
+  -- creating a database with a single field; in the latter we are also adding an index on that
+  -- field. The db package reserves any key that begins with an underscore to be special and syntax
+  -- for its own use.
+  for sheet_name, sheet in pairs(sheets) do
+    local columns = {}
+    local options = {}
+
+    -- the sheet was provided in {"column1", "column2"} format
+    if sheet[1] ~= nil then
+      -- assume field types are text, and should default to ""
+      for _, col_name in pairs(sheet) do
+        columns[col_name] = ""
+      end
+
+    -- sheet provided in {"column1" = default} format
+    else
+      for key, value in pairs(sheet) do
+
+        if string.starts(key, "_") then
+          options[key] = value
+        else
+          columns[key] = value
+        end
+      end
+    end
+
+    if options._violations then
+      local is_validations_valid, msg = db:_validate_validations(options._violations)
+      if is_validations_valid == false then
+        is_valid = false
+        table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+    else
+      options._violations = "FAIL"
+    end
+
+    if options._unique then
+      local is_unique_valid, msg = db:_validate_unique_contraints(options._unique)
+      if is_unique_valid == false then
+        is_valid = false
+        table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+    end
+
+    schema[sheet_name] = { columns = columns, options = options }
+  end
+
+  assert(is_valid, table.concat(msgs, "\n"))
 
   if not db:_isActiveDBName(db_name) then
     db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
@@ -267,38 +389,10 @@ function db:create(db_name, sheets, force)
     db.__autocommit[db_name] = true
   end
 
-  db.__schema[db_name] = {}
+  db.__schema[db_name] = schema
 
-  -- We need to separate the actual column configuration from the meta-configuration of the desired
-  -- sheet. {sheet={"column"}} verses {sheet={"column"}, _index={"column"}}. In the former we are
-  -- creating a database with a single field; in the latter we are also adding an index on that
-  -- field. The db package reserves any key that begins with an underscore to be special and syntax
-  -- for its own use.
-  for s_name, sht in pairs(sheets) do
-    local options = {}
-
-    if sht[1] ~= nil then
-      -- in case the sheet was provided in the sheet = {"column1", "column2"} format:
-      local t = {}               --   assume field types are text, and should default to ""
-      for k, v in pairs(sht) do
-        t[v] = ""
-      end
-      sht = t
-    else -- sheet provided in the sheet = {"column1" = default} format
-      for k, v in pairs(sht) do
-        if string.starts(k, "_") then
-          options[k] = v
-          sht[k] = nil
-        end
-      end
-    end
-
-    if not options._violations then
-      options._violations = "FAIL"
-    end
-
-    db.__schema[db_name][s_name] = { columns = sht, options = options }
-    db:_migrate(db_name, s_name, force)
+  for sheet_name, _ in pairs(sheets) do
+    db:_migrate(db_name, sheet_name, force)
   end
   return db:get_database(db_name)
 end
@@ -483,62 +577,85 @@ function db:_migrate(db_name, s_name, force)
 end
 
 function db:_build_create_table_sql(schema, s_name)
-
-  local sql_column = ', "%s" %s NULL'
+  local sql_column = '"%s" %s NULL'
   local sql_column_default = sql_column .. ' DEFAULT %s'
 
+  local on_conflict = "ON CONFLICT "..schema.options._violations
 
-  local sql_chunks = { "CREATE TABLE ", s_name, '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
+  local sql_chunks = { '"_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
+
+  local unique_column_constraints = {}
+  local unique_table_constraints = {}
+
+  -- Validations were already performed in db:create, so the only thing
+  -- we need to do here is filter our unique constraints to the appropirate
+  -- tables.
+  --
+  -- Into unique_column_constraints when the a column is unique on its own
+  -- and into unique_table_constraints when columns are grouped together.
+  if type(schema.options._unique) == "string" then
+    table.insert(unique_column_constraints, schema.options._unique)
+  elseif type(schema.options._unique) == "table" then
+    for _, unique_constraint in ipairs(schema.options._unique) do
+      if type(unique_constraint) == "string" then
+        table.insert(unique_column_constraints, unique_constraint)
+      elseif type(unique_constraint) == "table" then
+        table.insert(
+          unique_table_constraints,
+          'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
+        )
+      end
+    end
+  end
 
   -- We iterate over every defined column, and add a line which creates it.
-  for key, value in pairs(schema.columns) do
+  for col_name, col_schema in pairs(schema.columns) do
     local sql = ""
-    if value == nil then
-      sql = sql_column:format(key, db:_sql_type(value))
+    if col_schema == nil then
+      sql = sql_column:format(col_name, db:_sql_type(col_schema))
     else
-      sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
+      sql = sql_column_default:format(col_name, db:_sql_type(col_schema), db:_sql_convert(col_schema))
     end
-    if (type(schema.options._unique) == "table" and table.contains(schema.options._unique, key))
-    or (type(schema.options._unique) == "string" and schema.options._unique == key) then
-      sql = sql .. " UNIQUE"
+    if table.contains(unique_column_constraints, col_name) then
+      sql = sql .. " UNIQUE "..on_conflict
     end
     sql_chunks[#sql_chunks + 1] = sql
   end
 
-  sql_chunks[#sql_chunks + 1] = ")"
+  -- Add in the unique constraints
+  for _, unique_table_constraint in ipairs(unique_table_constraints) do
+    sql_chunks[#sql_chunks + 1] = "UNIQUE("..table.concat(unique_table_constraint, ", ")..")"
+  end
 
-  return table.concat(sql_chunks, "")
+  return "CREATE TABLE " .. s_name.. " ("..table.concat(sql_chunks, ", ")..")"
 end
 
 
 -- NOT LUADOC
 -- Creates any indexes which do not yet exist in the given database.
 function db:_migrate_indexes(conn, s_name, schema, current_columns)
-  local sql_create_index = "CREATE %s IF NOT EXISTS %s ON %s (%s);"
-  local opt = { _unique = "UNIQUE INDEX", _index = "INDEX" } -- , _check = "CHECK"}
+  local sql_create_index = "CREATE INDEX IF NOT EXISTS %s ON %s (%s);"
+  local sql = ""
 
-  for option_type, options in pairs(schema.options) do
-    if option_type == "_unique" or option_type == "_index" then
-      for _, value in pairs(options) do
-
-        -- If an index references a column which does not presently exist within the schema
-        -- this will fail.
-
-        if db:_index_valid(current_columns, value) then
-          --assert(db:_index_valid(current_columns, value),
-          --      "In sheet "..s_name.." an index field is specified that does not exist.")
-
-          local sql = sql_create_index:format(
-          opt[option_type], db:_index_name(s_name, value), s_name, db:_sql_columns(value)
-          )
-          db:echo_sql(sql)
-          conn:execute(sql)
-        end
+  if (type(schema.options._index) == "table") then
+    for _, value in pairs(schema.options._index) do
+      -- If an index references a column which does not presently exist within the schema
+      -- this will fail.
+      if db:_index_valid(current_columns, value) then
+        --assert(db:_index_valid(current_columns, value),
+        --      "In sheet "..s_name.." an index field is specified that does not exist.")
+        sql = sql_create_index:format(
+          db:_index_name(s_name, value),
+          s_name,
+          db:_sql_columns(value)
+        )
+        db:echo_sql(sql)
+        conn:execute(sql)
       end
+
     end
   end
 end
-
 
 
 --- Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index,
@@ -566,7 +683,7 @@ function db:add(sheet, ...)
   assert(s_name, "First argument to db:add must be a proper Sheet object.")
 
   local conn = db.__conn[db_name]
-  local sql_insert = "INSERT OR %s INTO %s %s VALUES %s"
+  local sql_insert = "INSERT INTO %s %s VALUES %s"
 
   for _, t in ipairs({ ... }) do
     if t._row_id then
@@ -574,11 +691,16 @@ function db:add(sheet, ...)
       t._row_id = nil
     end
 
-    local sql = sql_insert:format(db.__schema[db_name][s_name].options._violations, s_name, db:_sql_fields(t), db:_sql_values(t))
+    local sql = sql_insert:format(
+      s_name,
+      db:_sql_fields(t),
+      db:_sql_values(t)
+    )
     db:echo_sql(sql)
 
     local result, msg = conn:execute(sql)
-    if not result then
+    if result == nil then
+      printError(msg, true, false)
       return nil, msg
     end
   end
@@ -940,7 +1062,7 @@ function db:update(sheet, tbl)
 
   local conn = db.__conn[db_name]
 
-  local sql_chunks = { "UPDATE OR", db.__schema[db_name][s_name].options._violations, s_name, "SET" }
+  local sql_chunks = { "UPDATE", s_name, "SET" }
 
   local set_chunks = {}
   local set_block = [["%s" = %s]]
@@ -1013,12 +1135,17 @@ function db:set(field, value, query)
 
   local conn = db.__conn[db_name]
 
-  local sql_update = [[UPDATE OR %s %s SET "%s" = %s]]
+  local sql_update = [[UPDATE %s SET "%s" = %s]]
   if query then
     sql_update = sql_update .. [[ WHERE %s]]
   end
 
-  local sql = sql_update:format(db.__schema[db_name][s_name].options._violations, s_name, field.name, db:_coerce(field, value), query)
+  local sql = sql_update:format(
+    s_name,
+    field.name,
+    db:_coerce(field, value),
+    query
+  )
 
   db:echo_sql(sql)
   assert(conn:execute(sql))
@@ -1079,7 +1206,7 @@ function db:_coerce(field, value)
   if type(value) == "table" and value._isNull then
     return "NULL"
   elseif field.type == "number" then
-    return tonumber(value) or "'" .. value .. "'"
+    return tonumber(value) or ("'" .. value .. "'")
   elseif field.type == "datetime" then
     if value._timestamp == false then
       return "NULL"

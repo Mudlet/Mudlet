@@ -285,7 +285,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mMapperShowRoomBorders(true)
-, mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
@@ -4395,4 +4394,16 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();
+}
+
+void Host::sendCmdLine(const QString& cmd)
+{
+    if (!mpConsole || !mpConsole->mpCommandLine) {
+        qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
+        return;
+    }
+
+    // Set the command in the active command line
+    mpConsole->mpCommandLine->setPlainText(cmd);
+    mpConsole->mpCommandLine->selectAll();
 }

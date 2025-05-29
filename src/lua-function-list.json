@@ -419,6 +419,7 @@
     "send": "send(command, showOnScreen)",
     "sendAll": "sendAll([time delay], list of things to send, [echo back or not])",
     "sendATCP": "sendATCP(message, what)",
+    "sendCmdLine": "sendCmdLine(command)",
     "sendGMCP": "sendGMCP(command)",
     "sendIrc": "sendIrc(target, message)",
     "sendMSDP": "sendMSDP(variable[, value][, value...])",

@@ -1841,22 +1841,25 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
 
         if (option == OPT_MXP) {
-            if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
-                sendTelnetOption(TN_DO, OPT_MXP);
-                mpHost->mServerMXPenabled = true;
-                mpHost->mMxpProcessor.enable();
-                raiseProtocolEvent("sysProtocolEnabled", "MXP");
-                break;
-            } else {
+            if (!mpHost->mEnableMXP) {
                 sendTelnetOption(TN_DONT, OPT_MXP);
+                mpHost->mMxpProcessor.disable();
 
-                if (mpHost->mServerMXPenabled) {
+                if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
                 }
 
-                mpHost->mServerMXPenabled = false;
+                enableMXP = false;
                 break;
             }
+
+            enableMXP = true;
+            sendTelnetOption(TN_DO, OPT_MXP);
+            mpHost->mMxpProcessor.enable();
+
+            qDebug() << "MXP enabled";
+            raiseProtocolEvent("sysProtocolEnabled", "MXP");
+            break;
         }
 
         if (option == OPT_102) {
@@ -1977,7 +1980,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
             if (option == OPT_MXP) {
                 // MXP got turned off
-                mpHost->mServerMXPenabled = false;
+                enableMXP = false;
+                mpHost->mMxpProcessor.disable();
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2146,13 +2150,20 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
 
         if (option == OPT_MXP) {
-            if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+            if (mpHost->mEnableMXP) {
+                enableMXP = true;
                 sendTelnetOption(TN_WILL, OPT_MXP);
-                mpHost->mpConsole->print(tr("\n<MXP support enabled>\n"));
+                mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
-                raiseProtocolEvent("sysProtocolDisabled", "MXP");
+                mpHost->mMxpProcessor.disable();
+
+                if (enableMXP) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MXP");
+                }
+
+                enableMXP = false;
             }
             break;
         }
@@ -2256,6 +2267,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MXP) {
             // MXP got turned off
+            enableMXP = false;
+            mpHost->mMxpProcessor.disable();
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
         }
 

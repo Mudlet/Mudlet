@@ -2960,6 +2960,16 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendCmdLine
+int TLuaInterpreter::sendCmdLine(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "command");
+    Host& host = getHostFromLua(L);
+    host.sendCmdLine(text);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send
 // Note this is registered as send NOT sendRaw - see initLuaGlobals()
 // It converts the bytes in the command (the first argument) from Utf-8 to be
@@ -5070,6 +5080,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
+    lua_register(pGlobalLua, "sendCmdLine", TLuaInterpreter::sendCmdLine);
     lua_register(pGlobalLua, "send", TLuaInterpreter::sendRaw);
     lua_register(pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup);
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
@@ -7319,6 +7330,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMXP")) {
+        host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7349,10 +7364,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("specialForceCharsetNegotiationOff")) {
         host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
-    if (key == qsl("specialForceMxpNegotiationOff")) {
-        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
@@ -7517,6 +7528,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
+        { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
         { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
@@ -7525,7 +7537,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },

@@ -296,6 +296,7 @@ public:
     static int feedTelnet(lua_State*);
     static int Wait(lua_State*);
     static int expandAlias(lua_State*);
+    static int sendCmdLine(lua_State*);
     static int sendRaw(lua_State*);
     static int echo(lua_State*);
     static int selectString(lua_State*); // Was select but I think it clashes with the Lua command with that name
