@@ -411,6 +411,13 @@ private:
 
     QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec = nullptr;
+
+    // OSC 8 hyperlink tracking
+    QString mCurrentHyperlinkUrl;
+    QStringList mCurrentHyperlinkCommand;
+    QStringList mCurrentHyperlinkHint;
+    int mCurrentHyperlinkLinkId = 0;
+    bool mHyperlinkActive = false;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

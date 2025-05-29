@@ -945,6 +945,11 @@ COMMIT_LINE:
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
+        if (mHyperlinkActive) {
+            c.mLinkIndex = mCurrentHyperlinkLinkId;
+            c.mFlags |= TChar::Underline;
+        }
+
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
             c.mFlags |= TChar::Underline;
@@ -2155,6 +2160,86 @@ void TBuffer::decodeOSC(const QString& sequence)
             resetColors();
         }
         break;
+    case static_cast<quint8>('8'): {
+        // Handle OSC 8 hyperlinks in the form: "8;params;URI"
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC 8] Raw sequence: " << sequence;
+        qDebug().noquote() << "[OSC 8] Raw hex: " << sequence.toUtf8().toHex(' ');
+#endif
+        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
+        int firstSemi = rest.indexOf(';');
+
+        if (firstSemi == -1) {
+            qWarning() << "OSC 8: Missing first semicolon";
+            return;
+        }
+
+        int secondSemi = rest.indexOf(';', firstSemi + 1);
+
+        if (secondSemi == -1) {
+            qWarning() << "OSC 8: Missing second semicolon";
+            return;
+        }
+
+        QString param = rest.left(firstSemi).toString();
+
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!param.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC 8] Params provided (not used by Mudlet but shown for debugging): \"" << param << "\"";
+        }
+#endif
+        QString rawUrl = rest.mid(secondSemi + 1).toString();
+
+        // OSC 8 ;; closes the hyperlink
+        if ((param.isEmpty() && rawUrl.isEmpty())) {
+            mCurrentHyperlinkUrl.clear();
+            mCurrentHyperlinkCommand.clear();
+            mCurrentHyperlinkHint.clear();
+            mCurrentHyperlinkLinkId = 0;
+            mHyperlinkActive = false;
+            break;
+        }
+
+        if (!rawUrl.isEmpty()) {
+            if (rawUrl.length() > 2048) {
+                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
+                return;
+            }
+
+            QStringList command;
+            QStringList hint;
+
+            if (rawUrl.startsWith("send:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(5).toUtf8());
+                command = { qsl("send([[%1]])").arg(innerCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
+                mCurrentHyperlinkUrl = innerCommand;
+            } else if (rawUrl.startsWith("prompt:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(7).toUtf8());
+                command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
+                mCurrentHyperlinkUrl = innerCommand;
+            } else {
+                QUrl qurl(rawUrl);
+                QString scheme = qurl.scheme().toLower();
+
+                if (scheme == "http" || scheme == "https" || scheme == "ftp") {
+                    command = { qsl("openUrl([[%1]])").arg(rawUrl) };
+                    hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), rawUrl) };
+                    mCurrentHyperlinkUrl = rawUrl;
+                } else {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
+                    return;
+                }
+            }
+
+            mCurrentHyperlinkCommand = command;
+            mCurrentHyperlinkHint = hint;
+            mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+            mHyperlinkActive = true;
+        }
+        break;
+    }
     default:
         qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unhandled <OSC>?...<ST> code, Mudlet will ignore it.";
     }
@@ -3027,6 +3112,12 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
+    mCurrentHyperlinkUrl.clear();
+    mCurrentHyperlinkCommand.clear();
+    mCurrentHyperlinkHint.clear();
+    mCurrentHyperlinkLinkId = 0;
+    mHyperlinkActive = false;
+
     while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;

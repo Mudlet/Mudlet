@@ -4395,3 +4395,15 @@ void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();
 }
+
+void Host::sendCmdLine(const QString& cmd)
+{
+    if (!mpConsole || !mpConsole->mpCommandLine) {
+        qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
+        return;
+    }
+
+    // Set the command in the active command line
+    mpConsole->mpCommandLine->setPlainText(cmd);
+    mpConsole->mpCommandLine->selectAll();
+}
