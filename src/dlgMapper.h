@@ -69,10 +69,7 @@ public slots:
     void slot_setExitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    // Only used in newer Qt versions
     void slot_switchArea(const int);
-#endif
 
 private:
     TMap* mpMap = nullptr;

@@ -23,11 +23,10 @@
 #include "post_guard.h"
 
 SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
-    : QTextEdit(parent)
+    : QPlainTextEdit(parent)
 {
     highlighter = new TriggerHighlighter(this->document());
     highlighter->setHighlightingEnabled(true);
-    setAcceptRichText(false);
     setWordWrapMode(QTextOption::NoWrap);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -40,13 +39,13 @@ void SingleLineTextEdit::keyPressEvent(QKeyEvent *event)
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         return;
     }
-    QTextEdit::keyPressEvent(event);
+    QPlainTextEdit::keyPressEvent(event);
 }
 
 // ensure height remains on single line
 void SingleLineTextEdit::resizeEvent(QResizeEvent *event)
 {
-    QTextEdit::resizeEvent(event);
+    QPlainTextEdit::resizeEvent(event);
 }
 
 // ensure we can't paste multiple lines
@@ -55,14 +54,14 @@ void SingleLineTextEdit::insertFromMimeData(const QMimeData *source)
     if (source->hasText()) {
         QString text = source->text();
         QString firstLine = text.split(QRegularExpression("[\r\n]"), Qt::SkipEmptyParts).first();
-        QTextEdit::insertPlainText(firstLine);
+        QPlainTextEdit::insertPlainText(firstLine);
     }
 }
 
 // remove selection when focus is lost
 void SingleLineTextEdit::focusOutEvent(QFocusEvent* event)
 {
-    QTextEdit::focusOutEvent(event);
+    QPlainTextEdit::focusOutEvent(event);
     QTextCursor cursor = textCursor();
     cursor.clearSelection();
     setTextCursor(cursor);

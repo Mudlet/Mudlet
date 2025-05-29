@@ -63,13 +63,8 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
     connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_defaultColorClicked);
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
     buttonBox->button(QDialogButtonBox::Reset)->setToolTip(utils::richText(mIsBackground
-                                                                                ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")
-                                                                                : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+                                                                                ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")                                                                          : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
     connect(mSignalMapper, &QSignalMapper::mappedInt, this, &dlgColorTrigger::slot_basicColorClicked);
-#else
-    connect(mSignalMapper, qOverload<const int>(&QSignalMapper::mapped), this, &dlgColorTrigger::slot_basicColorClicked);
-#endif
 
     groupBox_basicColors->setToolTip(utils::richText(mIsBackground
                                                      ? tr("Click a color to make the trigger fire only when the text's background color matches the color number indicated.")

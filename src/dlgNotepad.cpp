@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -43,11 +44,17 @@ dlgNotepad::dlgNotepad(Host* pH)
 
     if (mpHost) {
         restore();
+        notesEdit->setFont(mpHost->getDisplayFont());
     }
 
     connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textWritten);
 
     startTimer(2min);
+}
+
+void dlgNotepad::setFont(const QFont& font)
+{
+    notesEdit->setFont(font);
 }
 
 dlgNotepad::~dlgNotepad()
@@ -72,10 +79,6 @@ void dlgNotepad::save()
     file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
-    // fileStream.setCodec is removed in Qt6 and UTF-8 is the default
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     fileStream << notesEdit->toPlainText();
     if (!file.commit()) {
         qDebug() << "dlgNotepad::save: error saving notepad contents: " << file.errorString();
@@ -90,16 +93,9 @@ void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
     file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
-    // In Qt6 the default encoding is UTF-8 instead of the system default
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    if (useUtf8Encoding) {
-        fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
-    }
-#else
     if (!useUtf8Encoding) {
         fileStream.setEncoding(QStringEncoder::Encoding::System);
     }
-#endif
     const QString txt = fileStream.readAll();
     notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);
@@ -130,7 +126,7 @@ void dlgNotepad::slot_textWritten()
 
 void dlgNotepad::timerEvent(QTimerEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (!mNeedToSave) {
         return;

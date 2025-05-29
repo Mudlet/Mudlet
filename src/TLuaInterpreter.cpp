@@ -570,8 +570,8 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(exitStatus);
+    Q_UNUSED(exitCode)
+    Q_UNUSED(exitStatus)
 
     objectsToDelete.append(sender());
 }
@@ -2667,6 +2667,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
     if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package); !success) {
         return warnArgumentValue(L, __func__, message);
     }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -2675,8 +2676,13 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
     const QString packageName = getVerifiedString(L, __func__, 1, "package name");
     Host& host = getHostFromLua(L);
-    host.uninstallPackage(packageName, enums::PackageModuleType::Package);
-    return 0;
+    const bool result = host.uninstallPackage(packageName, enums::PackageModuleType::Package);
+    if (!result) {
+        lua_pushnil(L);
+    } else {
+        lua_pushboolean(L, result);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installModule
@@ -2950,6 +2956,16 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
     host.send(payload, wantPrint, false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendCmdLine
+int TLuaInterpreter::sendCmdLine(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "command");
+    Host& host = getHostFromLua(L);
+    host.sendCmdLine(text);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3411,7 +3427,8 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
+void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions)
+{
     lua_State *L = pGlobalLua;
     lua_getglobal(L, "mxp");
     if (!lua_istable(L, -1)) {
@@ -4436,14 +4453,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
                 ++iter;
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -4465,13 +4476,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         case (QEvent::Enter): {
             auto qME = static_cast<const QEnterEvent*>(qE);
             lua_newtable(L);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -5074,6 +5080,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
+    lua_register(pGlobalLua, "sendCmdLine", TLuaInterpreter::sendCmdLine);
     lua_register(pGlobalLua, "send", TLuaInterpreter::sendRaw);
     lua_register(pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup);
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
@@ -5661,7 +5668,8 @@ void TLuaInterpreter::initLuaGlobals()
 }
 
 // No documentation available in wiki - internal function
-lua_State* TLuaInterpreter::getLuaGlobalState() {
+lua_State* TLuaInterpreter::getLuaGlobalState()
+{
     return pGlobalLua;
 }
 
@@ -5886,7 +5894,10 @@ void TLuaInterpreter::loadGlobal()
         // and in a "src" subdirectory (to match the relative source file
         // location to that top-level project file) of the main project
         // "mudlet" directory:
-        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
+        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // CMake builds from Qt Creator on Windows 11 appear to use this directory:
+        QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
 
     // Although it is relatively easy to detect whether something is #define d
@@ -5979,10 +5990,6 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     /*
      * FIXME: Qt Documentation for this method reports:
@@ -6525,7 +6532,8 @@ Host& getHostFromLua(lua_State* L)
 // No documentation available in wiki - internal function
 // Used to unref lua objects in the registry to avoid memory leaks
 // i.e. Unrefing tables passed into TLabel's event parameters.
-void TLuaInterpreter::freeLuaRegistryIndex(int index) {
+void TLuaInterpreter::freeLuaRegistryIndex(int index)
+{
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
 
@@ -7193,6 +7201,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     } else {
         mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
     }
+    mudlet::self()->mTrayIcon.hide();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -7318,6 +7327,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMXP")) {
+        host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7350,10 +7363,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("specialForceMxpNegotiationOff")) {
-        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
         host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7373,6 +7382,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("advertiseScreenReader")) {
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableClosedCaption")) {
+        host.mEnableClosedCaption = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {
@@ -7418,26 +7431,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("commandLineHistorySaveSize")) {
-        // This set of values needs to be the same as those put in the
-        // (QComboBox) dlgProfilePreferences::comboBox_commandLineHistorySaveSize
-        // widget:
-        static const QList<int> values{0, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000};
         const auto value = getVerifiedInt(L, __func__, 2, "value");
-        if (!values.contains(value)) {
-            static QStringList valuesAsStrings;
-            if (valuesAsStrings.isEmpty()) {
-                for (const auto& potentialValue : values) {
-                    valuesAsStrings << QString::number(potentialValue);
-                }
-            }
-            lua_pushnil(L);
-            // Use the original argument as a string, not what the
-            // getVerifiedInt(...) returns in case it is not a pure integer to
-            // start with:
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize number %s, it should be one of %s",
-                            lua_tostring(L, 2), valuesAsStrings.join(qsl(", ")).toUtf8().constData());
-            return 2;
-        }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
@@ -7474,7 +7468,8 @@ int TLuaInterpreter::setConfig(lua_State * L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#announce
-int TLuaInterpreter::announce(lua_State *L) {
+int TLuaInterpreter::announce(lua_State *L)
+{
     const QString text = getVerifiedString(L, __func__, 1, "text to announce");
     static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
     QString processing;
@@ -7530,6 +7525,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
+        { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
         { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
@@ -7538,7 +7534,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },

@@ -411,10 +411,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchBox->setToolTip(utils::richText(tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
-    // Create F3/Shift+F3 shortcuts for search navigation
-    searchNextShortcut = new QShortcut(QKeySequence(Qt::Key_F3), this);
-    searchPrevShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), this);
-
     mpAction_searchOptions = new QAction(tr("Search Options"), this);
     mpAction_searchOptions->setObjectName(qsl("mpAction_searchOptions"));
 
@@ -451,6 +447,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchDown->setIcon(QIcon(qsl(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
+    if (mType == MainConsole) {
+        setF3SearchEnabled(mpHost->getF3SearchEnabled());
+    }
 
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
@@ -556,7 +555,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // Need to delay doing this because it uses elements that may not have
     // been constructed yet:
     if (mType == MainConsole) {
-        QTimer::singleShot(0, this, [this]() { 
+        QTimer::singleShot(0, this, [this]() {
             setProxyForFocus(mpCommandLine);
         });
     }
@@ -1817,7 +1816,8 @@ void TConsole::slot_stopAllItems(bool b)
     }
 }
 
-void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY) {
+void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY)
+{
     mpHost->setCaretEnabled(true);
     mUpperPane->initializeCaret();
     moveCursor(searchX, searchY);
@@ -1831,7 +1831,10 @@ void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY) {
 
 void TConsole::slot_searchBufferUp()
 {
-    if (mpHost->getF3SearchEnabled()) buffer.clearSearchHighlights();
+    if (mpHost->getF3SearchEnabled()) {
+        buffer.clearSearchHighlights();
+    }
+
     // The search term entry box is one widget that does not pass a mouse press
     // event up to the main TConsole and thus does not cause the focus to shift
     // to the profile's tab when in multi-view mode - so add a call to make that
@@ -1846,7 +1849,8 @@ void TConsole::slot_searchBufferUp()
         // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
         mCurrentSearchResult = std::min<qsizetype>(mCurrentSearchResult, buffer.lineBuffer.size());
     }
-    if (buffer.lineBuffer.empty()) {
+    if (mSearchQuery.isEmpty() || buffer.lineBuffer.empty()) {
+        // Don't try and search for anything if the search term OR the console is empty:
         return;
     }
 
@@ -1857,13 +1861,15 @@ void TConsole::slot_searchBufferUp()
             searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
-                if (mpHost->getF3SearchEnabled()) focusOnSearchResultAndAnnounce(searchX, searchY);
+                if (mpHost->getF3SearchEnabled()) {
+                    focusOnSearchResultAndAnnounce(searchX, searchY);
+                }
                 found = true;
             }
         } while (searchX > -1);
 
         if (found) {
-            
+
             // Scroll to show the match
             scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
@@ -1876,13 +1882,16 @@ void TConsole::slot_searchBufferUp()
 
 void TConsole::slot_searchBufferDown()
 {
-    if (mpHost->getF3SearchEnabled()) buffer.clearSearchHighlights();
+    if (mpHost->getF3SearchEnabled()) {
+        buffer.clearSearchHighlights();
+    }
     if (mSearchQuery != mpBufferSearchBox->text()) {
         mSearchQuery = mpBufferSearchBox->text();
         buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     }
-    if (buffer.lineBuffer.empty()) {
+    if (mSearchQuery.isEmpty() || buffer.lineBuffer.empty()) {
+        // Don't try and search for anything if the search term OR the console is empty:
         return;
     }
     if (mCurrentSearchResult >= buffer.lineBuffer.size()) {
@@ -1896,13 +1905,15 @@ void TConsole::slot_searchBufferDown()
             searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
-                if (mpHost->getF3SearchEnabled()) focusOnSearchResultAndAnnounce(searchX, searchY);
+                if (mpHost->getF3SearchEnabled()) {
+                    focusOnSearchResultAndAnnounce(searchX, searchY);
+                }
                 found = true;
             }
         } while (searchX > -1);
 
         if (found) {
-            
+
             // Scroll to show the match
             scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
@@ -1937,11 +1948,7 @@ void TConsole::dragEnterEvent(QDragEnterEvent* e)
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
-#else
         Qt::KeyboardModifiers modifiers = e->modifiers();
-#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -1957,11 +1964,7 @@ void TConsole::dragMoveEvent(QDragMoveEvent* e)
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
-#else
         Qt::KeyboardModifiers modifiers = e->modifiers();
-#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -1978,11 +1981,7 @@ void TConsole::dropEvent(QDropEvent* e)
         const QString fname = url.toLocalFile();
         const QFileInfo info(fname);
         if (info.exists()) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            const QPoint pos = e->pos();
-#else
             QPoint pos = e->position().toPoint();
-#endif
             TEvent mudletEvent{};
             mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
             mudletEvent.mArgumentList.append(fname);
@@ -2001,11 +2000,7 @@ void TConsole::dropEvent(QDropEvent* e)
     }
     if (e->mimeData()->hasText()) {
         if (const QUrl url(e->mimeData()->text()); url.isValid()) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            const QPoint pos = e->pos();
-#else
             QPoint pos = e->position().toPoint();
-#endif
             TEvent mudletEvent{};
             mudletEvent.mArgumentList.append(QLatin1String("sysDropUrlEvent"));
             mudletEvent.mArgumentList.append(url.toString());
@@ -2065,11 +2060,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     case Qt::ExtraButton24: mudletEvent.mArgumentList.append(QString::number(27));  break;
     default:                mudletEvent.mArgumentList.append(QString::number(0));
     }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const QPoint pos = event->pos();
-#else
     QPoint pos = event->position().toPoint();
-#endif
     mudletEvent.mArgumentList.append(QString::number(pos.x()));
     mudletEvent.mArgumentList.append(QString::number(pos.y()));
     mudletEvent.mArgumentList.append(mConsoleName);
@@ -2369,16 +2360,36 @@ void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
 
 void TConsole::setF3SearchEnabled(const bool enabled)
 {
-    if (!searchNextShortcut || !searchPrevShortcut) {
+    if (mType != MainConsole) {
+        // Don't do anything if we are NOT the main console:
         return;
     }
 
-    if (enabled) {
-        connect(searchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
-        connect(searchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
+    if (mF3SearchEnabled == enabled) {
+        // Don't do anything if the stored setting already matches the wanted one
+        return;
+    }
+
+    mF3SearchEnabled = enabled;
+    if (mF3SearchEnabled) {
+        // Create F3/Shift+F3 shortcuts for search navigation if needed
+        if (mpSearchNextShortcut.isNull()) {
+            mpSearchNextShortcut = new QShortcut(QKeySequence(Qt::Key_F3), this);
+        }
+        if (mpSearchPrevShortcut.isNull()) {
+            mpSearchPrevShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), this);
+        }
+        connect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown, Qt::UniqueConnection);
+        connect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp, Qt::UniqueConnection);
     } else {
-        disconnect(searchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
-        disconnect(searchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
+        if (!mpSearchNextShortcut.isNull()) {
+            disconnect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
+            mpSearchNextShortcut->deleteLater();
+        }
+        if (!mpSearchPrevShortcut.isNull()) {
+            disconnect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
+            mpSearchPrevShortcut->deleteLater();
+        }
     }
 }
 
