@@ -579,17 +579,17 @@ attendere prego...</translation>
     <message>
       <location filename="../src/TBuffer.cpp" line="2215"/>
       <source>Send</source>
-      <translation type="unfinished"/>
+      <translation>Invia</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2220"/>
       <source>Prompt</source>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Open browser to</source>
-      <translation type="unfinished"/>
+      <translation>Apri browser</translation>
     </message>
   </context>
   <context>
@@ -1879,7 +1879,7 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="1482"/>
       <source>MXP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventi MXP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1487"/>
@@ -6683,7 +6683,7 @@ Inserisci altro materiale utile, per esempio un link alla wiki di mudlet, al for
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="894"/>
       <source>MXP: Mud eXtension Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MXP: Mud eXtension Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="899"/>
@@ -8733,7 +8733,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="887"/>
       <source>prompt</source>
-      <translation>prompt</translation>
+      <translation>linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2041"/>
@@ -10804,7 +10804,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="1259"/>
       <source>------------ </source>
       <extracomment>This represents the format of the timestamps shown for lines that do not * have a timestamp in a console that is showing them. If localised this * should be set to the same format and length as the smTimeStampFormat:</extracomment>
-      <translation type="unfinished"/>
+      <translation>------------ </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3232"/>
@@ -12770,7 +12770,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="776"/>
       <source>Select Font</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona carattere</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1156"/>
