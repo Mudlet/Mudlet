@@ -543,6 +543,27 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableTimeStamps
+int TLuaInterpreter::disableTimeStamps(lua_State* L)
+{
+    const QString windowName {WINDOW_NAME(L, 1)};
+    auto pConsole = CONSOLE(L, windowName);
+    // *pConsole can be the main console as well as any user one
+    if (!pConsole->showTimeStamps()) {
+        lua_pushnil(L);
+        if (windowName.isEmpty()) {
+            lua_pushstring(L, qsl("timestamps were not enabled for the main console").toUtf8().constData());
+        } else {
+            lua_pushstring(L, qsl("timestamps were not enabled for the \"%1\" console").arg(windowName).toUtf8().constData());
+        }
+        return 2;
+    }
+
+    pConsole->slot_toggleTimeStamps(false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoLink
 int TLuaInterpreter::echoLink(lua_State* L)
 {
@@ -715,6 +736,27 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
     auto console = CONSOLE(L, windowName);
     console->setScrollBarVisible(true);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTimeStamps
+int TLuaInterpreter::enableTimeStamps(lua_State* L)
+{
+    const QString windowName {WINDOW_NAME(L, 1)};
+    auto pConsole = CONSOLE(L, windowName);
+    // *pConsole can be the main console as well as any user one
+    if (pConsole->showTimeStamps()) {
+        lua_pushnil(L);
+        if (windowName.isEmpty()) {
+            lua_pushstring(L, qsl("timestamps were not enabled for the main console").toUtf8().constData());
+        } else {
+            lua_pushstring(L, qsl("timestamps were not enabled for the \"%1\" console").arg(windowName).toUtf8().constData());
+        }
+        return 2;
+    }
+
+    pConsole->slot_toggleTimeStamps(true);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAvailableFonts
@@ -1187,29 +1229,48 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     lua_newtable(L);
 
-    TChar::AttributeFlags const format = result.second.allDisplayAttributes();
     lua_pushstring(L, "bold");
-    lua_pushboolean(L, format & TChar::Bold);
+    lua_pushboolean(L, result.second.isBold());
     lua_settable(L, -3);
 
     lua_pushstring(L, "italic");
-    lua_pushboolean(L, format & TChar::Italic);
+    lua_pushboolean(L, result.second.isItalic());
     lua_settable(L, -3);
 
     lua_pushstring(L, "overline");
-    lua_pushboolean(L, format & TChar::Overline);
+    lua_pushboolean(L, result.second.isOverlined());
     lua_settable(L, -3);
 
     lua_pushstring(L, "reverse");
-    lua_pushboolean(L, format & TChar::Reverse);
+    lua_pushboolean(L, result.second.isReversed());
     lua_settable(L, -3);
 
     lua_pushstring(L, "strikeout");
-    lua_pushboolean(L, format & TChar::StrikeOut);
+    lua_pushboolean(L, result.second.isStruckOut());
     lua_settable(L, -3);
 
     lua_pushstring(L, "underline");
-    lua_pushboolean(L, format & TChar::Underline);
+    lua_pushboolean(L, result.second.isUnderlined());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "blinking");
+    if (Q_UNLIKELY(result.second.isFastBlinking())) {
+        lua_pushstring(L, "fast");
+    } else {
+        if (Q_UNLIKELY(result.second.isBlinking())) {
+            lua_pushstring(L, "slow");
+        } else {
+            lua_pushstring(L, "none");
+        }
+    }
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "concealed");
+    lua_pushboolean(L, result.second.isConcealed());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "alternateFont");
+    lua_pushinteger(L, result.second.alternateFont());
     lua_settable(L, -3);
 
     const QColor foreground(result.second.foreground());
@@ -1242,8 +1303,19 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_pushnumber(L, 3);
     lua_pushnumber(L, background.blue());
     lua_settable(L, -3);
+
     lua_settable(L, -3);
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#timeStampsEnabled
+int TLuaInterpreter::timeStampsEnabled(lua_State* L)
+{
+    const QString windowName {WINDOW_NAME(L, 1)};
+    auto pConsole = CONSOLE(L, windowName);
+    // *pConsole can be the main console as well as any user one
+    lua_pushboolean(L, pConsole->showTimeStamps());
     return 1;
 }
 
@@ -2386,11 +2458,6 @@ int TLuaInterpreter::setFont(lua_State* L)
     // if this font doesn't support it:
     QFont::insertSubstitution(font, qsl("Noto Color Emoji"));
     // TODO issue #4159: a nonexisting font breaks the console
-#endif
-
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Add Apple Color Emoji fallback.
-    QFont::insertSubstitution(font, qsl("Apple Color Emoji"));
 #endif
 
     auto console = CONSOLE(L, windowName);

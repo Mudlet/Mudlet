@@ -41,6 +41,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QSaveFile>
+#include <QVideoWidget>
 #include <QWidget>
 #include "post_guard.h"
 
@@ -190,7 +191,6 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
-
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
     std::list<int> getBgColor();
@@ -217,6 +217,8 @@ public:
     // non-scrolling window:
     void handleLinesOverflowEvent(const int lineCount);
     void clearSplit();
+    bool showTimeStamps() const { return mShowTimeStamps; }
+    void raiseMudletResizeEvent();
 
 
     QPointer<Host> mpHost;
@@ -308,7 +310,7 @@ public:
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
-
+    QVideoWidget* mpVideoWidget = nullptr;
 
 public slots:
     void slot_searchBufferUp();
@@ -318,7 +320,10 @@ public slots:
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
     void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleTimeStamps(const bool);
 
+signals:
+    void resized(QResizeEvent* event);
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
@@ -327,6 +332,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
 
+    bool mAlertOnNewData = true;
 
 private slots:
     void slot_adjustAccessibleNames();
@@ -342,8 +348,14 @@ private:
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
-    QShortcut* searchNextShortcut = nullptr;
-    QShortcut* searchPrevShortcut = nullptr;
+    bool mF3SearchEnabled = false;
+    QPointer<QShortcut> mpSearchNextShortcut;
+    QPointer<QShortcut> mpSearchPrevShortcut;
+    // The size of the TConsole in (normal) "character" cells:
+    QSize mDimensions;
+    // Whether to show (a 13 character by default) timestamp to the left of
+    // each line of text:
+    bool mShowTimeStamps = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

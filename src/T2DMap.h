@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2022-2023 by Stephen Lyons             *
+ *   Copyright (C) 2016, 2018-2019, 2022-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
@@ -85,10 +85,7 @@ public:
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
     void setPlayerRoomStyle(const int style);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    // This is NOT used as a slot in newer versions
     void switchArea(const QString& newAreaName);
-#endif
     void clearSelection();
 
 
@@ -208,11 +205,6 @@ public slots:
     void slot_customLineColor();
     void slot_shiftZup();
     void slot_shiftZdown();
-#if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
-    // This is ONLY used as a slot in older versions
-    void slot_switchArea(const QString& newAreaName);
-#endif
-// Not used: void slot_toggleShiftMode();
     void slot_shiftUp();
     void slot_shiftDown();
     void slot_shiftLeft();
@@ -224,7 +216,7 @@ public slots:
         bool changeSymbol, QString newSymbol,
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
-        bool changeLockStatus, bool newLockStatus,
+        bool changeLockStatus, std::optional<bool> newLockStatus,
         QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();

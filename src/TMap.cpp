@@ -2534,13 +2534,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
-    // Not used:    connect(mpNetworkReply, &QNetworkReply::readyRead, this, &TMap::slot_readyRead);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     connect(mpNetworkReply, &QNetworkReply::errorOccurred, this, &TMap::slot_downloadError);
-#else
-    connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
-#endif
-    // Not used:    connect(mpNetworkReply, &QNetworkReply::sslErrors, this, &TMap::slot_sslErrors);
     connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
     mpProgressDialog->show();
@@ -3526,7 +3520,7 @@ void TMap::restore16ColorSet()
 void TMap::setUnsaved(const char* fromWhere)
 {
 #if !defined(DEBUG_MAPAUTOSAVE)
-    Q_UNUSED(fromWhere);
+    Q_UNUSED(fromWhere)
 #else
     QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";

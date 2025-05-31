@@ -113,9 +113,6 @@ void TScript::compile(bool saveLoadingError)
             mOK_code = false;
         }
     }
-    for (auto script : *mpMyChildrenList) {
-        script->compile(saveLoadingError);
-    }
 }
 
 bool TScript::setScript(const QString& script)

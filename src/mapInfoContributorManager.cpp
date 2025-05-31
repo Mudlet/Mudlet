@@ -52,7 +52,8 @@ bool MapInfoContributorManager::removeContributor(const QString& name)
     return contributors.remove(name) > 0;
 }
 
-bool MapInfoContributorManager::enableContributor(const QString &name) {
+bool MapInfoContributorManager::enableContributor(const QString &name)
+{
     if (!contributors.contains(name)) {
         return false;
     }
@@ -62,7 +63,8 @@ bool MapInfoContributorManager::enableContributor(const QString &name) {
     return true;
 }
 
-bool MapInfoContributorManager::disableContributor(const QString &name) {
+bool MapInfoContributorManager::disableContributor(const QString &name)
+{
     if (!contributors.contains(name)) {
         return false;
     }
@@ -84,8 +86,8 @@ QList<QString> &MapInfoContributorManager::getContributorKeys()
 
 MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
 {
-    Q_UNUSED(selectionSize);
-    Q_UNUSED(displayAreaId);
+    Q_UNUSED(selectionSize)
+    Q_UNUSED(displayAreaId)
 
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);

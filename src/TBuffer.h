@@ -158,6 +158,7 @@ public:
     bool isOverlined() const { return mFlags & Overline; }
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
+    bool isConcealed() const { return mFlags & Concealed; }
     bool isFound() const { return mFlags & Found; }
     // Special case - if fast blink is set then do NOT say that blink is set to
     // preserve priority of the former over the latter:
@@ -320,8 +321,6 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
-    inline static const QString csmTimeStampFormat = qsl("hh:mm:ss.zzz ");
-    inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
     void shrinkBuffer();
@@ -410,6 +409,13 @@ private:
 
     QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec = nullptr;
+
+    // OSC 8 hyperlink tracking
+    QString mCurrentHyperlinkUrl;
+    QStringList mCurrentHyperlinkCommand;
+    QStringList mCurrentHyperlinkHint;
+    int mCurrentHyperlinkLinkId = 0;
+    bool mHyperlinkActive = false;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

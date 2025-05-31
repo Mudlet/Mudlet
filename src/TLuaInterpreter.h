@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -50,9 +50,15 @@
 #include "post_guard.h"
 
 extern "C" {
-    #include <lauxlib.h>
-    #include <lua.h>
-    #include <lualib.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lualib.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#endif
 }
 
 #include <list>
@@ -290,6 +296,7 @@ public:
     static int feedTelnet(lua_State*);
     static int Wait(lua_State*);
     static int expandAlias(lua_State*);
+    static int sendCmdLine(lua_State*);
     static int sendRaw(lua_State*);
     static int echo(lua_State*);
     static int selectString(lua_State*); // Was select but I think it clashes with the Lua command with that name
@@ -457,9 +464,15 @@ public:
     static int getPlayingMusic(lua_State*);
     static int getPlayingSounds(lua_State*);
     static int getPlayingVideos(lua_State*);
+    static int getPausedSounds(lua_State*);
+    static int getPausedMusic(lua_State*);
+    static int getPausedVideos(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
     static int stopVideos(lua_State*);
+    static int pauseSounds(lua_State*);
+    static int pauseMusic(lua_State*);
+    static int pauseVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -676,6 +689,10 @@ public:
     static int getProfiles(lua_State*);
     static int loadProfile(lua_State*);
     static int closeProfile(lua_State*);
+    static int getCollisionLocationsInArea(lua_State*);
+    static int disableTimeStamps(lua_State*);
+    static int enableTimeStamps(lua_State*);
+    static int timeStampsEnabled(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -763,11 +780,18 @@ private:
     static int getPlayingSoundsAsOrderedArguments(lua_State*, const char*);
     static int getPlayingSoundsAsTableArgument(lua_State*, const char*);
     static int getPlayingVideosAsTableArgument(lua_State*, const char*);
+    static void processPausedMediaTable(lua_State*, TMediaData&);
+    static int getPausedSoundsAsTableArgument(lua_State*, const char*);
+    static int getPausedMusicAsTableArgument(lua_State*, const char*);
+    static int getPausedVideosAsTableArgument(lua_State*, const char*);
     static int stopMusicAsOrderedArguments(lua_State*, const char*);
     static int stopMusicAsTableArgument(lua_State*, const char*);
     static int stopSoundsAsOrderedArguments(lua_State*, const char*);
     static int stopSoundsAsTableArgument(lua_State*, const char*);
     static int stopVideosAsTableArgument(lua_State*, const char*);
+    static int pauseSoundsAsTableArgument(lua_State*, const char*);
+    static int pauseMusicAsTableArgument(lua_State*, const char*);
+    static int pauseVideosAsTableArgument(lua_State*, const char*);
     static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
     static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
     static void parseHintsTable(lua_State*, const char*, int&, QStringList&);

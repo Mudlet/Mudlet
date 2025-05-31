@@ -133,7 +133,7 @@ end
 -- windowList
 function Geyser:remove (window)
   self.windowList[window.name] = nil
-  index = table.index_of(self.windows, window.name) or 0
+  local index = table.index_of(self.windows, window.name) or 0
   table.remove(self.windows, index)
 end
 

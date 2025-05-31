@@ -157,6 +157,7 @@ QTranslator* loadTranslationsForCommandLine()
 #ifdef Q_OS_WINDOWS
 void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
+    Q_UNUSED(context)
     switch (type) {
     case QtDebugMsg:
     case QtInfoMsg:
@@ -238,14 +239,6 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX)
     QAccessible::installFactory(Announcer::accessibleFactory);
-#endif
-
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Apple Color Emoji Fallback
-    QFont defaultFont;
-    defaultFont.setFamily(defaultFont.defaultFamily());
-    QFont::insertSubstitution(defaultFont.family(), qsl("Apple Color Emoji"));
-    app->setFont(defaultFont);
 #endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
@@ -482,7 +475,7 @@ int main(int argc, char* argv[])
 
     QStringList cliProfiles = parser.values(profileToOpen);
     qDebug() << "Got CLI profiles:" << cliProfiles;
-    
+
     if (cliProfiles.isEmpty()) {
         qDebug() << "No CLI profiles specified, checking environment variable";
         const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
@@ -556,15 +549,12 @@ int main(int argc, char* argv[])
         copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
     const QPixmap pixmap = QPixmap::fromImage(splashImage);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Specifying the screen here seems to help to put the splash screen on the
     // same monitor that the main application window will be put upon on first
     // run, in some situations the two can otherwise get to be different which
     // is misleading unhelpful to a new user...!
     QSplashScreen splash(qApp->primaryScreen(), pixmap);
-#else
-    QSplashScreen splash(pixmap);
-#endif
+
     if (showSplash) {
         splash.show();
     }
@@ -762,7 +752,7 @@ int main(int argc, char* argv[])
 // Small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done.
-// 
+//
 // Return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {

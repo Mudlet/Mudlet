@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -166,11 +166,6 @@ void mudlet::init()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // 'AA_UseHighDpiPixmaps' is deprecated in Qt6: High-DPI pixmaps are always enabled.
-    qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-
     // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
     // ... which is applied here:
@@ -273,9 +268,15 @@ void mudlet::init()
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
+    mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
+    mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
+    mpActionCloseApplication->setIconText(tr("Close Mudlet"));
+    mpActionCloseApplication->setObjectName(qsl("close_application"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
     mpButtonConnect->addAction(mpActionCloseProfile);
+    mpButtonConnect->addAction(mpActionCloseApplication);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -479,28 +480,17 @@ void mudlet::init()
 
     disableToolbarButtons();
 
-    if (mEnableFullScreenMode) {
-        // We always start in full-screen mode if it is enabled:
-        setWindowState(windowState() & ~(Qt::WindowFullScreen|Qt::WindowActive));
-        QIcon icon;
-        icon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
-        icon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
-        mpActionFullScreenView = new QAction(icon, tr("Full Screen"), this);
-        mpActionFullScreenView->setStatusTip(tr("Toggle Full Screen View"));
-        mpActionFullScreenView->setCheckable(true);
-        mpActionFullScreenView->setChecked(true);
-        mpMainToolBar->addAction(mpActionFullScreenView);
-        mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
-        mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
-        connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
-    }
-    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
+    QIcon fullScreenIcon;
+    fullScreenIcon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
+    fullScreenIcon.addPixmap(qsl(":/icons/view-restore.png"), QIcon::Normal, QIcon::On);
+    mpActionFullScreenView = new QAction(fullScreenIcon, tr("Full Screen"), this);
+    mpActionFullScreenView->setToolTip(utils::richText(tr("Toggle Full Screen View")));
+    mpActionFullScreenView->setCheckable(true);
+    mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
+    mpMainToolBar->addAction(mpActionFullScreenView);
+    mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    #if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Add Apple Color Emoji fallback.
-    QFont::insertSubstitution(mainFont.family(), qsl("Apple Color Emoji"));
-    #endif
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
@@ -535,6 +525,8 @@ void mudlet::init()
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_closeCurrentProfile);
+    connect(dactionCloseApplication, &QAction::triggered, this, &mudlet::close);
+    connect(mpActionCloseApplication, &QAction::triggered, this, &mudlet::close);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -669,6 +661,20 @@ void mudlet::init()
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
+    dactionToggleFullScreen->setToolTip(utils::richText(tr("Toggle Full Screen View")));
+
+    // The readLateSetting(...) call will set the initial
+    // Full-Screen/Maximised/Normal state - we just need to set the knobs to
+    // match
+    mpActionFullScreenView->setChecked(windowState() & Qt::WindowFullScreen);
+    dactionToggleFullScreen->setChecked(windowState() & Qt::WindowFullScreen);
+
+    // Now we wire up the knobs, after they've been set to the right state:
+    connect(mpActionFullScreenView, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+    connect(dactionToggleFullScreen, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
+    // And we also need to track outside causes that can change it:
+    connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
+
 #if defined(INCLUDE_UPDATER)
     pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
@@ -684,7 +690,11 @@ void mudlet::init()
 #endif // INCLUDE_UPDATER
 
     if (!mToolbarIconSize) {
-        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
+        // If the button size has not been previously set - on the first run
+        // set it according to whether we are full-screen - originally this
+        // would have been because it was likely running on a small screen
+        // device; this may no longer be useful:
+        setToolBarIconSize((windowState() & Qt::WindowFullScreen) ? 2 : 3);
     }
 
     // Allow mute functionality always
@@ -702,8 +712,8 @@ void mudlet::init()
     // load bundled fonts
     mFontManager.addFonts();
 
-    // Initialise a couple of QMaps with elements that must be translated into
-    // the current GUI Language
+    // Initialise a couple of QMaps and some other elements that must be
+    // translated into the current GUI Language
     loadMaps();
 
     setupTrayIcon();
@@ -825,10 +835,6 @@ void mudlet::setupConfig()
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    mpSettings->setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     migrateConfig(*mpSettings);
 }
 
@@ -1239,6 +1245,18 @@ void mudlet::loadMaps()
                         {"WINDOWS-1257", tr("WINDOWS-1257 (Baltic)")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)")}};
+
+    /*: This represents the format of the timestamps shown alongside the texts
+     * in a console and might require translation for a few locales; the content
+     * is as per QDateTime::toString(...) and needs to follow the rules for that
+     * function as well as being suitable for the translation locale.
+     */
+    smTimeStampFormat = tr("hh:mm:ss.zzz ");
+    /*: This represents the format of the timestamps shown for lines that do not
+     * have a timestamp in a console that is showing them. If localised this
+     * should be set to the same format and length as the smTimeStampFormat:
+     */
+    smBlankTimeStamp = tr("------------ ");
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -1953,7 +1971,8 @@ Host* mudlet::getActiveHost()
 }
 
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
-// ourselves):
+// ourselves or the user hits the close application menu option or action on
+// the "Connect" buttion):
 void mudlet::closeEvent(QCloseEvent* event)
 {
     qDebug() << "mudlet::closeEvent(...) INFO - called!";
@@ -2029,16 +2048,6 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 
-    // PLACEMARKER: Full-screen mode controlled by File (1 of 2) At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
-    if (settings.contains(qsl("enableFullScreenMode"))) {
-        // We have a setting stored for this
-        mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
-    } else {
-        // We do not have a QSettings value stored so check for the sentinel file:
-        const QFile file_use_smallscreen(getMudletPath(enums::mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
-        mEnableFullScreenMode = file_use_smallscreen.exists();
-    }
-
     // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
     auto oldDarkTheme = settings.value(qsl("darkTheme"), QVariant(false)).toBool();
 
@@ -2090,11 +2099,14 @@ void mudlet::readLateSettings(const QSettings& settings)
     resize(size);
     move(pos);
 
-    // Need to remove the Qt::WindowMaximized AND Qt::WindowActive from the
-    // state and then apply the result - If we are in, or go into,
-    // full-screen then this does not have any effect until we leave that:
-    setWindowState((windowState() & ~(Qt::WindowMaximized|Qt::WindowActive))
-                   |(settings.value("maximized", false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState));
+    // Need to remove the Qt::WindowMaximized, Qt::WindowFullScreen AND
+    // Qt::WindowActive from the state and then apply the result of combining
+    // the stored state - if we are full-screen then the maximised does not have
+    // any effect until we leave that:
+    auto state = windowState() & ~(Qt::WindowMaximized|Qt::WindowFullScreen|Qt::WindowActive);
+    state |= (settings.value(qsl("fullScreen"), false).toBool() ? Qt::WindowFullScreen : Qt::WindowNoState)
+            |(settings.value(qsl("maximized"), false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState);
+    setWindowState(state);
 
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
@@ -2241,11 +2253,11 @@ void mudlet::writeSettings()
     settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
     settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
+    settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
-    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
@@ -3233,13 +3245,14 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
                 const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
 
                 if (sequence && !sequence->toString().isEmpty()) {
-                    const QString seq = sequence->toString(QKeySequence::NativeText).split("", Qt::SkipEmptyParts).join(">+<");
-
+                    const QString seq = sequence->toString(QKeySequence::NativeText);
                     message = isMediaMuted
-                        ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use <%1> to unmute.").arg(seq)
-                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use <%1> to mute.").arg(seq);
+                        ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use \"%1\" to unmute.").arg(seq)
+                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use \"%1\" to mute.").arg(seq);
                 } else {
-                    message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted.") : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
+                    message = isMediaMuted
+                        ? tr("[ INFO ]  - Mudlet and game sounds are muted.")
+                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
                 }
 
                 pHost->postMessage(message);
@@ -3293,9 +3306,11 @@ void mudlet::slot_compactInputLine(const bool state)
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
+                state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
-            const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.").arg(shortcut->toString());
+            const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
             mpCurrentActiveHost->postMessage(infoMsg);
             mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
         }
@@ -3332,9 +3347,9 @@ mudlet::~mudlet()
 
 void mudlet::slot_toggleFullScreenView()
 {
-    // This slot can only be called when the button is visible on the main
-    // toolbar - but there are other things that can change the full-screen
-    // state!
+    // Althoug this slot can be called from the button on the main toolbar or
+    // the main menu bar there are other things that can change the full-screen
+    // state outside of Mudlet!
 
     // In the following calls to setWindowState we must NOT include
     // Qt::WindowActive in the flags to be applied:
@@ -3348,16 +3363,22 @@ void mudlet::slot_toggleFullScreenView()
         // Qt::WindowActive from the flags we might read:
         setWindowState((state & ~(Qt::WindowActive))|Qt::WindowFullScreen);
     }
+    // Update the controls to reflect the actual state - note that
+    // QAction::setChecked(bool) won't cause excution loops as it doesn't
+    // cause the QAction::triggered signal to be raised:
+    dactionToggleFullScreen->setChecked(windowState() & Qt::WindowFullScreen);
+    mpActionFullScreenView->setChecked(windowState() & Qt::WindowFullScreen);
 }
 
 void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
 {
-    // Update the state of the button to match the actual state - if it doesn't
-    // match
-    if (mpActionFullScreenView
-        && (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen))) {
-
+    // Update the state of the button and the menu item to match the actual
+    // state - if it doesn't match:
+    if (mpActionFullScreenView->isChecked() != (newState & Qt::WindowFullScreen)) {
         mpActionFullScreenView->setChecked(newState & Qt::WindowFullScreen);
+    }
+    if (dactionToggleFullScreen->isChecked() != (newState & Qt::WindowFullScreen)) {
+        dactionToggleFullScreen->setChecked(newState & Qt::WindowFullScreen);
     }
 }
 
@@ -3774,11 +3795,7 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         // when saving/resyncing packages/modules - ends in a '/'
         return qsl("%1/moduleBackups/").arg(confPath);
     case enums::qtTranslationsPath:
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#else
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-#endif
     case enums::hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
@@ -4134,9 +4151,7 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 
 QStringList mudlet::getAvailableFonts()
 {
-    const QFontDatabase database;
-
-    return database.families(QFontDatabase::Any);
+    return QFontDatabase::families(QFontDatabase::Any);
 }
 
 std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
@@ -4147,30 +4162,6 @@ std::string mudlet::replaceString(std::string subject, const std::string& search
          pos += replace.length();
     }
     return subject;
-}
-
-void mudlet::setEnableFullScreenMode(const bool state)
-{
-    // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
-    if (state != mEnableFullScreenMode) {
-        mEnableFullScreenMode = state;
-        auto filePath = mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_option_use_smallscreen"));
-        QSaveFile file(filePath);
-        if (state) {
-            file.open(QIODevice::WriteOnly | QIODevice::Text);
-            const QTextStream out(&file);
-            Q_UNUSED(out);
-            if (!file.commit()) {
-                qDebug() << "mudlet::setEnableFullScreenMode: error saving fullscreen state: " << file.errorString();
-            }
-        } else {
-            QFile::remove(filePath);
-        }
-    }
-
-    // Emit the signal whatever the stored value is - so that if there are
-    // multiple profile preference dialogs open they all update themselves:
-    emit signal_enableFulScreenModeChanged(state);
 }
 
 bool mudlet::migratePasswordsToSecureStorage()
@@ -4416,10 +4407,6 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8 instead
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -4488,10 +4475,6 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -4517,10 +4500,6 @@ int mudlet::getDictionaryWordCount(const QString &dictionaryPath)
     }
 
     QTextStream ds(&dict);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ds.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -4568,10 +4547,6 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
     }
 
     QTextStream as(&aff);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    as.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
@@ -4849,11 +4824,8 @@ static QString getShortPathName(const QString& name)
     }
     QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
     GetShortPathNameW(nameC, buffer.data(), length);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
-#else
     const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
-#endif
+
     return rc;
 }
 
@@ -5100,7 +5072,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
-                                                      qsl("ashyriamud.com"),
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
@@ -5197,7 +5168,12 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
                                     : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+            return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+            // Deprecated in 6.9 and due for removal in 6.13:
             return original.mirrored(true, true);
+#endif
         }
     } else {
         return QImage(releaseVersion
