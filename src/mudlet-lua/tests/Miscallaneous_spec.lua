@@ -2,11 +2,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     describe("Tests the functionality of getOS", function()
       it("should return the correct number of values for the current OS", function()
         local results = {getOS()}
-        -- Linux returns 4 values, all others return 2
+        -- Linux returns 4 values, all others return 3
         if results[1] == "linux" then
           assert.equals(4, #results)
         else
-          assert.equals(2, #results)
+          assert.equals(3, #results)
         end
       end)
 
