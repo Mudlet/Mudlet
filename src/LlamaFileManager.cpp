@@ -43,16 +43,17 @@ bool LlamafileManager::start(const Config& newConfig) {
     config = newConfig;
     
     if (!validateConfig()) {
+        qDebug() << "LlamafileManager: Invalid configuration: " << lastError;
         setStatus(Status::Error);
         return false;
     }
     
     setStatus(Status::Starting);
     
-    const QString executable = constructExecutablePath();
+    const QString executable = qsl("/bin/sh");
     const QStringList args = buildProcessArguments();
     
-    qDebug() << "Starting llamafile:" << executable << args;
+    qDebug().noquote() << "Starting llamafile:" << executable << args.join(" ");
     
     // Set working directory to the model's directory
     QFileInfo fileInfo(config.modelPath);
@@ -192,14 +193,16 @@ bool LlamafileManager::isLlamafileExecutable(const QString& path) {
         return false;
     }
     
+#if defined(Q_OS_WINDOWS)
     // Check if it's executable
     if (!info.isExecutable()) {
         return false;
     }
+#endif
     
     // Basic heuristics for llamafile detection
     const QString fileName = info.fileName().toLower();
-    return fileName.contains("llama") || fileName.endsWith(".llamafile");
+    return fileName.endsWith(".llamafile");
 }
 
 QString LlamafileManager::findLlamafileExecutable(const QStringList& searchPaths) {
@@ -218,7 +221,7 @@ QString LlamafileManager::findLlamafileExecutable(const QStringList& searchPaths
         QDir dir(path);
         if (!dir.exists()) continue;
         
-        const QStringList filters{"*.llamafile", "*llama*", "llamafile*"};
+        const QStringList filters{"*.llamafile"};
         const auto entries = dir.entryInfoList(filters, QDir::Files | QDir::Executable);
         
         for (const QFileInfo& entry : entries) {
@@ -372,8 +375,9 @@ void LlamafileManager::setStatus(Status newStatus) {
     if (currentStatus != newStatus) {
         const Status oldStatus = currentStatus;
         currentStatus = newStatus;
-        qDebug() << "LlamafileManager: Status changed from" << static_cast<int>(oldStatus) 
-                 << "to" << static_cast<int>(newStatus);
+        
+        qDebug() << "LlamafileManager: Status changed from" << oldStatus << "to" << newStatus;
+        
         emit statusChanged(newStatus, oldStatus);
     }
 }
@@ -424,15 +428,13 @@ void LlamafileManager::handleApiReply(QNetworkReply* reply, ApiCallback callback
 }
 
 QString LlamafileManager::constructExecutablePath() const {
-    QString executable = config.modelPath;
-    
-#ifdef Q_OS_WIN
-    // On Windows, ensure .exe extension if it's not already there
-    if (!executable.endsWith(".exe", Qt::CaseInsensitive) && 
-        !executable.contains('.', Qt::CaseInsensitive)) {
-        executable += ".exe";
-    }
+    QString executable;
+
+#if defined(Q_OS_LINUX)
+    return qsl("/bin/sh");
 #endif
+
+    executable = executable + config.modelPath;
     
     return executable;
 }
@@ -441,20 +443,17 @@ QStringList LlamafileManager::buildProcessArguments() const {
     QStringList args;
     
     // Basic server arguments
-    args << "--server" << "--v2" << "--nobrowser";
+    args << config.modelPath;
+    args << "--server";
     args << "--host" << config.host;
     args << "--port" << QString::number(config.port);
-    
-    // Context size
-    if (config.contextSize > 0) {
-        args << "-c" << QString::number(config.contextSize);
-    }
+    args << "--nobrowser";
     
     // GPU settings
     if (config.enableGpu) {
-        args << "-ngl" << "999"; // Use all GPU layers
+        args << "--n-gpu-layers" << "999"; // Use all GPU layers
     } else {
-        args << "-ngl" << "0";   // CPU only
+        args << "--n-gpu-layers" << "0";   // CPU only
     }
     
     // Add any extra arguments

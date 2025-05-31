@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 #include <functional>
+#include "utils.h"
 
 class LlamafileManager : public QObject {
     Q_OBJECT
@@ -30,6 +31,7 @@ public:
         Error,
         Unhealthy
     };
+    Q_ENUM(Status)
 
     enum class ApiType {
         ChatCompletions,
@@ -37,6 +39,7 @@ public:
         Embeddings,
         Models
     };
+    Q_ENUM(ApiType)
 
     struct Config {
         QString modelPath;
@@ -47,7 +50,6 @@ public:
         int maxRestartAttempts = 3;
         bool autoRestart = true;
         bool enableGpu = true;
-        int contextSize = 2048;
         QStringList extraArgs;
     };
 

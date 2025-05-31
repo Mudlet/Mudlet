@@ -5309,10 +5309,12 @@ void mudlet::initializeAI()
     
     // Try to find and configure AI model
     if (findAIModel()) {
+        qDebug() << "AI model found at:" << mAIModelPath;
         setupAIConfig();
         
         // Auto-start if enabled and model is available
         if (mAIAutoStart) {
+            qDebug() << "Auto-starting AI service...";
             QTimer::singleShot(2000, this, [this]() {
                 if (mpLlamafileManager && !mpLlamafileManager->isRunning()) {
                     LlamafileManager::Config config;
@@ -5321,7 +5323,6 @@ void mudlet::initializeAI()
                     config.port = 8080;
                     config.autoRestart = true;
                     config.enableGpu = true;
-                    config.contextSize = 4096;
                     
                     mpLlamafileManager->start(config);
                 }
@@ -5355,7 +5356,7 @@ bool mudlet::findAIModel()
     // Check if model path is already set in settings
     if (mpSettings->contains("AI/modelPath")) {
         QString savedPath = mpSettings->value("AI/modelPath").toString();
-        if (QFileInfo::exists(savedPath) && LlamafileManager::isLlamafileExecutable(savedPath)) {
+        if (LlamafileManager::isLlamafileExecutable(savedPath)) {
             mAIModelPath = savedPath;
             return true;
         }
