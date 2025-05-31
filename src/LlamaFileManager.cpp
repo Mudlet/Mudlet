@@ -479,7 +479,7 @@ void LlamafileManager::attemptRestart() {
     });
 }
 
-bool LlamafileManager::validateConfig() const {
+bool LlamafileManager::validateConfig() {
     if (config.modelPath.isEmpty()) {
         lastError = "Model path is empty";
         return false;

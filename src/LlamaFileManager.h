@@ -75,15 +75,15 @@ public:
     ~LlamafileManager();
 
     // Process management
-    [[nodiscard]] bool start(const Config& config);
+    bool start(const Config& config);
     void stop();
-    [[nodiscard]] Status status() const noexcept { return currentStatus; }
-    [[nodiscard]] bool isRunning() const noexcept { return currentStatus == Status::Running; }
-    [[nodiscard]] std::optional<qint64> processId() const noexcept;
+    Status status() const noexcept { return currentStatus; }
+    bool isRunning() const noexcept { return currentStatus == Status::Running; }
+    std::optional<qint64> processId() const noexcept;
     
     // Configuration
     void setConfig(const Config& config) { this->config = config; }
-    [[nodiscard]] const Config& getConfig() const noexcept { return config; }
+    const Config& getConfig() const noexcept { return config; }
     
     // API calls
     void chatCompletion(const ApiRequest& request, ApiCallback callback);
@@ -93,12 +93,12 @@ public:
     
     // Health monitoring
     void enableHealthCheck(bool enable = true);
-    [[nodiscard]] bool isHealthy() const noexcept { return healthy; }
+    bool isHealthy() const noexcept { return healthy; }
     
     // Utility functions
-    [[nodiscard]] static bool isLlamafileExecutable(const QString& path);
-    [[nodiscard]] static QString findLlamafileExecutable(const QStringList& searchPaths = {});
-    [[nodiscard]] QUrl apiBaseUrl() const;
+    static bool isLlamafileExecutable(const QString& path);
+    static QString findLlamafileExecutable(const QStringList& searchPaths = {});
+    QUrl apiBaseUrl() const;
 
 signals:
     void statusChanged(Status newStatus, Status oldStatus);
@@ -140,8 +140,8 @@ private:
     void resetRestartAttempts() { restartAttempts = 0; }
     
     // Validation
-    [[nodiscard]] bool validateConfig() const;
-    [[nodiscard]] bool isPortAvailable(int port) const;
+    bool validateConfig();
+    bool isPortAvailable(int port) const;
 };
 
 Q_DECLARE_METATYPE(LlamafileManager::Status)
