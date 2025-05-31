@@ -83,18 +83,18 @@ int TLuaInterpreter::aiChat(lua_State* L)
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
-    
+
     const QString prompt = getVerifiedString(L, __func__, 1, "prompt");
     if (prompt.isEmpty()) {
         return warnArgumentValue(L, __func__, "prompt cannot be empty");
     }
-    
+
     // Optional parameters
     double temperature = 0.7;
     int maxTokens = 150;
     bool stream = false;
     QString eventName;
-    
+
     if (lua_gettop(L) >= 2) {
         if (lua_istable(L, 2)) {
             lua_pushstring(L, "temperature");
@@ -103,21 +103,21 @@ int TLuaInterpreter::aiChat(lua_State* L)
                 temperature = lua_tonumber(L, -1);
             }
             lua_pop(L, 1);
-            
+
             lua_pushstring(L, "max_tokens");
             lua_gettable(L, 2);
             if (lua_isnumber(L, -1)) {
                 maxTokens = static_cast<int>(lua_tointeger(L, -1));
             }
             lua_pop(L, 1);
-            
+
             lua_pushstring(L, "stream");
             lua_gettable(L, 2);
             if (lua_isboolean(L, -1)) {
                 stream = lua_toboolean(L, -1);
             }
             lua_pop(L, 1);
-            
+
             lua_pushstring(L, "event");
             lua_gettable(L, 2);
             if (lua_isstring(L, -1)) {
@@ -126,46 +126,55 @@ int TLuaInterpreter::aiChat(lua_State* L)
             lua_pop(L, 1);
         }
     }
-    
+
     // Build messages array for chat completion
     QJsonArray messages;
     QJsonObject userMessage;
     userMessage["role"] = "user";
     userMessage["content"] = prompt;
     messages.append(userMessage);
-    
+
     LlamafileManager::ApiRequest request;
     request.messages = QJsonObject{{"messages", messages}};
     request.temperature = temperature;
     request.maxTokens = maxTokens;
     request.stream = stream;
-    
+
     auto* aiManager = pMudlet->getAIManager();
-    
+
     if (stream && !eventName.isEmpty()) {
         // Streaming mode with events
         aiManager->chatCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
-            QStringList eventData;
-            eventData << (response.success ? "true" : "false");
-            eventData << response.error;
+            TEvent event {};
             
+            // Add event name as first argument
+            event.mArgumentList.append(eventName);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add success status
+            event.mArgumentList.append(response.success ? "true" : "false");
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+            
+            // Add error message
+            event.mArgumentList.append(response.error);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add response content
+            QString content;
             if (response.success && response.data.contains("choices")) {
                 const QJsonArray choices = response.data["choices"].toArray();
                 if (!choices.isEmpty()) {
                     const QJsonObject choice = choices[0].toObject();
                     const QJsonObject message = choice["message"].toObject();
-                    eventData << message["content"].toString();
-                } else {
-                    eventData << "";
+                    content = message["content"].toString();
                 }
-            } else {
-                eventData << "";
             }
+            event.mArgumentList.append(content);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             
-            auto pEvent = new TEvent(eventName, eventData);
-            host.raiseEvent(pEvent);
+            host.raiseEvent(event);
         });
-        
+
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -173,8 +182,8 @@ int TLuaInterpreter::aiChat(lua_State* L)
         auto L_coroutine = lua_newthread(L);
         lua_pushvalue(L, lua_gettop(L)); // Copy the thread to the top
         int threadRef = luaL_ref(L, LUA_REGISTRYINDEX); // Store thread reference
-        
-        aiManager->chatCompletion(request, [L_coroutine, threadRef](const LlamafileManager::ApiResponse& response) {
+
+        aiManager->chatCompletion(request, [L, L_coroutine, threadRef](const LlamafileManager::ApiResponse& response) {
             if (response.success) {
                 if (response.data.contains("choices")) {
                     const QJsonArray choices = response.data["choices"].toArray();
@@ -197,19 +206,19 @@ int TLuaInterpreter::aiChat(lua_State* L)
                 lua_pushboolean(L_coroutine, false);
                 lua_pushstring(L_coroutine, response.error.toUtf8().constData());
             }
-            
-            // Resume the coroutine
-            int nresults = 0;
-            int status = lua_resume(L_coroutine, nullptr, 0, &nresults);
+
+            // Resume the coroutine - using the correct signature
+            int status = lua_resume(L_coroutine, 0);
             
             // Clean up the thread reference
-            luaL_unref(L_coroutine, LUA_REGISTRYINDEX, threadRef);
+            luaL_unref(L, LUA_REGISTRYINDEX, threadRef);
         });
-        
+
         // Yield the coroutine
-        return lua_yield(L_coroutine, 0);
+        return lua_yield(L, 0);
     }
 }
+
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#aiComplete
 int TLuaInterpreter::aiComplete(lua_State* L)
@@ -430,92 +439,6 @@ int TLuaInterpreter::aiEmbeddings(lua_State* L)
                 } else {
                     lua_pushboolean(L_coroutine, false);
                     lua_pushstring(L_coroutine, "No embedding data in response");
-                }
-            } else {
-                lua_pushboolean(L_coroutine, false);
-                lua_pushstring(L_coroutine, response.error.toUtf8().constData());
-            }
-            
-            // Resume the coroutine
-            int nresults = 0;
-            int status = lua_resume(L_coroutine, nullptr, 0, &nresults);
-            
-            // Clean up the thread reference
-            luaL_unref(L_coroutine, LUA_REGISTRYINDEX, threadRef);
-        });
-        
-        // Yield the coroutine
-        return lua_yield(L_coroutine, 0);
-    }
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAIModels
-int TLuaInterpreter::getAIModels(lua_State* L)
-{
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    
-    auto result = aiEnabled(L);
-    if (!result.first) {
-        return warnArgumentValue(L, __func__, result.second);
-    }
-    
-    // Optional event name for async mode
-    QString eventName;
-    if (lua_gettop(L) >= 1) {
-        eventName = getVerifiedString(L, __func__, 1, "event name", true);
-    }
-    
-    auto* aiManager = pMudlet->getAIManager();
-    
-    if (!eventName.isEmpty()) {
-        // Event-based mode
-        aiManager->getModels([&host, eventName](const LlamafileManager::ApiResponse& response) {
-            QStringList eventData;
-            eventData << (response.success ? "true" : "false");
-            eventData << response.error;
-            
-            if (response.success && response.data.contains("data")) {
-                const QJsonArray data = response.data["data"].toArray();
-                QStringList models;
-                for (const auto& item : data) {
-                    const QJsonObject obj = item.toObject();
-                    models << obj["id"].toString();
-                }
-                eventData << models.join(",");
-            } else {
-                eventData << "";
-            }
-            
-            auto pEvent = new TEvent(&host, eventName, eventData);
-            host.raiseEvent(pEvent);
-        });
-        
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        // Synchronous mode - use coroutine
-        auto L_coroutine = lua_newthread(L);
-        lua_pushvalue(L, lua_gettop(L)); // Copy the thread to the top
-        int threadRef = luaL_ref(L, LUA_REGISTRYINDEX); // Store thread reference
-        
-        aiManager->getModels([L_coroutine, threadRef](const LlamafileManager::ApiResponse& response) {
-            if (response.success) {
-                if (response.data.contains("data")) {
-                    const QJsonArray data = response.data["data"].toArray();
-                    
-                    lua_pushboolean(L_coroutine, true);
-                    lua_newtable(L_coroutine); // Create table for models
-                    
-                    int index = 1;
-                    for (const auto& item : data) {
-                        const QJsonObject obj = item.toObject();
-                        lua_pushstring(L_coroutine, obj["id"].toString().toUtf8().constData());
-                        lua_rawseti(L_coroutine, -2, index++);
-                    }
-                } else {
-                    lua_pushboolean(L_coroutine, false);
-                    lua_pushstring(L_coroutine, "No model data in response");
                 }
             } else {
                 lua_pushboolean(L_coroutine, false);
