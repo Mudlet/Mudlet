@@ -93,7 +93,7 @@ int TLuaInterpreter::aiChat(lua_State* L)
     double temperature = 0.7;
     int maxTokens = 150;
     bool stream = false;
-    QString eventName;
+    QString eventName = "aiChatResponse"; // Default event name
 
     if (lua_gettop(L) >= 2) {
         if (lua_istable(L, 2)) {
@@ -142,80 +142,38 @@ int TLuaInterpreter::aiChat(lua_State* L)
 
     auto* aiManager = pMudlet->getAIManager();
 
-    if (stream && !eventName.isEmpty()) {
-        // Streaming mode with events
-        aiManager->chatCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
-            TEvent event {};
-            
-            // Add event name as first argument
-            event.mArgumentList.append(eventName);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            
-            // Add success status
-            event.mArgumentList.append(response.success ? "true" : "false");
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-            
-            // Add error message
-            event.mArgumentList.append(response.error);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            
-            // Add response content
-            QString content;
-            if (response.success && response.data.contains("choices")) {
-                const QJsonArray choices = response.data["choices"].toArray();
-                if (!choices.isEmpty()) {
-                    const QJsonObject choice = choices[0].toObject();
-                    const QJsonObject message = choice["message"].toObject();
-                    content = message["content"].toString();
-                }
+    // Always use event-based approach (async)
+    aiManager->chatCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
+        TEvent event {};
+        
+        // Add event name as first argument
+        event.mArgumentList.append(eventName);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        
+        // Add success status
+        event.mArgumentList.append(response.success ? "true" : "false");
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        
+        // Add error message
+        event.mArgumentList.append(response.error);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        
+        // Add response content
+        QString content;
+        if (response.success && response.data.contains("choices")) {
+            const QJsonArray choices = response.data["choices"].toArray();
+            if (!choices.isEmpty()) {
+                const QJsonObject choice = choices[0].toObject();
+                const QJsonObject message = choice["message"].toObject();
+                content = message["content"].toString();
             }
-            event.mArgumentList.append(content);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            
-            host.raiseEvent(event);
-        });
+        }
+        event.mArgumentList.append(content);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        
+        host.raiseEvent(event);
+    });
 
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        // Synchronous mode - use coroutine
-        auto L_coroutine = lua_newthread(L);
-        lua_pushvalue(L, lua_gettop(L)); // Copy the thread to the top
-        int threadRef = luaL_ref(L, LUA_REGISTRYINDEX); // Store thread reference
-
-        aiManager->chatCompletion(request, [L, L_coroutine, threadRef](const LlamafileManager::ApiResponse& response) {
-            if (response.success) {
-                if (response.data.contains("choices")) {
-                    const QJsonArray choices = response.data["choices"].toArray();
-                    if (!choices.isEmpty()) {
-                        const QJsonObject choice = choices[0].toObject();
-                        const QJsonObject message = choice["message"].toObject();
-                        const QString content = message["content"].toString();
-                        
-                        lua_pushboolean(L_coroutine, true);
-                        lua_pushstring(L_coroutine, content.toUtf8().constData());
-                    } else {
-                        lua_pushboolean(L_coroutine, false);
-                        lua_pushstring(L_coroutine, "No response content");
-                    }
-                } else {
-                    lua_pushboolean(L_coroutine, false);
-                    lua_pushstring(L_coroutine, "Invalid response format");
-                }
-            } else {
-                lua_pushboolean(L_coroutine, false);
-                lua_pushstring(L_coroutine, response.error.toUtf8().constData());
-            }
-
-            // Resume the coroutine - using the correct signature
-            int status = lua_resume(L_coroutine, 0);
-            
-            // Clean up the thread reference
-            luaL_unref(L, LUA_REGISTRYINDEX, threadRef);
-        });
-
-        // Yield the coroutine
-        return lua_yield(L, 0);
-    }
+    lua_pushboolean(L, true);
+    return 1;
 }
-
