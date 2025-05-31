@@ -95,6 +95,7 @@ set(mudlet_SRCS
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
+    LlamaFileManager.cpp
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
@@ -279,6 +280,7 @@ set(mudlet_HDRS
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
+    LlamaFileManager.h
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
