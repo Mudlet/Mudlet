@@ -937,7 +937,16 @@ int TLuaInterpreter::getFont(lua_State* L)
     QString font;
     windowName = WINDOW_NAME(L, 1);
     auto console = CONSOLE(L, windowName);
-    font = console->mUpperPane->fontInfo().family();
+    Host& host = getHostFromLua(L);
+
+    if (console == host.mpConsole) {
+        font = host.getDisplayFont().family();
+    } else if (console->mUpperPane) {
+        font = console->mUpperPane->font().family();
+    } else {
+        font = console->font().family();
+    }
+
     lua_pushstring(L, font.toUtf8().constData());
     return 1;
 }
@@ -2448,6 +2457,10 @@ int TLuaInterpreter::setFont(lua_State* L)
     }
 
     const QString font = getVerifiedString(L, __func__, s, "name");
+
+    if (font.trimmed().isEmpty()) {
+        return warnArgumentValue(L, __func__, "font must not be empty");
+    }
 
     if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
         return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(font));
