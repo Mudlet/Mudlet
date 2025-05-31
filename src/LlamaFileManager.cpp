@@ -48,7 +48,6 @@ bool LlamafileManager::start(const Config& newConfig) {
     }
     
     setStatus(Status::Starting);
-    resetRestartAttempts();
     
     const QString executable = constructExecutablePath();
     const QStringList args = buildProcessArguments();
@@ -267,6 +266,8 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
         if (config.autoRestart && restartAttempts < config.maxRestartAttempts) {
             qDebug() << "LlamafileManager: Attempting restart" << (restartAttempts + 1) 
                      << "of" << config.maxRestartAttempts;
+            
+            setStatus(Status::Stopped);
             attemptRestart();
         } else {
             setStatus(Status::Error);
