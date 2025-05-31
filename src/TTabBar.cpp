@@ -184,7 +184,7 @@ void TTabBar::applyPrefixToDisplayedText(int index, const QString& prefix)
 
 void TTabBar::paintEvent(QPaintEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     QStylePainter painter(this);
     QStyleOptionTab opt;
 

@@ -725,6 +725,7 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
     setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
@@ -745,13 +746,13 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSSP"), pHost->mEnableMSSP);
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
+    setBoolAttribute(qsl("mEnableMXP"), pHost->mEnableMXP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
-    setBoolAttribute(qsl("mFORCE_MXP_NEGOTIATION_OFF"), pHost->mFORCE_MXP_NEGOTIATION_OFF);
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
@@ -1065,6 +1066,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWrapAt = readElementText().toInt();
             } else if (name() == qsl("wrapIndentCount")) {
                 pHost->mWrapIndentCount = readElementText().toInt();
+            } else if (name() == qsl("wrapHangingIndentCount")) {
+                pHost->mWrapHangingIndentCount = readElementText().toInt();
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
@@ -1159,14 +1162,10 @@ void XMLimport::readHost(Host* pHost)
 #endif
             } else if (name() == qsl("mDisplayFont")) {
                 pHost->setDisplayFontFromString(readElementText());
-#if defined(Q_OS_LINUX)
-                // On Linux ensure that emojis are displayed in colour even if
-                // this font doesn't support it:
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+                // On GNU/Linux and FreeBSD ensure that emojis are displayed in
+                // colour even if this font doesn't support it:
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
-#endif
-#if defined(Q_OS_MACOS) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                // Add Apple Color Emoji fallback.
-                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Apple Color Emoji"));
 #endif
                 pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {
@@ -1283,7 +1282,7 @@ void XMLimport::readHost(Host* pHost)
                 // We still check for them so that we avoid falling into the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText());
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("mMapInfoContributors")) {
                 readLegacyMapInfoContributors();
             } else if (name() == qsl("mapInfoContributor")) {
@@ -1302,7 +1301,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
 }
 
-bool XMLimport::readDefaultTrueBool(QString name) {
+bool XMLimport::readDefaultTrueBool(QString name)
+{
     return attributes().value(name) == YES || !attributes().hasAttribute(name);
 }
 

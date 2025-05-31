@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2022, 2024 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2022, 2024-2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -357,7 +357,7 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
     ui->lineEdit_filePath->setPlaceholderText(path);
 }
 
-void dlgPackageExporter::checkToEnableExportButton() 
+void dlgPackageExporter::checkToEnableExportButton()
 {
     QStringList missingFields;
     if (ui->lineEdit_packageName->text().isEmpty()) {
@@ -614,7 +614,7 @@ void dlgPackageExporter::slot_exportPackage()
         } else {
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=]() {
+            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
                 mExportingPackage = false;
                 checkToEnableExportButton();
 
@@ -866,22 +866,14 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("description"), packageDescription);
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
-    QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    const int offset = iso8601timestamp.offsetFromUtc();
-    iso8601timestamp.setOffsetFromUtc(offset);
-    QDateTime iso8601time(QDateTime::currentDateTime());
-    iso8601time.setTimeSpec(Qt::OffsetFromUTC);
-    mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
-    mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
+    const auto iso8601timestamp = utils::dateStamp();
+    mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp));
+    mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp));
 
     const QString luaConfig = qsl("%1/config.lua").arg(stagingDirName);
     QSaveFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
-        // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        out.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
         out << mPackageConfig;
         if (!configFile.commit()) {
             qDebug() << "dlgPackageExporter::writeConfigFile: error saving package config data: " << configFile.errorString();
@@ -984,7 +976,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     QMap<QString, QString> fileEntries;
     while (stagingFile.hasNext() && isOk) {
         const QString itEntry = stagingFile.next();
-        Q_UNUSED(itEntry);
+        Q_UNUSED(itEntry)
         // Dot and DotDot entries are no use to us so skip them
         if (!(stagingFile.fileName().compare(qsl(".")) && stagingFile.fileName().compare(qsl("..")))) {
             // Dot and DotDot entries are no use to us so skip them
@@ -1535,7 +1527,7 @@ void dlgPackageExporter::displayResultMessage(const QString& html, const bool is
                             'upload' in between them in the source text, (associated with uploading
                             the resulting package to the Mudlet forums) should be translated.
                             */
-                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?")));
+                                tr("Why not <a href=\"https://packages.mudlet.org/upload\">upload</a> your package for other Mudlet users?")));
     ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->infoLabel->setOpenExternalLinks(true);
 }
@@ -1597,8 +1589,12 @@ void dlgPackageExporter::slot_cancelExport()
 }
 
 //Description Class TextEdit
-dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW) : QTextEdit(pW) {}
-dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
+dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
+: QTextEdit(pW)
+{}
+
+dlgPackageExporterDescription::~dlgPackageExporterDescription()
+{}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {

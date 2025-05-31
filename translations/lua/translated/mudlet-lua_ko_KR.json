@@ -68,7 +68,7 @@
     "description": "disconnect your container from the border frame"
   },
   "Mudlet.packageInstallSuccess": {
-    "message": "패키지 '%s'이(가) 성공적으로 설치되었습니다.",
+    "message": "'%s' 패키지를 성공적으로 설치했습니다.",
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
   "Mudlet.packageInstallFail": {
@@ -76,7 +76,7 @@
     "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
   },
   "Mudlet.moduleInstallSuccess": {
-    "message": "모듈 '%s'이(가) 성공적으로 설치되었습니다.",
+    "message": "'%s' 모듈을 성공적으로 설치했습니다.",
     "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
   },
   "Mudlet.moduleInstallFail": {
@@ -88,15 +88,15 @@
     "description": "Download package from Url for installation - %s is source url"
   },
   "Mudlet.prefixOk": {
-    "message": "[ 정보 ]  - ",
+    "message": "[ 확인 ] - ",
     "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefixWarn": {
-    "message": "[ 경고 ]  - ",
+    "message": "[ 경고 ] - ",
     "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefixInfo": {
-    "message": "[ 정보 ]  - ",
+    "message": "[ 정보 ] - ",
     "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
   }
 }

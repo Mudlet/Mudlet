@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -569,8 +570,8 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(exitStatus);
+    Q_UNUSED(exitCode)
+    Q_UNUSED(exitStatus)
 
     objectsToDelete.append(sender());
 }
@@ -2666,6 +2667,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
     if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package); !success) {
         return warnArgumentValue(L, __func__, message);
     }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -2674,8 +2676,13 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
     const QString packageName = getVerifiedString(L, __func__, 1, "package name");
     Host& host = getHostFromLua(L);
-    host.uninstallPackage(packageName, enums::PackageModuleType::Package);
-    return 0;
+    const bool result = host.uninstallPackage(packageName, enums::PackageModuleType::Package);
+    if (!result) {
+        lua_pushnil(L);
+    } else {
+        lua_pushboolean(L, result);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installModule
@@ -2953,6 +2960,16 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendCmdLine
+int TLuaInterpreter::sendCmdLine(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "command");
+    Host& host = getHostFromLua(L);
+    host.sendCmdLine(text);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send
 // Note this is registered as send NOT sendRaw - see initLuaGlobals()
 // It converts the bytes in the command (the first argument) from Utf-8 to be
@@ -3073,65 +3090,95 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getOS
 int TLuaInterpreter::getOS(lua_State* L)
 {
+    auto pushProcessor = [&] () {
+#if defined(Q_PROCESSOR_IA64)
+        lua_pushstring(L, "ia64");
+        return 1;
+#elif defined(Q_PROCESSOR_X86_64)
+        lua_pushstring(L, "x86 (64-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_X86_32)
+        lua_pushstring(L, "x86 (32-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_POWER_64)
+        lua_pushstring(L, "ppc (64-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_POWER_32)
+        lua_pushstring(L, "ppc (32-bit)");
+        return 1;
+#elif defined(Q_PROCESSOR_ARM_V7)
+        lua_pushstring(L, "arm7");
+        return 1;
+#elif defined(Q_PROCESSOR_ARM_V6)
+        lua_pushstring(L, "arm6");
+        return 1;
+#elif defined(Q_PROCESSOR_ARM_V5)
+        lua_pushstring(L, "arm5");
+        return 1;
+#else
+        return 0;
+#endif
+    };
+
 #if defined(Q_OS_CYGWIN)
     // Try for this one before Q_OS_WINDOWS as both are likely to be defined on
     // a Cygwin platform
     // CHECK: hopefully will NOT be triggered on mingw/msys
     lua_pushstring(L, "cygwin");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_WINDOWS)
     lua_pushstring(L, "windows");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_LINUX)
     lua_pushstring(L, "linux");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     lua_pushstring(L, QSysInfo::productType().toUtf8().constData());
-    return 3;
+    return 3 + pushProcessor();
 #elif defined(Q_OS_HURD)
     lua_pushstring(L, "hurd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_FREEBSD)
     // Only defined on FreeBSD but NOT Debian kFreeBSD so we should check for
     // this first
     lua_pushstring(L, "freebsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_FREEBSD_KERNEL)
     // Defined for BOTH Debian kFreeBSD hybrid with a GNU userland and
     // main FreeBSD so it must be after Q_OS_FREEBSD check; included for Debian
     // packager who may want to have this!
     lua_pushstring(L, "kfreebsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_OPENBSD)
     lua_pushstring(L, "openbsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_NETBSD)
     lua_pushstring(L, "netbsd");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_BSD4)
     // Generic *nix - must be before unix and after other more specific results
     lua_pushstring(L, "bsd4");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #elif defined(Q_OS_UNIX)
     // Most generic *nix - must be after bsd4 and other more specific results
     lua_pushstring(L, "unix");
     lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
-    return 2;
+    return 2 + pushProcessor();
 #else
     lua_pushstring(L, "unknown");
     lua_pushstring(L, "unknown");
-    return 2;
+    return 2 + pushProcessor();
 #endif
 }
 
@@ -3380,7 +3427,8 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
+void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions)
+{
     lua_State *L = pGlobalLua;
     lua_getglobal(L, "mxp");
     if (!lua_istable(L, -1)) {
@@ -3893,6 +3941,12 @@ void TLuaInterpreter::setMatches(lua_State* L)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(void* pT)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -3918,7 +3972,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
         } else {
             if (mudlet::smDebugMode) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
             }
         }
         lua_pop(L, lua_gettop(L));
@@ -3962,6 +4016,12 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     lua_pushlightuserdata(L, pT);
@@ -3995,7 +4055,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 
             if (mudlet::smDebugMode) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
             }
         }
         lua_pop(L, lua_gettop(L));
@@ -4015,6 +4075,12 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 // to cut down on spammy output if things are okay.
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
     setMatches(L);
 
@@ -4036,7 +4102,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     } else {
         if (mudlet::smDebugMode && !muteDebugOutput) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4047,6 +4113,12 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
     bool returnValue = false;
 
@@ -4075,7 +4147,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
 
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4140,6 +4212,12 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     lua_getfield(L, LUA_GLOBALSINDEX, function.c_str());
@@ -4161,7 +4239,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
 
@@ -4179,6 +4257,12 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     if (!mMultiCaptureGroupList.empty()) {
@@ -4222,7 +4306,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4232,6 +4316,12 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     lua_State* L = pGlobalLua;
 
     bool returnValue = false;
@@ -4277,7 +4367,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4363,14 +4453,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
                 ++iter;
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -4392,13 +4476,8 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         case (QEvent::Enter): {
             auto qME = static_cast<const QEnterEvent*>(qE);
             lua_newtable(L);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            auto globalPosition = qME->globalPos();
-            auto position = qME->pos();
-#else
             auto globalPosition = qME->globalPosition().toPoint();
             auto position = qME->position().toPoint();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -4556,6 +4635,12 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
 // No documentation available in wiki - internal function
 double TLuaInterpreter::condenseMapLoad()
 {
+    QElapsedTimer executionTimer;
+
+    if (mudlet::smDebugMode) {
+        executionTimer.start();
+    }
+
     const QString luaFunction = qsl("condenseMapLoad");
     double loadTime = -1.0;
 
@@ -4580,7 +4665,7 @@ double TLuaInterpreter::condenseMapLoad()
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors\n" >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors in" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
         }
     }
 
@@ -4995,6 +5080,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
+    lua_register(pGlobalLua, "sendCmdLine", TLuaInterpreter::sendCmdLine);
     lua_register(pGlobalLua, "send", TLuaInterpreter::sendRaw);
     lua_register(pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup);
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
@@ -5104,12 +5190,22 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
     lua_register(pGlobalLua, "loadSoundFile", TLuaInterpreter::loadSoundFile);
     lua_register(pGlobalLua, "loadMusicFile", TLuaInterpreter::loadMusicFile);
+    lua_register(pGlobalLua, "loadVideoFile", TLuaInterpreter::loadVideoFile);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
     lua_register(pGlobalLua, "playMusicFile", TLuaInterpreter::playMusicFile);
+    lua_register(pGlobalLua, "playVideoFile", TLuaInterpreter::playVideoFile);
     lua_register(pGlobalLua, "getPlayingMusic", TLuaInterpreter::getPlayingMusic);
     lua_register(pGlobalLua, "getPlayingSounds", TLuaInterpreter::getPlayingSounds);
+    lua_register(pGlobalLua, "getPlayingVideos", TLuaInterpreter::getPlayingVideos);
+    lua_register(pGlobalLua, "getPausedSounds", TLuaInterpreter::getPausedSounds);
+    lua_register(pGlobalLua, "getPausedMusic", TLuaInterpreter::getPausedMusic);
+    lua_register(pGlobalLua, "getPausedVideos", TLuaInterpreter::getPausedVideos);
     lua_register(pGlobalLua, "stopMusic", TLuaInterpreter::stopMusic);
     lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
+    lua_register(pGlobalLua, "stopVideos", TLuaInterpreter::stopVideos);
+    lua_register(pGlobalLua, "pauseSounds", TLuaInterpreter::pauseSounds);
+    lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
+    lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);
@@ -5463,6 +5559,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfiles", TLuaInterpreter::getProfiles);
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     lua_register(pGlobalLua, "closeProfile", TLuaInterpreter::closeProfile);
+    lua_register(pGlobalLua, "getCollisionLocationsInArea", TLuaInterpreter::getCollisionLocationsInArea);
+    lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
+    lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
+    lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -5571,7 +5671,8 @@ void TLuaInterpreter::initLuaGlobals()
 }
 
 // No documentation available in wiki - internal function
-lua_State* TLuaInterpreter::getLuaGlobalState() {
+lua_State* TLuaInterpreter::getLuaGlobalState()
+{
     return pGlobalLua;
 }
 
@@ -5796,7 +5897,10 @@ void TLuaInterpreter::loadGlobal()
         // and in a "src" subdirectory (to match the relative source file
         // location to that top-level project file) of the main project
         // "mudlet" directory:
-        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
+        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // CMake builds from Qt Creator on Windows 11 appear to use this directory:
+        QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
 
     // Although it is relatively easy to detect whether something is #define d
@@ -5889,10 +5993,6 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     /*
      * FIXME: Qt Documentation for this method reports:
@@ -6435,7 +6535,8 @@ Host& getHostFromLua(lua_State* L)
 // No documentation available in wiki - internal function
 // Used to unref lua objects in the registry to avoid memory leaks
 // i.e. Unrefing tables passed into TLabel's event parameters.
-void TLuaInterpreter::freeLuaRegistryIndex(int index) {
+void TLuaInterpreter::freeLuaRegistryIndex(int index)
+{
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
 
@@ -7103,6 +7204,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     } else {
         mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
     }
+    mudlet::self()->mTrayIcon.hide();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -7228,6 +7330,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMXP")) {
+        host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7260,10 +7366,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("specialForceMxpNegotiationOff")) {
-        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
         host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7283,6 +7385,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("advertiseScreenReader")) {
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableClosedCaption")) {
+        host.mEnableClosedCaption = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {
@@ -7328,26 +7434,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("commandLineHistorySaveSize")) {
-        // This set of values needs to be the same as those put in the
-        // (QComboBox) dlgProfilePreferences::comboBox_commandLineHistorySaveSize
-        // widget:
-        static const QList<int> values{0, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000};
         const auto value = getVerifiedInt(L, __func__, 2, "value");
-        if (!values.contains(value)) {
-            static QStringList valuesAsStrings;
-            if (valuesAsStrings.isEmpty()) {
-                for (const auto& potentialValue : values) {
-                    valuesAsStrings << QString::number(potentialValue);
-                }
-            }
-            lua_pushnil(L);
-            // Use the original argument as a string, not what the
-            // getVerifiedInt(...) returns in case it is not a pure integer to
-            // start with:
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize number %s, it should be one of %s",
-                            lua_tostring(L, 2), valuesAsStrings.join(qsl(", ")).toUtf8().constData());
-            return 2;
-        }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
@@ -7375,11 +7462,17 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("f3SearchEnabled")) {
+        const bool value = getVerifiedBool(L, __func__, 2, "value");
+        host.setF3SearchEnabled(value);
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#announce
-int TLuaInterpreter::announce(lua_State *L) {
+int TLuaInterpreter::announce(lua_State *L)
+{
     const QString text = getVerifiedString(L, __func__, 1, "text to announce");
     static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
     QString processing;
@@ -7435,6 +7528,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
+        { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
         { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
@@ -7443,7 +7537,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
@@ -7483,7 +7576,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "asis");
             }
         } },
-        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } } //, <- not needed until another one is added
+        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
+        { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } } //, <- not needed until another one is added
     };
 
     auto it = configMap.find(key);

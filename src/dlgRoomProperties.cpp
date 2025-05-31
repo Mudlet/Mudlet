@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -338,7 +339,7 @@ void dlgRoomProperties::accept()
     // Find lock status to return back
     Qt::CheckState const newCheckState = checkBox_locked->checkState();
     bool changeLockStatus = true;
-    bool newLockStatus;
+    std::optional<bool> newLockStatus;
     if (newCheckState == Qt::PartiallyChecked) {
         // We don't want to change then
         changeLockStatus = false;
@@ -517,10 +518,10 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
     connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
+    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this]() {
         QMenu menu;
         //: This action deletes a color from the list of all room colors
-        menu.addAction(tr("Delete room color"), this, [=]() {
+        menu.addAction(tr("Delete room color"), this, [=, this]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto color = selectedItem->text();
 

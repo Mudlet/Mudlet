@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
@@ -183,11 +183,7 @@ void T2DMap::slot_shiftZdown()
     update();
 }
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
 void T2DMap::switchArea(const QString& newAreaName)
-#else
-void T2DMap::slot_switchArea(const QString& newAreaName)
-#endif
 {
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {
@@ -627,7 +623,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         if (showThisRoomName) {
             painter.save();
             painter.setFont(mapNameFont);
-            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
+            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::Alignment(Qt::AlignTop|Qt::AlignCenter) | Qt::TextFlag(Qt::TextSingleLine), pRoom->name);
             painter.restore();
         }
     }
@@ -2494,15 +2490,16 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
 
     const int infoHeight = mFontHeight; // Account for first iteration
     QRect testRect;
+
     // infoRect has a 10 margin on either side and on top to widget frame.
     mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop | Qt::TextIncludeTrailingSpaces, infoText);
+    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), infoText);
     mMapInfoRect.setHeight(testRect.height() + 10);
 
     // Restore Grey translucent background, was useful for debugging!
     painter.fillRect(mMapInfoRect, mpHost->mMapInfoBg);
     painter.setPen(properties.color);
-    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop | Qt::TextIncludeTrailingSpaces, infoText);
+    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), infoText);
     //forget about font size changing and bolding/italicisation:
     painter.restore();
 
@@ -2518,11 +2515,8 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
     if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
     mPHighlight = event->pos();
-#else
-    mPHighlight = event->position().toPoint();
-#endif
     mPick = true;
     mStartSpeedWalk = true;
     repaint();
@@ -2539,11 +2533,11 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() {
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=, this]() {
         updateMapLabel(labelRectangle, labelId, pArea);
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=]() mutable {
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=, this]() mutable {
         pArea->mMapLabels.remove(labelId);
         update();
     });
@@ -3022,14 +3016,10 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             // slot method did...
             connect(action, &QAction::triggered, mapper, qOverload<>(&QSignalMapper::map));
         }
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         // In relation to above "TODO" in the meantime we can handle things
         // by a change to one of a group of newer signals with a specific
         // signature:
         connect(mapper, &QSignalMapper::mappedString, this, &T2DMap::slot_userAction);
-#else
-        connect(mapper, qOverload<const QString&>(&QSignalMapper::mapped), this, &T2DMap::slot_userAction);
-#endif
 
         // After all has been added, finally have Qt display the context menu as a whole
         mPopupMenu = true;
@@ -3188,7 +3178,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             setMouseTracking(false);
             mRoomBeingMoved = false;
-        } else if (!mPopupMenu) {
+        } else {
+            mPopupMenu = false;
             // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
             mMultiSelection = !mMapViewOnly;
             mMultiRect = QRect(event->pos(), event->pos());
@@ -3292,11 +3283,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 mMultiSelection = false;
                 mHelpMsg.clear();
             }
-
-        } else { // In popup menu, so end that
-            mPopupMenu = false;
         }
-
     }
 
     TEvent sysMapWindowMousePressEvent{};
@@ -3946,7 +3933,7 @@ void T2DMap::slot_showPropertiesDialog()
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
-    connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+    connect(mpDlgRoomProperties, &QDialog::finished, this, [=, this]() {
         mpDlgRoomProperties = nullptr;
     });
 }
@@ -3958,7 +3945,7 @@ void T2DMap::slot_setRoomProperties(
     bool changeSymbol, QString newSymbol,
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
-    bool changeLockStatus, bool newLockStatus,
+    bool changeLockStatus, std::optional<bool> newLockStatus,
     QSet<TRoom*> rooms)
 {
     if (newName.isEmpty()) {
@@ -4002,8 +3989,8 @@ void T2DMap::slot_setRoomProperties(
         if (changeWeight) {
             room->setWeight(newWeight);
         }
-        if (changeLockStatus) {
-            room->isLocked = newLockStatus;
+        if (changeLockStatus && newLockStatus.has_value()) {
+            room->isLocked = newLockStatus.value();
         }
     }
     if (changeWeight || changeLockStatus) {
@@ -4192,7 +4179,8 @@ void T2DMap::slot_setUserData()
 {
 }
 
-void T2DMap::slot_loadMap() {
+void T2DMap::slot_loadMap()
+{
     if (!mpHost) {
         return;
     }
@@ -4294,7 +4282,7 @@ void T2DMap::slot_setArea()
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](const QString newText) {
+    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=, this](const QString newText) {
         auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
         buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.trimmed().isEmpty());
         if (!newText.trimmed().isEmpty() && arealist_combobox->findText(newText.trimmed(), Qt::MatchExactly) == -1
@@ -4305,7 +4293,7 @@ void T2DMap::slot_setArea()
         }
     });
 
-    connect(set_room_area_dialog, &QDialog::accepted, [=]() {
+    connect(set_room_area_dialog, &QDialog::accepted, [=, this]() {
         int newAreaId;
         if (arealist_combobox->findText(arealist_combobox->currentText(), Qt::MatchExactly) != -1) {
             newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
@@ -4351,11 +4339,7 @@ void T2DMap::slot_setArea()
                 }
                 const auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
                 switchArea(targetAreaName);
-#else
-                slot_switchArea(targetAreaName);
-#endif
             }
         }
         update();
@@ -4371,11 +4355,7 @@ void T2DMap::slot_setArea()
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
     if (mpMap->mLeftDown && !mpMap->m2DPanMode && (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly)) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        mpMap->m2DPanStart = event->localPos();
-#else
         mpMap->m2DPanStart = event->position();
-#endif
         mpMap->m2DPanMode = true;
     }
     if (mpMap->m2DPanMode && (!event->modifiers().testFlag(Qt::AltModifier) && !mMapViewOnly)) {
@@ -4383,11 +4363,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         mpMap->mLeftDown = false;
     }
     if (mpMap->m2DPanMode) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        const QPointF panNewPosition = event->localPos();
-#else
-        QPointF panNewPosition = event->position();
-#endif
+        const QPointF panNewPosition = event->position();
         mShiftMode = true;
         const QPointF movement = mpMap->m2DPanStart - panNewPosition;
         mMapCenterX += movement.x() / mRoomWidth;
@@ -4588,7 +4564,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 room->offset(dx, dy, 0);
                 // Previously we would move all the rooms to the same level as
                 // the center room but this is not really helpful as it
-                // squashes mulitple levels of rooms all onto the same level!
+                // squashes multiple levels of rooms all onto the same level!
 
                 QMapIterator<QString, QList<QPointF>> itk(room->customLines);
                 QMap<QString, QList<QPointF>> newMap;
@@ -5176,7 +5152,7 @@ void T2DMap::slot_setCustomLine2()
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
 {
-    Q_UNUSED(column);
+    Q_UNUSED(column)
     if (!special_exit) {
         return;
     }

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022, 2025 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -1399,7 +1400,7 @@ int TLuaInterpreter::getAreaRooms1(lua_State* L)
     }
     lua_newtable(L);
     int i = 0;
-    for (int room : qAsConst(pA->getAreaRooms())) {
+    for (const int room : std::as_const(pA->getAreaRooms())) {
         lua_pushnumber(L, ++i);
         lua_pushnumber(L, room);
         lua_settable(L, -3);
@@ -2377,7 +2378,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         const int totalWeight = host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
-        Q_UNUSED(totalWeight);
+        Q_UNUSED(totalWeight)
         return warnArgumentValue(L, __func__, qsl("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
     host.startSpeedWalk();
@@ -2654,7 +2655,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
     auto& host = getHostFromLua(L);
     host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
-        Q_UNUSED(infoColor);
+        Q_UNUSED(infoColor)
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
@@ -3313,15 +3314,61 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "environmentID");
-    const int r = getVerifiedInt(L, __func__, 2, "r");
-    const int g = getVerifiedInt(L, __func__, 3, "g");
-    const int b = getVerifiedInt(L, __func__, 4, "b");
-    const int alpha = getVerifiedInt(L, __func__, 5, "a");
-    const Host& host = getHostFromLua(L);
-    host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
+    const int r = getVerifiedInt(L, __func__, 2, "red color component");
+    const int g = getVerifiedInt(L, __func__, 3, "green color component");
+    const int b = getVerifiedInt(L, __func__, 4, "blue color component");
+    int alpha = 255;
+    if (lua_gettop(L) > 4) {
+        alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
+    }
+
+    if ((r < 0) || (r > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "red color component %d out of range {0 to 255}", r);
+        return 2;
+    }
+    if ((g < 0) || (g > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "green color component %d out of range {0 to 255}", g);
+        return 2;
+    }
+    if ((b < 0) || (b > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "blue color component %d out of range {0 to 255}", b);
+        return 2;
+    }
+    if ((alpha < 0) || (alpha > 255)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "alpha color component %d out of range {0 to 255}", alpha);
+        return 2;
+    }
+    const QColor& newColor = QColor(r, g, b, alpha);
+    Host& host = getHostFromLua(L);
+    host.mpMap->mCustomEnvColors[id] = newColor;
+    switch (id) { // See TMap::restore16ColorSet() for mapping of indexes:
+    case 257:   host.mRed_2 = newColor;             break;
+    case 258:   host.mGreen_2 = newColor;           break;
+    case 259:   host.mYellow_2 = newColor;          break;
+    case 260:   host.mBlue_2 = newColor;            break;
+    case 261:   host.mMagenta_2 = newColor;         break;
+    case 262:   host.mCyan_2 = newColor;            break;
+    case 263:   host.mWhite_2 = newColor;           break;
+    case 264:   host.mBlack_2 = newColor;           break;
+    case 265:   host.mLightRed_2 = newColor;        break;
+    case 266:   host.mLightGreen_2 = newColor;      break;
+    case 267:   host.mLightYellow_2 = newColor;     break;
+    case 268:   host.mLightBlue_2 = newColor;       break;
+    case 269:   host.mLightMagenta_2 = newColor;    break;
+    case 270:   host.mLightCyan_2 = newColor;       break;
+    case 271:   host.mLightWhite_2 = newColor;      break;
+    case 272:   host.mLightBlack_2 = newColor;      break;
+    default: {} // No-op
+    }
+
     host.mpMap->setUnsaved(__func__);
     host.mpMap->update();
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDoor
@@ -3833,4 +3880,44 @@ int TLuaInterpreter::updateMap(lua_State* L)
         host.mpMap->update();
     }
     return 0;
+}
+
+int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(area)));
+    }
+
+    lua_newtable(L);
+    int i = 0;
+    for (const auto& coordinateSet : pA->getCollisionNodes()) {
+        lua_pushnumber(L, ++i);
+        {
+            lua_newtable(L);
+
+            // x:
+            lua_pushnumber(L, 1);
+            lua_pushnumber(L, std::get<0>(coordinateSet));
+            lua_settable(L, -3);
+
+            // y:
+            lua_pushnumber(L, 2);
+            lua_pushnumber(L, std::get<1>(coordinateSet));
+            lua_settable(L, -3);
+
+            // z:
+            lua_pushnumber(L, 3);
+            lua_pushnumber(L, std::get<2>(coordinateSet));
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+    }
+    return 1;
+
 }

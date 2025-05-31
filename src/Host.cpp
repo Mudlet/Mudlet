@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -80,7 +80,11 @@ stopWatch::stopWatch()
 , mEffectiveStartDateTime()
 , mElapsedTime()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    mEffectiveStartDateTime.setTimeZone(QTimeZone::UTC);
+#else
     mEffectiveStartDateTime.setTimeSpec(Qt::UTC);
+#endif
 }
 
 bool stopWatch::start()
@@ -257,6 +261,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mWrapHangingIndentCount(0)
 , mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
@@ -280,7 +285,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mMapperShowRoomBorders(true)
-, mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
@@ -352,10 +356,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * otherwise - note that this must be done AFTER setDevice(...):
      */
     mErrorLogStream.setDevice(&mErrorLogFile);
-    // In Qt6 the default encoding is UTF-8
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
 
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
@@ -568,7 +568,7 @@ void Host::startMapAutosave(const int interval)
 
 void Host::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     autoSaveMap();
 }
@@ -753,7 +753,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=]() {
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
             reloadModule(syncModuleName);
             obj->deleteLater();
         });
@@ -872,6 +872,12 @@ void Host::resetProfile_phase2()
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    // A zero value is how we send a "false" value - which indicates that
+    // this is for a reset profile and NOT a freshly loaded one:
+    event.mArgumentList.append(QString::number(0));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
     raiseEvent(event);
     qDebug() << "resetProfile() DONE";
 }
@@ -933,12 +939,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     qApp->processEvents();
 
     auto watcher = new QFutureWatcher<void>;
-    mModuleFuture = QtConcurrent::run([=]() {
+    mModuleFuture = QtConcurrent::run([=, this]() {
         // wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=, this]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
@@ -1040,9 +1046,14 @@ void Host::updateConsolesFont()
         mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
         mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
     }
+
     if (mudlet::self()->smpDebugArea) {
         mudlet::self()->smpDebugConsole->setFont(mDisplayFont.family());
         mudlet::self()->smpDebugConsole->setFontSize(mDisplayFont.pointSize());
+    }
+
+    if (mpNotePad) {
+        mpNotePad->setFont(mDisplayFont);
     }
 }
 
@@ -1066,7 +1077,7 @@ void Host::setMediaLocationGMCP(const QString& mediaUrl)
     mMediaLocationGMCP = mediaUrl;
 }
 
-QString Host::getMediaLocationGMCP() const
+QString Host::mediaLocationGMCP() const
 {
     return mMediaLocationGMCP;
 }
@@ -1082,7 +1093,7 @@ void Host::setMediaLocationMSP(const QString& mediaUrl)
     mMediaLocationMSP = mediaUrl;
 }
 
-QString Host::getMediaLocationMSP() const
+QString Host::mediaLocationMSP() const
 {
     return mMediaLocationMSP;
 }
@@ -1099,17 +1110,11 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     return {true, QString()};
 }
 
-std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
-{
-    const auto result = setDisplayFont(QFont(fontName));
-    updateConsolesFont();
-    return result;
-}
-
 void Host::setDisplayFontFromString(const QString& fontData)
 {
-    mDisplayFont.fromString(fontData);
-    updateConsolesFont();
+    QFont font;
+    font.fromString(fontData);
+    setDisplayFont(font);
 }
 
 void Host::setDisplayFontSize(int size)
@@ -1185,7 +1190,7 @@ bool Host::checkForCustomSpeedwalk()
 void Host::startSpeedWalk()
 {
     const int totalWeight = assemblePath();
-    Q_UNUSED(totalWeight);
+    Q_UNUSED(totalWeight)
     const QString f = qsl("doSpeedWalk");
     const QString n = QString();
     mLuaInterpreter.call(f, n);
@@ -1992,7 +1997,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 }
 
 
-QString Host::sanitizePackageName(const QString packageName) const {
+QString Host::sanitizePackageName(const QString packageName) const
+{
     auto tempName = packageName.section(qsl("/"), -1);
     tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
     tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
@@ -2026,7 +2032,8 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+void Host::removePackageInfo(const QString &packageName, const bool isModule)
+{
     if (isModule) {
         mModuleInfo.remove(packageName);
     } else {
@@ -2185,15 +2192,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
-        /*
-         * We also have to explicit set the codec to use whilst reading the file
-         * as otherwise QTextCodec::codecForLocale() is used which for Qt5
-         * might be a local8Bit codec that thus will not handle all the
-         * characters contained in Unicode. In Qt6 the default is UTF-8.
-         */
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        in.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
+
         while (!in.atEnd()) {
             strings += in.readLine();
         }
@@ -2278,10 +2277,6 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 bool Host::writeProfileIniData(const QString& item, const QString& what)
 {
     QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     settings.setValue(item, what);
     settings.sync();
     switch (settings.status()) {
@@ -2300,10 +2295,6 @@ bool Host::writeProfileIniData(const QString& item, const QString& what)
 QString Host::readProfileIniData(const QString& item)
 {
     QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This will ensure compatibility going forward and backward
-    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
-#endif
     return settings.value(item).toString();
 }
 
@@ -2841,7 +2832,7 @@ void Host::setSpellDic(const QString& newDict)
 // DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
 void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
 {
-    Q_UNUSED(_useDictionary);
+    Q_UNUSED(_useDictionary)
     const bool useDictionary = true;
     bool dictionaryChanged {};
     // Copy the value while we have the lock:
@@ -2981,7 +2972,7 @@ void Host::loadSecuredPassword()
 
     job->setKey(getName());
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
         if (task->error()) {
             const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
@@ -4288,11 +4279,13 @@ void Host::setEditorShowBidi(const bool state)
     }
 }
 
-bool Host::caretEnabled() const {
+bool Host::caretEnabled() const
+{
     return mCaretEnabled;
 }
 
-void Host::setCaretEnabled(bool enabled) {
+void Host::setCaretEnabled(bool enabled)
+{
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
 }
@@ -4401,4 +4394,16 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();
+}
+
+void Host::sendCmdLine(const QString& cmd)
+{
+    if (!mpConsole || !mpConsole->mpCommandLine) {
+        qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
+        return;
+    }
+
+    // Set the command in the active command line
+    mpConsole->mpCommandLine->setPlainText(cmd);
+    mpConsole->mpCommandLine->selectAll();
 }

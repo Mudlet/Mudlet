@@ -114,7 +114,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              3000,
              false,
              qsl("<a href='http://www.3k.org/'>http://www.3k.org</a>"),
-             qsl(":/icons/3klogo.png"),
+             qsl(":/icons/3Kingdoms.png"),
              qsl("Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms "
                  "is a colossal adventure through which many years of active and continued "
                  "development by its dedicated coding staff.  Based around the mighty town of "
@@ -134,7 +134,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              3200,
              false,
              qsl("<a href='http://www.3scapes.org/'>http://www.3scapes.org</a>"),
-             qsl(":/icons/3slogo.png"),
+             qsl(":/icons/3Scapes.png"),
              qsl("3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but "
                  "unique and twisted in so many ways.  3Scapes offers a faster pace of play, along "
                  "with an assortment of new guilds, features, and areas.")},

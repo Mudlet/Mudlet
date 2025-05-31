@@ -14,12 +14,12 @@ jobs:
     - uses: actions/checkout@v4
       name: Checkout source code
 
-    - uses: leafo/gh-actions-lua@v10
+    - uses: leafo/gh-actions-lua@v11
       name: Install Lua
       with:
         luaVersion: "5.1.5"
 
-    - uses: leafo/gh-actions-luarocks@v4
+    - uses: leafo/gh-actions-luarocks@v5
       name: Install LuaRocks
 
     - name: Install LDoc

@@ -164,7 +164,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TAction* action)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TAction(" << action->getName() << ")";
     debug.nospace() << ", commandButtonUp=" << action->getCommandButtonUp();
     debug.nospace() << ", commandButtonDown=" << action->getCommandButtonDown();
