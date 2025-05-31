@@ -2881,7 +2881,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
     if (data.trimmed().isEmpty()) { // Example: Core.Ping
         // Pass empty table/object to Lua
-        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, "{}");
+        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, qsl("{}"));
         return;
     }
 
