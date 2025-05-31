@@ -1241,7 +1241,7 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
+    if (wantPrint && !mIsRemoteEchoingActive) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
