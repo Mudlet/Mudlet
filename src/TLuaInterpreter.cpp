@@ -5567,11 +5567,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "isAIRunning", TLuaInterpreter::isAIRunning);
     lua_register(pGlobalLua, "getAIModelPath", TLuaInterpreter::getAIModelPath);
     lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
-    lua_register(pGlobalLua, "aiComplete", TLuaInterpreter::aiComplete);
-    lua_register(pGlobalLua, "aiEmbeddings", TLuaInterpreter::aiEmbeddings);
-    lua_register(pGlobalLua, "getAIModels", TLuaInterpreter::getAIModels);
-    lua_register(pGlobalLua, "aiChatAsync", TLuaInterpreter::aiChatAsync);
-    lua_register(pGlobalLua, "aiCompleteAsync", TLuaInterpreter::aiCompleteAsync);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
