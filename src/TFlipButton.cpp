@@ -93,7 +93,7 @@ QSize TFlipButton::minimumSizeHint() const
 
 void TFlipButton::paintEvent(QPaintEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     QStylePainter painter(this);
 
     switch (mOrientation) {

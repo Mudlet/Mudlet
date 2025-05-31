@@ -32,7 +32,11 @@
 #include "post_guard.h"
 
 extern "C" {
-    #include <lua.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
 }
 
 class Host;
@@ -107,7 +111,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TKey* key)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TKey(" << key->getName();
     debug.nospace() << ", keyCode=" << key->getKeyCode();
     debug.nospace() << ", keyModifiers=" << key->getKeyModifiers();

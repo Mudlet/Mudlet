@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -719,8 +719,8 @@ void mudlet::init()
     // load bundled fonts
     mFontManager.addFonts();
 
-    // Initialise a couple of QMaps with elements that must be translated into
-    // the current GUI Language
+    // Initialise a couple of QMaps and some other elements that must be
+    // translated into the current GUI Language
     loadMaps();
 
     setupTrayIcon();
@@ -1252,6 +1252,18 @@ void mudlet::loadMaps()
                         {"WINDOWS-1257", tr("WINDOWS-1257 (Baltic)")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)")}};
+
+    /*: This represents the format of the timestamps shown alongside the texts
+     * in a console and might require translation for a few locales; the content
+     * is as per QDateTime::toString(...) and needs to follow the rules for that
+     * function as well as being suitable for the translation locale.
+     */
+    smTimeStampFormat = tr("hh:mm:ss.zzz ");
+    /*: This represents the format of the timestamps shown for lines that do not
+     * have a timestamp in a console that is showing them. If localised this
+     * should be set to the same format and length as the smTimeStampFormat:
+     */
+    smBlankTimeStamp = tr("------------ ");
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -4162,9 +4174,7 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 
 QStringList mudlet::getAvailableFonts()
 {
-    const QFontDatabase database;
-
-    return database.families(QFontDatabase::Any);
+    return QFontDatabase::families(QFontDatabase::Any);
 }
 
 std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
@@ -5085,7 +5095,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
-                                                      qsl("ashyriamud.com"),
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
@@ -5182,7 +5191,12 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
                                     : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+            return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+            // Deprecated in 6.9 and due for removal in 6.13:
             return original.mirrored(true, true);
+#endif
         }
     } else {
         return QImage(releaseVersion

@@ -547,13 +547,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled && isFromServer) {
+                    if (!mpHost->mEnableMXP && isFromServer) {
                         mGotCSI = false;
 
                         const QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
                         mpHost->mMxpProcessor.setMode(code);
                     }
-                    // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
+                    // end of if (!mpHost->mEnableMXP)
                     // We have manually disabled MXP negotiation
                     break;
 
@@ -680,7 +680,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         // We are outside of a CSI or OSC sequence if we get to here:
 
         if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
-            if (mpHost->mServerMXPenabled) {
+            if (mpHost->mEnableMXP) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
@@ -821,7 +821,7 @@ COMMIT_LINE:
                     lineBuffer << QString();
                 }
                 buffer.push_back(mMudBuffer);
-                timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+                timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
@@ -838,7 +838,7 @@ COMMIT_LINE:
                     lineBuffer.back().append(QString());
                 }
                 buffer.back() = mMudBuffer;
-                timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+                timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
@@ -944,6 +944,11 @@ COMMIT_LINE:
                 | (mConcealed ? TChar::Concealed : TChar::None);
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+        if (mHyperlinkActive) {
+            c.mLinkIndex = mCurrentHyperlinkLinkId;
+            c.mFlags |= TChar::Underline;
+        }
 
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
@@ -2155,6 +2160,86 @@ void TBuffer::decodeOSC(const QString& sequence)
             resetColors();
         }
         break;
+    case static_cast<quint8>('8'): {
+        // Handle OSC 8 hyperlinks in the form: "8;params;URI"
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC 8] Raw sequence: " << sequence;
+        qDebug().noquote() << "[OSC 8] Raw hex: " << sequence.toUtf8().toHex(' ');
+#endif
+        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
+        int firstSemi = rest.indexOf(';');
+
+        if (firstSemi == -1) {
+            qWarning() << "OSC 8: Missing first semicolon";
+            return;
+        }
+
+        int secondSemi = rest.indexOf(';', firstSemi + 1);
+
+        if (secondSemi == -1) {
+            qWarning() << "OSC 8: Missing second semicolon";
+            return;
+        }
+
+        QString param = rest.left(firstSemi).toString();
+
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!param.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC 8] Params provided (not used by Mudlet but shown for debugging): \"" << param << "\"";
+        }
+#endif
+        QString rawUrl = rest.mid(secondSemi + 1).toString();
+
+        // OSC 8 ;; closes the hyperlink
+        if ((param.isEmpty() && rawUrl.isEmpty())) {
+            mCurrentHyperlinkUrl.clear();
+            mCurrentHyperlinkCommand.clear();
+            mCurrentHyperlinkHint.clear();
+            mCurrentHyperlinkLinkId = 0;
+            mHyperlinkActive = false;
+            break;
+        }
+
+        if (!rawUrl.isEmpty()) {
+            if (rawUrl.length() > 2048) {
+                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
+                return;
+            }
+
+            QStringList command;
+            QStringList hint;
+
+            if (rawUrl.startsWith("send:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(5).toUtf8());
+                command = { qsl("send([[%1]])").arg(innerCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
+                mCurrentHyperlinkUrl = innerCommand;
+            } else if (rawUrl.startsWith("prompt:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(7).toUtf8());
+                command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
+                hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
+                mCurrentHyperlinkUrl = innerCommand;
+            } else {
+                QUrl qurl(rawUrl);
+                QString scheme = qurl.scheme().toLower();
+
+                if (scheme == "http" || scheme == "https" || scheme == "ftp") {
+                    command = { qsl("openUrl([[%1]])").arg(rawUrl) };
+                    hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), rawUrl) };
+                    mCurrentHyperlinkUrl = rawUrl;
+                } else {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
+                    return;
+                }
+            }
+
+            mCurrentHyperlinkCommand = command;
+            mCurrentHyperlinkHint = hint;
+            mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+            mHyperlinkActive = true;
+        }
+        break;
+    }
     default:
         qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unhandled <OSC>?...<ST> code, Mudlet will ignore it.";
     }
@@ -2218,7 +2303,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2238,7 +2323,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << csmBlankTimeStamp;
+            timeBuffer << mudlet::smBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2271,7 +2356,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << csmBlankTimeStamp;
+                    timeBuffer << mudlet::smBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2289,7 +2374,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                 linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2319,7 +2404,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
         promptBuffer << false;
         last = 0;
     }
@@ -2338,7 +2423,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << csmBlankTimeStamp;
+            timeBuffer << mudlet::smBlankTimeStamp;
             promptBuffer << false;
             firstChar = true;
             continue;
@@ -2372,7 +2457,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << csmBlankTimeStamp;
+                    timeBuffer << mudlet::smBlankTimeStamp;
                     promptBuffer << false;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
@@ -2386,7 +2471,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2415,7 +2500,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(csmTimeStampFormat);
+        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
         promptBuffer << false;
         lastLine = 0;
     }
@@ -2435,7 +2520,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(csmTimeStampFormat);
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
@@ -2770,7 +2855,7 @@ void TBuffer::log(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(csmTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(mudlet::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
 
@@ -3027,6 +3112,12 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
+    mCurrentHyperlinkUrl.clear();
+    mCurrentHyperlinkCommand.clear();
+    mCurrentHyperlinkHint.clear();
+    mCurrentHyperlinkLinkId = 0;
+    mHyperlinkActive = false;
+
     while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;
@@ -3318,7 +3409,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(csmTimeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(mudlet::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200, 150, 0);

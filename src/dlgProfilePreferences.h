@@ -39,6 +39,7 @@
 #include <QDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
+#include <QFontDialog>
 #include <QMap>
 #include "post_guard.h"
 
@@ -121,6 +122,7 @@ public slots:
 
     // Media
     void slot_purgeMediaCache();
+    void slot_toggleEnableClosedCaption(const bool);
 
     // Log.
     void slot_setLogDir();
@@ -185,7 +187,7 @@ private:
     void setColors2();
     void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
-    void setButtonColor(QPushButton*, const QColor&);
+    void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -208,6 +210,7 @@ private:
     void fillOutMapHistory();
 
     int mFontSize = 10;
+    QFont mDisplayFont;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
@@ -221,6 +224,7 @@ private:
     QPointer<QAction> mEnableMSDP;
     QPointer<QAction> mEnableMSSP;
     QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
 
