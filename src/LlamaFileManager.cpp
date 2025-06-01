@@ -262,6 +262,26 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
     qDebug() << "LlamafileManager: Process finished with exit code" << exitCode 
              << "status" << (exitStatus == QProcess::NormalExit ? "normal" : "crashed");
     
+    // Capture any remaining output from the process
+    QString stdoutOutput = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
+    QString stderrOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
+    
+    // Get last few lines of output for context
+    auto getLastLines = [](const QString& text, int maxLines = 5) -> QString {
+        if (text.isEmpty()) return QString();
+        
+        QStringList lines = text.split('\n', Qt::SkipEmptyParts);
+        if (lines.size() <= maxLines) {
+            return text;
+        }
+        
+        QStringList lastLines = lines.mid(lines.size() - maxLines);
+        return lastLines.join('\n');
+    };
+    
+    QString recentStdout = getLastLines(stdoutOutput);
+    QString recentStderr = getLastLines(stderrOutput);
+    
     healthCheckTimer->stop();
     healthy = false;
     
@@ -270,11 +290,29 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
             qDebug() << "LlamafileManager: Attempting restart" << (restartAttempts + 1) 
                      << "of" << config.maxRestartAttempts;
             
+            // Log the output for debugging restart scenarios
+            if (!recentStdout.isEmpty()) {
+                qDebug() << "LlamafileManager: Recent stdout:" << recentStdout;
+            }
+            if (!recentStderr.isEmpty()) {
+                qDebug() << "LlamafileManager: Recent stderr:" << recentStderr;
+            }
+            
             setStatus(Status::Stopped);
             attemptRestart();
         } else {
+            QString errorMsg = QString("Process exited unexpectedly (code: %1)").arg(exitCode);
+            
+            // Append recent output to error message
+            if (!recentStderr.isEmpty()) {
+                errorMsg += QString("\nRecent stderr:\n%1").arg(recentStderr);
+            }
+            if (!recentStdout.isEmpty()) {
+                errorMsg += QString("\nRecent stdout:\n%1").arg(recentStdout);
+            }
+            
             setStatus(Status::Error);
-            lastError = QString("Process exited unexpectedly (code: %1)").arg(exitCode);
+            lastError = errorMsg;
             emit processError(lastError);
         }
     } else {
