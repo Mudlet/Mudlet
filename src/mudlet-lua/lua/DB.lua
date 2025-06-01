@@ -138,14 +138,8 @@ end
 -- NOT LUADOC
 -- This serves as a very similar function to db:_sql_columns, quoting column names properly but for
 -- uses outside of INSERTs.
-function db:_sql_fields(values)
-  local sql_fields = {}
-
-  for k, v in pairs(values) do
-    sql_fields[#sql_fields + 1] = '"' .. k .. '"'
-  end
-
-  return "(" .. table.concat(sql_fields, ",") .. ")"
+function db:_sql_fields(fields)
+  return "(\"" .. table.concat(fields, "\",\"") .. "\")"
 end
 
 
@@ -698,7 +692,7 @@ function db:add(sheet, ...)
   local db_name = sheet._db_name
   local s_name = sheet._sht_name
 
-  local columns = db.__schema[db_name][s_name]['columns']
+  local columns = table.keys(db.__schema[db_name][s_name]['columns'])
 
   local sql = ""
   local sql_columns = db:_sql_fields(columns)
@@ -708,7 +702,7 @@ function db:add(sheet, ...)
   -- do not modify user's records.
   local clean_record = {}
   for i, raw_record in ipairs(raw_records) do
-    for col_name, _ in pairs(columns) do
+    for _, col_name in ipairs(columns) do
       if (raw_record[col_name] == nil) then
         clean_record[col_name] = db:Null()
       else
