@@ -258,3 +258,132 @@ int TLuaInterpreter::aiPrompt(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#aiPromptStream
+int TLuaInterpreter::aiPromptStream(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    
+    auto result = aiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    const QString prompt = getVerifiedString(L, __func__, 1, "prompt");
+    if (prompt.isEmpty()) {
+        return warnArgumentValue(L, __func__, "prompt cannot be empty");
+    }
+
+    // Optional parameters
+    double temperature = 0.7;
+    int maxTokens = 150;
+    QString eventName = "aiPromptStreamResponse"; // Default event name
+
+    if (lua_gettop(L) >= 2) {
+        if (lua_istable(L, 2)) {
+            lua_pushstring(L, "temperature");
+            lua_gettable(L, 2);
+            if (lua_isnumber(L, -1)) {
+                temperature = lua_tonumber(L, -1);
+            }
+            lua_pop(L, 1);
+
+            lua_pushstring(L, "max_tokens");
+            lua_gettable(L, 2);
+            if (lua_isnumber(L, -1)) {
+                maxTokens = static_cast<int>(lua_tointeger(L, -1));
+            }
+            lua_pop(L, 1);
+
+            lua_pushstring(L, "event");
+            lua_gettable(L, 2);
+            if (lua_isstring(L, -1)) {
+                eventName = QString::fromUtf8(lua_tostring(L, -1));
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    LlamafileManager::ApiRequest request;
+    request.prompt = prompt;
+    request.temperature = temperature;
+    request.maxTokens = maxTokens;
+    request.stream = true; // Force streaming mode
+
+    auto* aiManager = pMudlet->getAIManager();
+
+    qDebug() << "aiPromptStream request:" << request;
+
+    // For streaming, we need to handle the response differently
+    // This will require modifications to LlamaFileManager to support streaming callbacks
+    aiManager->textCompletionStream(request, 
+        // Chunk callback - fired for each streaming chunk
+        [&host, eventName](const QString& chunk, bool isComplete) {
+            TEvent event {};
+            
+            // Add event name as first argument
+            event.mArgumentList.append(eventName);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add chunk type
+            event.mArgumentList.append(isComplete ? QLatin1String("complete") : QLatin1String("partial"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add success status (always true for chunks, errors handled separately)
+            event.mArgumentList.append(QLatin1String("1"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+            
+            // Add empty error message for chunks
+            event.mArgumentList.append(QString());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add chunk content
+            QString content = chunk;
+            // Strip leading "\n " and trailing "</s>" for final chunk
+            if (isComplete) {
+                if (content.startsWith("\n ")) {
+                    content = content.mid(2);
+                }
+                if (content.endsWith("</s>")) {
+                    content.chop(4);
+                }
+            }
+            event.mArgumentList.append(content);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            qDebug() << "streaming event for aiPromptStream:" << event;
+            host.raiseEvent(event);
+        },
+        // Error callback - fired on error
+        [&host, eventName](const QString& error) {
+            TEvent event {};
+            
+            // Add event name as first argument
+            event.mArgumentList.append(eventName);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add chunk type
+            event.mArgumentList.append(QLatin1String("error"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add success status (false for errors)
+            event.mArgumentList.append(QLatin1String("0"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+            
+            // Add error message
+            event.mArgumentList.append(error);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            // Add empty content
+            event.mArgumentList.append(QString());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            
+            qDebug() << "error event for aiPromptStream:" << event;
+            host.raiseEvent(event);
+        }
+    );
+
+    lua_pushboolean(L, true);
+    return 1;
+}

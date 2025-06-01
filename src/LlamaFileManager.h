@@ -91,6 +91,8 @@ public:
     };
 
     using ApiCallback = std::function<void(const ApiResponse&)>;
+    using StreamChunkCallback = std::function<void(const QString& chunk, bool isComplete)>;
+    using StreamErrorCallback = std::function<void(const QString& error)>;
 
     explicit LlamafileManager(QObject* parent = nullptr);
     ~LlamafileManager();
@@ -111,6 +113,7 @@ public:
     void textCompletion(const ApiRequest& request, ApiCallback callback);
     void embeddings(const ApiRequest& request, ApiCallback callback);
     void getModels(ApiCallback callback);
+    void textCompletionStream(const ApiRequest& request, StreamChunkCallback chunkCallback, StreamErrorCallback errorCallback);
     
     // Health monitoring
     void enableHealthCheck(bool enable = true);
@@ -154,6 +157,7 @@ private:
     // Helper methods
     void setStatus(Status newStatus);
     void makeApiRequest(const QString& endpoint, const QJsonObject& requestData, ApiCallback callback);
+    void makeStreamingApiRequest(const QString& endpoint, const QJsonObject& requestData, StreamChunkCallback chunkCallback, StreamErrorCallback errorCallback);
     void handleApiReply(QNetworkReply* reply, ApiCallback callback);
     QString constructExecutablePath() const;
     QStringList buildProcessArguments() const;

@@ -575,3 +575,70 @@ bool LlamafileManager::isPortAvailable(int port) const {
     socket.disconnectFromHost();
     return available;
 }
+
+void LlamafileManager::textCompletionStream(const ApiRequest& request, StreamChunkCallback chunkCallback, StreamErrorCallback errorCallback) {
+    if (!isRunning()) {
+        errorCallback("Llamafile not running");
+        return;
+    }
+    
+    QJsonObject requestData;
+    requestData["prompt"] = request.prompt;
+    requestData["temperature"] = request.temperature;
+    requestData["n_predict"] = request.maxTokens;
+    requestData["stream"] = true; // Force streaming
+    
+    // Merge extra parameters
+    for (auto it = request.extraParams.begin(); it != request.extraParams.end(); ++it) {
+        requestData[it.key()] = it.value();
+    }
+    
+    makeStreamingApiRequest("/completion", requestData, chunkCallback, errorCallback);
+}
+
+void LlamafileManager::makeStreamingApiRequest(const QString& endpoint, const QJsonObject& requestData, StreamChunkCallback chunkCallback, StreamErrorCallback errorCallback) {
+    const QUrl url = apiBaseUrl().resolved(QUrl(endpoint));
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer no-key");
+    
+    const QByteArray data = QJsonDocument(requestData).toJson(QJsonDocument::Compact);
+    auto* reply = networkManager->post(request, data);
+    
+    // Handle streaming response
+    connect(reply, &QNetworkReply::readyRead, [reply, chunkCallback]() {
+        QByteArray data = reply->readAll();
+        QString chunk = QString::fromUtf8(data);
+        
+        // Parse Server-Sent Events format
+        QStringList lines = chunk.split('\n');
+        for (const QString& line : lines) {
+            if (line.startsWith("data: ")) {
+                QString jsonData = line.mid(6); // Remove "data: " prefix
+                if (jsonData == "[DONE]") {
+                    chunkCallback("", true); // Signal completion
+                    return;
+                }
+                
+                QJsonParseError parseError;
+                QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8(), &parseError);
+                if (parseError.error == QJsonParseError::NoError) {
+                    QJsonObject obj = doc.object();
+                    if (obj.contains("content")) {
+                        chunkCallback(obj["content"].toString(), false);
+                    }
+                }
+            }
+        }
+    });
+    
+    connect(reply, &QNetworkReply::finished, [reply, chunkCallback, errorCallback]() {
+        reply->deleteLater();
+        
+        if (reply->error() != QNetworkReply::NoError) {
+            errorCallback(reply->errorString());
+        } else {
+            chunkCallback("", true); // Signal completion
+        }
+    });
+}
