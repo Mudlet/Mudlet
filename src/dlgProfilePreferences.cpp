@@ -268,8 +268,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         emit signal_resetMainWindowShortcutsToDefaults();
     });
 
-    mDisplayFont = pHost->getDisplayFont();
-    pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
+    if (pHost) {
+        mDisplayFont = pHost->getDisplayFont();
+        pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
+    }
 
     connect(pushButton_fontDialog, &QPushButton::clicked, this, [this, pHost](){
         bool ok;
