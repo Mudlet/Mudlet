@@ -194,13 +194,6 @@ int TLuaInterpreter::aiPrompt(lua_State* L)
             }
             lua_pop(L, 1);
 
-            lua_pushstring(L, "stream");
-            lua_gettable(L, 2);
-            if (lua_isboolean(L, -1)) {
-                stream = lua_toboolean(L, -1);
-            }
-            lua_pop(L, 1);
-
             lua_pushstring(L, "event");
             lua_gettable(L, 2);
             if (lua_isstring(L, -1)) {
@@ -214,14 +207,10 @@ int TLuaInterpreter::aiPrompt(lua_State* L)
     request.prompt = prompt; // Use prompt field for text completion
     request.temperature = temperature;
     request.maxTokens = maxTokens;
-    request.stream = stream;
 
     auto* aiManager = pMudlet->getAIManager();
 
-    qDebug() << "aiPrompt request:" << request;
-
     aiManager->textCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
-        qDebug() << "aiPrompt response:" << response;
         TEvent event {};
         
         // Add event name as first argument
@@ -309,11 +298,9 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
     request.prompt = prompt;
     request.temperature = temperature;
     request.maxTokens = maxTokens;
-    request.stream = true; // Force streaming mode
+    request.stream = true;
 
     auto* aiManager = pMudlet->getAIManager();
-
-    qDebug() << "aiPromptStream request:" << request;
 
     // For streaming, we need to handle the response differently
     // This will require modifications to LlamaFileManager to support streaming callbacks
@@ -352,7 +339,6 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
             event.mArgumentList.append(content);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             
-            qDebug() << "streaming event for aiPromptStream:" << event;
             host.raiseEvent(event);
         },
         // Error callback - fired on error
@@ -379,7 +365,6 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             
-            qDebug() << "error event for aiPromptStream:" << event;
             host.raiseEvent(event);
         }
     );
