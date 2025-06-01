@@ -445,15 +445,12 @@ QStringList LlamafileManager::buildProcessArguments() const {
     // Basic server arguments
     args << config.modelPath;
     args << "--server";
-    args << "--host" << config.host;
-    args << "--port" << QString::number(config.port);
-    args << "--nobrowser";
+    args << "--v2";
+    args << qsl("-l %1:%2").arg(config.host).arg(config.port);
     
     // GPU settings
     if (config.enableGpu) {
-        args << "--n-gpu-layers" << "999"; // Use all GPU layers
-    } else {
-        args << "--n-gpu-layers" << "0";   // CPU only
+        args << "--gpu auto -ngl 9999";
     }
     
     // Add any extra arguments
