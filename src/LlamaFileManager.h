@@ -149,4 +149,52 @@ private:
 Q_DECLARE_METATYPE(LlamafileManager::Status)
 Q_DECLARE_METATYPE(LlamafileManager::ApiType)
 
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const LlamafileManager::ApiRequest& request)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+    debug.nospace() << "ApiRequest(" << "model=" << request.model;
+    debug.nospace() << ", messages=" << request.messages;
+    debug.nospace() << ", prompt=" << request.prompt;
+    debug.nospace() << ", input=" << request.input;
+    debug.nospace() << ", temperature=" << request.temperature;
+    debug.nospace() << ", maxTokens=" << request.maxTokens;
+    debug.nospace() << ", stream=" << request.stream;
+    debug.nospace() << ", extraParams=" << request.extraParams;
+    debug.nospace() << ')';
+    return debug;
+}
+
+inline QDebug& operator<<(QDebug& debug, const LlamafileManager::ApiResponse& response)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+    debug.nospace() << "ApiResponse(" << "success=" << response.success;
+    debug.nospace() << ", error=" << response.error;
+    debug.nospace() << ", data=" << response.data;
+    debug.nospace() << ", statusCode=" << response.statusCode;
+    debug.nospace() << ')';
+    return debug;
+}
+
+inline QDebug& operator<<(QDebug& debug, const LlamafileManager::Config& config)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+    debug.nospace() << "Config(" << "modelPath=" << config.modelPath;
+    debug.nospace() << ", host=" << config.host;
+    debug.nospace() << ", port=" << config.port;
+    debug.nospace() << ", startupTimeoutMs=" << config.startupTimeoutMs;
+    debug.nospace() << ", healthCheckIntervalMs=" << config.healthCheckIntervalMs;
+    debug.nospace() << ", maxRestartAttempts=" << config.maxRestartAttempts;
+    debug.nospace() << ", autoRestart=" << config.autoRestart;
+    debug.nospace() << ", enableGpu=" << config.enableGpu;
+    debug.nospace() << ", extraArgs=" << config.extraArgs;
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
+
+
 #endif // MUDLET_LLAMAFILEMANAGER_H
