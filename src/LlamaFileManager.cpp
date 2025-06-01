@@ -483,12 +483,22 @@ QStringList LlamafileManager::buildProcessArguments() const {
     // Basic server arguments
     args << config.modelPath;
     args << "--server";
-    args << "--v2";
-    args << qsl("-l %1:%2").arg(config.host).arg(config.port);
+    // v2 doesn't work: https://github.com/Mozilla-Ocho/llamafile/issues/695#issuecomment-2926499556
+    // args << "--v2";
+    // args << qsl("-l %1:%2").arg(config.host).arg(config.port);
+    args << "--host";
+    args << config.host;
+    args << "--port";
+    args << QString::number(config.port);
+
+    // required for v1 only, incompatible with v2
+    args << "--nobrowser";
     
     // GPU settings
     if (config.enableGpu) {
-        args << "--gpu auto -ngl 9999";
+        // doesn't work with v1
+        // args << "--gpu auto";
+        // args << "--ngl 999"
     }
     
     // Add any extra arguments
