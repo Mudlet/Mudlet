@@ -579,17 +579,17 @@ please wait...</translation>
     <message>
       <location filename="../src/TBuffer.cpp" line="2215"/>
       <source>Send</source>
-      <translation type="unfinished"/>
+      <translation>Send</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2220"/>
       <source>Prompt</source>
-      <translation type="unfinished"/>
+      <translation>Prompt</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Open browser to</source>
-      <translation type="unfinished"/>
+      <translation>Open browser to</translation>
     </message>
   </context>
   <context>
@@ -1881,7 +1881,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1482"/>
       <source>MXP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>MXP events:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1487"/>
@@ -6607,7 +6607,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="894"/>
       <source>MXP: Mud eXtension Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MXP: Mud eXtension Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="899"/>
@@ -10702,7 +10702,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <location filename="../src/mudlet.cpp" line="1259"/>
       <source>------------ </source>
       <extracomment>This represents the format of the timestamps shown for lines that do not * have a timestamp in a console that is showing them. If localised this * should be set to the same format and length as the smTimeStampFormat:</extracomment>
-      <translation type="unfinished"/>
+      <translation>------------ </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3232"/>
@@ -12667,7 +12667,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="776"/>
       <source>Select Font</source>
-      <translation type="unfinished"/>
+      <translation>Select Font</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1156"/>
