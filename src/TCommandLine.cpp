@@ -97,6 +97,9 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     restoreHistory();
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
+    connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
+        this->setEchoSuppression(isRemoteEcho);
+    });
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -947,7 +950,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty()) {
+    if (!toPlainText().isEmpty() && !mpHost->mIsRemoteEchoingActive) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
@@ -1554,3 +1557,41 @@ void TCommandLine::slot_saveHistory()
     }
 }
 
+void TCommandLine::setEchoSuppression(bool suppress)
+{
+    mIsEchoSuppressed = suppress;
+
+    if (suppress) {
+        clear();  // Clear leftover username or input
+    } else {
+        // Clear selection and reset cursor to end
+        QTextCursor cursor = textCursor();
+        cursor.clearSelection();
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
+        clear();  // Clear entered password
+    }
+
+    viewport()->update(); // triggers paintEvent to mask/unmask
+}
+
+void TCommandLine::paintEvent(QPaintEvent* event)
+{
+    if (!mIsEchoSuppressed) {
+        QPlainTextEdit::paintEvent(event);
+        return;
+    }
+
+    QPainter painter(viewport());
+    QTextCursor cursor = textCursor();
+    QTextBlock block = document()->firstBlock();
+    QFontMetrics fm(font());
+
+    // Paint each line with asterisks instead of actual text
+    for (QTextBlock b = block; b.isValid(); b = b.next()) {
+        QString text = b.text();
+        QString mask = QString('*').repeated(text.length());
+        QRect r = blockBoundingGeometry(b).translated(contentOffset()).toRect();
+        painter.drawText(r.topLeft() + QPoint(0, fm.ascent()), mask);
+    }
+}

@@ -739,6 +739,7 @@ signals:
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
     void signal_editorThemeChanged();
+    void signal_remoteEchoChanged(bool enabled);
 
 private slots:
     void slot_purgeTemps();
