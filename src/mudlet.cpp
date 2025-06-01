@@ -5390,12 +5390,12 @@ void mudlet::setupAIConfig()
     mAIAutoStart = mpSettings->value("AI/autoStart", true).toBool();
 }
 
-bool mudlet::isAIAvailable() const
+bool mudlet::aiModelAvailable() const
 {
     return !mAIModelPath.isEmpty() && QFileInfo::exists(mAIModelPath);
 }
 
-bool mudlet::isAIRunning() const
+bool mudlet::aiRunning() const
 {
     return mpLlamafileManager && mpLlamafileManager->isRunning();
 }

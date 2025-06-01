@@ -38,11 +38,11 @@ std::pair<bool, QString> TLuaInterpreter::aiEnabled(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
     
-    if (!pMudlet->isAIAvailable()) {
+    if (!pMudlet->aiModelAvailable()) {
         return {false, qsl("AI is not available")};
     }
     
-    if (!pMudlet->isAIRunning()) {
+    if (!pMudlet->aiRunning()) {
         return {false, qsl("AI is not currently running")};
     }
     

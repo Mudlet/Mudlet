@@ -402,8 +402,8 @@ public:
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
-    bool isAIAvailable() const;
-    bool isAIRunning() const;
+    bool aiModelAvailable() const;
+    bool aiRunning() const;
     QString getAIModelPath() const { return mAIModelPath; }
     void setAIModelPath(const QString& path);
     bool getAIAutoStart() const { return mAIAutoStart; }
