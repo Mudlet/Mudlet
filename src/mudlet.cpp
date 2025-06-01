@@ -5309,13 +5309,13 @@ void mudlet::initializeAI()
     
     // Try to find and configure AI model
     if (findAIModel()) {
-        qDebug() << "AI model found at:" << mAIModelPath;
+        qDebug() << "mudlet::initializeAI() INFO: AI model found at:" << mAIModelPath;
         setupAIConfig();
         
         // Auto-start if enabled and model is available
         if (mAIAutoStart) {
-            qDebug() << "Auto-starting AI service...";
-            QTimer::singleShot(2000, this, [this]() {
+            qDebug() << "mudlet::initializeAI() INFO: Auto-starting AI service...";
+            QTimer::singleShot(2s, this, [this]() {
                 if (mpLlamafileManager && !mpLlamafileManager->isRunning()) {
                     LlamafileManager::Config config;
                     config.modelPath = mAIModelPath;
@@ -5328,6 +5328,8 @@ void mudlet::initializeAI()
                 }
             });
         }
+    } else {
+        qDebug() << "mudlet::initializeAI() INFO: no model found, integration disabled.";
     }
 }
 
