@@ -151,7 +151,7 @@ int TLuaInterpreter::aiChat(lua_State* L)
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         
         // Add success status
-        event.mArgumentList.append(response.success ? "true" : "false");
+        event.mArgumentList.append(response.success ? QLatin1String("1") : QLatin1String("0"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
         
         // Add error message
@@ -160,17 +160,122 @@ int TLuaInterpreter::aiChat(lua_State* L)
         
         // Add response content
         QString content;
-        if (response.success && response.data.contains("choices")) {
-            const QJsonArray choices = response.data["choices"].toArray();
-            if (!choices.isEmpty()) {
-                const QJsonObject choice = choices[0].toObject();
-                const QJsonObject message = choice["message"].toObject();
-                content = message["content"].toString();
+        if (response.success && response.data.contains("content")) {
+            content = response.data["content"].toString();
+            // Strip leading "\n " and trailing "</s>"
+            if (content.startsWith("\n ")) {
+                content = content.mid(2);
+            }
+            if (content.endsWith("</s>")) {
+                content.chop(4);
             }
         }
         event.mArgumentList.append(content);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         
+        host.raiseEvent(event);
+    });
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#aiPrompt
+int TLuaInterpreter::aiPrompt(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    
+    auto result = aiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    const QString prompt = getVerifiedString(L, __func__, 1, "prompt");
+    if (prompt.isEmpty()) {
+        return warnArgumentValue(L, __func__, "prompt cannot be empty");
+    }
+
+    // Optional parameters
+    double temperature = 0.7;
+    int maxTokens = 150;
+    bool stream = false;
+    QString eventName = "aiPromptResponse"; // Default event name
+
+    if (lua_gettop(L) >= 2) {
+        if (lua_istable(L, 2)) {
+            lua_pushstring(L, "temperature");
+            lua_gettable(L, 2);
+            if (lua_isnumber(L, -1)) {
+                temperature = lua_tonumber(L, -1);
+            }
+            lua_pop(L, 1);
+
+            lua_pushstring(L, "max_tokens");
+            lua_gettable(L, 2);
+            if (lua_isnumber(L, -1)) {
+                maxTokens = static_cast<int>(lua_tointeger(L, -1));
+            }
+            lua_pop(L, 1);
+
+            lua_pushstring(L, "stream");
+            lua_gettable(L, 2);
+            if (lua_isboolean(L, -1)) {
+                stream = lua_toboolean(L, -1);
+            }
+            lua_pop(L, 1);
+
+            lua_pushstring(L, "event");
+            lua_gettable(L, 2);
+            if (lua_isstring(L, -1)) {
+                eventName = QString::fromUtf8(lua_tostring(L, -1));
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    LlamafileManager::ApiRequest request;
+    request.prompt = prompt; // Use prompt field for text completion
+    request.temperature = temperature;
+    request.maxTokens = maxTokens;
+    request.stream = stream;
+
+    auto* aiManager = pMudlet->getAIManager();
+
+    qDebug() << "aiPrompt request:" << request;
+
+    aiManager->textCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
+        qDebug() << "aiPrompt response:" << response;
+        TEvent event {};
+        
+        // Add event name as first argument
+        event.mArgumentList.append(eventName);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        
+        // Add success status
+        event.mArgumentList.append(response.success ? QLatin1String("1") : QLatin1String("0"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        
+        // Add error message
+        event.mArgumentList.append(response.error);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        
+        // Add response content
+        QString content;
+        if (response.success && response.data.contains("content")) {
+            content = response.data["content"].toString();
+            // Strip leading "\n " and trailing "</s>"
+            if (content.startsWith("\n ")) {
+                content = content.mid(2);
+            }
+            if (content.endsWith("</s>")) {
+                content.chop(4);
+            }
+        }
+        event.mArgumentList.append(content);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        
+        qDebug() << "event for aiPrompt:" << event;
         host.raiseEvent(event);
     });
 

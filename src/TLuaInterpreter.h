@@ -697,6 +697,7 @@ public:
     static int isAIRunning(lua_State*);
     static int getAIModelPath(lua_State*);
     static int aiChat(lua_State*);
+    static int aiPrompt(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

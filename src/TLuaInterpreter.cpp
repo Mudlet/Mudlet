@@ -5567,6 +5567,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "isAIRunning", TLuaInterpreter::isAIRunning);
     lua_register(pGlobalLua, "getAIModelPath", TLuaInterpreter::getAIModelPath);
     lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
+    lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
