@@ -660,6 +660,9 @@ function db:_migrate_indexes(conn, s_name, schema, current_columns)
 end
 
 
+-- format with table_name, column_names, value expressions
+local SQL_INSERT = "INSERT INTO %s %s VALUES %s"
+
 --- Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index,
 --- a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE
 --- index, you test those values before you attempt to insert a new row. <br/><br/>
@@ -691,34 +694,36 @@ function db:add(sheet, ...)
     assert(type(t) == "table", "db:add - Records must be a table of key-value pairs.")
   end
 
-  local clean_records = {}
+  local conn = db.__conn[sheet._db_name]
   local db_name = sheet._db_name
   local s_name = sheet._sht_name
-  local sql = ""
 
-  local conn = db.__conn[db_name]
-  local sql_insert = "INSERT INTO %s %s VALUES %s"
+  local columns = db.__schema[db_name][s_name]['columns']
+
+  local sql = ""
+  local sql_columns = db:_sql_fields(columns)
+  local sql_value_expressions = {}
 
   -- Create a copy of provided records so we
   -- do not modify user's records.
-  for i, t in ipairs(raw_records) do
-    clean_records[i] = {}
-    for k, v in pairs(t) do
-      clean_records[i][k] = v
+  local clean_record = {}
+  for i, raw_record in ipairs(raw_records) do
+    for col_name, _ in pairs(columns) do
+      if (raw_record[col_name] == nil) then
+        clean_record[col_name] = db:Null()
+      else
+        clean_record[col_name] = raw_record[col_name]
+      end
     end
-    -- You are not permitted to change a _row_id
-    clean_records[i]._row_id = nil
+    sql_value_expressions[i] = db:_sql_values(clean_record)
+    clean_record = {}
   end
 
-  for _, t in ipairs(clean_records) do
-    sql = sql + sql_insert:format(
-      s_name,
-      db:_sql_fields(t),
-      db:_sql_values(t)
-    )
-  end
-
-  sql = sql .. "COMMIT;"
+  sql = SQL_INSERT:format(
+    s_name,
+    sql_columns,
+    table.concat(sql_value_expressions, ',')
+  )
 
   db:echo_sql(sql)
   local result, msg = conn:execute(sql)
