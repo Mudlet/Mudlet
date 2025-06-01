@@ -49,30 +49,6 @@ std::pair<bool, QString> TLuaInterpreter::aiEnabled(lua_State* L)
     return {true, QString()};
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAIAvailable
-int TLuaInterpreter::isAIAvailable(lua_State* L)
-{
-    mudlet* pMudlet = mudlet::self();
-    lua_pushboolean(L, pMudlet->isAIAvailable());
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAIRunning
-int TLuaInterpreter::isAIRunning(lua_State* L)
-{
-    mudlet* pMudlet = mudlet::self();
-    lua_pushboolean(L, pMudlet->isAIRunning());
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAIModelPath
-int TLuaInterpreter::getAIModelPath(lua_State* L)
-{
-    mudlet* pMudlet = mudlet::self();
-    lua_pushstring(L, pMudlet->getAIModelPath().toUtf8().constData());
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#aiChat
 int TLuaInterpreter::aiChat(lua_State* L)
 {

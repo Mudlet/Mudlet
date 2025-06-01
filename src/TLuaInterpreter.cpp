@@ -5563,9 +5563,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
-    lua_register(pGlobalLua, "isAIAvailable", TLuaInterpreter::isAIAvailable);
-    lua_register(pGlobalLua, "isAIRunning", TLuaInterpreter::isAIRunning);
-    lua_register(pGlobalLua, "getAIModelPath", TLuaInterpreter::getAIModelPath);
     lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
     lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
     // PLACEMARKER: End of main Lua interpreter functions registration

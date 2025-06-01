@@ -693,9 +693,6 @@ public:
     static int disableTimeStamps(lua_State*);
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);
-    static int isAIAvailable(lua_State*);
-    static int isAIRunning(lua_State*);
-    static int getAIModelPath(lua_State*);
     static int aiChat(lua_State*);
     static int aiPrompt(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
