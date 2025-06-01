@@ -156,7 +156,9 @@ void LlamafileManager::textCompletion(const ApiRequest& request, ApiCallback cal
     QJsonObject requestData;
     requestData["prompt"] = request.prompt;
     requestData["temperature"] = request.temperature;
-    requestData["n_predict"] = request.maxTokens;
+    if (request.maxTokens > 0) {
+        requestData["n_predict"] = request.maxTokens;
+    }
     requestData["stream"] = request.stream;
     
     // Merge extra parameters
@@ -585,7 +587,9 @@ void LlamafileManager::textCompletionStream(const ApiRequest& request, StreamChu
     QJsonObject requestData;
     requestData["prompt"] = request.prompt;
     requestData["temperature"] = request.temperature;
-    requestData["n_predict"] = request.maxTokens;
+    if (request.maxTokens > 0) {
+        requestData["n_predict"] = request.maxTokens;
+    }
     requestData["stream"] = true; // Force streaming
     
     // Merge extra parameters

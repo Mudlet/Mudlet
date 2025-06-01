@@ -206,7 +206,10 @@ int TLuaInterpreter::aiPrompt(lua_State* L)
     LlamafileManager::ApiRequest request;
     request.prompt = prompt; // Use prompt field for text completion
     request.temperature = temperature;
-    request.maxTokens = maxTokens;
+    if (maxTokens > 0) {
+        request.maxTokens = maxTokens;
+    }
+    request.stream = stream;
 
     auto* aiManager = pMudlet->getAIManager();
 
@@ -266,7 +269,7 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
 
     // Optional parameters
     double temperature = 0.7;
-    int maxTokens = 150;
+    int maxTokens = 0; // 0 means no limit
     QString eventName = "aiPromptStreamResponse"; // Default event name
 
     if (lua_gettop(L) >= 2) {
@@ -297,7 +300,9 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
     LlamafileManager::ApiRequest request;
     request.prompt = prompt;
     request.temperature = temperature;
-    request.maxTokens = maxTokens;
+    if (maxTokens > 0) {
+        request.maxTokens = maxTokens;
+    }
     request.stream = true;
 
     auto* aiManager = pMudlet->getAIManager();
