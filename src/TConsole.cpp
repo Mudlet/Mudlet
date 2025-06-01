@@ -1341,9 +1341,16 @@ std::list<int> TConsole::getBgColor()
 
 QPair<quint8, TChar> TConsole::getTextAttributes() const
 {
-    const int x = P_begin.x();
-    const int y = P_begin.y();
-    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
+    int x = P_begin.x();
+    int y = P_begin.y();
+
+    // Fallback to cursor position if no selection is active
+    if (P_begin == P_end) {
+        x = mUserCursor.x();
+        y = mUserCursor.y();
+    }
+
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= static_cast<int>(buffer.buffer.at(y).size())) {
         return qMakePair(2, TChar());
     }
 
