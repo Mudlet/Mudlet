@@ -2618,11 +2618,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         case 0: {
                             QString terminalType = getNewEnvironClientName();
 
-                            // Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a numeric
-                            // version number during Telnet TTYPE negotiation. However, including a version number is not required by the
-                            // relevant RFCs, so since 2024, Mudlet has stopped sending it by default. As a result, servers that rely on
-                            // this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to
-                            // 16 colors instead of enabling 256-color mode. Hence, users can add the version number to the terminal type.
+                            // Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal
+                            // version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with
+                            // the relevant RFCs as the period character is not permitted therein; so since 2024, Mudlet has stopped sending
+                            // it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier,
+                            // and consequently restrict color support to 16 colors instead of enabling 256-color mode. Hence, users can add
+                            // the version number to the terminal type via a setting in Special Options.
                             if (mpHost->mVersionInTerminalType) {
                                 terminalType += qsl(" %1").arg(APP_VERSION);
                             }
