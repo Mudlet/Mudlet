@@ -169,6 +169,8 @@ function db:_sql_values(values)
     elseif t == "table" and v._timestamp ~= nil then
       if not v._timestamp then
         s = "NULL"
+      elseif v._timestamp == "CURRENT_TIMESTAMP" then
+        s = "datetime('now')"
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
@@ -733,10 +735,11 @@ function db:fetch_sql(sheet, sql)
   -- if we had a syntax error in our SQL, cur will be nil
   if cur and cur ~= 0 then
     local results = {}
+    local columns = cur:getcolnames()
     local row = cur:fetch({}, "a")
 
     while row do
-      results[#results + 1] = db:_coerce_sheet(sheet, row)
+      results[#results + 1] = db:_coerce_sheet(columns, sheet, row)
       row = cur:fetch({}, "a")
     end
     cur:close()
@@ -870,11 +873,9 @@ function db:aggregate(field, fn, query, distinct)
       return count
     end
     -- Only datetime left
-    -- the value, count, is currently in a UTC timestamp
-    local localtime = datetime:parse(count, nil, true)
-    -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-    count = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
-    return count
+    local utc_epoch = datetime:parse(count, nil, true)
+    local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+    return db:Timestamp(utc_epoch + locale_diff)
   else
     return 0
   end
@@ -1175,20 +1176,24 @@ end
 -- After a table so retrieved from the database, this function coerces values to
 -- their proper types. Specifically, numbers and datetimes become the proper
 -- types.
-function db:_coerce_sheet(sheet, tbl)
+function db:_coerce_sheet(columns, sheet, tbl)
   if tbl then
     tbl._row_id = tonumber(tbl._row_id)
 
-    for k, v in pairs(tbl) do
+    for _, k in pairs(columns) do
       if k ~= "_row_id" then
         local field = sheet[k]
         if field.type == "number" then
           tbl[k] = tonumber(tbl[k]) or tbl[k]
         elseif field.type == "datetime" then
-          -- the value, tbl[k], is currently in a UTC timestamp
-          local localtime = datetime:parse(tbl[k], nil, true)
-          -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-          tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
+          if (tbl[k] == nil) then
+            tbl[k] = db:Timestamp(nil)
+          else
+            -- the value, tbl[k], is a UTC timestamp
+            local utc_epoch = datetime:parse(tbl[k], nil, true)
+            local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+            tbl[k] = db:Timestamp(utc_epoch + locale_diff)
+          end
         end
       end
     end
@@ -1210,6 +1215,8 @@ function db:_coerce(field, value)
   elseif field.type == "datetime" then
     if value._timestamp == false then
       return "NULL"
+    elseif value._timestamp == "CURRENT_TIMESTAMP" then
+      return "datetime('now')"
     else
       return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
     end
@@ -1587,17 +1594,22 @@ end
 --- <b><u>TODO</u></b>
 function db:Timestamp(ts, fmt)
   local dt = {}
-  if type(ts) == "table" then
-    dt._timestamp = os.time(ts)
-  elseif type(ts) == "number" then
-    dt._timestamp = ts
-  elseif type(ts) == "string" and
-  assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
-    dt._timestamp = "CURRENT_TIMESTAMP"
-  elseif ts == nil then
-    dt._timestamp = false
+
+  if ts == nil then
+      dt._timestamp = false
+  elseif ts == "CURRENT_TIMESTAMP" then
+      dt._timestamp = "CURRENT_TIMESTAMP"
   else
-    assert(nil, "Invalid value passed to db.Timestamp()")
+    local t = type(ts)
+    if t == "table" then
+      dt._timestamp = os.time(ts)
+    elseif t == "number" then
+      dt._timestamp = ts
+    elseif t == "string" then
+      dt._timestamp = datetime:parse(ts, fmt, true)
+    else
+      error("Invalid value passed to db.Timestamp()")
+    end
   end
   return setmetatable(dt, db.__TimestampMT)
 end
@@ -1633,7 +1645,7 @@ db.__SheetMT = {
     local rt
     if assert(field, errormsg:format(k, sht_name, db_name)) then
       field_type = type(field)
-      if field_type == "table" and field._timestamp then
+      if field_type == "table" and field._timestamp ~= nil then
         field_type = "datetime"
       end
 

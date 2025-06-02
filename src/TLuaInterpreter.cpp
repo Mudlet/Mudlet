@@ -5560,6 +5560,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     lua_register(pGlobalLua, "closeProfile", TLuaInterpreter::closeProfile);
     lua_register(pGlobalLua, "getCollisionLocationsInArea", TLuaInterpreter::getCollisionLocationsInArea);
+    lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
+    lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
+    lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

@@ -690,6 +690,9 @@ public:
     static int loadProfile(lua_State*);
     static int closeProfile(lua_State*);
     static int getCollisionLocationsInArea(lua_State*);
+    static int disableTimeStamps(lua_State*);
+    static int enableTimeStamps(lua_State*);
+    static int timeStampsEnabled(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
