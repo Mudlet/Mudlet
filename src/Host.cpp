@@ -1267,7 +1267,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
         // allow sending blank commands
 
-    if (!dontExpandAliases && commandList.empty()) {
+    if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
         return;
