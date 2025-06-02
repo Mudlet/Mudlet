@@ -754,6 +754,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    setBoolAttribute(qsl("versionInTerminalType"), pHost->mVersionInTerminalType);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);

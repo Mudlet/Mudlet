@@ -2616,15 +2616,25 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientName = getNewEnvironClientName();
-                            cmd += clientName.toStdString();
+                            QString terminalType = getNewEnvironClientName();
+
+                            // Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a numeric
+                            // version number during Telnet TTYPE negotiation. However, including a version number is not required by the
+                            // relevant RFCs, so since 2024, Mudlet has stopped sending it by default. As a result, servers that rely on
+                            // this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to
+                            // 16 colors instead of enabling 256-color mode. Hence, users can add the version number to the terminal type.
+                            if (mpHost->mVersionInTerminalType) {
+                                terminalType += qsl(" %1").arg(APP_VERSION);
+                            }
+
+                            cmd += terminalType.toStdString();
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
                                 qDebug() << "MTTS enabled";
-                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << clientName;
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << terminalType;
                             } else {
-                                qDebug() << "WE send TERMINAL_TYPE is" << clientName;
+                                qDebug() << "WE send TERMINAL_TYPE is" << terminalType;
                             }
 
                             break;

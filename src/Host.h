@@ -673,6 +673,7 @@ public:
     bool mMapperShowRoomBorders;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     bool mForceNewEnvironNegotiationOff = false;
+    bool mVersionInTerminalType = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;

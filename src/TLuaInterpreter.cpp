@@ -7366,6 +7366,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("versionInTerminalType")) {
+        host.mVersionInTerminalType = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
         host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7537,6 +7541,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
+        { qsl("versionInTerminalType"), [&](){ lua_pushboolean(L, host.mVersionInTerminalType); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
