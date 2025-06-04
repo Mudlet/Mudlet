@@ -334,8 +334,6 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
-    inline static const QString csmTimeStampFormat = qsl("hh:mm:ss.zzz ");
-    inline static const QString csmBlankTimeStamp  = qsl("------------ ");
 
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
@@ -425,6 +423,13 @@ private:
 
     QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec = nullptr;
+
+    // OSC 8 hyperlink tracking
+    QString mCurrentHyperlinkUrl;
+    QStringList mCurrentHyperlinkCommand;
+    QStringList mCurrentHyperlinkHint;
+    int mCurrentHyperlinkLinkId = 0;
+    bool mHyperlinkActive = false;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

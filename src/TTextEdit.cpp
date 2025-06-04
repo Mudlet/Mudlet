@@ -69,7 +69,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mOldCaretColumn(0)
 , mIsCommandPopup(false)
 , mIsTailMode(true)
-, mShowTimeStamps(false)
 , mForceUpdate(false)
 , mIsLowerPane(isLowerPane)
 , mLastRenderedOffset(0)
@@ -83,9 +82,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mMaxHRange(0)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mTabStopwidth(8)
-// Should be the same as the size of the csmTimeStampFormat constant in the TBuffer
-// class:
-, mTimeStampWidth(13)
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -108,7 +104,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 #endif
     } else {
         // This is part of the Central Debug Console
-        mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
         mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFgColor = QColor(192, 192, 192);
@@ -177,30 +172,11 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
 }
 // debug using gammaray to see which events are raised
 
-void TTextEdit::slot_toggleTimeStamps(const bool state)
+void TTextEdit::toggleTimeStamps(const bool state)
 {
-    if (mShowTimeStamps != state) {
-        mShowTimeStamps = state;
-        if (mpConsole->getType() == TConsole::MainConsole) {
-            const auto filePath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
-            QSaveFile file(filePath);
-            if (state) {
-                file.open(QIODevice::WriteOnly | QIODevice::Text);
-                QTextStream out(&file);
-                if (!file.commit()) {
-                    qDebug() << "TTextEdit::slot_toggleTimeStamps: error saving timestamp state: " << file.errorString();
-                }
-            } else {
-                QFile::remove(filePath);
-            }
-        }
-        forceUpdate();
-        update();
-        if (mpConsole->getType() == TConsole::MainConsole && mpConsole->mpHost) {
-            // Update and send out the NAWS data:
-            mpConsole->mpHost->updateDisplayDimensions();
-        }
-    }
+    Q_UNUSED(state)
+    forceUpdate();
+    update();
 }
 
 // Only wired up for the upper pane:
@@ -458,7 +434,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     int currentSize = lineText.size();
-    if (mShowTimeStamps) {
+    if (mpConsole->showTimeStamps()) {
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         QVector<QColor> fgColors;
@@ -476,7 +452,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
             ++index;
             drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), c, timeStampStyle);
         }
-        currentSize += mTimeStampWidth;
+        currentSize += mudlet::smTimeStampFormat.size();
     }
 
     //get the longest line
@@ -1261,8 +1237,8 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
 
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
-            if (Q_UNLIKELY(isOverTimeStamp && mShowTimeStamps && indexOfChar == 0)) {
-                if ((mouseX + offset) < (mTimeStampWidth * mFontWidth)) {
+            if (Q_UNLIKELY(isOverTimeStamp && mpConsole->showTimeStamps() && indexOfChar == 0)) {
+                if ((mouseX + offset) < (mudlet::smTimeStampFormat.size() * mFontWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -1272,8 +1248,8 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             leftX = rightX;
             //mCursorX relevant for horizontal scrollbars
             //Otherwise the value is always 0
-            if (mShowTimeStamps) {
-                rightX = (mTimeStampWidth + column - mCursorX) * mFontWidth;
+            if (mpConsole->showTimeStamps()) {
+                rightX = (mudlet::smTimeStampFormat.size() + column - mCursorX) * mFontWidth;
             } else {
                 rightX = (column - mCursorX) * mFontWidth;
             }
@@ -1347,7 +1323,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
 
         bool isOutOfbounds = false;
-        if (!mCtrlSelecting && mShowTimeStamps) {
+        if (!mCtrlSelecting && mpConsole->showTimeStamps()) {
             bool isOverTimeStamp = false;
             x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds, &isOverTimeStamp);
             if (isOverTimeStamp) {
@@ -1576,14 +1552,14 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
         }
         if (y == mPA.y()) { // First line of selection
             if (isSingleLine) {
-                text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, mPB.x() + 1, mPA.x(), 0));
+                text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y, mPB.x() + 1, mPA.x(), 0));
             } else { // Not single line
-                text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, -1, mPA.x(), mPA.x()));
+                text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y, -1, mPA.x(), mPA.x()));
             }
         } else if (y == mPB.y()) { // Last line of selection
-            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, mPB.x() + 1));
+            text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y, mPB.x() + 1));
         } else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y));
+            text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y));
         }
     }
     text.append(qsl(" </div></body>\n"
@@ -1650,7 +1626,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
-        int lineWidth{(mShowTimeStamps ? mTimeStampWidth : 0) * mFontWidth};
+        auto lineWidth{(mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0) * mFontWidth};
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -1672,10 +1648,10 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             // The timestamp is (currently) 13 "normal width" characters
             // but that might not always be the case in some future I18n
             // situations:
-            lineWidth = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            lineWidth = (mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() + column : column) * mFontWidth;
             indexOfChar = nextBoundary;
         }
-        largestLine = std::max(lineWidth, largestLine);
+        largestLine = std::max(static_cast<int>(lineWidth), largestLine);
     }
 
     auto widthpx = std::min(65500, largestLine);
@@ -2011,6 +1987,11 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     }
 
     QWidget::resizeEvent(event);
+    if (!mIsLowerPane
+        && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole))) {
+
+        mpConsole->raiseMudletResizeEvent();
+    }
 }
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
@@ -2114,7 +2095,7 @@ int TTextEdit::bufferScrollDown(int lines)
     }
 }
 
-int TTextEdit::getColumnCount()
+int TTextEdit::getColumnCount() const
 {
     int charWidth;
 
@@ -2127,7 +2108,7 @@ int TTextEdit::getColumnCount()
     return width() / charWidth;
 }
 
-int TTextEdit::getRowCount()
+int TTextEdit::getRowCount() const
 {
     int rowHeight;
 

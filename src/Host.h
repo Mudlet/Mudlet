@@ -433,6 +433,8 @@ public:
         }
     }
 
+    void sendCmdLine(const QString& cmd);
+
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
     QPointer<dlgPackageManager> mpPackageManager;
