@@ -885,6 +885,12 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
+    // Prevent selection, drag/drop of text in the command line when echo suppression is on
+    if (mIsEchoSuppressed) {
+        event->ignore();
+        return;
+    }
+
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
         if (mpHost->mEnableSpellCheck) {
