@@ -98,7 +98,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
     connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
-        if (mType == MainCommandLine) {
+        if (mType == MainCommandLine) { // Limit to the main command line only
             this->setEchoSuppression(isRemoteEcho);
         }
     });
