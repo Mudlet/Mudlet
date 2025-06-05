@@ -886,7 +886,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     // Prevent selection, drag/drop of text in the command line when echo suppression is on
-    if (mIsEchoSuppressed) {
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
         event->ignore();
         return;
     }
@@ -1567,6 +1567,11 @@ void TCommandLine::slot_saveHistory()
 
 void TCommandLine::setEchoSuppression(bool suppress)
 {
+    // Only apply echo suppression to the main command line
+    if (mType != MainCommandLine) {
+        return;
+    }
+
     mIsEchoSuppressed = suppress;
 
     if (suppress) {
@@ -1585,21 +1590,22 @@ void TCommandLine::setEchoSuppression(bool suppress)
 
 void TCommandLine::paintEvent(QPaintEvent* event)
 {
-    if (!mIsEchoSuppressed) {
-        QPlainTextEdit::paintEvent(event);
+    // Only mask text for the main command line when echo is suppressed
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        QPainter painter(viewport());
+        QTextCursor cursor = textCursor();
+        QTextBlock block = document()->firstBlock();
+        QFontMetrics fm(font());
+
+        // Paint each line with asterisks instead of actual text
+        for (QTextBlock b = block; b.isValid(); b = b.next()) {
+            QString text = b.text();
+            QString mask = QString('*').repeated(text.length());
+            QRect r = blockBoundingGeometry(b).translated(contentOffset()).toRect();
+            painter.drawText(r.topLeft() + QPoint(0, fm.ascent()), mask);
+        }
         return;
     }
 
-    QPainter painter(viewport());
-    QTextCursor cursor = textCursor();
-    QTextBlock block = document()->firstBlock();
-    QFontMetrics fm(font());
-
-    // Paint each line with asterisks instead of actual text
-    for (QTextBlock b = block; b.isValid(); b = b.next()) {
-        QString text = b.text();
-        QString mask = QString('*').repeated(text.length());
-        QRect r = blockBoundingGeometry(b).translated(contentOffset()).toRect();
-        painter.drawText(r.topLeft() + QPoint(0, fm.ascent()), mask);
-    }
+    QPlainTextEdit::paintEvent(event);
 }
