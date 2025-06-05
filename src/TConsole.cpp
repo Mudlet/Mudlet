@@ -1675,7 +1675,7 @@ void TConsole::setScrolling(const bool state)
 void TConsole::printCommand(QString& msg)
 {
     // Skip printing if remote echo is active (e.g., password mode)
-    if (mpHost && mpHost->mIsRemoteEchoingActive) {
+    if (mpHost && mpHost->isRemoteEchoingActive()) {
         return;
     }
 

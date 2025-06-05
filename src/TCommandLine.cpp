@@ -950,7 +950,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty() && !mpHost->mIsRemoteEchoingActive) {
+    if (!toPlainText().isEmpty() && !mpHost->isRemoteEchoingActive()) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {

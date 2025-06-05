@@ -4409,7 +4409,7 @@ bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
     auto& host = getHostFromLua(L);
 
     // Suppress command line actions if remote echo is active (e.g., during password entry)
-    if (host.mIsRemoteEchoingActive) {
+    if (host.isRemoteEchoingActive()) {
         return false; // Do not invoke actions during password entry
     }
 

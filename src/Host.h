@@ -515,7 +515,11 @@ public:
      * hide them on our screen (and from logging!) - It should negate the effect
      * of the above mPrintCommand being true...
      */
-    bool mIsRemoteEchoingActive;
+    bool mIsRemoteEchoingActive = false;
+
+public:
+    void setRemoteEchoingActive(bool active);
+    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
