@@ -625,6 +625,7 @@ SOURCES += \
     HostManager.cpp \
     ircmessageformatter.cpp \
     KeyUnit.cpp \
+    LlamaFileManager.cpp \
     LuaInterface.cpp \
     main.cpp \
     mapInfoContributorManager.cpp \
@@ -656,6 +657,7 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterAI.cpp \
     TLuaInterpreterDiscord.cpp \
     TLuaInterpreterMapper.cpp \
     TLuaInterpreterMedia.cpp \
@@ -755,6 +757,7 @@ HEADERS += \
     HostManager.h \
     ircmessageformatter.h \
     KeyUnit.h \
+    LlamaFileManager.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
