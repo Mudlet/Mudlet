@@ -4406,6 +4406,13 @@ bool TLuaInterpreter::callAnonymousFunction(const int func, QString name)
 bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 {
     lua_State* L = pGlobalLua;
+    auto& host = getHostFromLua(L);
+
+    // Suppress command line actions if remote echo is active (e.g., during password entry)
+    if (host.isRemoteEchoingActive()) {
+        return false; // Do not invoke actions during password entry
+    }
+
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     lua_pushstring(L, text.toUtf8().constData());
     return callReference(L, qsl("cmdLineAction"), 1);
