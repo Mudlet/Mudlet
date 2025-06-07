@@ -214,12 +214,10 @@ bool LlamafileManager::isLlamafileExecutable(const QString& path) {
         return false;
     }
     
-#if defined(Q_OS_WINDOWS)
     // Check if it's executable
     if (!info.isExecutable()) {
         return false;
     }
-#endif
     
     // Basic heuristics for llamafile detection
     const QString fileName = info.fileName().toLower();
