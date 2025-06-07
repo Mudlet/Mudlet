@@ -929,22 +929,25 @@ int TLuaInterpreter::getFgColor(lua_State* L)
     }
     return result.size();
 }
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
 int TLuaInterpreter::getFont(lua_State* L)
 {
     QString windowName = qsl("main");
-    QString font;
     windowName = WINDOW_NAME(L, 1);
     auto console = CONSOLE(L, windowName);
     Host& host = getHostFromLua(L);
 
+    auto actualFontFamily = [](const QFont& font) -> QString {
+        return QFontInfo(font).family();
+    };
+
+    QString font;
+
     if (console == host.mpConsole) {
-        font = host.getDisplayFont().family();
+        font = actualFontFamily(host.getDisplayFont());
     } else if (console->mUpperPane) {
-        font = console->mUpperPane->font().family();
+        font = actualFontFamily(console->mUpperPane->font());
     } else {
-        font = console->font().family();
+        font = actualFontFamily(console->font());
     }
 
     lua_pushstring(L, font.toUtf8().constData());
