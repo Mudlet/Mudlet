@@ -97,11 +97,12 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     restoreHistory();
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
-    connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
-        if (mType == MainCommandLine) { // Limit to the main command line only
+
+    if (mType == MainCommandLine) { // Limit to the main command line only
+        connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
-        }
-    });
+        });
+    }
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -886,7 +887,8 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     // Prevent selection, drag/drop of text in the command line when echo suppression is on
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
+    // Allow right-click to show the context menu (enables Paste)
+    if (mIsEchoSuppressed && mType == MainCommandLine && event->button() != Qt::RightButton) {
         event->ignore();
         return;
     }
