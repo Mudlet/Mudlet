@@ -693,6 +693,9 @@ public:
     static int disableTimeStamps(lua_State*);
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);
+    static int aiChat(lua_State*);
+    static int aiPrompt(lua_State*);
+    static int aiPromptStream(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -845,6 +848,8 @@ private:
 
     // Holds the list of places to look for the LuaGlobal.lua file:
     QStringList mPossiblePaths;
+
+    static std::pair<bool, QString> aiEnabled(lua_State*);
 };
 
 Host& getHostFromLua(lua_State*);

@@ -2879,6 +2879,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         data = transcodedMsg.section(QChar::LineFeed, 1);
     }
 
+    if (data.trimmed().isEmpty()) { // Example: Core.Ping
+        // Pass empty table/object to Lua
+        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, qsl("{}"));
+        return;
+    }
+
     if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
