@@ -221,7 +221,11 @@ bool LlamafileManager::isLlamafileExecutable(const QString& path) {
     
     // Basic heuristics for llamafile detection
     const QString fileName = info.fileName().toLower();
+#ifdef Q_OS_WIN
+    return fileName.endsWith(".llamafile") || fileName.endsWith(".exe");
+#else
     return fileName.endsWith(".llamafile");
+#endif
 }
 
 QString LlamafileManager::findLlamafileExecutable(const QStringList& searchPaths) {
