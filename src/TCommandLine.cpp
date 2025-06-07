@@ -97,6 +97,12 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     restoreHistory();
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
+
+    if (mType == MainCommandLine) { // Limit to the main command line only
+        connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
+            this->setEchoSuppression(isRemoteEcho);
+        });
+    }
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -880,6 +886,13 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
+    // Prevent selection, drag/drop of text in the command line when echo suppression is on
+    // Allow right-click to show the context menu (enables Paste)
+    if (mIsEchoSuppressed && mType == MainCommandLine && event->button() != Qt::RightButton) {
+        event->ignore();
+        return;
+    }
+
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
         if (mpHost->mEnableSpellCheck) {
@@ -947,7 +960,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty()) {
+    if (!toPlainText().isEmpty() && !mpHost->isRemoteEchoingActive()) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
@@ -1554,3 +1567,47 @@ void TCommandLine::slot_saveHistory()
     }
 }
 
+void TCommandLine::setEchoSuppression(bool suppress)
+{
+    // Only apply echo suppression to the main command line
+    if (mType != MainCommandLine) {
+        return;
+    }
+
+    mIsEchoSuppressed = suppress;
+
+    if (suppress) {
+        clear();  // Clear leftover username or input
+    } else {
+        // Clear selection and reset cursor to end
+        QTextCursor cursor = textCursor();
+        cursor.clearSelection();
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
+        clear();  // Clear entered password
+    }
+
+    viewport()->update(); // triggers paintEvent to mask/unmask
+}
+
+void TCommandLine::paintEvent(QPaintEvent* event)
+{
+    // Only mask text for the main command line when echo is suppressed
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        QPainter painter(viewport());
+        QTextCursor cursor = textCursor();
+        QTextBlock block = document()->firstBlock();
+        QFontMetrics fm(font());
+
+        // Paint each line with asterisks instead of actual text
+        for (QTextBlock b = block; b.isValid(); b = b.next()) {
+            QString text = b.text();
+            QString mask = QString('*').repeated(text.length());
+            QRect r = blockBoundingGeometry(b).translated(contentOffset()).toRect();
+            painter.drawText(r.topLeft() + QPoint(0, fm.ascent()), mask);
+        }
+        return;
+    }
+
+    QPlainTextEdit::paintEvent(event);
+}
