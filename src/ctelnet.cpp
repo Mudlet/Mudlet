@@ -144,7 +144,7 @@ void cTelnet::reset()
     iac2 = false;
     insb = false;
     // Ensure we do not think that the game server is echoing for us:
-    mpHost->mIsRemoteEchoingActive = false;
+    mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
     command = "";
     mMudData = "";
@@ -1884,7 +1884,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (option == OPT_ECHO) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
-                    mpHost->mIsRemoteEchoingActive = true;
+                    mpHost->setRemoteEchoingActive(true);
                     qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
                 } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
@@ -1997,7 +1997,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
-                    mpHost->mIsRemoteEchoingActive = false;
+                    mpHost->setRemoteEchoingActive(false);
                     qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
                 }
 

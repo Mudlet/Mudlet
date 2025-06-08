@@ -515,7 +515,11 @@ public:
      * hide them on our screen (and from logging!) - It should negate the effect
      * of the above mPrintCommand being true...
      */
-    bool mIsRemoteEchoingActive;
+    bool mIsRemoteEchoingActive = false;
+
+public:
+    void setRemoteEchoingActive(bool active);
+    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -739,6 +743,7 @@ signals:
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
     void signal_editorThemeChanged();
+    void signal_remoteEchoChanged(bool enabled);
 
 private slots:
     void slot_purgeTemps();
