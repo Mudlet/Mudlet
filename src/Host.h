@@ -463,6 +463,8 @@ public:
     bool mEnableMNES = false;
     bool mEnableMXP = true;
     bool mAskTlsAvailable = true;
+    bool mPromptedForTTYPEVersion = false;
+
     int mMSSPTlsPort = 0;
     QString mMSSPHostName;
 

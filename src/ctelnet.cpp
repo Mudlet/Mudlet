@@ -67,6 +67,16 @@ int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
 
+static const QVector<unsigned char> expectedOrderForKaVirHandler = {
+    static_cast<unsigned char>(OPT_TERMINAL_TYPE),
+    static_cast<unsigned char>(OPT_NAWS),
+    static_cast<unsigned char>(OPT_CHARSET),
+    static_cast<unsigned char>(OPT_MSDP),
+    static_cast<unsigned char>(OPT_MSSP),
+    static_cast<unsigned char>(OPT_ATCP),
+    static_cast<unsigned char>(OPT_MSP),
+    static_cast<unsigned char>(OPT_MXP)
+};
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
 : mProfileName(profileName)
@@ -148,6 +158,8 @@ void cTelnet::reset()
     mGA_Driver = false;
     command = "";
     mMudData = "";
+
+    mNegotiationOrder.clear();
 }
 
 
@@ -1530,6 +1542,60 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     sendAllMNESValues(); // No list specified or only a VAR, send the entire list of defined VAR variables
 }
 
+// Track the order of option negotiations for KaVir protocol
+void cTelnet::trackKaVirNegotiation(unsigned char option)
+{
+#ifdef DEBUG_TELNET
+    qDebug().nospace() << "trackKaVirNegotiation: option=" << static_cast<int>(option)
+                       << " (" << decodeOption(option) << ")";
+    QStringList optList;
+    for (unsigned char opt : mNegotiationOrder) {
+        optList << QString("%1 (%2)").arg(static_cast<int>(opt)).arg(decodeOption(opt));
+    }
+    qDebug().nospace() << "Current negotiation order: [" << optList.join(", ") << "]";
+#endif
+    if (!mpHost || mpHost->mPromptedForTTYPEVersion) {
+        return;
+    }
+
+    mNegotiationOrder.append(option);
+
+    // Only keep as many as needed
+    if (mNegotiationOrder.size() > expectedOrderForKaVirHandler.size())
+        mNegotiationOrder.removeFirst();
+
+    // Check for match
+    if (mNegotiationOrder == expectedOrderForKaVirHandler) {
+        promptEnableTTYPEVersion();
+    }
+}
+
+// Prompt user to enable TTYPE version compatibility mode and reconnect
+void cTelnet::promptEnableTTYPEVersion()
+{
+    mpHost->mPromptedForTTYPEVersion = true;
+    mpHost->writeProfileData(qsl("prompted_ttype_version"), "1");
+
+    auto msgBox = new QMessageBox();
+    msgBox->setIcon(QMessageBox::Question);
+    msgBox->setText(tr("This game appears to use a protocol that works best if Mudlet reports its version number during connection.\n\nEnable this compatibility mode for improved color support and reconnect?"));
+    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox->setDefaultButton(QMessageBox::Yes);
+
+    int ret = msgBox->exec();
+    delete msgBox;
+
+    if (ret == QMessageBox::Yes) {
+        disconnectIt();
+        mpHost->mVersionInTerminalType = true;
+        mpHost->writeProfileData(qsl("versionInTerminalType"), "1");
+        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in TTYPE for this profile. Reconnecting..."));
+        reconnect();
+    } else {
+        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable it later in Special Options."));
+    }
+}
+
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
@@ -1615,6 +1681,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = telnetCommand[2];
+        trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
@@ -2018,6 +2085,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_DO: {
         //server wants us to enable some option
         option = telnetCommand[2];
+        trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);

@@ -7348,6 +7348,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("promptForTTYPEVersion")) {
+        host.mPromptedForTTYPEVersion = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("inputLineStrictUnixEndings")) {
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7558,6 +7562,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
+        { qsl("promptForTTYPEVersion"), [&](){lua_pushboolean(L, host.mPromptedForTTYPEVersion); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
         { qsl("showSentText"), [&](){ lua_pushboolean(L, host.mPrintCommand); } },

@@ -768,6 +768,8 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mAskTlsAvailable"), pHost->mAskTlsAvailable);
     setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
     setBoolAttribute(qsl("f3SearchEnabled"), pHost->mF3SearchEnabled);
+    setBoolAttribute(qsl("mPromptedForTTYPEVersion"), pHost->mPromptedForTTYPEVersion);
+
 
     pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
 
