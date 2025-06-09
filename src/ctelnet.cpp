@@ -1565,7 +1565,7 @@ void cTelnet::trackKaVirNegotiation(unsigned char option)
         optList << QString("%1 (%2)").arg(static_cast<int>(opt)).arg(decodeOption(opt));
     }
 
-    qDebug().nospace() << "Current negotiation order: [" << optList.join(", ") << "]";
+    qDebug().nospace() << "Matched KaVir protocol handling negotiation order: [" << optList.join(", ") << "]";
 #endif
         promptEnableTTYPEVersion();
     }
