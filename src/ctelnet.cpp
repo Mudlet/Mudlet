@@ -1545,27 +1545,28 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
 // Track the order of option negotiations for KaVir protocol
 void cTelnet::trackKaVirNegotiation(unsigned char option)
 {
-#ifdef DEBUG_TELNET
-    qDebug().nospace() << "trackKaVirNegotiation: option=" << static_cast<int>(option)
-                       << " (" << decodeOption(option) << ")";
-    QStringList optList;
-    for (unsigned char opt : mNegotiationOrder) {
-        optList << QString("%1 (%2)").arg(static_cast<int>(opt)).arg(decodeOption(opt));
-    }
-    qDebug().nospace() << "Current negotiation order: [" << optList.join(", ") << "]";
-#endif
-    if (!mpHost || mpHost->mPromptedForTTYPEVersion) {
+    if (!mpHost || mpHost->mPromptedForVersionInTTYPE) {
         return;
     }
 
     mNegotiationOrder.append(option);
 
     // Only keep as many as needed
-    if (mNegotiationOrder.size() > expectedOrderForKaVirHandler.size())
+    if (mNegotiationOrder.size() > expectedOrderForKaVirHandler.size()) {
         mNegotiationOrder.removeFirst();
+    }
 
     // Check for match
     if (mNegotiationOrder == expectedOrderForKaVirHandler) {
+#ifdef DEBUG_TELNET
+    QStringList optList;
+
+    for (unsigned char opt : mNegotiationOrder) {
+        optList << QString("%1 (%2)").arg(static_cast<int>(opt)).arg(decodeOption(opt));
+    }
+
+    qDebug().nospace() << "Current negotiation order: [" << optList.join(", ") << "]";
+#endif
         promptEnableTTYPEVersion();
     }
 }
@@ -1573,8 +1574,7 @@ void cTelnet::trackKaVirNegotiation(unsigned char option)
 // Prompt user to enable TTYPE version compatibility mode and reconnect
 void cTelnet::promptEnableTTYPEVersion()
 {
-    mpHost->mPromptedForTTYPEVersion = true;
-    mpHost->writeProfileData(qsl("prompted_ttype_version"), "1");
+    mpHost->mPromptedForVersionInTTYPE = true;
 
     auto msgBox = new QMessageBox();
     msgBox->setIcon(QMessageBox::Question);
@@ -1587,12 +1587,11 @@ void cTelnet::promptEnableTTYPEVersion()
 
     if (ret == QMessageBox::Yes) {
         disconnectIt();
-        mpHost->mVersionInTerminalType = true;
-        mpHost->writeProfileData(qsl("versionInTerminalType"), "1");
-        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in TTYPE for this profile. Reconnecting..."));
+        mpHost->mVersionInTTYPE = true;
+        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting..."));
         reconnect();
     } else {
-        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable it later in Special Options."));
+        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options."));
     }
 }
 
@@ -2692,7 +2691,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             // it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier,
                             // and consequently restrict color support to 16 colors instead of enabling 256-color mode. Hence, users can add
                             // the version number to the terminal type via a setting in Special Options.
-                            if (mpHost->mVersionInTerminalType) {
+                            if (mpHost->mVersionInTTYPE) {
                                 terminalType += qsl(" %1").arg(APP_VERSION);
                             }
 

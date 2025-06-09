@@ -7348,8 +7348,8 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("promptForTTYPEVersion")) {
-        host.mPromptedForTTYPEVersion = getVerifiedBool(L, __func__, 2, "value");
+    if (key == qsl("promptForVersionInTTYPE")) {
+        host.mPromptedForVersionInTTYPE = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("inputLineStrictUnixEndings")) {
@@ -7380,8 +7380,8 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("versionInTerminalType")) {
-        host.mVersionInTerminalType = getVerifiedBool(L, __func__, 2, "value");
+    if (key == qsl("versionInTTYPE")) {
+        host.mVersionInTTYPE = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
@@ -7562,7 +7562,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
-        { qsl("promptForTTYPEVersion"), [&](){lua_pushboolean(L, host.mPromptedForTTYPEVersion); } },
+        { qsl("promptForVersionInTTYPE"), [&](){lua_pushboolean(L, host.mPromptedForVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
         { qsl("showSentText"), [&](){ lua_pushboolean(L, host.mPrintCommand); } },
@@ -7570,7 +7570,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("versionInTerminalType"), [&](){ lua_pushboolean(L, host.mVersionInTerminalType); } },
+        { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },

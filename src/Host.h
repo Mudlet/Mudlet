@@ -463,7 +463,7 @@ public:
     bool mEnableMNES = false;
     bool mEnableMXP = true;
     bool mAskTlsAvailable = true;
-    bool mPromptedForTTYPEVersion = false;
+    bool mPromptedForVersionInTTYPE = false;
 
     int mMSSPTlsPort = 0;
     QString mMSSPHostName;
@@ -679,7 +679,7 @@ public:
     bool mMapperShowRoomBorders;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     bool mForceNewEnvironNegotiationOff = false;
-    bool mVersionInTerminalType = false;
+    bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
