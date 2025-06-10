@@ -268,24 +268,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         emit signal_resetMainWindowShortcutsToDefaults();
     });
 
-    if (pHost) {
-        mDisplayFont = pHost->getDisplayFont();
-        pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
-    }
-
-    connect(pushButton_fontDialog, &QPushButton::clicked, this, [this, pHost](){
-        bool ok;
-        QFont font = QFontDialog::getFont(&ok, pHost->getDisplayFont(), this->window());
-        if (ok) {
-            qDebug() << "Font selected: " << font.toString();
-            qDebug() << "Font family: " << font.family();
-            qDebug() << "Font size: " << font.pointSize();
-            mDisplayFont = font;
-            mFontSize = font.pointSize();
-            slot_setFontSize();
-            pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
-        }
-    });
     generateDiscordTooltips();
 
     label_languageChangeWarning->hide();
@@ -636,6 +618,23 @@ void dlgProfilePreferences::enableHostDetails()
 void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
+
+    mDisplayFont = pHost->getDisplayFont();
+    pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
+
+    connect(pushButton_fontDialog, &QPushButton::clicked, this, [this, pHost](){
+        bool ok;
+        QFont font = QFontDialog::getFont(&ok, pHost->getDisplayFont(), this->window());
+        if (ok) {
+            qDebug() << "Font selected: " << font.toString();
+            qDebug() << "Font family: " << font.family();
+            qDebug() << "Font size: " << font.pointSize();
+            mDisplayFont = font;
+            mFontSize = font.pointSize();
+            slot_setFontSize();
+            pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
+        }
+    });
 
     // search engine load
     search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
@@ -1290,6 +1289,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
 
+    disconnect(pushButton_fontDialog, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(pushButton_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);

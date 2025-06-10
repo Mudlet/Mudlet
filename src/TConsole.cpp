@@ -1674,6 +1674,11 @@ void TConsole::setScrolling(const bool state)
 
 void TConsole::printCommand(QString& msg)
 {
+    // Skip printing if remote echo is active (e.g., password mode)
+    if (mpHost && mpHost->isRemoteEchoingActive()) {
+        return;
+    }
+
     if (mTriggerEngineMode) {
         msg.append(QChar::LineFeed);
         const int lineBeforeNewContent = buffer.getLastLineNumber();
