@@ -24,7 +24,6 @@
      </property>
      <property name="text">
       <string>Are you sure that you'd like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
-
 If you are, please type in the profile name as a confirmation:</string>
      </property>
      <property name="wordWrap">
