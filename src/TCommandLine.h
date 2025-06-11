@@ -77,6 +77,7 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
+    void setEchoSuppression(bool suppress);
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -112,6 +113,7 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
+    void paintEvent(QPaintEvent* event) override;
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -138,6 +140,9 @@ private:
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:
     QString mBackingFileName;
+
+    // Track echo suppression state
+    bool mIsEchoSuppressed = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

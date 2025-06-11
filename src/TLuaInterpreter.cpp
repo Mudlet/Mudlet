@@ -4406,6 +4406,13 @@ bool TLuaInterpreter::callAnonymousFunction(const int func, QString name)
 bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 {
     lua_State* L = pGlobalLua;
+    auto& host = getHostFromLua(L);
+
+    // Suppress command line actions if remote echo is active (e.g., during password entry)
+    if (host.isRemoteEchoingActive()) {
+        return false; // Do not invoke actions during password entry
+    }
+
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     lua_pushstring(L, text.toUtf8().constData());
     return callReference(L, qsl("cmdLineAction"), 1);
@@ -5563,6 +5570,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
+    lua_register(pGlobalLua, "aiChat", TLuaInterpreter::aiChat);
+    lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
+    lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -7379,6 +7389,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
         return success();
     }
+    if (key == qsl("editorAutoComplete")) {
+        host.mEditorAutoComplete = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("announceIncomingText")) {
         host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7522,6 +7536,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         }},
         { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
         { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
+        { qsl("editorAutoComplete"), [&](){ lua_pushboolean(L, host.mEditorAutoComplete); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },
         { qsl("enableMSDP"), [&](){ lua_pushboolean(L, host.mEnableMSDP); } },
@@ -7529,7 +7544,16 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
-        { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
+        { qsl("logDirectory"), [&](){
+            const auto logDir = host.mLogDir;
+
+            if (logDir == nullptr || logDir.isEmpty()) {
+                lua_pushstring(L, mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+            } else {
+                lua_pushstring(L, host.mLogDir.toUtf8().constData());
+            }
+        } },
+        { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
         { qsl("showSentText"), [&](){ lua_pushboolean(L, host.mPrintCommand); } },

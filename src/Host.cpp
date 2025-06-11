@@ -247,7 +247,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
-, mIsRemoteEchoingActive(false)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
@@ -1266,7 +1265,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
         // allow sending blank commands
 
-    if (!dontExpandAliases && commandList.empty()) {
+    if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
         return;
@@ -4406,4 +4405,12 @@ void Host::sendCmdLine(const QString& cmd)
     // Set the command in the active command line
     mpConsole->mpCommandLine->setPlainText(cmd);
     mpConsole->mpCommandLine->selectAll();
+}
+
+void Host::setRemoteEchoingActive(bool active)
+{
+    if (mIsRemoteEchoingActive != active) {
+        mIsRemoteEchoingActive = active;
+        emit signal_remoteEchoChanged(active);
+    }
 }
