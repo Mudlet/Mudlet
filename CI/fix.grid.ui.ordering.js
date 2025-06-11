@@ -31,9 +31,10 @@ function visitNode(node) {
 function visitUiFile(file) {
   const filePath = `${uiDir}/${file}`
   fs.readFile(filePath).then(contents => {
-    var uiDefinition = convert.xml2js(contents, { compact: true });
+    let uiDefinition = convert.xml2js(contents, { compact: true });
     visitNode(uiDefinition)
-    var result = convert.js2xml(uiDefinition, { compact: true, spaces: 1})
+    let result = convert.js2xml(uiDefinition, { compact: true, spaces: 1})
+    result = result.replace(new RegExp(/^\s*\n/gm), '')
     fs.writeFile(filePath, result + "\n")
   })  
 }
