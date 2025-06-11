@@ -3262,9 +3262,9 @@ int TLuaInterpreter::windowType(lua_State* L)
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
     int s = 1;
-    std::string windowName;
+    QString windowName;
     if (lua_gettop(L)) {
-        windowName = getVerifiedString(L, __func__, s++, "window name").toStdString();
+        windowName = getVerifiedString(L, __func__, s++, "window name");
     }
     const int lineNumber = getVerifiedInt(L, __func__, s, "line");
 

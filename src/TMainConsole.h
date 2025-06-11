@@ -62,7 +62,7 @@ public:
     std::list<int> getFgColor(std::string& buf);
     std::list<int> getBgColor(std::string& buf);
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
-    void luaWrapLine(std::string& buf, int line);
+    void luaWrapLine(QString& buf, int line);
     QString getCurrentLine(std::string&);
     TConsole* createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);

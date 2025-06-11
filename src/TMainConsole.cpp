@@ -392,14 +392,13 @@ QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
     return qMakePair(1, TChar());
 }
 
-void TMainConsole::luaWrapLine(std::string& buf, int line)
+void TMainConsole::luaWrapLine(QString& buf, int line)
 {
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
+    if (buf.isEmpty() || buf == QLatin1String("main")) {
         TConsole::luaWrapLine(line);
         return;
     }
-    auto pC = mSubConsoleMap.value(key);
+    auto pC = mSubConsoleMap.value(buf);
     if (pC) {
         pC->luaWrapLine(line);
     }
