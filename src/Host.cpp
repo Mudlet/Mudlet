@@ -1042,12 +1042,12 @@ void Host::updateConsolesFont()
     }
 
     if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
-        mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
+        mpEditorDialog->mpErrorConsole->setFontName(mDisplayFont.family());
         mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
     }
 
     if (mudlet::self()->smpDebugArea) {
-        mudlet::self()->smpDebugConsole->setFont(mDisplayFont.family());
+        mudlet::self()->smpDebugConsole->setFontName(mDisplayFont.family());
         mudlet::self()->smpDebugConsole->setFontSize(mDisplayFont.pointSize());
     }
 
