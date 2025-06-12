@@ -1466,9 +1466,9 @@ void TConsole::refreshView() const
     mLowerPane->forceUpdate();
 }
 
-bool TConsole::setFont(const QString& font)
+bool TConsole::setFontName(const QString& fontName)
 {
-    mDisplayFontName = font;
+    mDisplayFontName = fontName;
 
     refreshView();
     return true;
