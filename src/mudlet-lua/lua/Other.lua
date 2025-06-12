@@ -1246,6 +1246,7 @@ function getConfig(...)
       "commandLineHistorySaveSize",
       "compactInputLine",
       "controlCharacterHandling",
+      "editorAutoComplete",
       "enableGMCP",
       "enableMNES",
       "enableMSDP",
