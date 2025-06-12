@@ -624,11 +624,8 @@ void TCommandLine::adjustHeight()
     }
     const int fontH = QFontMetrics(font()).height();
     // Adjust height margin based on font size and if it is more than one row
-    int marginH = lines > 1 ? 2+fontH/3 : 5;
-    if (lines > 1 && marginH < 8) {
-        marginH = 8; // needed for very small fonts
-    }
-    int _height = fontH * lines + marginH;
+    int marginH = lines > 1 ? 10 : 5;
+    int _height = (fontH + 1) * lines + marginH;
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
