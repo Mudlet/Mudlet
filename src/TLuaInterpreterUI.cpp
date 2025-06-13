@@ -940,32 +940,27 @@ int TLuaInterpreter::getFont(lua_State* L)
         return QFontInfo(font).family();
     };
 
-    QString font;
+    QString fontName;
 
     if (console == host.mpConsole) {
-        font = actualFontFamily(host.getDisplayFont());
+        fontName = actualFontFamily(host.getDisplayFont());
     } else if (console->mUpperPane) {
-        font = actualFontFamily(console->mUpperPane->font());
+        fontName = actualFontFamily(console->mUpperPane->font());
     } else {
-        font = actualFontFamily(console->font());
+        fontName = actualFontFamily(console->font());
     }
 
-    lua_pushstring(L, font.toUtf8().constData());
+    lua_pushstring(L, fontName.toUtf8().constData());
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFontSize
 int TLuaInterpreter::getFontSize(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     int rval = -1;
     const QString windowName {WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
-    if (console == host.mpConsole) {
-        rval = host.getDisplayFont().pointSize();
-    } else {
-        rval = console->mUpperPane->mDisplayFont.pointSize();
-    }
+    rval = console->mUpperPane->font().pointSize();
 
     if (rval <= -1) {
         lua_pushnil(L);
@@ -1093,7 +1088,7 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainConsoleWidth
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     int fw = QFontMetrics(host.getDisplayFont()).averageCharWidth();
     fw *= host.mWrapAt + 1;
     lua_pushnumber(L, fw);
@@ -2709,12 +2704,12 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     const QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
     const int size = getVerifiedInt(L, __func__, 2, "font size");
     auto console = CONSOLE(L, windowName);
-    if (console->setFontSize(size)) {
-        lua_pushboolean(L, true);
-    } else {
+    if (size < 1) {
         return warnArgumentValue(L, __func__, qsl("setting font size of '%1' failed").arg(windowName));
     }
-    return 0;
+    console->setFontSize(size);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie

@@ -2429,6 +2429,10 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         // Can't call pRoom->getArea() further down without a valid pRoom!
         return;
     }
+
+    painter.save();
+    painter.setFont(mpHost->getDisplayFont());
+
     int yOffset = 20;
     const int initialYOffset = yOffset;
     // Left margin for info widget:
@@ -2471,6 +2475,8 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     if (yOffset > initialYOffset) {
         painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
     }
+
+    painter.restore();
 }
 
 int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)

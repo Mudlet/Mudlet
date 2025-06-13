@@ -1170,9 +1170,10 @@ void XMLimport::readHost(Host* pHost)
                 // colour even if this font doesn't support it:
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
 #endif
-                pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {
-                pHost->mCommandLineFont.fromString(readElementText());
+                // We use the same font as the main console now so discard this
+                // one silently:
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("commandSeperator")) {
                 // Ignore this misspelled duplicate, it has been removed from
                 // the Xml format but will appear in older files and trip the
