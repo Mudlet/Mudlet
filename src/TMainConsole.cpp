@@ -350,13 +350,12 @@ void TMainConsole::selectCurrentLine(std::string& buf)
     }
 }
 
-std::list<int> TMainConsole::getFgColor(std::string& buf)
+std::list<int> TMainConsole::getFgColor(QString& buf)
 {
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
+    if (buf.isEmpty() || buf == QLatin1String("main")) {
         return TConsole::getFgColor();
     }
-    auto pC = mSubConsoleMap.value(key);
+    auto pC = mSubConsoleMap.value(buf);
     if (pC) {
         return pC->getFgColor();
     }
@@ -364,13 +363,12 @@ std::list<int> TMainConsole::getFgColor(std::string& buf)
     return {};
 }
 
-std::list<int> TMainConsole::getBgColor(std::string& buf)
+std::list<int> TMainConsole::getBgColor(QString& buf)
 {
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
+    if (buf.isEmpty() || buf == QLatin1String("main")) {
         return TConsole::getBgColor();
     }
-    auto pC = mSubConsoleMap.value(key);
+    auto pC = mSubConsoleMap.value(buf);
     if (pC) {
         return pC->getBgColor();
     }

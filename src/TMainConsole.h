@@ -59,8 +59,8 @@ public:
     bool clear(const QString& name);
     void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
-    std::list<int> getFgColor(std::string& buf);
-    std::list<int> getBgColor(std::string& buf);
+    std::list<int> getFgColor(QString& buf);
+    std::list<int> getBgColor(QString& buf);
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     void luaWrapLine(QString& buf, int line);
     QString getCurrentLine(std::string&);
