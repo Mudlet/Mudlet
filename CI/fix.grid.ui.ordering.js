@@ -1,43 +1,99 @@
-const fs = require("fs").promises;
-const convert = require("xml-js");
+const fs = require("fs");
+const sax = require("sax");
 
-const ATTRIBUTE_KEY = "_attributes";
 const GRID_LAYOUT_CLASS = "QGridLayout";
 
 const uiDir = `${__dirname}/../src/ui`;
 
-function getCellOrder(node, attrKey) {
-  let attrs = node[attrKey];
-  let row = parseInt(attrs.row);
-  let col = parseInt(attrs.column);
-  return row * 1000 + col;
+class Layout {
+    items = []
+
+    constructor(type) {
+        this.type = type
+    }
+
+    addItem(item) {
+        this.items.push(item)
+    }
 }
 
-function visitNode(node) {
-  if (typeof node !== "object") {
-    return;
-  }
+class Item {
+    row
+    column
+    startOffset
+    endOffset
+    content
 
-  const subject = Array.isArray(node) ? node : Object.values(node);
-  subject.forEach(item => visitNode(item))
+    constructor(startOffset, row, column) {
+        this.startOffset = startOffset
+        this.row = parseInt(row);
+        this.column = parseInt(column);
+    }
 
-  if (node[ATTRIBUTE_KEY]?.class === GRID_LAYOUT_CLASS && Array.isArray(node.item)) {
-    node.item.sort(
-      (a, b) => getCellOrder(a, ATTRIBUTE_KEY) - getCellOrder(b, ATTRIBUTE_KEY)
-    );
-  }
+    getCellOrder() {
+        return this.row * 1000 + this.column;
+    }
+
+    isValid() {
+        return this.row !== undefined && this.column !== undefined
+    }
+
 }
 
 function visitUiFile(file) {
-  const filePath = `${uiDir}/${file}`
-  fs.readFile(filePath).then(contents => {
-    let uiDefinition = convert.xml2js(contents, { compact: true });
-    visitNode(uiDefinition)
-    let result = convert.js2xml(uiDefinition, { compact: true, spaces: 1})
-    result = result.replace(new RegExp(/^\s*\n/gm), '')
-    fs.writeFile(filePath, result + "\n")
-  })  
+    const filePath = `${uiDir}/${file}`
+    const stack = []
+    const processed = []
+
+    let uiFileContents = fs.readFileSync(filePath, 'utf-8');
+
+    const saxStream = sax.createStream(false, {})
+    let lastTagClosed = 0
+    saxStream.onopentag = (node) => {
+        if (node.name === 'LAYOUT') {
+            stack.push(new Layout(node.attributes.CLASS))
+        }
+        if (node.name === 'ITEM') {
+            stack.push(new Item(lastTagClosed, node.attributes.ROW, node.attributes.COLUMN))
+        }
+
+    }
+    saxStream.onclosetag = (tag) => {
+        if (tag === 'ITEM') {
+            const item = stack.pop()
+            if (!item.isValid() && stack.at(-1) instanceof Layout) {
+                return
+            }
+            item.endOffset = saxStream._parser.position
+            item.content = uiFileContents.substring(item.startOffset, item.endOffset)
+            if (stack.at(-1) instanceof Layout) {
+                stack.at(-1).addItem(item)
+            }
+        }
+        if (tag === 'LAYOUT') {
+            processed.push(stack.pop())
+        }
+        lastTagClosed = saxStream._parser.position
+    }
+
+    saxStream.end = () => {
+
+        processed.filter(layout => layout.type === GRID_LAYOUT_CLASS).forEach((layout) => {
+            let indexOffset = 0
+            let endPosition = 0;
+            layout.items.forEach(item => {
+                uiFileContents = uiFileContents.substring(0, item.startOffset + indexOffset) + uiFileContents.substring(item.endOffset + indexOffset)
+                indexOffset -= (item.endOffset - item.startOffset)
+                endPosition = Math.max(indexOffset, item.endOffset)
+            })
+
+            uiFileContents = uiFileContents.substring(0, endPosition + indexOffset) + layout.items.sort((a, b) => a.getCellOrder() - b.getCellOrder()).map(item => item.content).join("") + uiFileContents.substring(endPosition + indexOffset)
+        })
+        fs.writeFileSync(filePath, uiFileContents)
+
+    }
+    fs.createReadStream(filePath).pipe(saxStream)
+
 }
 
-
-fs.readdir( uiDir ).then(files => files.forEach(visitUiFile))
+fs.readdirSync( uiDir ).forEach(visitUiFile)

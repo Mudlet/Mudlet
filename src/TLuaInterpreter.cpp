@@ -7348,6 +7348,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("promptForVersionInTTYPE")) {
+        host.mPromptedForVersionInTTYPE = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("versionInTTYPE")) {
+        host.mVersionInTTYPE = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("inputLineStrictUnixEndings")) {
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7554,6 +7562,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
+        { qsl("promptForVersionInTTYPE"), [&](){lua_pushboolean(L, host.mPromptedForVersionInTTYPE); } },
+        { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
         { qsl("showSentText"), [&](){ lua_pushboolean(L, host.mPrintCommand); } },
