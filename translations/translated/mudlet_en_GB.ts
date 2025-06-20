@@ -4152,17 +4152,19 @@ changed.</translation>
       <source>This game appears to use a protocol that works best if Mudlet reports its version number during connection.
 
 Enable this compatibility mode for improved color support and reconnect?</source>
-      <translation type="unfinished"/>
+      <translation>This game appears to use a protocol that works best if Mudlet reports its version number during connection.
+
+Enable this compatibility mode for improved colour support and reconnect?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1591"/>
       <source>[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1594"/>
       <source>[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2554"/>
@@ -12590,12 +12592,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4004"/>
       <source>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict colour support to 16 colours instead of enabling 256-colour mode.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4007"/>
       <source>Send Mudlet version in terminal type</source>
-      <translation type="unfinished"/>
+      <translation>Send Mudlet version in terminal type</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4041"/>
