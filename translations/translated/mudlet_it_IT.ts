@@ -4238,7 +4238,7 @@ Attivare questa modalità di compatibilità per migliorare il supporto del color
     <message>
       <location filename="../src/ctelnet.cpp" line="1594"/>
       <source>[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Modalità di compatibilità disabilitata. È possibile abilitare l'invio della versione di Mudlet, in seguito nel menù Opzioni Avanzate.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2554"/>
@@ -12695,12 +12695,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4004"/>
       <source>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alcuni server utilizzano lo snippet di protocollo di KaVir, che prevede che il client fornisca sia il suo nome che un numero di versione decimale durante la negoziazione Telnet TTYPE. Tuttavia, includere un numero di versione non è conforme agli RFC pertinenti poiché il carattere punto non è consentito al loro interno; quindi dal 2024 Mudlet ha smesso di inviarlo per impostazione predefinita. Di conseguenza, i server che dipendono da queste informazioni potrebbero assumere che Mudlet sia versione 1.0 o precedente, e di conseguenza limitare il supporto dei colori a 16 colori invece di abilitare la modalità a 256 colori.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4007"/>
       <source>Send Mudlet version in terminal type</source>
-      <translation type="unfinished"/>
+      <translation>Invia la versione di Mudlet al server di gioco</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4041"/>
