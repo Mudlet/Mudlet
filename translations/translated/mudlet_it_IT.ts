@@ -4226,12 +4226,14 @@ non sarà variata nuovamente.</translation>
       <source>This game appears to use a protocol that works best if Mudlet reports its version number during connection.
 
 Enable this compatibility mode for improved color support and reconnect?</source>
-      <translation type="unfinished"/>
+      <translation>Questo gioco sembra utilizzare un protocollo che funziona meglio se Mudlet indica il suo numero di versione durante la connessione.
+
+Attivare questa modalità di compatibilità per migliorare il supporto del colore e riconnettersi?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1591"/>
       <source>[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Modalità di compatibilità abilitata: Mudlet ora invierà al gioco il suo numero di versione per questo profilo. Riconnessione...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1594"/>
