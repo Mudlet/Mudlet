@@ -3998,6 +3998,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_mVersionInTTYPE">
+            <property name="toolTip">
+             <string>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Send Mudlet version in terminal type</string>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
@@ -4497,6 +4507,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
+  <tabstop>checkBox_mVersionInTTYPE</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mForceNewEnvironNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>

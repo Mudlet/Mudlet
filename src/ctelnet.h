@@ -51,6 +51,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <QVector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -325,6 +326,8 @@ private:
 
     static std::pair<bool, bool> testReadReplayFile();
 
+    void trackKaVirNegotiation(unsigned char option);
+    void promptEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
@@ -426,6 +429,9 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    // KaVir protocol negotiation tracking
+    QVector<unsigned char> mNegotiationOrder;
 };
 
 #endif // MUDLET_CTELNET_H

@@ -67,6 +67,16 @@ int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
 
+static const QVector<unsigned char> expectedOrderForKaVirHandler = {
+    static_cast<unsigned char>(OPT_TERMINAL_TYPE),
+    static_cast<unsigned char>(OPT_NAWS),
+    static_cast<unsigned char>(OPT_CHARSET),
+    static_cast<unsigned char>(OPT_MSDP),
+    static_cast<unsigned char>(OPT_MSSP),
+    static_cast<unsigned char>(OPT_ATCP),
+    static_cast<unsigned char>(OPT_MSP),
+    static_cast<unsigned char>(OPT_MXP)
+};
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
 : mProfileName(profileName)
@@ -148,6 +158,8 @@ void cTelnet::reset()
     mGA_Driver = false;
     command = "";
     mMudData = "";
+
+    mNegotiationOrder.clear();
 }
 
 
@@ -1530,6 +1542,59 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     sendAllMNESValues(); // No list specified or only a VAR, send the entire list of defined VAR variables
 }
 
+// Track the order of option negotiations for KaVir protocol
+void cTelnet::trackKaVirNegotiation(unsigned char option)
+{
+    if (!mpHost || mpHost->mPromptedForVersionInTTYPE) {
+        return;
+    }
+
+    mNegotiationOrder.append(option);
+
+    // Only keep as many as needed
+    if (mNegotiationOrder.size() > expectedOrderForKaVirHandler.size()) {
+        mNegotiationOrder.removeFirst();
+    }
+
+    // Check for match
+    if (mNegotiationOrder == expectedOrderForKaVirHandler) {
+#ifdef DEBUG_TELNET
+    QStringList optList;
+
+    for (unsigned char opt : mNegotiationOrder) {
+        optList << QString("%1 (%2)").arg(static_cast<int>(opt)).arg(decodeOption(opt));
+    }
+
+    qDebug().nospace() << "Matched KaVir protocol handling negotiation order: [" << optList.join(", ") << "]";
+#endif
+        promptEnableTTYPEVersion();
+    }
+}
+
+// Prompt user to enable TTYPE version compatibility mode and reconnect
+void cTelnet::promptEnableTTYPEVersion()
+{
+    mpHost->mPromptedForVersionInTTYPE = true;
+
+    auto msgBox = new QMessageBox();
+    msgBox->setIcon(QMessageBox::Question);
+    msgBox->setText(tr("This game appears to use a protocol that works best if Mudlet reports its version number during connection.\n\nEnable this compatibility mode for improved color support and reconnect?"));
+    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox->setDefaultButton(QMessageBox::Yes);
+
+    int ret = msgBox->exec();
+    delete msgBox;
+
+    if (ret == QMessageBox::Yes) {
+        disconnectIt();
+        mpHost->mVersionInTTYPE = true;
+        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting..."));
+        reconnect();
+    } else {
+        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options."));
+    }
+}
+
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
@@ -1615,6 +1680,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = telnetCommand[2];
+        trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
@@ -2018,6 +2084,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_DO: {
         //server wants us to enable some option
         option = telnetCommand[2];
+        trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
@@ -2616,15 +2683,26 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientName = getNewEnvironClientName();
-                            cmd += clientName.toStdString();
+                            QString terminalType = getNewEnvironClientName();
+
+                            // Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal
+                            // version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with
+                            // the relevant RFCs as the period character is not permitted therein; so since 2024, Mudlet has stopped sending
+                            // it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier,
+                            // and consequently restrict color support to 16 colors instead of enabling 256-color mode. Hence, users can add
+                            // the version number to the terminal type via a setting in Special Options.
+                            if (mpHost->mVersionInTTYPE) {
+                                terminalType += qsl(" %1").arg(APP_VERSION);
+                            }
+
+                            cmd += terminalType.toStdString();
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
                                 qDebug() << "MTTS enabled";
-                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << clientName;
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << terminalType;
                             } else {
-                                qDebug() << "WE send TERMINAL_TYPE is" << clientName;
+                                qDebug() << "WE send TERMINAL_TYPE is" << terminalType;
                             }
 
                             break;
