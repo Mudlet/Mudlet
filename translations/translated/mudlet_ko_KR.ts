@@ -10853,7 +10853,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1261"/>
       <source>------------ </source>
       <extracomment>This represents the format of the timestamps shown for lines that do not * have a timestamp in a console that is showing them. If localised this * should be set to the same format and length as the smTimeStampFormat:</extracomment>
-      <translation type="unfinished"/>
+      <translation>------------ </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3239"/>
@@ -12725,7 +12725,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3853"/>
       <source>Enable closed caption for media</source>
-      <translation type="unfinished"/>
+      <translation>미디어에 자막 활성화</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3923"/>
@@ -12749,12 +12749,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4004"/>
       <source>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;일부 서버는 KaVir의 프로토콜 스니펫을 사용하는데, 이는 클라이언트가 Telnet TTYPE 협상 중에 이름과 십진수 버전 번호를 모두 제공할 것으로 예상합니다. 그러나 버전 번호를 포함하는 것은 마침표 문자가 허용되지 않으므로 관련 RFC를 따르지 않습니다. 따라서 2024년부터 Mudlet은 기본적으로 전송을 중단했습니다. 결과적으로, 이 정보에 의존하는 서버는 Mudlet이 버전 1.0 이하라고 가정할 수 있으며, 결과적으로 256색 모드를 활성화하는 대신 16색으로 색 지원을 제한할 수 있습니다.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4007"/>
       <source>Send Mudlet version in terminal type</source>
-      <translation type="unfinished"/>
+      <translation>터미널 유형으로 Mudlet 버전 보내기</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4041"/>
@@ -12855,7 +12855,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="776"/>
       <source>Select Font</source>
-      <translation type="unfinished"/>
+      <translation>글꼴 선택</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1156"/>
