@@ -575,17 +575,17 @@ please wait...</source>
     <message>
       <location filename="../src/TBuffer.cpp" line="2215"/>
       <source>Send</source>
-      <translation type="unfinished"/>
+      <translation>보내기</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2220"/>
       <source>Prompt</source>
-      <translation type="unfinished"/>
+      <translation>프롬프트</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Open browser to</source>
-      <translation type="unfinished"/>
+      <translation>브라우저로 열기</translation>
     </message>
   </context>
   <context>
@@ -1872,7 +1872,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1482"/>
       <source>MXP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>MXP 이벤트:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1487"/>
@@ -2401,52 +2401,52 @@ in main console!</source>
     <message>
       <location filename="../src/TMedia.cpp" line="332"/>
       <source>fades</source>
-      <translation type="unfinished"/>
+      <translation>사라짐</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1082"/>
       <source>Too many stopped media players. Purging stopped players.</source>
-      <translation type="unfinished"/>
+      <translation>중지된 미디어 플레이어가 너무 많습니다. 중지된 플레이어를 정리합니다.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1090"/>
       <source>Too many stopped media players. Removed oldest active player.</source>
-      <translation type="unfinished"/>
+      <translation>중지된 미디어 플레이어가 너무 많습니다. 가장 오래된 활성 플레이어를 제거했습니다.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1187"/>
       <source>Maximum allowed active media players reached for media type. Cannot play additional media.</source>
-      <translation type="unfinished"/>
+      <translation>미디어 유형에 대해 허용된 최대 활성 미디어 플레이어 수에 도달했습니다. 추가 미디어를 재생할 수 없습니다.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1264"/>
       <source>stops</source>
-      <translation type="unfinished"/>
+      <translation>중지</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1281"/>
       <source>plays</source>
-      <translation type="unfinished"/>
+      <translation>재생</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1298"/>
       <source>pauses</source>
-      <translation type="unfinished"/>
+      <translation>일시정지</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2051"/>
       <source>music</source>
-      <translation type="unfinished"/>
+      <translation>음악</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>video</source>
-      <translation type="unfinished"/>
+      <translation>동영상</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>sound</source>
-      <translation type="unfinished"/>
+      <translation>사운드</translation>
     </message>
   </context>
   <context>
@@ -4144,17 +4144,19 @@ Mudlet은 ASCII 인코딩을 사용하여 데이터를 전송하려 시도하겠
       <source>This game appears to use a protocol that works best if Mudlet reports its version number during connection.
 
 Enable this compatibility mode for improved color support and reconnect?</source>
-      <translation type="unfinished"/>
+      <translation>이 게임은 연결 중에 Mudlet이 버전 번호를 보고할 때 가장 잘 작동하는 프로토콜을 사용하는 것으로 보입니다.
+
+향상된 색상 지원을 위해 이 호환성 모드를 활성화하고 다시 연결하시겠습니까?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1591"/>
       <source>[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ]  - 호환 모드가 활성화되었습니다: 이제 Mudlet이 이 프로필의 터미널 타입에서 버전 번호를 전송합니다. 재연결 중...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1594"/>
       <source>[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ]  - 호환성 모드가 활성화되지 않았습니다. 나중에 특수 옵션에서 터미널 유형의 버전을 활성화할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2554"/>
@@ -6625,7 +6627,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="896"/>
       <source>MXP: Mud eXtension Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MXP: Mud eXtension 프로토콜</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="901"/>
@@ -10847,7 +10849,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1256"/>
       <source>hh:mm:ss.zzz </source>
       <extracomment>This represents the format of the timestamps shown alongside the texts * in a console and might require translation for a few locales; the content * is as per QDateTime::toString(...) and needs to follow the rules for that * function as well as being suitable for the translation locale.</extracomment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1261"/>
