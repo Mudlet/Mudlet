@@ -96,7 +96,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
+
+    QPalette transparentBgPalette;
+    transparentBgPalette.setColor(QPalette::Window, QColor(0, 0, 0, 0));
+    setPalette(transparentBgPalette);
 
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -105,13 +109,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     const QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
-
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
-    mpMainFrame->setPalette(framePalette);
-    mpMainFrame->setAutoFillBackground(true);
+    mpMainFrame->setPalette(transparentBgPalette);
     mpMainFrame->setObjectName(qsl("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
@@ -886,6 +884,14 @@ void TConsole::changeColors()
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
             mpMainDisplay->setStyleSheet(styleSheet);
+
+            QPalette transparentBgPalette;
+            transparentBgPalette.setColor(QPalette::Window, QColor(0, 0, 0, 0));
+            mpBaseVFrame->setPalette(transparentBgPalette);
+            mpBaseHFrame->setPalette(transparentBgPalette);
+            mpMainFrame->setPalette(transparentBgPalette);
+            mpMainDisplay->setPalette(transparentBgPalette);
+            setPalette(transparentBgPalette);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
