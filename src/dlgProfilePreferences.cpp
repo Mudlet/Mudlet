@@ -4515,7 +4515,7 @@ bool dlgProfilePreferences::updateDisplayFont()
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
-    QFont::insertSubstitution(mpHost->displayFont.family(), qsl("Noto Color Emoji"));
+    QFont::insertSubstitution(mpHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
 #endif
 
     // update the display properly when font or size or antiAliasing selections

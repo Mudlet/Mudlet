@@ -1168,7 +1168,7 @@ void XMLimport::readHost(Host* pHost)
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
                 // On GNU/Linux and FreeBSD ensure that emojis are displayed in
                 // colour even if this font doesn't support it:
-                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+                QFont::insertSubstitution(pHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
 #endif
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this

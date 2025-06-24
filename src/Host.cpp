@@ -1024,7 +1024,7 @@ QString Host::getMmpMapLocation() const
 void Host::updateConsolesFont()
 {
     if (!mpConsole) {
-        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font releated operatione.";
+        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font releated operations.";
         return;
     }
 
