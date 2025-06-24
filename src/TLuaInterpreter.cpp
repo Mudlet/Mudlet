@@ -7558,8 +7558,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
-        { qsl("advertiseScreenReader"), [&](){ lua_pushboolean(L, host.mAdvertiseScreenReader); } },
-        { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
         { qsl("logDirectory"), [&](){
             const auto logDir = host.mLogDir;
 
