@@ -7340,8 +7340,13 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("enableMXP") || key == qsl("specialForceMxpNegotiationOff")) {
+    if (key == qsl("specialForceMxpNegotiationOff")) {
         // specialForceMxpNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableMXP
+        host.mEnableMXP = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMXP") {
         host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
