@@ -7346,7 +7346,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMXP = !getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("enableMXP") {
+    if (key == qsl("enableMXP")) {
         host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
