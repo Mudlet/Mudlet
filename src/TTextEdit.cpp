@@ -674,7 +674,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull()) {
+    if (!textRect.isNull() && bgColor != mpConsole->getConsoleBgColor()) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;
