@@ -7558,6 +7558,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
+        { qsl("advertiseScreenReader"), [&](){ lua_pushboolean(L, host.mAdvertiseScreenReader); } },
+        { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
         { qsl("logDirectory"), [&](){
             const auto logDir = host.mLogDir;
 
@@ -7576,6 +7578,11 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("fixUnnecessaryLinebreaks"), [&](){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
+        { qsl("specialForceMxpNegotiationOff"), [&](){
+            // specialForceMxpNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableMXP
+            lua_pushboolean(L, !host.mEnableMXP);
+        } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
