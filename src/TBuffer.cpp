@@ -26,6 +26,8 @@
 #include "mudlet.h"
 #include "TEvent.h"
 #include "TStringUtils.h"
+#include "TTextProperties.h"
+#include "widechar_width.h"
 
 #include "pre_guard.h"
 #include <QTextBoundaryFinder>
@@ -852,9 +854,10 @@ COMMIT_LINE:
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
-            wrap(line);
+            wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
             // Start a new, but empty line in the various buffers
+            log(lineBuffer.size() - 1, lineBuffer.size() - 1);
             ++localBufferPosition;
             std::deque<TChar> const newLine;
             buffer.push_back(newLine);
@@ -2285,198 +2288,35 @@ void TBuffer::resetColors()
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = qsl(",.- ");
+    append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
+}
 
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
-    }
-    int last = buffer.size() - 1;
-    if (last < 0) {
-        // buffer is completely empty
-        std::deque<TChar> newLine;
-        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
-        const TChar c(format.mFgColor,
-                format.mBgColor,
-                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
-                 : (format.mFlags & TChar::TestMask)));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
-        promptBuffer << false;
-        last = 0;
-    }
+void TBuffer::append(const QString& text, int sub_start, int sub_end,
+                     const QColor& fgColor, const QColor& bgColor,
+                     TChar::AttributeFlags flags, int linkID)
+{
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+    appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
     if (text.isEmpty()) {
         return;
     }
-    bool firstChar = (lineBuffer.back().isEmpty());
-    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-    if (sub_end >= length) {
-        sub_end = text.size() - 1;
+    // optimization: if the lastLine length hasn't changed,
+    // skip it and wrap subsequent lines
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    } else {
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
     }
-
-    for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
-        if (text.at(i) == QChar::LineFeed) {
-            log(size() - 1, size() - 1);
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer << mudlet::smBlankTimeStamp;
-            promptBuffer << false;
-            firstChar = true;
-            continue;
-        }
-
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    const QString tmp = lineBuffer.back().mid(0, linebreakPos);
-                    const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int restOfLine = lineRest.size();
-                    if (restOfLine > 0) {
-                        while (restOfLine > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            restOfLine--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << mudlet::smBlankTimeStamp;
-                    promptBuffer << false;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
-                }
-            }
-        }
-        lineBuffer.back().append(text.at(i));
-        const TChar c(format.mFgColor,
-                format.mBgColor,
-                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
-                 : (format.mFlags & TChar::TestMask)),
-                linkID);
-        buffer.back().push_back(c);
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
-            firstChar = false;
-        }
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        shrinkBuffer();
     }
-
     // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
     // limit to prevent it growing beyond a "reasonable" size we also
     // want to check - for TConsoles that have been set to be "non-scrollable"
     // - that the content has not exceeded the number of lines that can be
     // shown in the upper pane and to raise an event if it has
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
-    }
-}
-
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
-{
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = qsl(",.- ");
-
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
-    }
-    int last = buffer.size() - 1;
-    if (last < 0) {
-        std::deque<TChar> newLine;
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
-        promptBuffer << false;
-        last = 0;
-    }
-    if (text.isEmpty()) {
-        return;
-    }
-    bool firstChar = (lineBuffer.back().isEmpty());
-    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-    if (sub_end >= length) {
-        sub_end = text.size() - 1;
-    }
-
-    for (int i = sub_start; i < length; ++i) {
-        if (text.at(i) == '\n') {
-            log(size() - 1, size() - 1);
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer << mudlet::smBlankTimeStamp;
-            promptBuffer << false;
-            firstChar = true;
-            continue;
-        }
-
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                // insert linebreak either at linebreaking character location or at last character of line
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == 0) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    const QString tmp = lineBuffer.back().mid(0, linebreakPos);
-                    const QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int restOfLine = lineRest.size();
-                    if (restOfLine > 0) {
-                        while (restOfLine > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            restOfLine--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << mudlet::smBlankTimeStamp;
-                    promptBuffer << false;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
-                }
-            }
-        }
-        lineBuffer.back().append(text.at(i));
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(c);
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
-            firstChar = false;
-        }
-    }
-    // Check - for "non-scrollable" TConsoles that the content has not exceeded
-    // the number of lines that can be shown and raise an event if it has:
     if (!mpConsole.isNull()) {
         mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
@@ -2489,20 +2329,16 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (sub_end < 0) {
         return;
     }
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
-    }
     int lastLine = buffer.size() - 1;
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
-        std::deque<TChar> newLine;
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
-        promptBuffer << false;
+        appendEmptyLine();
         lastLine = 0;
+        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
+        const TChar styling(fgColor, bgColor,
+                (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask))
+                 : (flags & TChar::TestMask)));
+        buffer.back().push_back(styling);
     }
 
     if (text.isEmpty()) {
@@ -2516,19 +2352,29 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     }
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        lineBuffer.back().append(text.at(i));
-        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(c);
+        const QChar thisChar = text.at(i);
+        if (thisChar == QChar::LineFeed) {
+            firstChar = true;
+            appendEmptyLine();
+            continue;
+        }
+        lineBuffer.back().append(thisChar);
+        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+        buffer.back().push_back(styling);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
-    // Check - for "non-scrollable" TConsoles that the content has not exceeded
-    // the number of lines that can be shown and raise an event if it has:
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
-    }
+}
+
+void TBuffer::appendEmptyLine()
+{
+    std::deque<TChar> const newLine;
+    buffer.push_back(newLine);
+    lineBuffer.push_back(QString());
+    timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+    promptBuffer << false;
 }
 
 // This was called "insert" but that is commonly used for built in methods and
@@ -2643,7 +2489,7 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 
     if (hasAppended && y != -1) {
         TChar format(mpConsole);
-        wrapLine(y, mWrapAt, mWrapIndent, format);
+        wrapLine(y, mWrapAt, mWrapIndent, mWrapHangingIndent);
     }
 }
 
@@ -2709,115 +2555,85 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
     return offset;
 }
 
-inline int TBuffer::wrap(int startLine)
+// find lindbreaks and indents (if not necessary, return empty list)
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, 
+    const int maxWidth, const int indent, const int hangingIndent)
 {
-    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
-        return 0;
+    QList<WrapInfo> output;
+    if (lineText.isEmpty()) {
+        return output;
     }
-    std::queue<std::deque<TChar>> queue;
-    QStringList tempList;
-    QStringList timeList;
-    QList<bool> promptList;
-    int lineCount = 0;
-    const TChar pSpace(mpConsole);
-    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
-        const bool isPrompt = promptBuffer[i];
-        std::deque<TChar> newLine;
-        QString lineText = "";
-        const QString time = timeBuffer[i];
-        int indent = 0;
-        if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
-            for (int i3 = 0; i3 < mWrapIndent; ++i3) {
-                newLine.push_back(pSpace);
-                lineText.append(" ");
-            }
-            indent = mWrapIndent;
-        }
-        int lastSpace = 0;
-        int wrapPos = 0;
-        const int length = buffer[i].size();
-        if (length == 0) {
-            tempList.append(QString());
-            std::deque<TChar> const emptyLine;
-            queue.push(emptyLine);
-            timeList.append(time);
-        }
-        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
-            if (length - i2 > mWrapAt - indent) {
-                wrapPos = calculateWrapPosition(i, i2, i2 + mWrapAt - indent);
-                lastSpace = qMax(0, wrapPos);
-            } else {
-                lastSpace = 0;
-            }
-            const int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
-            for (int i3 = 0; i3 < wrapPosition; ++i3) {
-                if (lastSpace > 0) {
-                    if (i2 > lastSpace) {
-                        break;
-                    }
-                }
-                if (i2 >= static_cast<int>(buffer[i].size())) {
-                    break;
-                }
-                if (lineBuffer[i].at(i2) == '\n') {
-                    i2++;
-                    break;
-                }
-                if (i3 == 0 && i2 != 0) {
-                    for (int j = 0; j < mWrapHangingIndent; ++j) {
-                        newLine.push_back(pSpace);
-                        lineText.append(" ");
-                    }
-                }
-                newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
-            }
-            if (newLine.empty()) {
-                tempList.append(QString());
-                std::deque<TChar> const emptyLine;
-                queue.push(emptyLine);
-                timeList.append(QString());
-                promptList.append(false);
-            } else {
-                queue.push(newLine);
-                tempList.append(lineText);
-                timeList.append(time);
-                promptList.append(isPrompt);
-            }
-            newLine.clear();
-            lineText = "";
-            indent = mWrapHangingIndent;
-            i2 += skipSpacesAtBeginOfLine(i, i2);
-        }
-        lineCount++;
-    }
-    for (int i = 0; i < lineCount; ++i) {
-        buffer.pop_back();
-        lineBuffer.pop_back();
-        timeBuffer.pop_back();
-        promptBuffer.pop_back();
-    }
+    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+    QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
+    int xPos = 0;
+    int totalWidth = 0;
+    int firstChar = 0;
+    bool needsIndent = isNewline;
 
-    const int insertedLines = queue.size() - 1;
-    while (!queue.empty()) {
-        buffer.push_back(queue.front());
-        queue.pop();
-    }
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        if (tempList[i].size() < 1) {
-            lineBuffer.append(QString());
-            timeBuffer.append(QString());
-            promptBuffer.push_back(false);
-        } else {
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
+    // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
+        const QChar c = lineText.at(indexOfChar);
+        // skip leading spaces for any wrapped lines
+        if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
+            indexOfChar++;
+            firstChar = indexOfChar;
+            boundaryFinder.setPosition(indexOfChar);
+            continue;
         }
+        // handle embedded linefeed
+        if (c == QChar::LineFeed) {
+            output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+            indexOfChar++;
+            boundaryFinder.setPosition(indexOfChar);
+            firstChar = indexOfChar;
+            isNewline = true;
+            needsIndent = false;
+            continue;
+        }
+        int nextBoundary = boundaryFinder.toNextBoundary();
+        const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+        const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+        const int charWidth = graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
+        const int indentationHere = isNewline ? indent : hangingIndent;
+        if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
+            if (isNewline) {
+                needsIndent = true;
+            }
+            lineBreakFinder.setPosition(indexOfChar);
+            // we check c == QChar::Space since we are happy to break at -any- space, 
+            // unlike the indirect-linebreak permission of QTextBoundaryFinder::Line
+            // (see: https://www.unicode.org/reports/tr14/#LD9) which will only break at
+            // at the first char after 1+ space(s)
+            const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
+            if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
+                boundaryFinder.setPosition(indexOfChar);
+                output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+            } else {
+                indexOfChar = lineBreakFinder.position();
+                nextBoundary = lineBreakFinder.position();
+                boundaryFinder.setPosition(nextBoundary);
+                output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+            }
+            isNewline = false;
+            needsIndent = true;
+            xPos = 0;
+            firstChar = indexOfChar;
+            continue;
+        }
+        xPos += charWidth;
+        totalWidth += charWidth;
+        indexOfChar = nextBoundary;
     }
-
-    log(startLine, startLine + tempList.size());
-    return insertedLines > 0 ? insertedLines : 0;
+    // it's possible that no wrapping is needed
+    if (totalWidth <= mWrapAt) {
+        output.clear();
+        return output;
+    }
+    // if the line has been wrapped, append last remaining bit
+    if (!output.isEmpty()) {
+        output.append(WrapInfo(isNewline, !isNewline, firstChar, lineText.size()));
+    }
+    return output;
 }
 
 // This only works on the Main Console for a profile
@@ -2885,110 +2701,119 @@ void TBuffer::appendLog(const QString &text)
 }
 
 // returns how many new lines have been inserted by the wrapping action
-int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format)
+int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
 {
-    if (startLine < 0) {
+    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
     }
-    if (static_cast<int>(buffer.size()) <= startLine) {
-        return 0;
-    }
+
     std::queue<std::deque<TChar>> queue;
     QStringList tempList;
+    QStringList timeList;
+    QList<bool> promptList;
     int lineCount = 0;
-
-    for (int line = startLine, total = static_cast<int>(buffer.size()); line < total; ++line) {
-        if (line > startLine) {
-            break; //only wrap one line of text
-        }
-        std::deque<TChar> newLine;
-        QString lineText;
-
-        int indent = 0;
-        if (static_cast<int>(buffer[line].size()) >= screenWidth) {
-            for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
-                const TChar pSpace = format;
-                newLine.push_back(pSpace);
-                lineText.append(QChar::Space);
-            }
-            indent = indentSize;
-        }
-        int lastSpace = -1;
-        int wrapPos = -1;
-        auto lineLength = static_cast<int>(buffer[line].size());
-
-        for (int characterPosition = 0, total = static_cast<int>(buffer[line].size()); characterPosition < total;) {
-            if (lineLength - characterPosition > screenWidth - indent) {
-                wrapPos = calculateWrapPosition(line, characterPosition, characterPosition + screenWidth - indent);
-                lastSpace = qMax(-1, wrapPos);
-            } else {
-                lastSpace = -1;
-            }
-            for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
-                if (lastSpace > 0) {
-                    if (characterPosition >= lastSpace) {
-                        characterPosition++;
-                        break;
-                    }
-                }
-                if (characterPosition >= static_cast<int>(buffer[line].size())) {
-                    break;
-                }
-                if (lineBuffer[line][characterPosition] == QChar::LineFeed) {
-                    characterPosition++;
-
-                    if (newLine.empty()) {
-                        tempList.append(QString());
-                        std::deque<TChar> const emptyLine;
-                        queue.push(emptyLine);
-                    } else {
-                        queue.push(newLine);
-                        tempList.append(lineText);
-                    }
-                    goto OPT_OUT_CLEAN;
-                }
-                newLine.push_back(buffer[line][characterPosition]);
-                lineText.append(lineBuffer[line].at(characterPosition));
-                characterPosition++;
-            }
-            queue.push(newLine);
-            tempList.append(lineText);
-
-        OPT_OUT_CLEAN:
-            newLine.clear();
-            lineText.clear();
-            indent = 0;
-        }
+    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
+    const int indent = (indentSize < maxWidth) ? indentSize : 0;
+    const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         lineCount++;
-    }
+        std::deque<TChar> newBufferLine;
+        QString newLineText;
+        const QString time = timeBuffer[i];
+        // trivial case
+        if (buffer[i].size() == 0) {
+            tempList.append(newLineText);
+            queue.push(newBufferLine);
+            timeList.append(time);
+            promptList.append(false);
+            continue;
+        }
 
-    if (lineCount < 1) {
-        log(startLine, startLine);
-        return 0;
+        // consider wrapping line
+        int newBufferCharPosition = 0;
+        const bool isPrompt = promptBuffer[i];
+        const QString lineText = lineBuffer[i];
+        // a blank timestamp indicates a wrapped line
+        const bool isNewline = (time != mudlet::smBlankTimeStamp);
+        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent); 
+        if (lineBreaks.isEmpty()) {
+            tempList.append(lineText);
+            queue.push(buffer[i]);
+            timeList.append(time);
+            promptList.append(isPrompt);
+            continue;
+        }
+        const QString qIndent(indent, QChar::Space);
+        const QString qHangingIndent(hangingIndent, QChar::Space);
+        for (WrapInfo w : lineBreaks) {
+            // skip TChars as needed
+            while (newBufferCharPosition < w.firstChar) {
+                buffer[i].pop_front();
+                newBufferCharPosition++;
+            }
+            if (w.needsIndent) {
+                // background color of indentation spaces should match first char in the line
+                const TChar indentSpace = buffer[i].front();
+                // add indentation to TChar buffer and newLineText
+                if (w.isNewline) {
+                    for (int i = 0; i < indent; ++i) {
+                        newBufferLine.push_front(indentSpace);
+                    }
+                    newLineText.append(qIndent);
+                } else {
+                    for (int i = 0; i < hangingIndent; ++i) {
+                        newBufferLine.push_front(indentSpace);
+                    }
+                    newLineText.append(qHangingIndent);
+                }
+            }
+            // append TChars of the wrapped lineText to TChar buffer
+            while (newBufferCharPosition < w.lastChar) {
+                newBufferLine.push_back(buffer[i].front());
+                buffer[i].pop_front();
+                newBufferCharPosition++;
+            }
+            // everything else
+            newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
+            tempList.append(newLineText);
+            if (w.isNewline) {
+                timeList.append(time);
+            } else {
+                timeList.append(mudlet::smBlankTimeStamp);
+            }
+            queue.push(newBufferLine);
+            promptList.append(isPrompt);
+            newBufferLine.clear();
+            newLineText = QString();
+        }
     }
-
-    buffer.erase(buffer.begin() + startLine);
-    lineBuffer.removeAt(startLine);
-    const QString time = timeBuffer.at(startLine);
-    timeBuffer.removeAt(startLine);
-    const bool isPrompt = promptBuffer.at(startLine);
-    promptBuffer.removeAt(startLine);
+    for (int i = 0; i < lineCount; ++i) {
+        buffer.pop_back();
+        lineBuffer.pop_back();
+        timeBuffer.pop_back();
+        promptBuffer.pop_back();
+    }
 
     const int insertedLines = queue.size() - 1;
-    int i = 0;
-    while (!queue.empty()) {
-        buffer.insert(buffer.begin() + startLine + i, queue.front());
-        queue.pop();
-        i++;
+    for (int i = 0; i <= insertedLines; ++i) {
+        if (tempList[i].size() < 1) {
+            queue.pop();
+            appendEmptyLine();
+        } else {
+            buffer.push_back(queue.front());
+            queue.pop();
+            lineBuffer.append(tempList[i]);
+            timeBuffer.append(timeList[i]);
+            promptBuffer.push_back(promptList[i]);
+        }
     }
 
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        lineBuffer.insert(startLine + i, tempList[i]);
-        timeBuffer.insert(startLine + i, time);
-        promptBuffer.insert(startLine + i, isPrompt);
+    if (insertedLines > 0) {
+        // log all lines but the last one (in case further text is appended later)
+        log(startLine, startLine + insertedLines - 1);
+        return insertedLines;
     }
-    log(startLine, startLine + tempList.size() - 1);
-    return insertedLines > 0 ? insertedLines : 0;
+    return 0;
 }
 
 bool TBuffer::moveCursor(QPoint& where)

@@ -529,6 +529,7 @@
     "setWindow": "setWindow(windowName, name, [Xpos, Ypos, show])",
     "setWindowWrap": "setWindowWrap(windowName, wrapAt)",
     "setWindowWrapIndent": "setWindowWrapIndent(windowName, wrapTo)",
+    "setWindowWrapHangingIndent": "setWindowWrapHangingIndent(windowName, wrapTo)",
     "shms": "shms(seconds, bool)",
     "showCaptureGroups": "showCaptureGroups()",
     "showColors": "showColors([columns], [filterColor], [sort])",

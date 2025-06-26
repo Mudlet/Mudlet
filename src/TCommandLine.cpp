@@ -1250,11 +1250,13 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 {
-    const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+    const Qt::KeyboardModifiers allExceptShiftModifiers = Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
 
-    if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
-        // let user-defined Ctrl+# keys match first - and only if the user hasn't created
-        // then we fallback to tab switching
+    if ((ke->modifiers() & allExceptShiftModifiers) == Qt::ControlModifier) {
+        // let user-defined Ctrl+# keys match first - and only if the user
+        // hasn't created one then we fallback to tab switching - however
+        // since some locales need the SHIFT modifier to enter numbers from the
+        // top keyboard row (e.g. French AZERTY) we must ignore that one!
         if (keybindingMatched(ke)) {
             // Ah the user HAS created a matching binding:
             return true;
