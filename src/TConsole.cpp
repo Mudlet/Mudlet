@@ -1345,7 +1345,7 @@ void TConsole::setFontSize(int size)
 {
     if (mDisplayFontDetails.mPointSize != size) {
         mDisplayFontDetails.mPointSize = size;
-        setFont(mDisplayFontDetails.makeFont());
+        setFont(mDisplayFontDetails.makeFont(), true);
     }
 }
 
@@ -1461,10 +1461,10 @@ void TConsole::raiseFontChangeEvent()
     mpHost->raiseEvent(fontChangeEvent);
 }
 
-void TConsole::setFont(const QFont& newFont)
+void TConsole::setFont(const QFont& newFont, const bool forceChange)
 {
     TFontAttributes newFontDetails(newFont);
-    if (mDisplayFontDetails != newFontDetails) {
+    if (forceChange || (mDisplayFontDetails != newFontDetails)) {
         mDisplayFontDetails = newFontDetails;
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
@@ -1491,7 +1491,7 @@ void TConsole::setFont(const QFont& newFont)
 void TConsole::setFontName(const QString& fontName)
 {
     mDisplayFontDetails.mName = fontName;
-    setFont(mDisplayFontDetails.makeFont());
+    setFont(mDisplayFontDetails.makeFont(), true);
     refreshView();
 }
 

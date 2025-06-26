@@ -2454,32 +2454,33 @@ int TLuaInterpreter::setFont(lua_State* L)
         windowName = WINDOW_NAME(L, s++);
     }
 
-    const QString font = getVerifiedString(L, __func__, s, "name");
+    const QString fontName = getVerifiedString(L, __func__, s, "name");
 
-    if (font.trimmed().isEmpty()) {
+    if (fontName.trimmed().isEmpty()) {
         return warnArgumentValue(L, __func__, "font must not be empty");
     }
 
-    if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
-        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(font));
+    if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
-    QFont::insertSubstitution(font, qsl("Noto Color Emoji"));
+    QFont::insertSubstitution(fontName, qsl("Noto Color Emoji"));
     // TODO issue #4159: a nonexisting font breaks the console
 #endif
 
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
-        auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
+        auto result = host.setDisplayFont(QFont(fontName, host.getDisplayFont().pointSize()));
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
         }
         console->refreshView();
     } else {
+        QFont(fontName, console->font().pointSize())
         console->setFont(font);
     }
     lua_pushboolean(L, true);

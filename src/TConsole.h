@@ -307,7 +307,11 @@ public:
     void raiseMudletResizeEvent();
     // This *should* be overridding the (void) QWidget::setFont(const QFont&)
     // method but doesn't seem to be...!
-    void setFont(const QFont&);
+    // The forceChange option is required when using this method within
+    // setFontName(...) or setFontSize(...) so that the changes made
+    // on the TFontDetails class are forced into play, as otherwise
+    // it looks that they haven't inside this method:
+    void setFont(const QFont&, const bool forceChange = false);
 
 
     QPointer<Host> mpHost;
