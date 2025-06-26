@@ -2480,7 +2480,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         }
         console->refreshView();
     } else {
-        QFont(fontName, console->font().pointSize())
+        auto font = QFont(fontName, console->font().pointSize());
         console->setFont(font);
     }
     lua_pushboolean(L, true);
