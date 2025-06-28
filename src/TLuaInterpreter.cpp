@@ -7355,6 +7355,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("specialForceMXPProcessorOn")) {
+        host.mForceMXPProcessorOn = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("promptForMXPProcessorOn")) {
+        host.mPromptedForMXPProcessorOn = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("promptForVersionInTTYPE")) {
         host.mPromptedForVersionInTTYPE = getVerifiedBool(L, __func__, 2, "value");
         return success();

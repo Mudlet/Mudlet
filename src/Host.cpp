@@ -411,8 +411,21 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         });
     }
 
-    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
-    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){
+        purgeTimer.start(1min);
+
+        if (mForceMXPProcessorOn) {
+            mMxpProcessor.disable();
+        }
+    });
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){
+        purgeTimer.stop();
+
+        if (mForceMXPProcessorOn) {
+            mMxpProcessor.enable();
+            qDebug() << "MXP enabled (forced)";
+        }
+    });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
