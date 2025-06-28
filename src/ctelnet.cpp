@@ -1602,7 +1602,7 @@ void cTelnet::promptEnableMXPProcessor()
 
     auto msgBox = new QMessageBox();
     msgBox->setIcon(QMessageBox::Question);
-    msgBox->setText(tr("This game appears to support MXP (Mud eXtension Protocol).\n\nEnable this feature for clickable links, room info, richer interactions and reconnect?"));
+    msgBox->setText(tr("This game appears to support MXP (Mud eXtension Protocol).\n\nEnable this feature for clickable links, room info, and richer interactions?"));
     msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox->setDefaultButton(QMessageBox::Yes);
 
@@ -1610,10 +1610,8 @@ void cTelnet::promptEnableMXPProcessor()
     delete msgBox;
 
     if (ret == QMessageBox::Yes) {
-        disconnectIt();
         mpHost->mForceMXPProcessorOn = true;
-        postMessage(tr("[ INFO ]  - MXP processing force enabled for this profile. Reconnecting..."));
-        reconnect();
+        postMessage(tr("[ INFO ]  - MXP processing force enabled for this profile."));
     } else {
         postMessage(tr("[ INFO ]  - MXP processing not force enabled. You can enable it later in Special Options."));
     }
@@ -1933,7 +1931,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             if (!mpHost->mEnableMXP) {
                 sendTelnetOption(TN_DONT, OPT_MXP);
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->mForceMXPProcessorOn) {
+                    mpHost->mMxpProcessor.disable();
+                }
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -2071,7 +2072,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (option == OPT_MXP) {
                 // MXP got turned off
                 enableMXP = false;
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->mForceMXPProcessorOn) {
+                    mpHost->mMxpProcessor.disable();
+                }
+
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2248,7 +2253,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->mForceMXPProcessorOn) {
+                    mpHost->mMxpProcessor.disable();
+                }
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -2359,7 +2367,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             // MXP got turned off
             enableMXP = false;
-            mpHost->mMxpProcessor.disable();
+
+            if (!mpHost->mForceMXPProcessorOn) {
+                mpHost->mMxpProcessor.disable();
+            }
+
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
         }
 
