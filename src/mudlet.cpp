@@ -5132,9 +5132,15 @@ bool mudlet::desktopInDarkMode()
     return false;
 }
 
-void mudlet::announce(const QString& text, const QString& processing)
+void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
-    mpAnnouncer->announce(text, processing);
+    if (isPlain){
+        mpAnnouncer->announce(text, processing);
+    } else {
+        QTextDocument convertor;
+        convertor.setHtml(text);
+        mpAnnouncer->announce(convertor.toPlainText(), processing);
+    }
 }
 
 void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
@@ -5358,6 +5364,23 @@ bool mudlet::findAIModel()
     // Check if model path is already set in settings
     if (mpSettings->contains("AI/modelPath")) {
         QString savedPath = mpSettings->value("AI/modelPath").toString();
+        
+#ifdef Q_OS_WIN
+        // On Windows, ensure .exe extension exists
+        if (!savedPath.endsWith(".exe", Qt::CaseInsensitive)) {
+            QString pathWithExe = savedPath + ".exe";
+            if (QFile::exists(savedPath) && !QFile::exists(pathWithExe)) {
+                if (QFile::rename(savedPath, pathWithExe)) {
+                    savedPath = pathWithExe;
+                    mpSettings->setValue("AI/modelPath", savedPath); // Update settings
+                }
+            } else if (QFile::exists(pathWithExe)) {
+                savedPath = pathWithExe;
+                mpSettings->setValue("AI/modelPath", savedPath); // Update settings
+            }
+        }
+#endif
+        
         if (LlamafileManager::isLlamafileExecutable(savedPath)) {
             mAIModelPath = savedPath;
             return true;

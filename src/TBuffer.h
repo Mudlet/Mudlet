@@ -53,6 +53,18 @@ class Host;
 class QTextCodec;
 class TConsole;
 
+class WrapInfo
+{
+    friend class TBuffer;
+
+public:
+    const bool isNewline;
+    const bool needsIndent;
+    const int firstChar;
+    const int lastChar;
+    WrapInfo(bool isNewline, bool needsIndent, int firstChar, int lastChar) : isNewline(isNewline), needsIndent(needsIndent), firstChar(firstChar), lastChar(lastChar) {}
+};
+
 class TChar
 {
     friend class TBuffer;
@@ -253,7 +265,7 @@ public:
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
-    int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
+    int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
@@ -262,7 +274,6 @@ public:
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
     int find(int line, const QString& what, int pos);
-    int wrap(int);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);
@@ -283,8 +294,10 @@ public:
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
+    void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
+    void setWrapHangingIndent(int i) { mWrapHangingIndent = i; }
     void updateColors();
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
@@ -323,6 +336,7 @@ public:
 
 
 private:
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
