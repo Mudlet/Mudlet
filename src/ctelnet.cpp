@@ -1611,7 +1611,7 @@ void cTelnet::promptEnableMXPProcessor()
 
     if (ret == QMessageBox::Yes) {
         mpHost->setForceMXPProcessorOn(true);
-        postMessage(tr("[ INFO ]  - MXP processing force enabled for this profile."));
+        postMessage(tr("[ INFO ]  - MXP processing force enabled for this profile. You can disable it later in Special Options."));
     } else {
         postMessage(tr("[ INFO ]  - MXP processing not force enabled. You can enable it later in Special Options."));
     }
@@ -3467,24 +3467,25 @@ void cTelnet::postMessage(QString msg)
 }
 
 //forward data for further processing
-
-
 void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
+
     if (mpPostingTimer->interval() != mTimeOut) {
         mpPostingTimer->setInterval(mTimeOut);
     }
+
     mMudData += mud_data;
 
-    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        //////////////////////////////////////////////////////////////////////
-        //
-        // Patch for servers that need GA/EOR for prompt fixups
-        //
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mud_data);
+    }
 
+    // Patch for servers that need GA/EOR for prompt fixups
+    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
         int j = 0;
         int s = mMudData.size();
+
         while (j < s) {
             // search for leading <LF> but skip leading ANSI control sequences
             if (mMudData[j] == 0x1B) {
@@ -3496,6 +3497,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
                     ++j;
                 }
             }
+
             if (mMudData[j] == '\n') {
                 mMudData.erase(j, 1);
                 break;
@@ -3505,8 +3507,6 @@ void cTelnet::gotPrompt(std::string& mud_data)
         NEXT:
             ++j;
         }
-        //
-        ////////////////////////////
     }
 
     postData();
@@ -3522,7 +3522,9 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
     // List of MXP startup indicators
     static const std::vector<std::string> mxpIndicators = {
-        "<version>", "<support>", "<!element", "<!entity", "<!attlist", "<!doctype>", "<reset>", "<send"
+        "<version>", "<support>",
+        "<!element", "<!entity", "<!attlist", "<!tag",
+        "<send ", "<a ", "<expire ", "<sound ", "<music ", "<var ", "<color "
     };
 
     // Convert line to lower-case for case-insensitive search
@@ -3603,7 +3605,13 @@ void cTelnet::slot_timerPosting()
     if (!mIsTimerPosting) {
         return;
     }
+
     mMudData += "\r";
+
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mMudData);
+    }
+
     postData();
     mMudData = "";
     mIsTimerPosting = false;
