@@ -583,7 +583,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Open browser to</source>
-      <translation type="unfinished"/>
+      <translation>Abra el navegador para</translation>
     </message>
   </context>
   <context>
@@ -708,7 +708,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2802"/>
       <source>Create exit line...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Crear línea de salida...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2805"/>
@@ -1404,13 +1404,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2152"/>
       <source>Profile main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contenido en vivo de la ventana principal del perfil.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2157"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana principal del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2160"/>
@@ -1422,19 +1422,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2175"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; ventana incrustada &quot;%2&quot; contenido pasado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2177"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; ventana incrustada &quot;%2&quot; contenido activo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2180"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana de perfil incrustada &quot;%1&quot; contenido pasado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2182"/>
