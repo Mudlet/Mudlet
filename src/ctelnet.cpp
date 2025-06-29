@@ -1595,7 +1595,7 @@ void cTelnet::promptEnableTTYPEVersion()
     }
 }
 
-// Prompt user to enable MXP processor and reconnect
+// Prompt user to enable MXP processor
 void cTelnet::promptEnableMXPProcessor()
 {
     mpHost->mPromptedForMXPProcessorOn = true;
@@ -3540,6 +3540,7 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
     static const std::vector<std::string> mxpEscapes = {
         "\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z"
     };
+
     for (const auto& esc : mxpEscapes) {
         if (line.find(esc) != std::string::npos) {
             promptEnableMXPProcessor();
