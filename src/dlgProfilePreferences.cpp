@@ -645,7 +645,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
-    checkBox_mForceMXPProcessorOn->setChecked(pHost->mForceMXPProcessorOn);
+    checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
     mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
@@ -2946,7 +2946,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
-        pHost->mForceMXPProcessorOn = checkBox_mForceMXPProcessorOn->isChecked();
+        pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
         pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();

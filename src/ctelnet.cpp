@@ -1610,7 +1610,7 @@ void cTelnet::promptEnableMXPProcessor()
     delete msgBox;
 
     if (ret == QMessageBox::Yes) {
-        mpHost->mForceMXPProcessorOn = true;
+        mpHost->setForceMXPProcessorOn(true);
         postMessage(tr("[ INFO ]  - MXP processing force enabled for this profile."));
     } else {
         postMessage(tr("[ INFO ]  - MXP processing not force enabled. You can enable it later in Special Options."));
@@ -1932,7 +1932,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (!mpHost->mEnableMXP) {
                 sendTelnetOption(TN_DONT, OPT_MXP);
 
-                if (!mpHost->mForceMXPProcessorOn) {
+                if (!mpHost->getForceMXPProcessorOn()) {
                     mpHost->mMxpProcessor.disable();
                 }
 
@@ -2073,7 +2073,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 // MXP got turned off
                 enableMXP = false;
 
-                if (!mpHost->mForceMXPProcessorOn) {
+                if (!mpHost->getForceMXPProcessorOn()) {
                     mpHost->mMxpProcessor.disable();
                 }
 
@@ -2254,7 +2254,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
 
-                if (!mpHost->mForceMXPProcessorOn) {
+                if (!mpHost->getForceMXPProcessorOn()) {
                     mpHost->mMxpProcessor.disable();
                 }
 
@@ -2368,7 +2368,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // MXP got turned off
             enableMXP = false;
 
-            if (!mpHost->mForceMXPProcessorOn) {
+            if (!mpHost->getForceMXPProcessorOn()) {
                 mpHost->mMxpProcessor.disable();
             }
 
@@ -3556,7 +3556,7 @@ void cTelnet::gotRest(std::string& mud_data)
     }
 
     // MXP detection scan
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->mMxpProcessor.isEnabled()) {
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
         trackMXPElementDetection(mud_data);
     }
 

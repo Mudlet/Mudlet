@@ -769,7 +769,6 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
     setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
-    setBoolAttribute(qsl("mForceMXPProcessorOn"), pHost->mForceMXPProcessorOn);
     setBoolAttribute(qsl("mPromptedForMXPProcessorOn"), pHost->mPromptedForMXPProcessorOn);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
@@ -785,6 +784,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
     setBoolAttribute(qsl("f3SearchEnabled"), pHost->mF3SearchEnabled);
 
+    pHost->setForceMXPProcessorOn(attributes().value(qsl("mForceMXPProcessorOn")) == YES);
     pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
 
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
