@@ -859,7 +859,7 @@ COMMIT_LINE:
             // Start a new, but empty line in the various buffers
             log(lineBuffer.size() - 1, lineBuffer.size() - 1);
             ++localBufferPosition;
-            // Suppress new empty line IFF echoes alreadt created a new empty line
+            // Suppress new empty line IFF echoes already created a new empty line
             // i.e. add newline if no added lines or the lastline isn't empty
             if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
                 std::deque<TChar> const newLine;
