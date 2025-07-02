@@ -143,6 +143,9 @@ private:
 
     // Track echo suppression state
     bool mIsEchoSuppressed = false;
+    // Store text that was in the command line before echo suppression started
+    // This allows us to restore user input after password prompts complete
+    QString mPreEchoText;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
