@@ -549,14 +549,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mEnableMXP && isFromServer) {
+                    if (isFromServer && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn())) {
                         mGotCSI = false;
 
                         const QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
                         mpHost->mMxpProcessor.setMode(code);
                     }
-                    // end of if (!mpHost->mEnableMXP)
-                    // We have manually disabled MXP negotiation
+
                     break;
 
                 case static_cast<quint8>('C'): {
@@ -682,7 +681,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         // We are outside of a CSI or OSC sequence if we get to here:
 
         if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
-            if (mpHost->mEnableMXP) {
+            if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
@@ -854,16 +853,20 @@ COMMIT_LINE:
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
-            wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
+            const int addedLines = wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
             // Start a new, but empty line in the various buffers
             log(lineBuffer.size() - 1, lineBuffer.size() - 1);
             ++localBufferPosition;
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer.push_back(QString());
-            promptBuffer << false;
+            // Suppress new empty line IFF echoes already created a new empty line
+            // i.e. add newline if no added lines or the lastline isn't empty
+            if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
+                std::deque<TChar> const newLine;
+                buffer.push_back(newLine);
+                lineBuffer.push_back(QString());
+                timeBuffer.push_back(QString());
+                promptBuffer << false;
+            }
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
                 // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
                 // in all other methods where the following is used (because

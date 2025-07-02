@@ -7341,12 +7341,22 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("specialForceMxpNegotiationOff")) {
+        // specialForceMxpNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableMXP
+        host.mEnableMXP = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("enableMXP")) {
         host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("promptForMXPProcessorOn")) {
+        host.mPromptedForMXPProcessorOn = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("promptForVersionInTTYPE")) {
@@ -7563,6 +7573,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
+        { qsl("promptForMXPProcessorOn"), [&](){lua_pushboolean(L, host.mPromptedForMXPProcessorOn); } },
+        { qsl("specialForceMXPProcessorOn"), [&](){lua_pushboolean(L, host.getForceMXPProcessorOn()); } },
         { qsl("promptForVersionInTTYPE"), [&](){lua_pushboolean(L, host.mPromptedForVersionInTTYPE); } },
         { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
@@ -7571,6 +7583,11 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("fixUnnecessaryLinebreaks"), [&](){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
+        { qsl("specialForceMxpNegotiationOff"), [&](){
+            // specialForceMxpNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableMXP
+            lua_pushboolean(L, !host.mEnableMXP);
+        } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },

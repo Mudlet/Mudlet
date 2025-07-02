@@ -715,6 +715,19 @@ void XMLimport::readHostPackage()
 
 void XMLimport::readHost(Host* pHost)
 {
+    // This is an inline helper function to get a boolean value from a legacy attribute
+    // or return a default value. It also allows for inverting the result which is useful
+    // for attributes that have been negated in the past (e.g., mFORCE_MXP_NEGOTIATION_OFF
+    // which is now mEnableMXP).
+    auto getBoolValueFromLegacyAttributeOrDefault = [&](const QString& legacyAttribute, const bool defaultsTo, bool invert = false) -> bool {
+        if (attributes().hasAttribute(legacyAttribute)) {
+            bool value = attributes().value(legacyAttribute) == YES;
+            return invert ? !value : value;
+        } else {
+            return defaultsTo;
+        }
+    };
+
     auto setBoolAttributeWithDefault = [&](const QString& attribute, bool& target, const bool defaultsTo) {
         target = attributes().hasAttribute(attribute) ? attributes().value(attribute) == YES : defaultsTo;
     };
@@ -728,6 +741,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
+    setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
@@ -746,7 +760,6 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSSP"), pHost->mEnableMSSP);
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
-    setBoolAttribute(qsl("mEnableMXP"), pHost->mEnableMXP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
@@ -756,6 +769,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
     setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
+    setBoolAttribute(qsl("mPromptedForMXPProcessorOn"), pHost->mPromptedForMXPProcessorOn);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);
@@ -770,6 +784,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
     setBoolAttribute(qsl("f3SearchEnabled"), pHost->mF3SearchEnabled);
 
+    pHost->setForceMXPProcessorOn(attributes().value(qsl("mForceMXPProcessorOn")) == YES);
     pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
 
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
