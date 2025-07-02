@@ -328,7 +328,7 @@ private:
     static std::pair<bool, bool> testReadReplayFile();
 
     void trackKaVirNegotiation(unsigned char option);
-    void promptEnableMXPProcessor();
+    void autoEnableMXPProcessor();
     void promptEnableTTYPEVersion();
 
     QPointer<Host> mpHost;

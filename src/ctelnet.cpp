@@ -1595,26 +1595,14 @@ void cTelnet::promptEnableTTYPEVersion()
     }
 }
 
-// Prompt user to enable MXP processor
-void cTelnet::promptEnableMXPProcessor()
+// Auto-enable MXP processor when indicators are detected
+void cTelnet::autoEnableMXPProcessor()
 {
     mpHost->mPromptedForMXPProcessorOn = true;
 
-    auto msgBox = new QMessageBox();
-    msgBox->setIcon(QMessageBox::Question);
-    msgBox->setText(tr("This game appears to support MXP (Mud eXtension Protocol).\n\nEnable this feature for clickable links, room info, and richer interactions?"));
-    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgBox->setDefaultButton(QMessageBox::Yes);
-
-    int ret = msgBox->exec();
-    delete msgBox;
-
-    if (ret == QMessageBox::Yes) {
-        mpHost->setForceMXPProcessorOn(true);
-        postMessage(tr("[ INFO ]  - MXP processing force enabled for this profile. You can disable it later in Special Options."));
-    } else {
-        postMessage(tr("[ INFO ]  - MXP processing not force enabled. You can enable it later in Special Options."));
-    }
+    // Automatically enable MXP processing
+    mpHost->setForceMXPProcessorOn(true);
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but may not negotiate it. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this forced setting in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -3533,7 +3521,7 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
     for (const auto& indicator : mxpIndicators) {
         if (lowerLine.find(indicator) != std::string::npos) {
-            promptEnableMXPProcessor();
+            autoEnableMXPProcessor();
             return;
         }
     }
@@ -3545,7 +3533,7 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
     for (const auto& esc : mxpEscapes) {
         if (line.find(esc) != std::string::npos) {
-            promptEnableMXPProcessor();
+            autoEnableMXPProcessor();
             return;
         }
     }
