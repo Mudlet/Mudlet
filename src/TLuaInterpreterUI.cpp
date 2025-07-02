@@ -803,9 +803,9 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBgColor
 int TLuaInterpreter::getBgColor(lua_State* L)
 {
-    std::string windowName = "main";
+    QString windowName = qsl("main");
     if (lua_gettop(L) > 0) {
-        windowName = getVerifiedString(L, __func__, 1, "window name", true).toStdString();
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
     const Host& host = getHostFromLua(L);
@@ -917,9 +917,9 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFgColor
 int TLuaInterpreter::getFgColor(lua_State* L)
 {
-    std::string windowName = "main";
+    QString windowName = qsl("main");
     if (lua_gettop(L) > 0) {
-        windowName = getVerifiedString(L, __func__, 1, "window name", true).toStdString();
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
     const Host& host = getHostFromLua(L);
@@ -1512,7 +1512,7 @@ int TLuaInterpreter::insertText(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAnsiBgColor
 int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 {
-    std::string windowName = "main";
+    QString windowName = qsl("main");
     const int ansiBg = getVerifiedInt(L, __func__, 1, "ANSI color");
 
     std::list<int> result;
@@ -1606,7 +1606,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAnsiFgColor
 int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 {
-    std::string windowName = "main";
+    QString windowName = "main";
     const int ansiFg = getVerifiedInt(L, __func__, 1, "ANSI color");
 
     std::list<int> result;
@@ -3272,9 +3272,9 @@ int TLuaInterpreter::windowType(lua_State* L)
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
     int s = 1;
-    std::string windowName;
+    QString windowName = qsl("main");
     if (lua_gettop(L)) {
-        windowName = getVerifiedString(L, __func__, s++, "window name").toStdString();
+        windowName = getVerifiedString(L, __func__, s++, "window name");
     }
     const int lineNumber = getVerifiedInt(L, __func__, s, "line");
 

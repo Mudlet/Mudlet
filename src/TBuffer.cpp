@@ -853,16 +853,20 @@ COMMIT_LINE:
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
-            wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
+            const int addedLines = wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
 
             // Start a new, but empty line in the various buffers
             log(lineBuffer.size() - 1, lineBuffer.size() - 1);
             ++localBufferPosition;
-            std::deque<TChar> const newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer.push_back(QString());
-            promptBuffer << false;
+            // Suppress new empty line IFF echoes already created a new empty line
+            // i.e. add newline if no added lines or the lastline isn't empty
+            if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
+                std::deque<TChar> const newLine;
+                buffer.push_back(newLine);
+                lineBuffer.push_back(QString());
+                timeBuffer.push_back(QString());
+                promptBuffer << false;
+            }
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
                 // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
                 // in all other methods where the following is used (because
