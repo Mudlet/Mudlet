@@ -365,6 +365,7 @@ public:
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
+    static int setWindowWrapHangingIndent(lua_State*);
     static int resetFormat(lua_State*);
     static int moveCursorEnd(lua_State*);
     static int getLastLineNumber(lua_State*);

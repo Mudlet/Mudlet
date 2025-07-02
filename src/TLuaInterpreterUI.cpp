@@ -3047,6 +3047,16 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     return 0;
 }
 
+//Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
+int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
+{
+    const QString windowName {WINDOW_NAME(L, 1)};
+    const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
+    auto console = CONSOLE(L, windowName);
+    console->setHangingIndentCount(luaFrom);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow
 int TLuaInterpreter::showWindow(lua_State* L)
 {

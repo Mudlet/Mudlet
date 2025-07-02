@@ -4632,9 +4632,9 @@ void dlgTriggerEditor::saveTrigger()
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
-    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1);
     QStringList patterns;
     QList<int> patternKinds;
+    int  validItems = 0;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->toPlainText();
 
@@ -4646,6 +4646,7 @@ void dlgTriggerEditor::saveTrigger()
             continue;
         }
 
+        ++validItems;
         switch (patternType) {
         case 0:
             patternKinds << REGEX_SUBSTRING;
@@ -4675,7 +4676,7 @@ void dlgTriggerEditor::saveTrigger()
         }
         patterns << pattern;
     }
-
+    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1) && (validItems > 1);
     const QString script = mpSourceEditorEdbeeDocument->text();
 
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();

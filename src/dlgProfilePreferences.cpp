@@ -644,6 +644,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
+    checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
     mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
@@ -1382,6 +1384,8 @@ void dlgProfilePreferences::clearHostDetails()
     edbeePreviewWidget->textDocument()->setText(QString());
 
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
+    checkBox_mVersionInTTYPE->setChecked(false);
+    checkBox_mForceMXPProcessorOn->setChecked(false);
     mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
@@ -2941,6 +2945,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
+        pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
+        pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
         pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
