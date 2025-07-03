@@ -1573,17 +1573,33 @@ void TCommandLine::setEchoSuppression(bool suppress)
         return;
     }
 
+    // No change in state, nothing to do
+    if (mIsEchoSuppressed == suppress) {
+        return;
+    }
+
     mIsEchoSuppressed = suppress;
 
     if (suppress) {
-        clear();  // Clear leftover username or input
+        // Save the current text before clearing for password input
+        // This preserves any command the user may have typed while waiting for login
+        mPreEchoText = toPlainText();
+        clear();  // Clear for password input
     } else {
-        // Clear selection and reset cursor to end
-        QTextCursor cursor = textCursor();
-        cursor.clearSelection();
-        cursor.movePosition(QTextCursor::End);
-        setTextCursor(cursor);
-        clear();  // Clear entered password
+        // Clear the password field first
+        clear();
+        
+        // Restore the previously typed text if any
+        // This allows users to continue with commands they typed during login sequences
+        if (!mPreEchoText.isEmpty()) {
+            setPlainText(mPreEchoText);
+            // Position cursor at the end of the restored text
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::End);
+            setTextCursor(cursor);
+            // Clear the saved text
+            mPreEchoText.clear();
+        }
     }
 
     viewport()->update(); // triggers paintEvent to mask/unmask
