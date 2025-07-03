@@ -2870,10 +2870,11 @@ void TTextEdit::updateCaret()
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
     if (!mpHost->caretEnabled()) {
-        // Feature #7926: Auto-redirect focus to command line for alpha-numeric characters
+        // Auto-redirect focus to command line for alpha-numeric characters
         // This improves accessibility for screen reader users by automatically redirecting
         // typing focus from the output window to the command line
         const QString text = event->text();
+
         if (!text.isEmpty() && text.at(0).isLetterOrNumber()) {
             // Find the appropriate command line to redirect to
             TCommandLine* targetCommandLine = nullptr;
@@ -2881,9 +2882,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             // First, try to get the command line associated with this console
             if (mpConsole && mpConsole->mpCommandLine && mpConsole->mpCommandLine->isVisible()) {
                 targetCommandLine = mpConsole->mpCommandLine;
-            }
-            // If this console doesn't have a command line, fall back to the main console
-            else if (mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine && mpHost->mpConsole->mpCommandLine->isVisible()) {
+            } else if (mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine && mpHost->mpConsole->mpCommandLine->isVisible()) {
+                // If this console doesn't have a command line, fall back to the main console
                 targetCommandLine = mpHost->mpConsole->mpCommandLine;
             }
             
