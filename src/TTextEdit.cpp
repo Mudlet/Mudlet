@@ -54,6 +54,7 @@
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
+#include <QTimer>
 #include <QToolTip>
 #include <QVersionNumber>
 #include "post_guard.h"
@@ -2876,31 +2877,25 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         const QString text = event->text();
 
         if (!text.isEmpty() && text.at(0).isLetterOrNumber()) {
-            // Find the appropriate command line to redirect to
-            TCommandLine* targetCommandLine = nullptr;
+            // Use the Host's public method to set focus to the active command line
+            mpHost->setFocusOnHostActiveCommandLine();
             
-            // First, try to get the command line associated with this console
-            if (mpConsole && mpConsole->mpCommandLine && mpConsole->mpCommandLine->isVisible()) {
-                targetCommandLine = mpConsole->mpCommandLine;
-            } else if (mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine && mpHost->mpConsole->mpCommandLine->isVisible()) {
-                // If this console doesn't have a command line, fall back to the main console
-                targetCommandLine = mpHost->mpConsole->mpCommandLine;
-            }
+            // Forward the key event to the command line that now has focus
+            // We need to use QTimer::singleShot to ensure the focus change happens first
+            QTimer::singleShot(0, [this, event]() {
+                if (auto* focusedWidget = QApplication::focusWidget()) {
+                    if (qobject_cast<TCommandLine*>(focusedWidget)) {
+                        QApplication::sendEvent(focusedWidget, event);
+                    }
+                }
+            });
             
-            if (targetCommandLine) {
-                // Set focus to the command line
-                targetCommandLine->setFocus(Qt::ShortcutFocusReason);
-                
-                // Forward the key event to the command line so the typed character appears
-                QApplication::sendEvent(targetCommandLine, event);
-                
-                // Mark the event as handled
-                event->accept();
-                return;
-            }
+            // Mark the event as handled
+            event->accept();
+            return;
         }
         
-        // For non-alpha-numeric keys or if no command line found, use default behavior
+        // For non-alpha-numeric keys or if no active command line found, use default behavior
         QWidget::keyPressEvent(event);
         return;
     }
