@@ -2881,8 +2881,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mpHost->setFocusOnHostActiveCommandLine();
             
             // Forward the key event to the command line that now has focus
-            // We need to use QTimer::singleShot to ensure the focus change happens first
-            QTimer::singleShot(0, [this, event]() {
+            // Use a 1ms timer to ensure it runs after the Host's 0ms focus timer
+            QTimer::singleShot(1, [this, event]() {
                 if (auto* focusedWidget = QApplication::focusWidget()) {
                     if (qobject_cast<TCommandLine*>(focusedWidget)) {
                         QApplication::sendEvent(focusedWidget, event);
