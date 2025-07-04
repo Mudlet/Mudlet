@@ -2871,35 +2871,34 @@ void TTextEdit::updateCaret()
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
     if (!mpHost->caretEnabled()) {
-        // Auto-redirect focus to command line for alpha-numeric characters
-        // This improves accessibility for screen reader users by automatically redirecting
-        // typing focus from the output window to the command line
-        const QString text = event->text();
-
-        if (!text.isEmpty() && text.at(0).isLetterOrNumber()) {
-            // Use the Host's public method to set focus to the active command line
-            mpHost->setFocusOnHostActiveCommandLine();
-            
-            // Forward the key event to the command line that now has focus
-            // Use a 1ms timer to ensure it runs after the Host's 0ms focus timer
-            QTimer::singleShot(1, [this, event]() {
-                if (auto* focusedWidget = QApplication::focusWidget()) {
-                    if (qobject_cast<TCommandLine*>(focusedWidget)) {
-                        QApplication::sendEvent(focusedWidget, event);
-                    }
-                }
-            });
-            
-            // Mark the event as handled
-            event->accept();
-            return;
-        }
-        
-        // For non-alpha-numeric keys or if no active command line found, use default behavior
         QWidget::keyPressEvent(event);
         return;
     }
 
+    // Auto-redirect focus to command line for alpha-numeric characters
+    // This improves accessibility for screen reader users by automatically redirecting
+    // typing focus from the output window to the command line
+    const QString text = event->text();
+
+    if (!text.isEmpty() && text.at(0).isLetterOrNumber()) {
+        // Use the Host's public method to set focus to the active command line
+        mpHost->setFocusOnHostActiveCommandLine();
+        
+        // Forward the key event to the command line that now has focus
+        // Use a 1ms timer to ensure it runs after the Host's 0ms focus timer
+        QTimer::singleShot(1, [this, event]() {
+            if (auto* focusedWidget = QApplication::focusWidget()) {
+                if (qobject_cast<TCommandLine*>(focusedWidget)) {
+                    QApplication::sendEvent(focusedWidget, event);
+                }
+            }
+        });
+        
+        // Mark the event as handled
+        event->accept();
+        return;
+    }
+        
     qsizetype newCaretLine = -1;
     qsizetype newCaretColumn = -1;
 
