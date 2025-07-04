@@ -4243,7 +4243,7 @@ Attivare questa modalità di compatibilità per migliorare il supporto del color
     <message>
       <location filename="../src/ctelnet.cpp" line="1605"/>
       <source>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but may not negotiate it. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this forced setting in Settings &gt; Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Questo gioco sembra supportare MXP (MUD eXtension Protocol), ma potrebbe non negoziarlo durante la connessione. L'elaborazione MXP è stata forzatamente abilitata per i collegamenti cliccabili, le informazioni sulla stanza e altre interazioni. Puoi disabilitare questa impostazione nella sezione Altre opzioni Speciali della scheda Opzioni avazante nelle Impostazioni.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2578"/>
@@ -12710,12 +12710,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4014"/>
       <source>&lt;p&gt;Some servers do not negotiate Mud eXtension Protocol (MXP). When checked, this preference forces the MXP processor to be enabled. Note: To disable MXP entirely, leave this unchecked and also uncheck MXP in Choose protocols section of the General tab in Settings.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alcuni server non negoziano Mud eXtension Protocol (MXP). Quando selezionato, questa preferenza forza l'abilitazione del processore MXP. Nota: Per disabilitare completamente MXP, disabilitare questa opzione e deselezionare MXP nella sezione Protocolli di Gioco della scheda Generale nelle Impostazioni.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4017"/>
       <source>Force MXP processing on</source>
-      <translation type="unfinished"/>
+      <translation>Forza elaborazione MXP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4051"/>
