@@ -3182,8 +3182,8 @@ int TLuaInterpreter::getOS(lua_State* L)
 #endif
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPID
-int TLuaInterpreter::getPID(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessID
+int TLuaInterpreter::getProcessID(lua_State* L)
 {
     int pid = QApplication::applicationPid();
     lua_pushinteger(L, pid);
@@ -5483,7 +5483,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
-    lua_register(pGlobalLua, "getPID", TLuaInterpreter::getPID);
+    lua_register(pGlobalLua, "getProcessID", TLuaInterpreter::getProcessID);
     lua_register(pGlobalLua, "getClipboardText", TLuaInterpreter::getClipboardText);
     lua_register(pGlobalLua, "setClipboardText", TLuaInterpreter::setClipboardText);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
