@@ -2884,14 +2884,38 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         // Use the Host's public method to set focus to the active command line
         mpHost->setFocusOnHostActiveCommandLine();
         
+        // Create a heap-allocated copy of the key event for safe forwarding
+        // This prevents use-after-free when the timer fires after the original event is destroyed
+        auto* eventCopy = new QKeyEvent(event->type(), event->key(), event->modifiers(),
+                                        event->nativeScanCode(), event->nativeVirtualKey(),
+                                        event->nativeModifiers(), event->text(),
+                                        event->isAutoRepeat(), event->count());
+        
+        // Use QPointer for safe widget access in the timer callback
+        QPointer<TTextEdit> safeThis(this);
+        
         // Forward the key event to the command line that now has focus
         // Use a 1ms timer to ensure it runs after the Host's 0ms focus timer
-        QTimer::singleShot(1, [this, event]() {
+        QTimer::singleShot(1, [safeThis, eventCopy]() {
+            // Safety check: ensure the widget still exists
+            if (!safeThis) {
+                qDebug() << "TTextEdit::keyPressEvent timer - Widget was destroyed before timer fired";
+                delete eventCopy;
+                return;
+            }
+            
             if (auto* focusedWidget = QApplication::focusWidget()) {
                 if (qobject_cast<TCommandLine*>(focusedWidget)) {
-                    QApplication::sendEvent(focusedWidget, event);
+                    qDebug() << "TTextEdit::keyPressEvent timer - Forwarding event to command line";
+                    QApplication::sendEvent(focusedWidget, eventCopy);
+                } else {
+                    qDebug() << "TTextEdit::keyPressEvent timer - Focus not on command line, focused widget:" << focusedWidget->metaObject()->className();
                 }
+            } else {
+                qDebug() << "TTextEdit::keyPressEvent timer - No focused widget found";
             }
+            // Clean up the copied event
+            delete eventCopy;
         });
         
         // Mark the event as handled
