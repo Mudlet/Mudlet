@@ -1607,7 +1607,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
             mPreEchoText = currentText;
         }
 
-        clear();  // Clear for password input
+        clear(); // Clear for password input
     } else {
         // Clear the password field first
         clear();
