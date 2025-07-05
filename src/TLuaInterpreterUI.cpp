@@ -1239,12 +1239,12 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     QPair<quint8, TChar> const result = console->getTextAttributes();
 
-    if (result.first != 0) {
-        return warnArgumentValue(L, __func__, qsl("no character under cursor or selection in window '%1'").arg(windowName));
-    }
-
     if (result.first == 2) {
         return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
+    }
+
+    if (result.first != 0) {
+        return warnArgumentValue(L, __func__, qsl("no character under cursor or selection in window '%1'").arg(windowName));
     }
 
     lua_newtable(L);
