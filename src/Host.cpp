@@ -2956,10 +2956,10 @@ void Host::updateProxySettings(QNetworkAccessManager* manager)
 
 std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 {
-    if (!mpDownloaderProxy) {
-        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    if (!mpConnectionProxy) {
+        mpConnectionProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
     }
-    auto& proxy = mpDownloaderProxy;
+    auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
     if (!mProxyUsername.isEmpty()) {
@@ -2969,7 +2969,7 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
         proxy->setPassword(mProxyPassword);
     }
 
-    return mpDownloaderProxy;
+    return mpConnectionProxy;
 }
 
 void Host::setDisplayFontSpacing(const qreal spacing)

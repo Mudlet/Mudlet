@@ -168,8 +168,6 @@ public:
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
 
-
-
     QString         getName()                        { return mHostName; }
     QString         getCommandSeparator()            { return mCommandSeparator; }
     void            setName(const QString& name);
@@ -440,6 +438,8 @@ public:
         }
     }
     void sendCmdLine(const QString& cmd);
+    void setRemoteEchoingActive(bool active);
+    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -525,10 +525,6 @@ public:
      * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive = false;
-
-public:
-    void setRemoteEchoingActive(bool active);
-    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -698,7 +694,7 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
-    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
+    std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;
@@ -736,6 +732,10 @@ public:
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
+    // Which IP version to use for the Game Server connection - this has to be
+    // stored as a per profile item and not something in the game save so it
+    // is available in the "Connect Profile" dialogue:
+    QAbstractSocket::NetworkLayerProtocol mIPVersion = QAbstractSocket::AnyIPProtocol;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

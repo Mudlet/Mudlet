@@ -210,6 +210,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         character_password_entry->setToolTip(utils::richText(tr("Characters password. Note that the password is not encrypted in storage")));
     }
 
+    // We actually need to store the integer equivalents to the enum values as
+    // conveying the enum values directly is awkward/hard/impossible as QVariants:
+    comboBox_IPVersion->addItem(tr("Either"), static_cast<int>(QAbstractSocket::AnyIPProtocol));
+    comboBox_IPVersion->addItem(tr("IPv4 only"), static_cast<int>(QAbstractSocket::IPv4Protocol));
+    comboBox_IPVersion->addItem(tr("IPv6 only"), static_cast<int>(QAbstractSocket::IPv6Protocol));
+
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
@@ -242,6 +248,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 #else
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
 #endif
+    connect(comboBox_IPVersion, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgConnectionProfiles::slot_updateIPVersion);
 
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
@@ -889,6 +896,13 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         website_entry->show();
     }
     website_entry->setText(val);
+
+    val = readProfileData(profile_name, qsl("ipversion"));
+    if (val.isEmpty()) {
+        comboBox_IPVersion->setCurrentIndex(comboBox_IPVersion->findData(QAbstractSocket::AnyIPProtocol));
+    } else {
+        comboBox_IPVersion->setCurrentIndex(comboBox_IPVersion->findData(static_cast<QAbstractSocket::NetworkLayerProtocol>(val.toInt())));
+    }
 
     profile_history->clear();
 
@@ -1575,7 +1589,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             QDialog::accept();
             return;
         }
-        
+
         pHost->setName(profile_name);
 
         if (!host_name_entry->text().trimmed().isEmpty()) {
@@ -1610,6 +1624,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
+
+        pHost->mIPVersion = static_cast<QAbstractSocket::NetworkLayerProtocol>(comboBox_IPVersion->currentData().value<int>());
 
         // This also writes the value out to the profile's base directory:
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
@@ -2067,4 +2083,14 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     }
 
     profiles_tree_widget->setCurrentRow(indexes.first());
+}
+
+void dlgConnectionProfiles::slot_updateIPVersion()
+{
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (!pItem) {
+        return;
+    }
+
+    writeProfileData(pItem->data(csmNameRole).toString(), qsl("ipversion"), QString::number(comboBox_IPVersion->currentData().toInt()));
 }

@@ -160,6 +160,7 @@ private slots:
     void slot_passwordSaved(QKeychain::Job* job);
     void slot_passwordDeleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
+    void slot_updateIPVersion();
 };
 
 

@@ -24,7 +24,7 @@
   <property name="windowTitle">
    <string>Select a profile to connect with</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_connection_profiles">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -41,7 +41,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_top" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -54,7 +54,7 @@
        <height>0</height>
       </size>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_top">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -71,7 +71,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QWidget" name="widget_5" native="true">
+       <widget class="QWidget" name="widget_top_left" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -84,7 +84,7 @@
           <height>0</height>
          </size>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <layout class="QVBoxLayout" name="verticalLayout_widget_top_left">
          <property name="spacing">
           <number>0</number>
          </property>
@@ -154,7 +154,7 @@
            <property name="midLineWidth">
             <number>3</number>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <layout class="QHBoxLayout" name="horizontalLayout_notificationArea">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -335,9 +335,9 @@
              <height>16777215</height>
             </size>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <layout class="QHBoxLayout" name="horizontalLayout_profileAdminArea">
             <item>
-             <spacer name="horizontalSpacer_4">
+             <spacer name="horizontalSpacer_profileAdminArea">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
@@ -419,7 +419,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="widget_2" native="true">
+       <widget class="QWidget" name="widget_top_right" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -438,7 +438,7 @@
           <height>16777215</height>
          </size>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
+        <layout class="QVBoxLayout" name="verticalLayout_widget_top_right">
          <item>
           <widget class="QTextBrowser" name="welcome_message">
            <property name="enabled">
@@ -485,7 +485,7 @@
             <attribute name="title">
              <string>Connect to</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout">
+            <layout class="QGridLayout" name="gridLayout_tab_connection_info">
              <item row="0" column="0">
               <widget class="QLabel" name="label_profileName">
                <property name="text">
@@ -629,7 +629,7 @@
             <attribute name="title">
              <string>Options</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout_2">
+            <layout class="QGridLayout" name="gridLayout_tab_options">
              <item row="0" column="0">
               <widget class="QLabel" name="label_characterName">
                <property name="text">
@@ -719,6 +719,23 @@
               </widget>
              </item>
              <item row="3" column="0">
+              <widget class="QLabel" name="label_IPVersion">
+               <property name="text">
+                <string>IP Version:</string>
+               </property>
+               <property name="buddy">
+                <cstring>comboBox_IPVersion</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QComboBox" name="comboBox_IPVersion">
+               <property name="maxVisibleItems">
+                <number>3</number>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
               <widget class="QCheckBox" name="discord_optin_checkBox">
                <property name="enabled">
                 <bool>false</bool>
@@ -748,7 +765,7 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="0" colspan="2">
+             <item row="5" column="0" colspan="2">
               <widget class="QCheckBox" name="autologin_checkBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -773,7 +790,7 @@
                </property>
               </widget>
              </item>
-             <item row="5" column="0" colspan="2">
+             <item row="6" column="0" colspan="2">
               <widget class="QCheckBox" name="auto_reconnect">
                <property name="accessibleName">
                 <string>Auto-reconnect</string>
@@ -810,7 +827,7 @@
            <property name="title">
             <string>Information</string>
            </property>
-           <layout class="QVBoxLayout" name="vBoxLayout_4">
+           <layout class="QVBoxLayout" name="vBoxLayout_informationArea">
             <property name="leftMargin">
              <number>0</number>
             </property>
@@ -889,7 +906,7 @@
    </item>
    <item>
     <widget class="QWidget" name="widget_bottom" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
@@ -950,6 +967,7 @@
   <tabstop>login_entry</tabstop>
   <tabstop>character_password_entry</tabstop>
   <tabstop>profile_history</tabstop>
+  <tabstop>comboBox_IPVersion</tabstop>
   <tabstop>discord_optin_checkBox</tabstop>
   <tabstop>autologin_checkBox</tabstop>
   <tabstop>auto_reconnect</tabstop>

@@ -226,7 +226,7 @@ public:
     void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
-    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+    QAbstractSocket::SocketState getConnectionState() const { return mpSocket.state(); }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
@@ -255,8 +255,9 @@ public slots:
     void slot_socketConnected();
     void slot_socketDisconnected();
     void slot_socketReadyToBeRead();
-// Not used    void slot_socketError();
+    void slot_socketError();
 #if !defined(QT_NO_SSL)
+    void slot_socketEncrypted();
     void slot_socketSslError(const QList<QSslError>&);
 #endif
     void slot_timerPosting();
@@ -330,12 +331,13 @@ private:
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
     void promptEnableTTYPEVersion();
+    void finalizeConnection();
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
-    QTcpSocket socket;
+    QTcpSocket mpSocket;
 #else
-    QSslSocket socket;
+    QSslSocket mpSocket;
 #endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
@@ -343,8 +345,8 @@ private:
     QTextCodec* outgoingDataCodec = nullptr;
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder = nullptr;
-    QString hostName;
-    int hostPort = 0;
+    QString mHostName;
+    int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
 
