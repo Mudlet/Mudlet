@@ -1583,7 +1583,30 @@ void TCommandLine::setEchoSuppression(bool suppress)
     if (suppress) {
         // Save the current text before clearing for password input
         // This preserves any command the user may have typed while waiting for login
-        mPreEchoText = toPlainText();
+        const QString currentText = toPlainText();
+        // Only save text if it's not empty and not already sent as a command
+        // We check if it differs from the most recent actual command (skipping empty entries)
+        bool shouldSave = false;
+
+        if (!currentText.isEmpty()) {
+            // Look for the most recent non-empty history entry
+            for (const QString& historyEntry : mHistoryList) {
+                if (!historyEntry.isEmpty()) {
+                    // Only save if current text is different from the last actual command
+                    shouldSave = (currentText != historyEntry);
+                    break;
+                }
+            }
+            // If history is empty or all entries are empty, save the current text
+            if (mHistoryList.isEmpty()) {
+                shouldSave = true;
+            }
+        }
+        
+        if (shouldSave) {
+            mPreEchoText = currentText;
+        }
+
         clear();  // Clear for password input
     } else {
         // Clear the password field first
