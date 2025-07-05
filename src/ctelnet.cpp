@@ -67,6 +67,16 @@ int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
 
+static const QVector<unsigned char> expectedOrderForKaVirHandler = {
+    static_cast<unsigned char>(OPT_TERMINAL_TYPE),
+    static_cast<unsigned char>(OPT_NAWS),
+    static_cast<unsigned char>(OPT_CHARSET),
+    static_cast<unsigned char>(OPT_MSDP),
+    static_cast<unsigned char>(OPT_MSSP),
+    static_cast<unsigned char>(OPT_ATCP),
+    static_cast<unsigned char>(OPT_MSP),
+    static_cast<unsigned char>(OPT_MXP)
+};
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
 : mProfileName(profileName)
@@ -148,6 +158,8 @@ void cTelnet::reset()
     mGA_Driver = false;
     command = "";
     mMudData = "";
+
+    mNegotiationOrder.clear();
 }
 
 
@@ -1530,6 +1542,69 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     sendAllMNESValues(); // No list specified or only a VAR, send the entire list of defined VAR variables
 }
 
+// Track the order of option negotiations for KaVir protocol
+void cTelnet::trackKaVirNegotiation(unsigned char option)
+{
+    if (!mpHost || mpHost->mPromptedForVersionInTTYPE) {
+        return;
+    }
+
+    mNegotiationOrder.append(option);
+
+    // Only keep as many as needed
+    if (mNegotiationOrder.size() > expectedOrderForKaVirHandler.size()) {
+        mNegotiationOrder.removeFirst();
+    }
+
+    // Check for match
+    if (mNegotiationOrder == expectedOrderForKaVirHandler) {
+#ifdef DEBUG_TELNET
+    QStringList optList;
+
+    for (unsigned char opt : mNegotiationOrder) {
+        optList << QString("%1 (%2)").arg(static_cast<int>(opt)).arg(decodeOption(opt));
+    }
+
+    qDebug().nospace() << "Matched KaVir protocol handling negotiation order: [" << optList.join(", ") << "]";
+#endif
+        promptEnableTTYPEVersion();
+    }
+}
+
+// Prompt user to enable TTYPE version compatibility mode and reconnect
+void cTelnet::promptEnableTTYPEVersion()
+{
+    mpHost->mPromptedForVersionInTTYPE = true;
+
+    auto msgBox = new QMessageBox();
+    msgBox->setIcon(QMessageBox::Question);
+    msgBox->setText(tr("This game appears to use a protocol that works best if Mudlet reports its version number during connection.\n\nEnable this compatibility mode for improved color support and reconnect?"));
+    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox->setDefaultButton(QMessageBox::Yes);
+
+    int ret = msgBox->exec();
+    delete msgBox;
+
+    if (ret == QMessageBox::Yes) {
+        disconnectIt();
+        mpHost->mVersionInTTYPE = true;
+        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting..."));
+        reconnect();
+    } else {
+        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options."));
+    }
+}
+
+// Auto-enable MXP processor when indicators are detected
+void cTelnet::autoEnableMXPProcessor()
+{
+    mpHost->mPromptedForMXPProcessorOn = true;
+
+    // Automatically enable MXP processing
+    mpHost->setForceMXPProcessorOn(true);
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but may not negotiate it. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this forced setting in Settings > Special Options."));
+}
+
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
@@ -1615,6 +1690,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = telnetCommand[2];
+        trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
@@ -1843,7 +1919,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             if (!mpHost->mEnableMXP) {
                 sendTelnetOption(TN_DONT, OPT_MXP);
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->getForceMXPProcessorOn()) {
+                    mpHost->mMxpProcessor.disable();
+                }
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -1981,7 +2060,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (option == OPT_MXP) {
                 // MXP got turned off
                 enableMXP = false;
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->getForceMXPProcessorOn()) {
+                    mpHost->mMxpProcessor.disable();
+                }
+
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2018,6 +2101,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_DO: {
         //server wants us to enable some option
         option = telnetCommand[2];
+        trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
@@ -2157,7 +2241,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->getForceMXPProcessorOn()) {
+                    mpHost->mMxpProcessor.disable();
+                }
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -2268,7 +2355,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             // MXP got turned off
             enableMXP = false;
-            mpHost->mMxpProcessor.disable();
+
+            if (!mpHost->getForceMXPProcessorOn()) {
+                mpHost->mMxpProcessor.disable();
+            }
+
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
         }
 
@@ -2616,15 +2707,26 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientName = getNewEnvironClientName();
-                            cmd += clientName.toStdString();
+                            QString terminalType = getNewEnvironClientName();
+
+                            // Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal
+                            // version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with
+                            // the relevant RFCs as the period character is not permitted therein; so since 2024, Mudlet has stopped sending
+                            // it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier,
+                            // and consequently restrict color support to 16 colors instead of enabling 256-color mode. Hence, users can add
+                            // the version number to the terminal type via a setting in Special Options.
+                            if (mpHost->mVersionInTTYPE) {
+                                terminalType += qsl(" %1").arg(APP_VERSION);
+                            }
+
+                            cmd += terminalType.toStdString();
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
                                 qDebug() << "MTTS enabled";
-                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << clientName;
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << terminalType;
                             } else {
-                                qDebug() << "WE send TERMINAL_TYPE is" << clientName;
+                                qDebug() << "WE send TERMINAL_TYPE is" << terminalType;
                             }
 
                             break;
@@ -3353,24 +3455,25 @@ void cTelnet::postMessage(QString msg)
 }
 
 //forward data for further processing
-
-
 void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
+
     if (mpPostingTimer->interval() != mTimeOut) {
         mpPostingTimer->setInterval(mTimeOut);
     }
+
     mMudData += mud_data;
 
-    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        //////////////////////////////////////////////////////////////////////
-        //
-        // Patch for servers that need GA/EOR for prompt fixups
-        //
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mud_data);
+    }
 
+    // Patch for servers that need GA/EOR for prompt fixups
+    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
         int j = 0;
         int s = mMudData.size();
+
         while (j < s) {
             // search for leading <LF> but skip leading ANSI control sequences
             if (mMudData[j] == 0x1B) {
@@ -3382,6 +3485,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
                     ++j;
                 }
             }
+
             if (mMudData[j] == '\n') {
                 mMudData.erase(j, 1);
                 break;
@@ -3391,8 +3495,6 @@ void cTelnet::gotPrompt(std::string& mud_data)
         NEXT:
             ++j;
         }
-        //
-        ////////////////////////////
     }
 
     postData();
@@ -3400,21 +3502,68 @@ void cTelnet::gotPrompt(std::string& mud_data)
     mIsTimerPosting = false;
 }
 
+void cTelnet::trackMXPElementDetection(const std::string& line)
+{
+    if (!mpHost || mpHost->mPromptedForMXPProcessorOn) {
+        return;
+    }
+
+    // List of MXP startup indicators
+    static const std::vector<std::string> mxpIndicators = {
+        "<version>", "<support>",
+        "<!element", "<!entity", "<!attlist", "<!tag",
+        "<send ", "<a ", "<expire ", "<sound ", "<music ", "<var ", "<color "
+    };
+
+    // Convert line to lower-case for case-insensitive search
+    std::string lowerLine = line;
+    std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(), ::tolower);
+
+    for (const auto& indicator : mxpIndicators) {
+        if (lowerLine.find(indicator) != std::string::npos) {
+            autoEnableMXPProcessor();
+            return;
+        }
+    }
+
+    // MXP escape tags (case-sensitive, as they are control codes)
+    static const std::vector<std::string> mxpEscapes = {
+        "\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z"
+    };
+
+    for (const auto& esc : mxpEscapes) {
+        if (line.find(esc) != std::string::npos) {
+            autoEnableMXPProcessor();
+            return;
+        }
+    }
+}
+
 void cTelnet::gotRest(std::string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
+
+    // MXP detection scan
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mud_data);
+    }
+
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
+
         if (i != std::string::npos) {
             mMudData += mud_data.substr(0, i + 1);
             postData();
+
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
                 mpPostingTimer->setInterval(mTimeOut);
             }
+
             mpPostingTimer->start();
             mIsTimerPosting = true;
+
             if (i + 1 < mud_data.size()) {
                 mMudData = mud_data.substr(i + 1, mud_data.size());
             } else {
@@ -3422,15 +3571,16 @@ void cTelnet::gotRest(std::string& mud_data)
             }
         } else {
             mMudData += mud_data;
+
             if (!mIsTimerPosting) {
                 if (mpPostingTimer->interval() != mTimeOut) {
                     mpPostingTimer->setInterval(mTimeOut);
                 }
+
                 mpPostingTimer->start();
                 mIsTimerPosting = true;
             }
         }
-
     } else {
         mMudData += mud_data;
         postData();
@@ -3443,7 +3593,13 @@ void cTelnet::slot_timerPosting()
     if (!mIsTimerPosting) {
         return;
     }
+
     mMudData += "\r";
+
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mMudData);
+    }
+
     postData();
     mMudData = "";
     mIsTimerPosting = false;

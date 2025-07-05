@@ -229,7 +229,7 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
-    void announce(const QString& text, const QString& processing = QString());
+    void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
