@@ -38,7 +38,6 @@
 #include <QScrollBar>
 #include <QSaveFile>
 #include <QToolButton>
-#include <QHBoxLayout>
 #include <QIcon>
 #include "post_guard.h"
 
@@ -65,7 +64,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
         mpPasswordToggleButton->setMaximumSize(QSize(20, 20));
         mpPasswordToggleButton->setFocusPolicy(Qt::NoFocus);
         mpPasswordToggleButton->setCursor(Qt::PointingHandCursor);
-        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png"))); // Default to "show" icon
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
         mpPasswordToggleButton->setToolTip(tr("Show password"));
         mpPasswordToggleButton->setVisible(false); // Hidden by default
         connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
