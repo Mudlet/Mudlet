@@ -1567,32 +1567,20 @@ void cTelnet::trackKaVirNegotiation(unsigned char option)
 
     qDebug().nospace() << "Matched KaVir protocol handling negotiation order: [" << optList.join(", ") << "]";
 #endif
-        promptEnableTTYPEVersion();
+        autoEnableTTYPEVersion();
     }
 }
 
-// Prompt user to enable TTYPE version compatibility mode and reconnect
-void cTelnet::promptEnableTTYPEVersion()
+// Auto-enable TTYPE version compatibility mode when KaVir protocol is detected
+void cTelnet::autoEnableTTYPEVersion()
 {
     mpHost->mPromptedForVersionInTTYPE = true;
 
-    auto msgBox = new QMessageBox();
-    msgBox->setIcon(QMessageBox::Question);
-    msgBox->setText(tr("This game appears to use a protocol that works best if Mudlet reports its version number during connection.\n\nEnable this compatibility mode for improved color support and reconnect?"));
-    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgBox->setDefaultButton(QMessageBox::Yes);
-
-    int ret = msgBox->exec();
-    delete msgBox;
-
-    if (ret == QMessageBox::Yes) {
-        disconnectIt();
-        mpHost->mVersionInTTYPE = true;
-        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting..."));
-        reconnect();
-    } else {
-        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options."));
-    }
+    // Automatically enable TTYPE version compatibility
+    disconnectIt();
+    mpHost->mVersionInTTYPE = true;
+    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting..."));
+    reconnect();
 }
 
 // Auto-enable MXP processor when indicators are detected
