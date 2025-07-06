@@ -432,7 +432,13 @@ public:
             mpConsole->setF3SearchEnabled(enabled);
         }
     }
-
+    bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
+    void setForceMXPProcessorOn(bool value) {
+        if (mForceMXPProcessorOn != value) {
+            mForceMXPProcessorOn = value;
+            emit signal_forceMXPProcessorOnChanged(value);
+        }
+    }
     void sendCmdLine(const QString& cmd);
 
     cTelnet mTelnet;
@@ -462,6 +468,7 @@ public:
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
     bool mEnableMXP = true;
+    bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
 
@@ -747,6 +754,7 @@ signals:
     void signal_saveCommandLinesHistory();
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
+    void signal_forceMXPProcessorOnChanged(bool enabled);
 
 private slots:
     void slot_purgeTemps();
@@ -941,6 +949,10 @@ private:
 
     // Whether F3 search functionality is enabled
     bool mF3SearchEnabled = false;
+
+    // Whether to force the MXP processor to be on, even if not negotiated with the
+    // MUD Server
+    bool mForceMXPProcessorOn = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:

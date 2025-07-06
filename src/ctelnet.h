@@ -223,6 +223,7 @@ public:
     bool isMSPEnabled() const { return enableMSP; }
     bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
+    void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
@@ -327,6 +328,7 @@ private:
     static std::pair<bool, bool> testReadReplayFile();
 
     void trackKaVirNegotiation(unsigned char option);
+    void autoEnableMXPProcessor();
     void promptEnableTTYPEVersion();
 
     QPointer<Host> mpHost;

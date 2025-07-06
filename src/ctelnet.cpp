@@ -1595,6 +1595,16 @@ void cTelnet::promptEnableTTYPEVersion()
     }
 }
 
+// Auto-enable MXP processor when indicators are detected
+void cTelnet::autoEnableMXPProcessor()
+{
+    mpHost->mPromptedForMXPProcessorOn = true;
+
+    // Automatically enable MXP processing
+    mpHost->setForceMXPProcessorOn(true);
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but may not negotiate it. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this forced setting in Settings > Special Options."));
+}
+
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
@@ -1909,7 +1919,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             if (!mpHost->mEnableMXP) {
                 sendTelnetOption(TN_DONT, OPT_MXP);
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->getForceMXPProcessorOn()) {
+                    mpHost->mMxpProcessor.disable();
+                }
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -2047,7 +2060,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (option == OPT_MXP) {
                 // MXP got turned off
                 enableMXP = false;
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->getForceMXPProcessorOn()) {
+                    mpHost->mMxpProcessor.disable();
+                }
+
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2224,7 +2241,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
-                mpHost->mMxpProcessor.disable();
+
+                if (!mpHost->getForceMXPProcessorOn()) {
+                    mpHost->mMxpProcessor.disable();
+                }
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -2335,7 +2355,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             // MXP got turned off
             enableMXP = false;
-            mpHost->mMxpProcessor.disable();
+
+            if (!mpHost->getForceMXPProcessorOn()) {
+                mpHost->mMxpProcessor.disable();
+            }
+
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
         }
 
@@ -3431,24 +3455,25 @@ void cTelnet::postMessage(QString msg)
 }
 
 //forward data for further processing
-
-
 void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
+
     if (mpPostingTimer->interval() != mTimeOut) {
         mpPostingTimer->setInterval(mTimeOut);
     }
+
     mMudData += mud_data;
 
-    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        //////////////////////////////////////////////////////////////////////
-        //
-        // Patch for servers that need GA/EOR for prompt fixups
-        //
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mud_data);
+    }
 
+    // Patch for servers that need GA/EOR for prompt fixups
+    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
         int j = 0;
         int s = mMudData.size();
+
         while (j < s) {
             // search for leading <LF> but skip leading ANSI control sequences
             if (mMudData[j] == 0x1B) {
@@ -3460,6 +3485,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
                     ++j;
                 }
             }
+
             if (mMudData[j] == '\n') {
                 mMudData.erase(j, 1);
                 break;
@@ -3469,8 +3495,6 @@ void cTelnet::gotPrompt(std::string& mud_data)
         NEXT:
             ++j;
         }
-        //
-        ////////////////////////////
     }
 
     postData();
@@ -3478,21 +3502,68 @@ void cTelnet::gotPrompt(std::string& mud_data)
     mIsTimerPosting = false;
 }
 
+void cTelnet::trackMXPElementDetection(const std::string& line)
+{
+    if (!mpHost || mpHost->mPromptedForMXPProcessorOn) {
+        return;
+    }
+
+    // List of MXP startup indicators
+    static const std::vector<std::string> mxpIndicators = {
+        "<version>", "<support>",
+        "<!element", "<!entity", "<!attlist", "<!tag",
+        "<send ", "<a ", "<expire ", "<sound ", "<music ", "<var ", "<color "
+    };
+
+    // Convert line to lower-case for case-insensitive search
+    std::string lowerLine = line;
+    std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(), ::tolower);
+
+    for (const auto& indicator : mxpIndicators) {
+        if (lowerLine.find(indicator) != std::string::npos) {
+            autoEnableMXPProcessor();
+            return;
+        }
+    }
+
+    // MXP escape tags (case-sensitive, as they are control codes)
+    static const std::vector<std::string> mxpEscapes = {
+        "\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z"
+    };
+
+    for (const auto& esc : mxpEscapes) {
+        if (line.find(esc) != std::string::npos) {
+            autoEnableMXPProcessor();
+            return;
+        }
+    }
+}
+
 void cTelnet::gotRest(std::string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
+
+    // MXP detection scan
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mud_data);
+    }
+
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
+
         if (i != std::string::npos) {
             mMudData += mud_data.substr(0, i + 1);
             postData();
+
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
                 mpPostingTimer->setInterval(mTimeOut);
             }
+
             mpPostingTimer->start();
             mIsTimerPosting = true;
+
             if (i + 1 < mud_data.size()) {
                 mMudData = mud_data.substr(i + 1, mud_data.size());
             } else {
@@ -3500,15 +3571,16 @@ void cTelnet::gotRest(std::string& mud_data)
             }
         } else {
             mMudData += mud_data;
+
             if (!mIsTimerPosting) {
                 if (mpPostingTimer->interval() != mTimeOut) {
                     mpPostingTimer->setInterval(mTimeOut);
                 }
+
                 mpPostingTimer->start();
                 mIsTimerPosting = true;
             }
         }
-
     } else {
         mMudData += mud_data;
         postData();
@@ -3521,7 +3593,13 @@ void cTelnet::slot_timerPosting()
     if (!mIsTimerPosting) {
         return;
     }
+
     mMudData += "\r";
+
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+        trackMXPElementDetection(mMudData);
+    }
+
     postData();
     mMudData = "";
     mIsTimerPosting = false;
