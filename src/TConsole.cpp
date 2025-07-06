@@ -1679,7 +1679,6 @@ void TConsole::printCommand(QString& msg)
     }
 
     if (mTriggerEngineMode) {
-        msg.append(QChar::LineFeed);
         const int lineBeforeNewContent = buffer.getLastLineNumber();
         if (lineBeforeNewContent >= 0) {
             if (buffer.lineBuffer.at(lineBeforeNewContent).right(1) != QChar(QChar::LineFeed)) {
