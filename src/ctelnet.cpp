@@ -609,7 +609,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     // Using a colon to separate the IP address and the port number can be
     // confusing for numeric IPv6 address - this'll ensure those get formatted
     auto formatAddressCorrectly = [=](const QString& address, const int port) {
-        const static QRegularExpression anythingOtherThanDigitsOrColons(qsl("[^0123456789abcdefABCEDF:]"));
+        static const QRegularExpression anythingOtherThanDigitsOrColons(qsl("[^0123456789abcdefABCEDF:]"));
         if (anythingOtherThanDigitsOrColons.match(address.trimmed()).hasMatch()) {
             // address has other characters so is NOT a literal IPv6 address,
             // so return it just separated from the port by a ':'
