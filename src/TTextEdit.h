@@ -116,10 +116,7 @@ public:
     // long enough again.
     int mOldCaretColumn;
 
-    QFont mDisplayFont;
     QColor mFgColor;
-    int mFontAscent;
-    int mFontDescent;
     bool mIsCommandPopup;
     // If true, this TTextEdit is to display the last lines in
     // mpConsole.mpBuffer. This is always true for the lower main window panel

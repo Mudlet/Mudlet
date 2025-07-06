@@ -85,14 +85,11 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
+    Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
+    setFont(mpHost->getDisplayFont());
+    mFontHeight = fontMetrics().height();
+    mFontWidth = fontMetrics().averageCharWidth();
     if (pC->getType() != TConsole::CentralDebugConsole) {
-        const auto hostFont = mpHost->getDisplayFont();
-        mFontHeight = QFontMetrics(hostFont).height();
-        mFontWidth = QFontMetrics(hostFont).averageCharWidth();
-
-        mpHost->setDisplayFontFixedPitch(true);
-        setFont(hostFont);
-
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
         // There is no point in setting this option on the Central Debug Console
         // as A) it is shared and B) any codepoints that it can't handle will
@@ -104,13 +101,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 #endif
     } else {
         // This is part of the Central Debug Console
-        mFontHeight = QFontMetrics(mDisplayFont).height();
-        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFgColor = QColor(192, 192, 192);
         mBgColor = Qt::black;
-        mDisplayFont = QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal);
-        mDisplayFont.setFixedPitch(true);
-        setFont(mDisplayFont);
     }
     mScreenHeight = height() / mFontHeight;
 
@@ -259,27 +251,14 @@ void TTextEdit::updateHorizontalScrollBar()
 
 void TTextEdit::updateScreenView()
 {
+    mFontWidth = fontMetrics().averageCharWidth();
+    mFontHeight = fontMetrics().height();
     if (isHidden()) {
-        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        mFontDescent = QFontMetrics(mDisplayFont).descent();
-        mFontAscent = QFontMetrics(mDisplayFont).ascent();
-        mFontHeight = mFontAscent + mFontDescent;
         return; //NOTE: otherwise mScreenHeight==0 would cause a floating point exception
     }
-    // This was "if (pC->mType == TConsole::MainConsole) {"
-    // and mIsMiniConsole is true for user created Mini Consoles and User Windows
     if (mpConsole->getType() == TConsole::MainConsole) {
-        mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
-        mFontDescent = QFontMetrics(mpHost->getDisplayFont()).descent();
-        mFontAscent = QFontMetrics(mpHost->getDisplayFont()).ascent();
-        mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
-    } else {
-        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        mFontDescent = QFontMetrics(mDisplayFont).descent();
-        mFontAscent = QFontMetrics(mDisplayFont).ascent();
-        mFontHeight = mFontAscent + mFontDescent;
     }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     if (!mIsLowerPane) {
@@ -646,7 +625,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull()) {
+    if (!textRect.isNull() && bgColor != mpConsole->getConsoleBgColor()) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;
@@ -795,30 +774,13 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     pixmap.fill(Qt::transparent);
 
     QPainter p(&pixmap);
+    // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
+    p.setFont(painter.font());
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    if (mpConsole->getType() == TConsole::MainConsole) {
-        p.setFont(mpHost->getDisplayFont());
-        p.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
-    } else {
-        p.setFont(mDisplayFont);
-        p.setRenderHint(QPainter::TextAntialiasing, false);
-    }
 
-    QPoint P_topLeft = r.topLeft();
-    QPoint P_bottomRight = r.bottomRight();
-
-    int y_topLeft = P_topLeft.y();
-    int x_bottomRight = P_bottomRight.x();
-    int y_bottomRight = P_bottomRight.y();
-
-    if (x_bottomRight > mScreenWidth * mFontWidth) {
-        x_bottomRight = mScreenWidth * mFontWidth;
-    }
-
-    //    int x1 = x_topLeft / mFontWidth;
-    int y1 = y_topLeft / mFontHeight;
-    int x2 = x_bottomRight / mFontWidth;
-    int y2 = y_bottomRight / mFontHeight;
+    int y_top = r.top() / mFontHeight;
+    int y_bottom = r.bottom()/ mFontHeight;
+    int x_right = std::min(r.right(), (mScreenWidth * mFontWidth)) / mFontWidth;
 
     int lineOffset = imageTopLine();
     int from = 0;
@@ -829,7 +791,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         if (mLastRenderedOffset) {
             mScrollVector = lineOffset - mLastRenderedOffset;
         } else {
-            mScrollVector = y2 + lineOffset;
+            mScrollVector = y_bottom + lineOffset;
         }
     }
 
@@ -841,14 +803,12 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     if ((r.height() < rect().height()) && (lineOffset > 0)) {
         p.drawPixmap(0, 0, mScreenMap);
+        from = y_top;
+        noScroll = true;
         if (!mForceUpdate && !mMouseTracking) {
-            from = y1;
-            noScroll = true;
             noCopy = true;
         } else {
-            from = y1;
-            y2 = mScreenHeight;
-            noScroll = true;
+            y_bottom = mScreenHeight;
             mScrollVector = 0;
         }
     }
@@ -865,18 +825,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
-            y2 = abs(mScrollVector);
+            y_bottom = abs(mScrollVector);
         }
     }
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
-    QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
+    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontHeight, (y_bottom + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    for (int i = from; i <= y2; ++i) {
+    for (int i = from; i <= y_bottom; ++i) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
@@ -921,6 +881,7 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!painter.isActive()) {
         return;
     }
+    painter.setFont(font());
     drawForeground(painter, rect);
 }
 
@@ -1689,13 +1650,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    if (mpConsole->getType() == TConsole::MainConsole) {
-        painter.setFont(mpHost->getDisplayFont());
-        painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
-    } else {
-        painter.setFont(mDisplayFont);
-        painter.setRenderHint(QPainter::TextAntialiasing, false);
-    }
+    painter.setFont(font());
 
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;
@@ -2097,28 +2052,12 @@ int TTextEdit::bufferScrollDown(int lines)
 
 int TTextEdit::getColumnCount() const
 {
-    int charWidth;
-
-    if (mpConsole->getType() == TConsole::MainConsole) {
-        charWidth = qRound(QFontMetricsF(mpHost->getDisplayFont()).averageCharWidth());
-    } else {
-        charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
-    }
-
-    return width() / charWidth;
+    return qRound(width() / QFontMetricsF(font()).averageCharWidth());
 }
 
 int TTextEdit::getRowCount() const
 {
-    int rowHeight;
-
-    if (mpConsole->getType() == TConsole::MainConsole) {
-        rowHeight = qRound(QFontMetricsF(mpHost->getDisplayFont()).lineSpacing());
-    } else {
-        rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());
-    }
-
-    return height() / rowHeight;
+    return qRound(height() / QFontMetricsF(font()).lineSpacing());
 }
 
 inline QString TTextEdit::htmlCenter(const QString& text)
@@ -2873,6 +2812,19 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         QWidget::keyPressEvent(event);
         return;
     }
+    
+    // #7933 Auto-reditect focus to command line from output window when press alpha-numeric characters 
+    // skips ctrl,alt, etc. This improves experiencie and makes fast switch to screenreader users focusing on output
+    if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
+        if (mpHost && mpConsole && mpConsole->mpCommandLine) {
+            mpHost->setCaretEnabled(false);
+            mpHost->setFocusOnHostActiveCommandLine();
+            QKeyEvent newEvent(event->type(), event->key(), event->modifiers(), event->text(), event->isAutoRepeat(), event->count());
+            qApp->sendEvent(mpConsole->mpCommandLine, &newEvent);
+            return;
+        }
+        // if not command line ignore
+    }        
 
     qsizetype newCaretLine = -1;
     qsizetype newCaretColumn = -1;

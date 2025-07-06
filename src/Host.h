@@ -339,13 +339,13 @@ public:
     QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
-    const QFont& getDisplayFont() const { return mDisplayFont; }
+    // Use this rather than accessng the TMainConsole::font() as the latter
+    // isn't always around during profile start-up:
+    QFont getDisplayFont();
+    QFont getAndClearTempDisplayFont();
     std::pair<bool, QString> setDisplayFont(const QFont&);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
-    void setDisplayFontSpacing(const qreal spacing);
-    void setDisplayFontStyle(QFont::StyleStrategy s);
-    void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
@@ -440,9 +440,22 @@ public:
         }
     }
     void sendCmdLine(const QString& cmd);
+    bool fontsAntiAlias() const { return !mNoAntiAlias; }
 
-    cTelnet mTelnet;
+private:
+    bool mNoAntiAlias = false;
+    // These are used only during profile initiation to provide faked details
+    // for things looking to the main console font before it gets instantiated:
+    std::optional<TFontAttributes> mTempDisplayFontAttributes;
+    std::optional<QFont> mTempDisplayFont;
+
+public:
+    // Make this the first public member instantiated so we can use ITS font
+    // as the "reference" or "master" font for whole profile - and so we don't
+    // have to maintain a separate one here in this class which does not, as
+    // something derived from a QOject, have one:
     QPointer<TMainConsole> mpConsole;
+    cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
@@ -459,7 +472,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
@@ -502,7 +514,6 @@ public:
     // pushed down:
     bool mIsProfileLoadingSequence;
 
-    bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
@@ -783,8 +794,6 @@ private:
     TCommandLine* activeCommandLine();
     void closeChildren();
 
-
-    QFont mDisplayFont;
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
 

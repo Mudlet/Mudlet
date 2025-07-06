@@ -10503,3 +10503,15 @@ void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
 
     mpTriggersMainArea->groupBox_multiLineTrigger->setEnabled(activeItems > 1);
 }
+
+void dlgTriggerEditor::setDisplayFont(const QFont& newFont)
+{
+    if (mpErrorConsole) {
+        mpErrorConsole->setFont(newFont);
+    }
+
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setFont(newFont);
+    config->endChanges();
+}
