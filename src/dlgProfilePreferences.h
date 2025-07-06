@@ -56,11 +56,6 @@ public:
     void setTab(QString tab);
 
 public slots:
-    // Fonts.
-    void slot_setFontSize();
-    void slot_setDisplayFont();
-// Not used: slot_setCommandLineFont();
-
     // Terminal colors.
     void slot_setColorBlack();
     void slot_setColorLightBlack();
@@ -176,6 +171,9 @@ private slots:
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
+    void slot_displayFontChanged();
+    void slot_displayFontSizeChanged();
+    void slot_displayFontAliasingChanged();
 
 signals:
     void signal_themeUpdateCompleted();
@@ -208,9 +206,9 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
+    bool updateDisplayFont();
 
-    int mFontSize = 10;
-    QFont mDisplayFont;
+
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;

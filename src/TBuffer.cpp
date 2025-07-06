@@ -549,14 +549,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mEnableMXP && isFromServer) {
+                    if (isFromServer && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn())) {
                         mGotCSI = false;
 
                         const QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
                         mpHost->mMxpProcessor.setMode(code);
                     }
-                    // end of if (!mpHost->mEnableMXP)
-                    // We have manually disabled MXP negotiation
+
                     break;
 
                 case static_cast<quint8>('C'): {
@@ -682,7 +681,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         // We are outside of a CSI or OSC sequence if we get to here:
 
         if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
-            if (mpHost->mEnableMXP) {
+            if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
