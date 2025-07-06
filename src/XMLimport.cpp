@@ -1248,6 +1248,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mFgColor_2 = QColor::fromString(readElementText());
             } else if (name() == qsl("mBgColor2")) {
                 pHost->mBgColor_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLowerLevelColor")) {
+                pHost->mLowerLevelColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mUpperLevelColor")) {
+                pHost->mUpperLevelColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
