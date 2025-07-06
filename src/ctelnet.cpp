@@ -702,7 +702,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 postMessage(tr("[ ERROR ] - DNS lookup Failure - no IP address could be found for the URL:\n"
                                "%1\n"
                                "for the IP version 4 protocol. A connection cannot be established.\n"
-                               "There is/are however other %n address(es) that might be usable\n"
+                               "There is/are however %n other address(es) that might be usable\n"
                                "if you change the option controlling acceptable IP versions.",
                                "",
                                unusableAddresses.count())
@@ -711,7 +711,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 postMessage(tr("[ ERROR ] - DNS lookup Failure - no IP address could be found for the URL:\n"
                                "%1\n"
                                "for the IP version 6 protocol. A connection cannot be established.\n"
-                               "There is/are however other %n address(es) that might be usable\n"
+                               "There is/are however %n other address(es) that might be usable\n"
                                "if you change the option controlling acceptable IP versions.",
                                "",
                                unusableAddresses.count())

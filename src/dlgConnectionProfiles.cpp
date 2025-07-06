@@ -212,8 +212,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     // We actually need to store the integer equivalents to the enum values as
     // conveying the enum values directly is awkward/hard/impossible as QVariants:
+    //: Text to show in IP Version selection comboBox to allow BOTH IPv4 and IPv6 connections
     comboBox_IPVersion->addItem(tr("Either"), static_cast<int>(QAbstractSocket::AnyIPProtocol));
+    //: Text to show in IP Version selection comboBox to allow only IPv4 connections
     comboBox_IPVersion->addItem(tr("IPv4 only"), static_cast<int>(QAbstractSocket::IPv4Protocol));
+    //: Text to show in IP Version selection comboBox to allow only IPv6 connections
     comboBox_IPVersion->addItem(tr("IPv6 only"), static_cast<int>(QAbstractSocket::IPv6Protocol));
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
