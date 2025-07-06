@@ -60,6 +60,7 @@ const QString TConsole::cmLuaLineVariable("line");
 TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
+, mDisplayFontDetails((type == MainConsole) && pH->fontsAntiAlias())
 , buffer(pH, this)
 , emergencyStop(new QToolButton)
 , mConsoleName(name)
@@ -94,9 +95,16 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
     }
+
+    QWidget::setFont(mDisplayFontDetails.makeFont());
+
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
+
+    QPalette transparentBgPalette;
+    transparentBgPalette.setColor(QPalette::Window, QColor(0, 0, 0, 0));
+    setPalette(transparentBgPalette);
 
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -105,13 +113,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     const QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
-
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
-    mpMainFrame->setPalette(framePalette);
-    mpMainFrame->setAutoFillBackground(true);
+    mpMainFrame->setPalette(transparentBgPalette);
     mpMainFrame->setObjectName(qsl("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
@@ -198,6 +200,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpCommandLine = new TCommandLine(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
+        mpCommandLine->setFont(font());
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
@@ -232,11 +235,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setAccessibleName(tr("main window"));
+    mUpperPane->setFont(font());
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setObjectName(qsl("lowerPane_%1_%2").arg(mProfileName, mConsoleName));
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
+    mLowerPane->setFont(font());
 
     if (mType == MainConsole) {
         setFocusProxy(mpCommandLine);
@@ -402,7 +407,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
     mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
-    mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
+    mpBufferSearchBox->setFont(font());
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
     mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette commandLinePalette;
@@ -500,6 +505,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpMainFrame->move(0, 0);
         mpMainDisplay->move(0, 0);
     }
+
     if (mType & CentralDebugConsole) {
         layerCommandLine->hide();
     }
@@ -527,9 +533,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     // error and debug consoles inherit font of the main console
     if (mType & (ErrorConsole | CentralDebugConsole)) {
-        mDisplayFont = mpHost->getDisplayFont();
-        mDisplayFontName = mDisplayFont.family();
-        mDisplayFontSize = mDisplayFont.pointSize();
 
         // They always use "Control Pictures" to show control characters:
         mControlCharacter = ControlCharacterMode::Picture;
@@ -543,12 +546,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         setMouseTracking(true);
     }
 
-
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
-    }
 
-    if (mType & MainConsole) {
         mpCommandLine->adjustHeight();
     }
 
@@ -709,7 +709,7 @@ void TConsole::refresh()
 
     mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
-    if (mType & MainConsole) {
+    if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
     }
 
@@ -872,20 +872,20 @@ QString getColorCode(QColor color)
 
 void TConsole::changeColors()
 {
-    mDisplayFont.setFixedPitch(true);
     if (mType == CentralDebugConsole) {
-        mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
-        mDisplayFont.setFixedPitch(true);
-        mUpperPane->setFont(mDisplayFont);
-        mLowerPane->setFont(mDisplayFont);
+        // No-op now?
     } else if (mType & (ErrorConsole|SubConsole|UserWindow|Buffer)) {
-        mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoAntialias | QFont::PreferQuality));
-        mDisplayFont.setFixedPitch(true);
-        mUpperPane->setFont(mDisplayFont);
-        mLowerPane->setFont(mDisplayFont);
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
             mpMainDisplay->setStyleSheet(styleSheet);
+
+            QPalette transparentBgPalette;
+            transparentBgPalette.setColor(QPalette::Window, QColor(0, 0, 0, 0));
+            mpBaseVFrame->setPalette(transparentBgPalette);
+            mpBaseHFrame->setPalette(transparentBgPalette);
+            mpMainFrame->setPalette(transparentBgPalette);
+            mpMainDisplay->setPalette(transparentBgPalette);
+            setPalette(transparentBgPalette);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
@@ -907,15 +907,6 @@ void TConsole::changeColors()
             mpCommandLine->mRegularPalette = commandLinePalette;
             mpCommandLine->setStyleSheet(styleSheet);
         }
-        if (mpHost->mNoAntiAlias) {
-            mpHost->setDisplayFontStyle(QFont::NoAntialias);
-        } else {
-            mpHost->setDisplayFontStyle(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
-        }
-        mpHost->setDisplayFontFixedPitch(true);
-        mDisplayFont.setFixedPitch(true);
-        mUpperPane->setFont(mpHost->getDisplayFont());
-        mLowerPane->setFont(mpHost->getDisplayFont());
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mpHost->mBgColor));
             mpMainDisplay->setStyleSheet(styleSheet);
@@ -926,9 +917,6 @@ void TConsole::changeColors()
         mFgColor = mpHost->mFgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
-        if (mpCommandLine) {
-            mpCommandLine->setFont(mpHost->getDisplayFont());
-        }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
@@ -1358,12 +1346,12 @@ void TConsole::luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
 }
 
-bool TConsole::setFontSize(int size)
+void TConsole::setFontSize(int size)
 {
-    mDisplayFontSize = size;
-
-    refreshView();
-    return true;
+    if (mDisplayFontDetails.mPointSize != size) {
+        mDisplayFontDetails.mPointSize = size;
+        setFont(mDisplayFontDetails.makeFont(), true);
+    }
 }
 
 bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
@@ -1417,6 +1405,7 @@ void TConsole::setCmdVisible(bool isVisible)
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+        mpCommandLine->setFont(font());
         // put this CommandLine in the mainConsoles SubCommandLineMap
         // name is the console name
         mpHost->mpConsole->mSubCommandLineMap[mConsoleName] = mpCommandLine;
@@ -1448,22 +1437,67 @@ void TConsole::setCmdVisible(bool isVisible)
 
 void TConsole::refreshView() const
 {
-    mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
-    mUpperPane->setFont(mUpperPane->mDisplayFont);
+    mUpperPane->setFont(font());
     mUpperPane->updateScreenView();
     mUpperPane->forceUpdate();
-    mLowerPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
-    mLowerPane->setFont(mLowerPane->mDisplayFont);
+    mLowerPane->setFont(font());
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 }
 
-bool TConsole::setFontName(const QString& fontName)
+void TConsole::raiseFontChangeEvent()
 {
-    mDisplayFontName = fontName;
+    if (!mpHost) {
+        return;
+    }
+    if (!(mType & (MainConsole|UserWindow|SubConsole))) {
+        return;
+    }
 
+    TEvent fontChangeEvent{};
+    fontChangeEvent.mArgumentList.append(QLatin1String("sysFontChangeEvent"));
+    fontChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    fontChangeEvent.mArgumentList.append(mConsoleName);
+    fontChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    fontChangeEvent.mArgumentList.append(font().family());
+    fontChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    fontChangeEvent.mArgumentList.append(QString::number(font().pointSize()));
+    fontChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(fontChangeEvent);
+}
+
+void TConsole::setFont(const QFont& newFont, const bool forceChange)
+{
+    TFontAttributes newFontDetails(newFont);
+    if (forceChange || (mDisplayFontDetails != newFontDetails)) {
+        mDisplayFontDetails = newFontDetails;
+        QWidget::setFont(newFont);
+        // Update associated TCommandLine's:
+        if (mType & (MainConsole|SubConsole|UserWindow)) {
+            if (mpHost->mpConsole) {
+                for (auto& commandLine : mpHost->mpConsole->mSubCommandLineMap) {
+                    auto pConsole = commandLine->console();
+                    if (pConsole && (pConsole == this)) {
+                        commandLine->setFont(font());
+                        commandLine->adjustHeight();
+                    }
+                }
+            }
+            if (!mpCommandLine.isNull()) {
+                mpCommandLine->setFont(font());
+                mpCommandLine->adjustHeight();
+            }
+        }
+        refreshView();
+        raiseFontChangeEvent();
+    }
+}
+
+void TConsole::setFontName(const QString& fontName)
+{
+    mDisplayFontDetails.mName = fontName;
+    setFont(mDisplayFontDetails.makeFont(), true);
     refreshView();
-    return true;
 }
 
 QString TConsole::getCurrentLine()

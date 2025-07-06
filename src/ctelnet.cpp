@@ -867,7 +867,7 @@ bool cTelnet::socketOutRaw(std::string& data)
 void cTelnet::checkNAWS()
 {
     Host* pHost = mpHost;
-    if (!pHost) {
+    if (!pHost ||!pHost->mpConsole) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the

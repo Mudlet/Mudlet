@@ -940,32 +940,27 @@ int TLuaInterpreter::getFont(lua_State* L)
         return QFontInfo(font).family();
     };
 
-    QString font;
+    QString fontName;
 
     if (console == host.mpConsole) {
-        font = actualFontFamily(host.getDisplayFont());
+        fontName = actualFontFamily(host.getDisplayFont());
     } else if (console->mUpperPane) {
-        font = actualFontFamily(console->mUpperPane->font());
+        fontName = actualFontFamily(console->mUpperPane->font());
     } else {
-        font = actualFontFamily(console->font());
+        fontName = actualFontFamily(console->font());
     }
 
-    lua_pushstring(L, font.toUtf8().constData());
+    lua_pushstring(L, fontName.toUtf8().constData());
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFontSize
 int TLuaInterpreter::getFontSize(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     int rval = -1;
     const QString windowName {WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
-    if (console == host.mpConsole) {
-        rval = host.getDisplayFont().pointSize();
-    } else {
-        rval = console->mUpperPane->mDisplayFont.pointSize();
-    }
+    rval = console->mUpperPane->font().pointSize();
 
     if (rval <= -1) {
         lua_pushnil(L);
@@ -1093,7 +1088,7 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainConsoleWidth
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     int fw = QFontMetrics(host.getDisplayFont()).averageCharWidth();
     fw *= host.mWrapAt + 1;
     lua_pushnumber(L, fw);
@@ -2459,32 +2454,33 @@ int TLuaInterpreter::setFont(lua_State* L)
         windowName = WINDOW_NAME(L, s++);
     }
 
-    const QString font = getVerifiedString(L, __func__, s, "name");
+    const QString fontName = getVerifiedString(L, __func__, s, "name");
 
-    if (font.trimmed().isEmpty()) {
+    if (fontName.trimmed().isEmpty()) {
         return warnArgumentValue(L, __func__, "font must not be empty");
     }
 
-    if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
-        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(font));
+    if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
-    QFont::insertSubstitution(font, qsl("Noto Color Emoji"));
+    QFont::insertSubstitution(fontName, qsl("Noto Color Emoji"));
     // TODO issue #4159: a nonexisting font breaks the console
 #endif
 
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
-        auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
+        auto result = host.setDisplayFont(QFont(fontName, host.getDisplayFont().pointSize()));
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
         }
         console->refreshView();
     } else {
+        auto font = QFont(fontName, console->font().pointSize());
         console->setFont(font);
     }
     lua_pushboolean(L, true);
@@ -2709,12 +2705,12 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     const QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
     const int size = getVerifiedInt(L, __func__, 2, "font size");
     auto console = CONSOLE(L, windowName);
-    if (console->setFontSize(size)) {
-        lua_pushboolean(L, true);
-    } else {
+    if (size < 1) {
         return warnArgumentValue(L, __func__, qsl("setting font size of '%1' failed").arg(windowName));
     }
-    return 0;
+    console->setFontSize(size);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie

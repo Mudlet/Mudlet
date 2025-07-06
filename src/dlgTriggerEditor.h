@@ -228,6 +228,7 @@ public:
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
     void showIDLabels(const bool);
+    void setDisplayFont(const QFont&);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
