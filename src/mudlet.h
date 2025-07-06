@@ -27,10 +27,11 @@
  ***************************************************************************/
 
 #include "Announcer.h"
-#include "MudletInstanceCoordinator.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
+#include "LlamaFileManager.h"
+#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "TMediaData.h"
 #include "utils.h"
@@ -208,6 +209,11 @@ public:
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // This may need to be localised, it represents the format of the timestamp
+    inline static QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
+    // If localised this should be set to the same format and length as the
+    // smTimeStampFormat:
+    inline static QString smBlankTimeStamp = qsl("------------ ");
 
 
     void showEvent(QShowEvent*) override;
@@ -223,7 +229,7 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
-    void announce(const QString& text, const QString& processing = QString());
+    void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
@@ -394,6 +400,15 @@ public:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
 
+    // AI integration methods
+    LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
+    bool aiModelAvailable() const;
+    bool aiRunning() const;
+    QString getAIModelPath() const { return mAIModelPath; }
+    void setAIModelPath(const QString& path);
+    bool getAIAutoStart() const { return mAIAutoStart; }
+    void setAIAutoStart(bool autoStart);
+
 
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
@@ -473,6 +488,8 @@ signals:
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
+    void signal_aiStatusChanged(bool running);
+    void signal_aiModelChanged(const QString& modelPath);
 
 
 private slots:
@@ -501,6 +518,8 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
+    void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
+    void slot_aiError(const QString& error);
 
 
 private:
@@ -664,6 +683,17 @@ private:
     // show the tutorial maximum 3 times on a new Mudlet
     static const int mScrollbackTutorialsMax = 3; // Split screen
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
+
+    // AI/LlamaFile integration
+    std::unique_ptr<LlamafileManager> mpLlamafileManager;
+    QString mAIModelPath;
+    bool mAIAutoStart = true;
+    
+    // Helper methods for AI integration
+    void initializeAI();
+    void shutdownAI();
+    bool findAIModel();
+    void setupAIConfig();
 };
 
 

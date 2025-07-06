@@ -39,6 +39,7 @@
 #include <QDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
+#include <QFontDialog>
 #include <QMap>
 #include "post_guard.h"
 
@@ -55,11 +56,6 @@ public:
     void setTab(QString tab);
 
 public slots:
-    // Fonts.
-    void slot_setFontSize();
-    void slot_setDisplayFont();
-// Not used: slot_setCommandLineFont();
-
     // Terminal colors.
     void slot_setColorBlack();
     void slot_setColorLightBlack();
@@ -121,6 +117,7 @@ public slots:
 
     // Media
     void slot_purgeMediaCache();
+    void slot_toggleEnableClosedCaption(const bool);
 
     // Log.
     void slot_setLogDir();
@@ -178,6 +175,9 @@ private slots:
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
+    void slot_displayFontChanged();
+    void slot_displayFontSizeChanged();
+    void slot_displayFontAliasingChanged();
 
 signals:
     void signal_themeUpdateCompleted();
@@ -210,8 +210,9 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
+    bool updateDisplayFont();
 
-    int mFontSize = 10;
+
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
@@ -225,6 +226,7 @@ private:
     QPointer<QAction> mEnableMSDP;
     QPointer<QAction> mEnableMSSP;
     QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
 

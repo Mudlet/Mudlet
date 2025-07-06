@@ -325,13 +325,14 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag") || key == QLatin1String("caption")) {
             QString value = getVerifiedString(L,
                                               func,
                                               -1,
                                               key == QLatin1String("name")  ? "value for name"
                                               : key == QLatin1String("key") ? "value for key"
                                               : key == QLatin1String("tag") ? "value for tag"
+                                              : key == QLatin1String("caption") ? "value for caption"
                                                                             : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
@@ -348,6 +349,8 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaKey(value);
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
+            } else if (key == QLatin1String("caption") && !value.isEmpty()) {
+                mediaData.setMediaCaption(value);
             }
         } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")) {
             int value = getVerifiedInt(L,
@@ -582,13 +585,14 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag") || key == QLatin1String("caption")) {
             QString value = getVerifiedString(L,
                                               func,
                                               -1,
                                               key == QLatin1String("name")  ? "value for name"
                                               : key == QLatin1String("key") ? "value for key"
                                               : key == QLatin1String("tag") ? "value for tag"
+                                              : key == QLatin1String("caption") ? "value for caption"
                                                                             : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
@@ -605,6 +609,8 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
                 mediaData.setMediaKey(value);
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
+            } else if (key == QLatin1String("caption") && !value.isEmpty()) {
+                mediaData.setMediaCaption(value);
             }
         } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")
                    || key == QLatin1String("priority")) {

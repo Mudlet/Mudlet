@@ -321,8 +321,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // option areas
     mpErrorConsole = new TConsole(mpHost, qsl("errors_%1").arg(hostName), TConsole::ErrorConsole, this);
     mpErrorConsole->setWrapAt(100);
-    mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
-    mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
+    mpErrorConsole->slot_toggleTimeStamps(true);
     mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
@@ -4633,9 +4632,9 @@ void dlgTriggerEditor::saveTrigger()
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
-    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1);
     QStringList patterns;
     QList<int> patternKinds;
+    int  validItems = 0;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->toPlainText();
 
@@ -4647,6 +4646,7 @@ void dlgTriggerEditor::saveTrigger()
             continue;
         }
 
+        ++validItems;
         switch (patternType) {
         case 0:
             patternKinds << REGEX_SUBSTRING;
@@ -4676,7 +4676,7 @@ void dlgTriggerEditor::saveTrigger()
         }
         patterns << pattern;
     }
-
+    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1) && (validItems > 1);
     const QString script = mpSourceEditorEdbeeDocument->text();
 
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -10060,7 +10060,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
         connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
         // don't coalesce the format text action - not that it matters for us since we we only change
         // the text once during the undo group
-        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_None, false);
+        controller->endUndoGroup(edbee::CoalesceId_None, false);
     });
 
     menu->addAction(formatAction);
@@ -10502,4 +10502,16 @@ void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
     }
 
     mpTriggersMainArea->groupBox_multiLineTrigger->setEnabled(activeItems > 1);
+}
+
+void dlgTriggerEditor::setDisplayFont(const QFont& newFont)
+{
+    if (mpErrorConsole) {
+        mpErrorConsole->setFont(newFont);
+    }
+
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setFont(newFont);
+    config->endChanges();
 }
