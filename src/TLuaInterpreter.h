@@ -365,6 +365,7 @@ public:
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
+    static int setWindowWrapHangingIndent(lua_State*);
     static int resetFormat(lua_State*);
     static int moveCursorEnd(lua_State*);
     static int getLastLineNumber(lua_State*);
@@ -603,6 +604,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getProcessID(lua_State*);
     static int getClipboardText(lua_State*);
     static int setClipboardText(lua_State*);
     static int getAvailableFonts(lua_State*);

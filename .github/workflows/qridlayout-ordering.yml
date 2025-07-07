@@ -3,6 +3,7 @@ name: QGridLayout Items Ordering
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
 
 jobs:
   qgrid-ordering:
@@ -18,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
       - name: Install yarn dependencies
         run: |
-          yarn add xml-js --dev
+          yarn add sax --dev
           node CI/fix.grid.ui.ordering.js
       - name: Add & Commit
         uses: EndBug/add-and-commit@v9.1.4
