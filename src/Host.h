@@ -168,6 +168,8 @@ public:
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
 
+
+
     QString         getName()                        { return mHostName; }
     QString         getCommandSeparator()            { return mCommandSeparator; }
     void            setName(const QString& name);
@@ -439,8 +441,6 @@ public:
     }
     void sendCmdLine(const QString& cmd);
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
-    void setRemoteEchoingActive(bool active);
-    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
 private:
     bool mNoAntiAlias = false;
@@ -536,6 +536,10 @@ public:
      * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive = false;
+
+public:
+    void setRemoteEchoingActive(bool active);
+    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -705,7 +709,7 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
-    std::unique_ptr<QNetworkProxy> mpConnectionProxy;
+    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;

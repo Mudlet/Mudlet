@@ -2982,10 +2982,10 @@ void Host::updateProxySettings(QNetworkAccessManager* manager)
 
 std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 {
-    if (!mpConnectionProxy) {
-        mpConnectionProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
     }
-    auto& proxy = mpConnectionProxy;
+    auto& proxy = mpDownloaderProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
     if (!mProxyUsername.isEmpty()) {
@@ -2995,7 +2995,7 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
         proxy->setPassword(mProxyPassword);
     }
 
-    return mpConnectionProxy;
+    return mpDownloaderProxy;
 }
 
 void Host::loadSecuredPassword()

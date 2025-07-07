@@ -226,7 +226,7 @@ public:
     void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
-    QAbstractSocket::SocketState getConnectionState() const { return mpSocket.state(); }
+    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
@@ -335,9 +335,9 @@ private:
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
-    QTcpSocket mpSocket;
+    QTcpSocket socket;
 #else
-    QSslSocket mpSocket;
+    QSslSocket socket;
 #endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
@@ -345,8 +345,8 @@ private:
     QTextCodec* outgoingDataCodec = nullptr;
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder = nullptr;
-    QString mHostName;
-    int mHostPort = 0;
+    QString hostName;
+    int hostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
 
