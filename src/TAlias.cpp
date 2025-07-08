@@ -402,10 +402,12 @@ QString TAlias::moduleName(TAlias* pAlias)
     return QString();
 }
 
-bool TAlias::checkIfNew() {
+bool TAlias::checkIfNew()
+{
     return isNew;
 }
 
-void TAlias::unmarkAsNew() {
+void TAlias::unmarkAsNew()
+{
     isNew = false;
 }

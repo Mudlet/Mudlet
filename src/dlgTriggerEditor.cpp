@@ -5244,8 +5244,6 @@ void dlgTriggerEditor::saveScript()
         return;
     }
 
-    QString old_name;
-
     mpScriptsMainArea->trimName();
     const QString name = mpScriptsMainArea->lineEdit_script_name->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
@@ -5270,7 +5268,6 @@ void dlgTriggerEditor::saveScript()
         return;
     }
 
-    old_name = pT->getName();
     pT->setName(name);
     pT->setEventHandlerList(handlerList);
     pT->setScript(script);
@@ -5329,7 +5326,7 @@ void dlgTriggerEditor::saveScript()
             clearEditorNotification();
         }
 
-        if (old_name == tr("New script") || old_name == tr("New script group")) {
+        if (pT->checkIfNew()) {
             if (pT->isFolder()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
@@ -5351,6 +5348,7 @@ void dlgTriggerEditor::saveScript()
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
             pT->setIsActive(true);
+            pT->unmarkAsNew();
         } else {
             pItem->setIcon(0, icon);
             pItem->setText(0, name);

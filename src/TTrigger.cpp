@@ -1178,11 +1178,13 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
     return false;
 }
 
-bool TTrigger::checkIfNew() {
+bool TTrigger::checkIfNew()
+{
     return isNew;
 }
 
-void TTrigger::unmarkAsNew() {
+void TTrigger::unmarkAsNew()
+{
     isNew = false;
 }
 
