@@ -1715,10 +1715,8 @@ void TConsole::printCommand(QString& msg)
     if (mTriggerEngineMode) {
         msg.append(QChar::LineFeed);
         const int lineBeforeNewContent = buffer.getLastLineNumber();
-        if (lineBeforeNewContent >= 0) {
-            if (buffer.lineBuffer.at(lineBeforeNewContent).right(1) != QChar(QChar::LineFeed)) {
+        if (lineBeforeNewContent >= 0 && !buffer.lineBuffer.back().isEmpty()) {
                 msg.prepend(QChar::LineFeed);
-            }
         }
         buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
     } else {
