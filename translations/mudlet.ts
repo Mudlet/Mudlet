@@ -69,83 +69,83 @@
 <context>
     <name>Host</name>
     <message>
-        <location filename="../src/Host.cpp" line="410"/>
+        <location filename="../src/Host.cpp" line="407"/>
         <source>Text to send to the game</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="479"/>
+        <location filename="../src/Host.cpp" line="476"/>
         <source>[ ALERT ] - This profile will now save and close.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="750"/>
+        <location filename="../src/Host.cpp" line="747"/>
         <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
         <extracomment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="764"/>
+        <location filename="../src/Host.cpp" line="761"/>
         <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
         <extracomment>This error message will appear when a module is saved as package but cannot be done for some reason.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1088"/>
+        <location filename="../src/Host.cpp" line="1086"/>
         <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
         <comment>%1 will be a random happy emoji</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1089"/>
+        <location filename="../src/Host.cpp" line="1087"/>
         <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
         <comment>%1 will be a random happy emoji</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1884"/>
+        <location filename="../src/Host.cpp" line="1910"/>
         <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1886"/>
+        <location filename="../src/Host.cpp" line="1912"/>
         <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1890"/>
+        <location filename="../src/Host.cpp" line="1916"/>
         <source>Unpacking</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2646"/>
+        <location filename="../src/Host.cpp" line="2672"/>
         <source>Playing %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2649"/>
-        <location filename="../src/Host.cpp" line="2656"/>
+        <location filename="../src/Host.cpp" line="2675"/>
+        <location filename="../src/Host.cpp" line="2682"/>
         <source>%1 at %2:%3</source>
         <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="3062"/>
-        <location filename="../src/Host.cpp" line="4112"/>
+        <location filename="../src/Host.cpp" line="3073"/>
+        <location filename="../src/Host.cpp" line="4121"/>
         <source>Map - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="4128"/>
+        <location filename="../src/Host.cpp" line="4137"/>
         <source>Pre-Map loading(3) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="4138"/>
+        <location filename="../src/Host.cpp" line="4147"/>
         <source>Loading map(3) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -610,20 +610,20 @@ please wait...</source>
 <context>
     <name>T2DMap</name>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2667"/>
+        <location filename="../src/T2DMap.cpp" line="2673"/>
         <source>Undo</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2669"/>
+        <location filename="../src/T2DMap.cpp" line="2675"/>
         <source>Undo last point</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2676"/>
-        <location filename="../src/T2DMap.cpp" line="2951"/>
+        <location filename="../src/T2DMap.cpp" line="2682"/>
+        <location filename="../src/T2DMap.cpp" line="2957"/>
         <source>Properties</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
 ----------
@@ -631,8 +631,8 @@ please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2678"/>
-        <location filename="../src/T2DMap.cpp" line="2955"/>
+        <location filename="../src/T2DMap.cpp" line="2684"/>
+        <location filename="../src/T2DMap.cpp" line="2961"/>
         <source>properties...</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
 ----------
@@ -640,44 +640,44 @@ please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2680"/>
+        <location filename="../src/T2DMap.cpp" line="2686"/>
         <source>Change the properties of this line</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2683"/>
+        <location filename="../src/T2DMap.cpp" line="2689"/>
         <source>Finish</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2685"/>
+        <location filename="../src/T2DMap.cpp" line="2691"/>
         <source>Finish drawing this line</source>
         <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2752"/>
+        <location filename="../src/T2DMap.cpp" line="2758"/>
         <source>Create new map</source>
         <extracomment>2D Mapper context menu (no map found) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2755"/>
+        <location filename="../src/T2DMap.cpp" line="2761"/>
         <source>Load map</source>
         <extracomment>2D Mapper context menu (no map found) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2772"/>
+        <location filename="../src/T2DMap.cpp" line="2778"/>
         <source>Create new room here</source>
         <extracomment>Menu option to create a new room in the mapper</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2779"/>
-        <location filename="../src/T2DMap.cpp" line="2887"/>
+        <location filename="../src/T2DMap.cpp" line="2785"/>
+        <location filename="../src/T2DMap.cpp" line="2893"/>
         <source>Move</source>
         <extracomment>2D Mapper context menu (room) item
 ----------
@@ -685,68 +685,68 @@ please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2786"/>
+        <location filename="../src/T2DMap.cpp" line="2792"/>
         <source>Configure room...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2788"/>
+        <location filename="../src/T2DMap.cpp" line="2794"/>
         <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
         <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2795"/>
+        <location filename="../src/T2DMap.cpp" line="2801"/>
         <source>Set exits...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2802"/>
+        <location filename="../src/T2DMap.cpp" line="2808"/>
         <source>Create exit line...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2805"/>
+        <location filename="../src/T2DMap.cpp" line="2811"/>
         <source>Replace an exit line with a custom line</source>
         <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2810"/>
+        <location filename="../src/T2DMap.cpp" line="2816"/>
         <source>Custom exit lines are not shown and are not editable in grid mode</source>
         <extracomment>2D Mapper context menu (room) item tooltip (disabled state)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2819"/>
+        <location filename="../src/T2DMap.cpp" line="2825"/>
         <source>Spread...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2821"/>
+        <location filename="../src/T2DMap.cpp" line="2827"/>
         <source>Increase map X-Y spacing for the selected group of rooms</source>
         <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2828"/>
+        <location filename="../src/T2DMap.cpp" line="2834"/>
         <source>Shrink...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2830"/>
+        <location filename="../src/T2DMap.cpp" line="2836"/>
         <source>Decrease map X-Y spacing for the selected group of rooms</source>
         <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2837"/>
-        <location filename="../src/T2DMap.cpp" line="2892"/>
+        <location filename="../src/T2DMap.cpp" line="2843"/>
+        <location filename="../src/T2DMap.cpp" line="2898"/>
         <source>Delete</source>
         <extracomment>2D Mapper context menu (room) item
 ----------
@@ -754,214 +754,214 @@ please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2844"/>
+        <location filename="../src/T2DMap.cpp" line="2850"/>
         <source>Move to position...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2846"/>
+        <location filename="../src/T2DMap.cpp" line="2852"/>
         <source>Move selected room or group of rooms to the given coordinates in this area</source>
         <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2853"/>
+        <location filename="../src/T2DMap.cpp" line="2859"/>
         <source>Move to area...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2858"/>
+        <location filename="../src/T2DMap.cpp" line="2864"/>
         <source>Create label...</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2860"/>
+        <location filename="../src/T2DMap.cpp" line="2866"/>
         <source>Create label to show text or an image</source>
         <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2867"/>
+        <location filename="../src/T2DMap.cpp" line="2873"/>
         <source>Set player location</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2869"/>
+        <location filename="../src/T2DMap.cpp" line="2875"/>
         <source>Set the player&apos;s current location to here</source>
         <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2878"/>
+        <location filename="../src/T2DMap.cpp" line="2884"/>
         <source>Switch to editing mode</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2880"/>
+        <location filename="../src/T2DMap.cpp" line="2886"/>
         <source>Switch to viewing mode</source>
         <extracomment>2D Mapper context menu (room) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2889"/>
+        <location filename="../src/T2DMap.cpp" line="2895"/>
         <source>Move label</source>
         <extracomment>2D Mapper context menu item (label) tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2894"/>
+        <location filename="../src/T2DMap.cpp" line="2900"/>
         <source>Delete label</source>
         <extracomment>2D Mapper context menu (label) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2909"/>
+        <location filename="../src/T2DMap.cpp" line="2915"/>
         <source>Add point</source>
         <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2917"/>
+        <location filename="../src/T2DMap.cpp" line="2923"/>
         <source>Divide segment by adding a new point mid-way along</source>
         <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2921"/>
+        <location filename="../src/T2DMap.cpp" line="2927"/>
         <source>Select a point first, then add a new point mid-way along the segment towards room</source>
         <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2925"/>
+        <location filename="../src/T2DMap.cpp" line="2931"/>
         <source>Remove point</source>
         <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2933"/>
+        <location filename="../src/T2DMap.cpp" line="2939"/>
         <source>Merge pair of segments by removing this point</source>
         <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2937"/>
+        <location filename="../src/T2DMap.cpp" line="2943"/>
         <source>Remove last segment by removing this point</source>
         <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2942"/>
+        <location filename="../src/T2DMap.cpp" line="2948"/>
         <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
         <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2947"/>
+        <location filename="../src/T2DMap.cpp" line="2953"/>
         <source>Select a point first, then remove it</source>
         <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2956"/>
+        <location filename="../src/T2DMap.cpp" line="2962"/>
         <source>Change the properties of this custom line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2960"/>
+        <location filename="../src/T2DMap.cpp" line="2966"/>
         <source>Delete line</source>
         <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2962"/>
+        <location filename="../src/T2DMap.cpp" line="2968"/>
         <source>Delete all of this custom line</source>
         <extracomment>2D Mapper context menu (custom line editing) item tooltip</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3200"/>
+        <location filename="../src/T2DMap.cpp" line="3206"/>
         <source>Drag to select multiple rooms or labels, release to finish...</source>
         <extracomment>2D Mapper big, bottom of screen help message</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3459"/>
-        <location filename="../src/T2DMap.cpp" line="5001"/>
+        <location filename="../src/T2DMap.cpp" line="3465"/>
+        <location filename="../src/T2DMap.cpp" line="5007"/>
         <source>Solid line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3460"/>
-        <location filename="../src/T2DMap.cpp" line="5002"/>
+        <location filename="../src/T2DMap.cpp" line="3466"/>
+        <location filename="../src/T2DMap.cpp" line="5008"/>
         <source>Dot line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3461"/>
-        <location filename="../src/T2DMap.cpp" line="5003"/>
+        <location filename="../src/T2DMap.cpp" line="3467"/>
+        <location filename="../src/T2DMap.cpp" line="5009"/>
         <source>Dash line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3462"/>
-        <location filename="../src/T2DMap.cpp" line="5004"/>
+        <location filename="../src/T2DMap.cpp" line="3468"/>
+        <location filename="../src/T2DMap.cpp" line="5010"/>
         <source>Dash-dot line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3463"/>
-        <location filename="../src/T2DMap.cpp" line="5005"/>
+        <location filename="../src/T2DMap.cpp" line="3469"/>
+        <location filename="../src/T2DMap.cpp" line="5011"/>
         <source>Dash-dot-dot line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3766"/>
+        <location filename="../src/T2DMap.cpp" line="3772"/>
         <source>Move the selection, centered on the highlighted room (%1) to:</source>
         <comment>%1 is a room number</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3772"/>
+        <location filename="../src/T2DMap.cpp" line="3778"/>
         <source>x coordinate (was %1):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3773"/>
+        <location filename="../src/T2DMap.cpp" line="3779"/>
         <source>y coordinate (was %1):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3774"/>
+        <location filename="../src/T2DMap.cpp" line="3780"/>
         <source>z coordinate (was %1):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3790"/>
+        <location filename="../src/T2DMap.cpp" line="3796"/>
         <source>OK</source>
         <extracomment>dialog (room(s) move) button</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3796"/>
+        <location filename="../src/T2DMap.cpp" line="3802"/>
         <source>Cancel</source>
         <extracomment>dialog (room(s) move) button</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="5149"/>
-        <location filename="../src/T2DMap.cpp" line="5183"/>
+        <location filename="../src/T2DMap.cpp" line="5155"/>
+        <location filename="../src/T2DMap.cpp" line="5189"/>
         <source>Left-click to add point, right-click to undo/change/finish...</source>
         <extracomment>2D Mapper big, bottom of screen help message</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="5194"/>
+        <location filename="../src/T2DMap.cpp" line="5200"/>
         <source>Left-click and drag a square for the size and position of your label</source>
         <extracomment>2D Mapper big, bottom of screen help message</extracomment>
         <translation type="unfinished"></translation>
@@ -1006,7 +1006,7 @@ please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2457"/>
+        <location filename="../src/T2DMap.cpp" line="2461"/>
         <source>render time: %1S mO: (%2,%3,%4)</source>
         <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
         <translation type="unfinished"></translation>
@@ -1017,12 +1017,12 @@ please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4035"/>
+        <location filename="../src/T2DMap.cpp" line="4041"/>
         <source>Spread out rooms</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4036"/>
+        <location filename="../src/T2DMap.cpp" line="4042"/>
         <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1031,12 +1031,12 @@ factor of:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4107"/>
+        <location filename="../src/T2DMap.cpp" line="4113"/>
         <source>Shrink in rooms</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4108"/>
+        <location filename="../src/T2DMap.cpp" line="4114"/>
         <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1045,23 +1045,23 @@ factor of:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4194"/>
+        <location filename="../src/T2DMap.cpp" line="4200"/>
         <source>Load Mudlet map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4196"/>
+        <location filename="../src/T2DMap.cpp" line="4202"/>
         <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
         <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4290"/>
+        <location filename="../src/T2DMap.cpp" line="4296"/>
         <source>This will create new area: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4306"/>
+        <location filename="../src/T2DMap.cpp" line="4312"/>
         <source>[ ERROR ] - Unable to add &quot;%1&quot; as an area to the map.
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
         <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
@@ -1069,7 +1069,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4314"/>
+        <location filename="../src/T2DMap.cpp" line="4320"/>
         <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1105,55 +1105,61 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
 <context>
     <name>TCommandLine</name>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="712"/>
-        <source>Add to user dictionary</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TCommandLine.cpp" line="714"/>
-        <source>Remove from user dictionary</source>
+        <location filename="../src/TCommandLine.cpp" line="68"/>
+        <location filename="../src/TCommandLine.cpp" line="1682"/>
+        <source>Show password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/TCommandLine.cpp" line="727"/>
+        <source>Add to user dictionary</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TCommandLine.cpp" line="729"/>
+        <source>Remove from user dictionary</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TCommandLine.cpp" line="742"/>
         <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
         <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="738"/>
+        <location filename="../src/TCommandLine.cpp" line="753"/>
         <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
         <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="808"/>
+        <location filename="../src/TCommandLine.cpp" line="823"/>
         <source>no suggestions (system)</source>
         <extracomment>Used when the command spelling checker using the selected system dictionary has no words to suggest.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="837"/>
+        <location filename="../src/TCommandLine.cpp" line="852"/>
         <source>no suggestions (shared)</source>
         <extracomment>Used when the command spelling checker using the dictionary shared between profile has no words to suggest.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="843"/>
+        <location filename="../src/TCommandLine.cpp" line="858"/>
         <source>no suggestions (profile)</source>
         <extracomment>Used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1388"/>
+        <location filename="../src/TCommandLine.cpp" line="1403"/>
         <source>Input line for &quot;%1&quot; profile.</source>
         <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1395"/>
-        <location filename="../src/TCommandLine.cpp" line="1428"/>
-        <location filename="../src/TCommandLine.cpp" line="1462"/>
+        <location filename="../src/TCommandLine.cpp" line="1410"/>
+        <location filename="../src/TCommandLine.cpp" line="1443"/>
+        <location filename="../src/TCommandLine.cpp" line="1477"/>
         <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
         <extracomment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.
 ----------
@@ -1163,15 +1169,15 @@ Accessibility-friendly description for the built-in command line of a console/wi
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1403"/>
+        <location filename="../src/TCommandLine.cpp" line="1418"/>
         <source>Input line.</source>
         <extracomment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1409"/>
-        <location filename="../src/TCommandLine.cpp" line="1443"/>
-        <location filename="../src/TCommandLine.cpp" line="1477"/>
+        <location filename="../src/TCommandLine.cpp" line="1424"/>
+        <location filename="../src/TCommandLine.cpp" line="1458"/>
+        <location filename="../src/TCommandLine.cpp" line="1492"/>
         <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
         <extracomment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.
 ----------
@@ -1181,166 +1187,171 @@ Accessibility-friendly description for the built-in command line of a console/wi
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1421"/>
+        <location filename="../src/TCommandLine.cpp" line="1436"/>
         <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
         <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1437"/>
+        <location filename="../src/TCommandLine.cpp" line="1452"/>
         <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
         <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1456"/>
+        <location filename="../src/TCommandLine.cpp" line="1471"/>
         <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
         <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TCommandLine.cpp" line="1470"/>
+        <location filename="../src/TCommandLine.cpp" line="1485"/>
         <source>Input line of &quot;%1&quot; window.</source>
         <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TCommandLine.cpp" line="1678"/>
+        <source>Hide password</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>TConsole</name>
     <message>
-        <location filename="../src/TConsole.cpp" line="89"/>
+        <location filename="../src/TConsole.cpp" line="90"/>
         <source>Debug Console</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="347"/>
+        <location filename="../src/TConsole.cpp" line="352"/>
         <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="362"/>
+        <location filename="../src/TConsole.cpp" line="367"/>
         <source>N:%1 S:%2</source>
         <extracomment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="370"/>
+        <location filename="../src/TConsole.cpp" line="375"/>
         <source>&lt;no GA&gt; S:%1</source>
         <extracomment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="1760"/>
+        <location filename="../src/TConsole.cpp" line="1792"/>
         <source>System Message: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="1052"/>
+        <location filename="../src/TConsole.cpp" line="1040"/>
         <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="1054"/>
+        <location filename="../src/TConsole.cpp" line="1042"/>
         <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2095"/>
+        <location filename="../src/TConsole.cpp" line="2127"/>
         <source>Debug messages from all profiles are shown here.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2098"/>
+        <location filename="../src/TConsole.cpp" line="2130"/>
         <source>Central debug console past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2100"/>
+        <location filename="../src/TConsole.cpp" line="2132"/>
         <source>Central debug console live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2103"/>
+        <location filename="../src/TConsole.cpp" line="2135"/>
         <source>Central debug console.</source>
         <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2112"/>
+        <location filename="../src/TConsole.cpp" line="2144"/>
         <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2114"/>
+        <location filename="../src/TConsole.cpp" line="2146"/>
         <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2117"/>
+        <location filename="../src/TConsole.cpp" line="2149"/>
         <source>Editor&apos;s error window past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2119"/>
+        <location filename="../src/TConsole.cpp" line="2151"/>
         <source>Editor&apos;s error window live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2125"/>
+        <location filename="../src/TConsole.cpp" line="2157"/>
         <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
         <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2128"/>
+        <location filename="../src/TConsole.cpp" line="2160"/>
         <source>Editor&apos;s error window</source>
         <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2135"/>
+        <location filename="../src/TConsole.cpp" line="2167"/>
         <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="234"/>
+        <location filename="../src/TConsole.cpp" line="237"/>
         <source>main window</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="414"/>
+        <location filename="../src/TConsole.cpp" line="419"/>
         <source>Search buffer.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="417"/>
-        <location filename="../src/TConsole.cpp" line="420"/>
+        <location filename="../src/TConsole.cpp" line="422"/>
+        <location filename="../src/TConsole.cpp" line="425"/>
         <source>Search Options</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="424"/>
+        <location filename="../src/TConsole.cpp" line="429"/>
         <source>Case sensitive</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="426"/>
+        <location filename="../src/TConsole.cpp" line="431"/>
         <source>Match case precisely</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="439"/>
+        <location filename="../src/TConsole.cpp" line="444"/>
         <source>Earlier search result.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="449"/>
+        <location filename="../src/TConsole.cpp" line="454"/>
         <source>Later search result.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1360,196 +1371,196 @@ Accessibility-friendly description for the built-in command line of a console/wi
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="1887"/>
-        <location filename="../src/TConsole.cpp" line="1931"/>
+        <location filename="../src/TConsole.cpp" line="1919"/>
+        <location filename="../src/TConsole.cpp" line="1963"/>
         <source>No search results, sorry!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2094"/>
+        <location filename="../src/TConsole.cpp" line="2126"/>
         <source>Debug Console.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2144"/>
+        <location filename="../src/TConsole.cpp" line="2176"/>
         <source>Profile &quot;%1&quot; main window past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2146"/>
+        <location filename="../src/TConsole.cpp" line="2178"/>
         <source>Profile &quot;%1&quot; main window live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2149"/>
+        <location filename="../src/TConsole.cpp" line="2181"/>
         <source>Profile main window past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2151"/>
+        <location filename="../src/TConsole.cpp" line="2183"/>
         <source>Profile main window live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2156"/>
+        <location filename="../src/TConsole.cpp" line="2188"/>
         <source>Profile &quot;%1&quot; main window.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2159"/>
+        <location filename="../src/TConsole.cpp" line="2191"/>
         <source>Profile main window.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2174"/>
+        <location filename="../src/TConsole.cpp" line="2206"/>
         <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2176"/>
+        <location filename="../src/TConsole.cpp" line="2208"/>
         <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2179"/>
+        <location filename="../src/TConsole.cpp" line="2211"/>
         <source>Profile embedded window &quot;%1&quot; past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2181"/>
+        <location filename="../src/TConsole.cpp" line="2213"/>
         <source>Profile embedded window &quot;%1&quot; live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2186"/>
+        <location filename="../src/TConsole.cpp" line="2218"/>
         <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2189"/>
+        <location filename="../src/TConsole.cpp" line="2221"/>
         <source>Profile embedded window &quot;%1&quot;.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2204"/>
+        <location filename="../src/TConsole.cpp" line="2236"/>
         <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2206"/>
+        <location filename="../src/TConsole.cpp" line="2238"/>
         <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2209"/>
+        <location filename="../src/TConsole.cpp" line="2241"/>
         <source>Profile user window &quot;%1&quot; past content.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2211"/>
+        <location filename="../src/TConsole.cpp" line="2243"/>
         <source>Profile user window &quot;%1&quot; live content.</source>
         <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2216"/>
+        <location filename="../src/TConsole.cpp" line="2248"/>
         <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2219"/>
+        <location filename="../src/TConsole.cpp" line="2251"/>
         <source>Profile user window &quot;%1&quot;.</source>
         <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2108"/>
+        <location filename="../src/TConsole.cpp" line="2140"/>
         <source>Error Console in editor.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="311"/>
+        <location filename="../src/TConsole.cpp" line="316"/>
         <source>Toggle time stamps</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="325"/>
+        <location filename="../src/TConsole.cpp" line="330"/>
         <source>Toggle recording of replays</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="334"/>
+        <location filename="../src/TConsole.cpp" line="339"/>
         <source>Toggle logging</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="389"/>
+        <location filename="../src/TConsole.cpp" line="394"/>
         <source>Emergency stop! Stop all scripts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2121"/>
+        <location filename="../src/TConsole.cpp" line="2153"/>
         <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2131"/>
+        <location filename="../src/TConsole.cpp" line="2163"/>
         <source>Error messages are shown here in the editor.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2137"/>
+        <location filename="../src/TConsole.cpp" line="2169"/>
         <source>Main Window for &quot;%1&quot; profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2139"/>
+        <location filename="../src/TConsole.cpp" line="2171"/>
         <source>Main Window.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2166"/>
+        <location filename="../src/TConsole.cpp" line="2198"/>
         <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2168"/>
+        <location filename="../src/TConsole.cpp" line="2200"/>
         <source>Embedded window &quot;%1&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2170"/>
+        <location filename="../src/TConsole.cpp" line="2202"/>
         <source>Game content or locally generated text may be sent here.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2196"/>
+        <location filename="../src/TConsole.cpp" line="2228"/>
         <source>User window &quot;%1&quot; for &quot;%2&quot; profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2198"/>
+        <location filename="../src/TConsole.cpp" line="2230"/>
         <source>User window &quot;%1&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2200"/>
+        <location filename="../src/TConsole.cpp" line="2232"/>
         <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1570,110 +1581,110 @@ Accessibility-friendly description for the built-in command line of a console/wi
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="4162"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="4196"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4170"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4204"/>
         <source>ERROR</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5649"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5658"/>
         <source>Some functions may not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="4980"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4988"/>
         <source>No error message available from Lua</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="4165"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="4184"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4173"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4192"/>
         <source>object</source>
         <extracomment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="4168"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="4187"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4176"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4195"/>
         <source>function</source>
         <extracomment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="4982"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4990"/>
         <source>Lua error: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="4990"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="4998"/>
         <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
         <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5636"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5645"/>
         <source>Probably will not be able to access Mudlet Lua code.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5654"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5663"/>
         <source>Database support will not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5661"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5670"/>
         <source>utf8.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5667"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5676"/>
         <source>yajl.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5855"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5864"/>
         <source>No error message available from Lua.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5857"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5866"/>
         <source>Lua error: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5859"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5868"/>
         <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5941"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5950"/>
         <source>%1 (doesn&apos;t exist)</source>
         <comment>This file doesn&apos;t exist</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5946"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5955"/>
         <source>%1 (isn&apos;t a file or symlink to a file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5959"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5968"/>
         <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5981"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5990"/>
         <source>%1 (couldn&apos;t read file)</source>
         <comment>This file could not be read for some reason (for example, no permission)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5987"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5996"/>
         <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5994"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="6003"/>
         <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -1683,151 +1694,151 @@ Tried these locations:
 <context>
     <name>TMainConsole</name>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="256"/>
+        <location filename="../src/TMainConsole.cpp" line="258"/>
         <source>Mudlet MUD Client version: %1%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="258"/>
+        <location filename="../src/TMainConsole.cpp" line="260"/>
         <source>Mudlet, log from %1 profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="320"/>
+        <location filename="../src/TMainConsole.cpp" line="322"/>
         <source>Stop logging game output to log file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="216"/>
+        <location filename="../src/TMainConsole.cpp" line="218"/>
         <source>Logging has started. Log file is %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="180"/>
+        <location filename="../src/TMainConsole.cpp" line="182"/>
         <source>logfile</source>
         <extracomment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="226"/>
+        <location filename="../src/TMainConsole.cpp" line="228"/>
         <source>Logging has been stopped. Log file is %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="295"/>
-        <location filename="../src/TMainConsole.cpp" line="317"/>
+        <location filename="../src/TMainConsole.cpp" line="297"/>
+        <location filename="../src/TMainConsole.cpp" line="319"/>
         <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
         <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="325"/>
+        <location filename="../src/TMainConsole.cpp" line="327"/>
         <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
         <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="336"/>
+        <location filename="../src/TMainConsole.cpp" line="338"/>
         <source>Start logging game output to log file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="688"/>
+        <location filename="../src/TMainConsole.cpp" line="690"/>
         <source>Pre-Map loading(2) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="699"/>
+        <location filename="../src/TMainConsole.cpp" line="701"/>
         <source>Loading map(2) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1111"/>
+        <location filename="../src/TMainConsole.cpp" line="1113"/>
         <source>User window - %1 - %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1173"/>
+        <location filename="../src/TMainConsole.cpp" line="1175"/>
         <source>N:%1 S:%2</source>
         <extracomment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1182"/>
+        <location filename="../src/TMainConsole.cpp" line="1184"/>
         <source>&lt;no GA&gt; S:%1</source>
         <extracomment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1280"/>
+        <location filename="../src/TMainConsole.cpp" line="1282"/>
         <source>Pre-Map loading(1) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1298"/>
+        <location filename="../src/TMainConsole.cpp" line="1300"/>
         <source>Loading map(1) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1300"/>
+        <location filename="../src/TMainConsole.cpp" line="1302"/>
         <source>Loading map(1) &quot;%1&quot; at %2 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1344"/>
+        <location filename="../src/TMainConsole.cpp" line="1346"/>
         <source>Pre-Map importing(1) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1367"/>
+        <location filename="../src/TMainConsole.cpp" line="1369"/>
         <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1373"/>
+        <location filename="../src/TMainConsole.cpp" line="1375"/>
         <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1382"/>
+        <location filename="../src/TMainConsole.cpp" line="1384"/>
         <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1389"/>
+        <location filename="../src/TMainConsole.cpp" line="1391"/>
         <source>Importing map(1) &quot;%1&quot; at %2 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1392"/>
+        <location filename="../src/TMainConsole.cpp" line="1394"/>
         <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1395"/>
+        <location filename="../src/TMainConsole.cpp" line="1397"/>
         <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1419"/>
+        <location filename="../src/TMainConsole.cpp" line="1421"/>
         <source>[ INFO ]  - Map reload request received from system...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1424"/>
+        <location filename="../src/TMainConsole.cpp" line="1426"/>
         <source>[  OK  ]  - ... System Map reload request completed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1426"/>
+        <location filename="../src/TMainConsole.cpp" line="1428"/>
         <source>[ WARN ]  - ... System Map reload request failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1453"/>
+        <location filename="../src/TMainConsole.cpp" line="1455"/>
         <source>+--------------------------------------------------------------+
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
@@ -1835,94 +1846,94 @@ Tried these locations:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1464"/>
+        <location filename="../src/TMainConsole.cpp" line="1466"/>
         <source>GMCP events:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1469"/>
+        <location filename="../src/TMainConsole.cpp" line="1471"/>
         <source>ATCP events:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1474"/>
+        <location filename="../src/TMainConsole.cpp" line="1476"/>
         <source>Channel102 events:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1479"/>
+        <location filename="../src/TMainConsole.cpp" line="1481"/>
         <source>MXP events:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1484"/>
+        <location filename="../src/TMainConsole.cpp" line="1486"/>
         <source>MSSP events:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1490"/>
+        <location filename="../src/TMainConsole.cpp" line="1492"/>
         <source>MSDP events:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1502"/>
+        <location filename="../src/TMainConsole.cpp" line="1504"/>
         <source>Trigger Report:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1507"/>
+        <location filename="../src/TMainConsole.cpp" line="1509"/>
         <source>Timer Report:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1512"/>
+        <location filename="../src/TMainConsole.cpp" line="1514"/>
         <source>Alias Report:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1517"/>
+        <location filename="../src/TMainConsole.cpp" line="1519"/>
         <source>Keybinding Report:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1522"/>
+        <location filename="../src/TMainConsole.cpp" line="1524"/>
         <source>Script Report:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1527"/>
+        <location filename="../src/TMainConsole.cpp" line="1529"/>
         <source>Gif Report:</source>
         <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1582"/>
+        <location filename="../src/TMainConsole.cpp" line="1584"/>
         <source>Save profile?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1582"/>
+        <location filename="../src/TMainConsole.cpp" line="1584"/>
         <source>Do you want to save the profile %1?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1596"/>
+        <location filename="../src/TMainConsole.cpp" line="1598"/>
         <source>Could not save profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMainConsole.cpp" line="1597"/>
+        <location filename="../src/TMainConsole.cpp" line="1599"/>
         <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -2997,494 +3008,494 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 <context>
     <name>TTextEdit</name>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1849"/>
+        <location filename="../src/TTextEdit.cpp" line="1804"/>
         <source>Copy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1860"/>
+        <location filename="../src/TTextEdit.cpp" line="1815"/>
         <source>Copy HTML</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1864"/>
+        <location filename="../src/TTextEdit.cpp" line="1819"/>
         <source>Copy as image</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1867"/>
+        <location filename="../src/TTextEdit.cpp" line="1822"/>
         <source>Select All</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1872"/>
+        <location filename="../src/TTextEdit.cpp" line="1827"/>
         <source>Search on %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1891"/>
+        <location filename="../src/TTextEdit.cpp" line="1846"/>
         <source>Analyse characters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1900"/>
+        <location filename="../src/TTextEdit.cpp" line="1855"/>
         <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1909"/>
+        <location filename="../src/TTextEdit.cpp" line="1864"/>
         <source>restore Main menu</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1911"/>
+        <location filename="../src/TTextEdit.cpp" line="1866"/>
         <source>Use this to restore the Main menu to get access to controls.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1913"/>
+        <location filename="../src/TTextEdit.cpp" line="1868"/>
         <source>restore Main Toolbar</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1915"/>
+        <location filename="../src/TTextEdit.cpp" line="1870"/>
         <source>Use this to restore the Main Toolbar to get access to controls.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1923"/>
+        <location filename="../src/TTextEdit.cpp" line="1878"/>
         <source>Clear console</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1926"/>
+        <location filename="../src/TTextEdit.cpp" line="1881"/>
         <source>*** starting new session ***</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2143"/>
+        <location filename="../src/TTextEdit.cpp" line="2082"/>
         <source>{tab}</source>
         <extracomment>Unicode U+0009 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2145"/>
+        <location filename="../src/TTextEdit.cpp" line="2084"/>
         <source>{line-feed}</source>
         <extracomment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2147"/>
+        <location filename="../src/TTextEdit.cpp" line="2086"/>
         <source>{carriage-return}</source>
         <extracomment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2149"/>
+        <location filename="../src/TTextEdit.cpp" line="2088"/>
         <source>{space}</source>
         <extracomment>Unicode U+0020 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2151"/>
+        <location filename="../src/TTextEdit.cpp" line="2090"/>
         <source>{non-breaking space}</source>
         <extracomment>Unicode U+00A0 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2153"/>
+        <location filename="../src/TTextEdit.cpp" line="2092"/>
         <source>{soft hyphen}</source>
         <extracomment>Unicode U+00AD codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2155"/>
+        <location filename="../src/TTextEdit.cpp" line="2094"/>
         <source>{combining grapheme joiner}</source>
         <extracomment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2157"/>
+        <location filename="../src/TTextEdit.cpp" line="2096"/>
         <source>{ogham space mark}</source>
         <extracomment>Unicode U+1680 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2159"/>
+        <location filename="../src/TTextEdit.cpp" line="2098"/>
         <source>{&apos;n&apos; quad}</source>
         <extracomment>Unicode U+2000 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2161"/>
+        <location filename="../src/TTextEdit.cpp" line="2100"/>
         <source>{&apos;m&apos; quad}</source>
         <extracomment>Unicode U+2001 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2163"/>
+        <location filename="../src/TTextEdit.cpp" line="2102"/>
         <source>{&apos;n&apos; space}</source>
         <extracomment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2165"/>
+        <location filename="../src/TTextEdit.cpp" line="2104"/>
         <source>{&apos;m&apos; space}</source>
         <extracomment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2167"/>
+        <location filename="../src/TTextEdit.cpp" line="2106"/>
         <source>{3-per-em space}</source>
         <extracomment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2169"/>
+        <location filename="../src/TTextEdit.cpp" line="2108"/>
         <source>{4-per-em space}</source>
         <extracomment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2171"/>
+        <location filename="../src/TTextEdit.cpp" line="2110"/>
         <source>{6-per-em space}</source>
         <extracomment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2173"/>
+        <location filename="../src/TTextEdit.cpp" line="2112"/>
         <source>{digit space}</source>
         <extracomment>Unicode U+2007 codepoint - figure (digit) wide space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2175"/>
+        <location filename="../src/TTextEdit.cpp" line="2114"/>
         <source>{punctuation wide space}</source>
         <extracomment>Unicode U+2008 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2177"/>
+        <location filename="../src/TTextEdit.cpp" line="2116"/>
         <source>{5-per-em space}</source>
         <extracomment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2179"/>
+        <location filename="../src/TTextEdit.cpp" line="2118"/>
         <source>{hair width space}</source>
         <extracomment>Unicode U+200A codepoint - thinnest space.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2181"/>
+        <location filename="../src/TTextEdit.cpp" line="2120"/>
         <source>{zero width space}</source>
         <extracomment>Unicode U+200B codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2183"/>
+        <location filename="../src/TTextEdit.cpp" line="2122"/>
         <source>{Zero width non-joiner}</source>
         <extracomment>Unicode U+200C codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2185"/>
+        <location filename="../src/TTextEdit.cpp" line="2124"/>
         <source>{zero width joiner}</source>
         <extracomment>Unicode U+200D codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2187"/>
+        <location filename="../src/TTextEdit.cpp" line="2126"/>
         <source>{left-to-right mark}</source>
         <extracomment>Unicode U+200E codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2189"/>
+        <location filename="../src/TTextEdit.cpp" line="2128"/>
         <source>{right-to-left mark}</source>
         <extracomment>Unicode U+200F codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2191"/>
+        <location filename="../src/TTextEdit.cpp" line="2130"/>
         <source>{line separator}</source>
         <extracomment>Unicode 0x2028 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2193"/>
+        <location filename="../src/TTextEdit.cpp" line="2132"/>
         <source>{paragraph separator}</source>
         <extracomment>Unicode U+2029 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2195"/>
+        <location filename="../src/TTextEdit.cpp" line="2134"/>
         <source>{Left-to-right embedding}</source>
         <extracomment>Unicode U+202A codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2197"/>
+        <location filename="../src/TTextEdit.cpp" line="2136"/>
         <source>{right-to-left embedding}</source>
         <extracomment>Unicode U+202B codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2199"/>
+        <location filename="../src/TTextEdit.cpp" line="2138"/>
         <source>{pop directional formatting}</source>
         <extracomment>Unicode U+202C codepoint - pop (undo last) directional formatting.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2201"/>
+        <location filename="../src/TTextEdit.cpp" line="2140"/>
         <source>{Left-to-right override}</source>
         <extracomment>Unicode U+202D codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2203"/>
+        <location filename="../src/TTextEdit.cpp" line="2142"/>
         <source>{right-to-left override}</source>
         <extracomment>Unicode U+202E codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2205"/>
+        <location filename="../src/TTextEdit.cpp" line="2144"/>
         <source>{narrow width no-break space}</source>
         <extracomment>Unicode U+202F codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2207"/>
+        <location filename="../src/TTextEdit.cpp" line="2146"/>
         <source>{medium width mathematical space}</source>
         <extracomment>Unicode U+205F codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2209"/>
+        <location filename="../src/TTextEdit.cpp" line="2148"/>
         <source>{zero width non-breaking space}</source>
         <extracomment>Unicode U+2060 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2211"/>
+        <location filename="../src/TTextEdit.cpp" line="2150"/>
         <source>{function application}</source>
         <extracomment>Unicode U+2061 codepoint - function application (whatever that means!)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2213"/>
+        <location filename="../src/TTextEdit.cpp" line="2152"/>
         <source>{invisible times}</source>
         <extracomment>Unicode U+2062 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2215"/>
+        <location filename="../src/TTextEdit.cpp" line="2154"/>
         <source>{invisible separator}</source>
         <extracomment>Unicode U+2063 codepoint - invisible separator or comma.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2217"/>
+        <location filename="../src/TTextEdit.cpp" line="2156"/>
         <source>{invisible plus}</source>
         <extracomment>Unicode U+2064 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2219"/>
+        <location filename="../src/TTextEdit.cpp" line="2158"/>
         <source>{left-to-right isolate}</source>
         <extracomment>Unicode U+2066 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2221"/>
+        <location filename="../src/TTextEdit.cpp" line="2160"/>
         <source>{right-to-left isolate}</source>
         <extracomment>Unicode U+2067 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2223"/>
+        <location filename="../src/TTextEdit.cpp" line="2162"/>
         <source>{first strong isolate}</source>
         <extracomment>Unicode U+2068 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2225"/>
+        <location filename="../src/TTextEdit.cpp" line="2164"/>
         <source>{pop directional isolate}</source>
         <extracomment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2227"/>
+        <location filename="../src/TTextEdit.cpp" line="2166"/>
         <source>{inhibit symmetrical swapping}</source>
         <extracomment>Unicode U+206A codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2229"/>
+        <location filename="../src/TTextEdit.cpp" line="2168"/>
         <source>{activate symmetrical swapping}</source>
         <extracomment>Unicode U+206B codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2231"/>
+        <location filename="../src/TTextEdit.cpp" line="2170"/>
         <source>{inhibit arabic form-shaping}</source>
         <extracomment>Unicode U+206C codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2233"/>
+        <location filename="../src/TTextEdit.cpp" line="2172"/>
         <source>{activate arabic form-shaping}</source>
         <extracomment>Unicode U+206D codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2235"/>
+        <location filename="../src/TTextEdit.cpp" line="2174"/>
         <source>{national digit shapes}</source>
         <extracomment>Unicode U+206E codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2237"/>
+        <location filename="../src/TTextEdit.cpp" line="2176"/>
         <source>{nominal Digit shapes}</source>
         <extracomment>Unicode U+206F codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2239"/>
+        <location filename="../src/TTextEdit.cpp" line="2178"/>
         <source>{ideographic space}</source>
         <extracomment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2241"/>
+        <location filename="../src/TTextEdit.cpp" line="2180"/>
         <source>{variation selector 1}</source>
         <extracomment>Unicode U+FE00 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2243"/>
+        <location filename="../src/TTextEdit.cpp" line="2182"/>
         <source>{variation selector 2}</source>
         <extracomment>Unicode U+FE01 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2245"/>
+        <location filename="../src/TTextEdit.cpp" line="2184"/>
         <source>{variation selector 3}</source>
         <extracomment>Unicode U+FE02 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2247"/>
+        <location filename="../src/TTextEdit.cpp" line="2186"/>
         <source>{variation selector 4}</source>
         <extracomment>Unicode U+FE03 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2249"/>
+        <location filename="../src/TTextEdit.cpp" line="2188"/>
         <source>{variation selector 5}</source>
         <extracomment>Unicode U+FE04 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2251"/>
+        <location filename="../src/TTextEdit.cpp" line="2190"/>
         <source>{variation selector 6}</source>
         <extracomment>Unicode U+FE05 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2253"/>
+        <location filename="../src/TTextEdit.cpp" line="2192"/>
         <source>{variation selector 7}</source>
         <extracomment>Unicode U+FE06 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2255"/>
+        <location filename="../src/TTextEdit.cpp" line="2194"/>
         <source>{variation selector 8}</source>
         <extracomment>Unicode U+FE07 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2257"/>
+        <location filename="../src/TTextEdit.cpp" line="2196"/>
         <source>{variation selector 9}</source>
         <extracomment>Unicode U+FE08 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2259"/>
+        <location filename="../src/TTextEdit.cpp" line="2198"/>
         <source>{variation selector 10}</source>
         <extracomment>Unicode U+FE09 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2261"/>
+        <location filename="../src/TTextEdit.cpp" line="2200"/>
         <source>{variation selector 11}</source>
         <extracomment>Unicode U+FE0A codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2263"/>
+        <location filename="../src/TTextEdit.cpp" line="2202"/>
         <source>{variation selector 12}</source>
         <extracomment>Unicode U+FE0B codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2265"/>
+        <location filename="../src/TTextEdit.cpp" line="2204"/>
         <source>{variation selector 13}</source>
         <extracomment>Unicode U+FE0C codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2267"/>
+        <location filename="../src/TTextEdit.cpp" line="2206"/>
         <source>{variation selector 14}</source>
         <extracomment>Unicode U+FE0D codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2269"/>
+        <location filename="../src/TTextEdit.cpp" line="2208"/>
         <source>{variation selector 15}</source>
         <extracomment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2271"/>
+        <location filename="../src/TTextEdit.cpp" line="2210"/>
         <source>{variation selector 16}</source>
         <extracomment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2273"/>
+        <location filename="../src/TTextEdit.cpp" line="2212"/>
         <source>{zero width no-break space}</source>
         <extracomment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2281"/>
+        <location filename="../src/TTextEdit.cpp" line="2220"/>
         <source>{interlinear annotation anchor}</source>
         <extracomment>Unicode U+FFF9 codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2283"/>
+        <location filename="../src/TTextEdit.cpp" line="2222"/>
         <source>{interlinear annotation separator}</source>
         <extracomment>Unicode U+FFFA codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2285"/>
+        <location filename="../src/TTextEdit.cpp" line="2224"/>
         <source>{interlinear annotation terminator}</source>
         <extracomment>Unicode U+FFFB codepoint</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2287"/>
+        <location filename="../src/TTextEdit.cpp" line="2226"/>
         <source>{object replacement character}</source>
         <extracomment>Unicode U+FFFC codepoint.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2300"/>
-        <location filename="../src/TTextEdit.cpp" line="2303"/>
-        <location filename="../src/TTextEdit.cpp" line="2326"/>
+        <location filename="../src/TTextEdit.cpp" line="2239"/>
+        <location filename="../src/TTextEdit.cpp" line="2242"/>
+        <location filename="../src/TTextEdit.cpp" line="2265"/>
         <source>{noncharacter}</source>
         <extracomment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character
 ----------
@@ -3494,94 +3505,94 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2313"/>
+        <location filename="../src/TTextEdit.cpp" line="2252"/>
         <source>{FitzPatrick modifier 1 or 2}</source>
         <extracomment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2315"/>
+        <location filename="../src/TTextEdit.cpp" line="2254"/>
         <source>{FitzPatrick modifier 3}</source>
         <extracomment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2317"/>
+        <location filename="../src/TTextEdit.cpp" line="2256"/>
         <source>{FitzPatrick modifier 4}</source>
         <extracomment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2319"/>
+        <location filename="../src/TTextEdit.cpp" line="2258"/>
         <source>{FitzPatrick modifier 5}</source>
         <extracomment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2321"/>
+        <location filename="../src/TTextEdit.cpp" line="2260"/>
         <source>{FitzPatrick modifier 6}</source>
         <extracomment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2619"/>
-        <location filename="../src/TTextEdit.cpp" line="2685"/>
+        <location filename="../src/TTextEdit.cpp" line="2558"/>
+        <location filename="../src/TTextEdit.cpp" line="2624"/>
         <source>Index (UTF-16)</source>
         <extracomment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2624"/>
-        <location filename="../src/TTextEdit.cpp" line="2690"/>
+        <location filename="../src/TTextEdit.cpp" line="2563"/>
+        <location filename="../src/TTextEdit.cpp" line="2629"/>
         <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
         <extracomment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2629"/>
-        <location filename="../src/TTextEdit.cpp" line="2695"/>
+        <location filename="../src/TTextEdit.cpp" line="2568"/>
+        <location filename="../src/TTextEdit.cpp" line="2634"/>
         <source>Visual</source>
         <extracomment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2634"/>
-        <location filename="../src/TTextEdit.cpp" line="2700"/>
+        <location filename="../src/TTextEdit.cpp" line="2573"/>
+        <location filename="../src/TTextEdit.cpp" line="2639"/>
         <source>Index (UTF-8)</source>
         <extracomment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2639"/>
-        <location filename="../src/TTextEdit.cpp" line="2705"/>
+        <location filename="../src/TTextEdit.cpp" line="2578"/>
+        <location filename="../src/TTextEdit.cpp" line="2644"/>
         <source>Byte</source>
         <extracomment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="2645"/>
-        <location filename="../src/TTextEdit.cpp" line="2711"/>
+        <location filename="../src/TTextEdit.cpp" line="2584"/>
+        <location filename="../src/TTextEdit.cpp" line="2650"/>
         <source>Lua character or code</source>
         <extracomment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}&quot;</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1486"/>
+        <location filename="../src/TTextEdit.cpp" line="1447"/>
         <source>Mudlet, debug console extract</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1488"/>
+        <location filename="../src/TTextEdit.cpp" line="1449"/>
         <source>Mudlet, %1 mini-console extract from %2 profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1490"/>
+        <location filename="../src/TTextEdit.cpp" line="1451"/>
         <source>Mudlet, %1 user window extract from %2 profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TTextEdit.cpp" line="1492"/>
+        <location filename="../src/TTextEdit.cpp" line="1453"/>
         <source>Mudlet, main console extract from %1 profile</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4791,145 +4802,145 @@ Count</source>
 <context>
     <name>directions</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5704"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5713"/>
         <source>north</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5706"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5715"/>
         <source>n</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5708"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5717"/>
         <source>east</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5710"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5719"/>
         <source>e</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5712"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5721"/>
         <source>south</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5714"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5723"/>
         <source>s</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5716"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5725"/>
         <source>west</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5718"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5727"/>
         <source>w</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5720"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5729"/>
         <source>northeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5722"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5731"/>
         <source>ne</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5724"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5733"/>
         <source>southeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5726"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5735"/>
         <source>se</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5728"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5737"/>
         <source>southwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5730"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5739"/>
         <source>sw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5732"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5741"/>
         <source>northwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5734"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5743"/>
         <source>nw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5736"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5745"/>
         <source>in</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5738"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5747"/>
         <source>i</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5740"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5749"/>
         <source>out</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5742"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5751"/>
         <source>o</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5744"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5753"/>
         <source>up</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5746"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5755"/>
         <source>u</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5748"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5757"/>
         <source>down</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="5750"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="5759"/>
         <source>d</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
@@ -6345,89 +6356,89 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="714"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="708"/>
         <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="842"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="830"/>
         <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="844"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="832"/>
         <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="845"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="833"/>
         <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="848"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="836"/>
         <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="849"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="837"/>
         <source>Named file (concatenate logs in one file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="923"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="910"/>
         <source>Other profiles to Map to:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="964"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="951"/>
         <source>%1 {Default, recommended}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="976"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="963"/>
         <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="978"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="965"/>
         <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="987"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="974"/>
         <source>2D Map Room Symbol scaling factor:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1007"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="994"/>
         <source>Show &quot;%1&quot; in the map area selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1047"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1034"/>
         <source>%1 (*Error, report to Mudlet Makers*)</source>
         <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1174"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4302"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1161"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4219"/>
         <source>Profile preferences - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1486"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1478"/>
         <source>Profile preferences</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2459"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2376"/>
         <source>Load Mudlet map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2399"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2316"/>
         <source>Loading map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6439,7 +6450,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     </message>
     <message numerus="yes">
         <location filename="../src/dlgProfilePreferences.cpp" line="148"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3236"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3153"/>
         <source>copy to %n destination(s)</source>
         <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
         <translation type="unfinished">
@@ -6453,93 +6464,93 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="873"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="860"/>
         <source>Protocols</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="877"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="864"/>
         <source>GMCP: Generic Mud Communication Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="882"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="869"/>
         <source>MSDP: Mud Server Data Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="887"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="874"/>
         <source>MSSP: Mud Server Status Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="892"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="879"/>
         <source>MSP: Mud Sound Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="897"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="884"/>
         <source>MXP: Mud eXtension Protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="902"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="889"/>
         <source>MTTS: Mud Terminal Type Standard</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="907"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="894"/>
         <source>MNES: Mud New-Environ Standard</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="1779"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="1771"/>
         <source>Pick color</source>
         <extracomment>Generic pick color dialog title</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2423"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2340"/>
         <source>Loaded map from %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2425"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2342"/>
         <source>Could not load map from %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2490"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2407"/>
         <source>Save Mudlet map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2518"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2435"/>
         <source>Saving map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2535"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2452"/>
         <source>Saved map to %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2537"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2454"/>
         <source>Could not save map to %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2568"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2485"/>
         <source>Migrating passwords to secure storage...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2575"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2492"/>
         <source>Migrating passwords to profiles...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2607"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2524"/>
         <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -6547,52 +6558,52 @@ and there is enough space. The copying operation has failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2614"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2531"/>
         <source>Creating a destination directory failed...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2698"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2615"/>
         <source>Backing up current map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2708"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2625"/>
         <source>Could not backup the map - saving it failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2733"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2650"/>
         <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2745"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2662"/>
         <source>Copying over map to %1 - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2751"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2668"/>
         <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2755"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2672"/>
         <source>Map copied successfully to other profile %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2767"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2684"/>
         <source>Map copied, now signalling other profiles to reload it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2806"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2723"/>
         <source>Where should Mudlet save log files?</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/dlgProfilePreferences.cpp" line="3243"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3160"/>
         <source>%n selected - change destinations...</source>
         <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
         <translation type="unfinished">
@@ -6600,130 +6611,130 @@ and there is enough space. The copying operation has failed.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3250"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3167"/>
         <source>pick destinations...</source>
         <extracomment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3487"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3404"/>
         <source>Could not update themes: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3490"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3407"/>
         <source>Updating themes from colorsublime.github.io...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3609"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3526"/>
         <source>{missing, possibly recently deleted trigger item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3612"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3529"/>
         <source>{missing, possibly recently deleted alias item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3615"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3532"/>
         <source>{missing, possibly recently deleted script item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3618"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3535"/>
         <source>{missing, possibly recently deleted timer item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3621"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3538"/>
         <source>{missing, possibly recently deleted key item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3624"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3541"/>
         <source>{missing, possibly recently deleted button item}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3748"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3665"/>
         <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3753"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3670"/>
         <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3793"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3710"/>
         <source>How many rooms in the whole map have this symbol.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3811"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3728"/>
         <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3819"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3736"/>
         <source>The symbol can be made entirely from glyphs in the specified font.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3837"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3754"/>
         <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3930"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3847"/>
         <source>Large icon</source>
         <extracomment>Discord Rich Presence large icon</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3932"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3849"/>
         <source>Detail</source>
         <extracomment>Discord Rich Presence detail</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3935"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3852"/>
         <source>Small icon</source>
         <extracomment>Discord Rich Presence small icon&quot;</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3937"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3854"/>
         <source>State</source>
         <extracomment>Discord Rich Presence state</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3940"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3857"/>
         <source>Party size</source>
         <extracomment>Discord Rich Presence party size</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3942"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3859"/>
         <source>Party max</source>
         <extracomment>Discord Rich Presence maximum party size</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3944"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3861"/>
         <source>Time</source>
         <extracomment>Discord Rich Presence time until or time elapsed</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4434"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4351"/>
         <source>Set outer color of player room mark.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4435"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4352"/>
         <source>Set inner color of player room mark.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -6758,130 +6769,130 @@ and there is enough space. The copying operation has failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="686"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="680"/>
         <source>Enable spell check using dictionary:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="716"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="710"/>
         <source>%1 - not recognised</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="717"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="711"/>
         <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="734"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="728"/>
         <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2410"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2327"/>
         <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2451"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2368"/>
         <source>Any map file (*.dat *.json *.xml)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2452"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2485"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2369"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2402"/>
         <source>Mudlet binary map (*.dat)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2453"/>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2486"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2370"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2403"/>
         <source>Mudlet JSON map (*.json)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2454"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2371"/>
         <source>Mudlet XML map (*.xml)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="2455"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="2372"/>
         <source>Any file (*)</source>
         <comment>Do not change extensions (in braces) as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3781"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3698"/>
         <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3805"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3722"/>
         <source>more - not shown...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3828"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3745"/>
         <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="3979"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3896"/>
         <source>Map symbol usage - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4060"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3977"/>
         <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4061"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3978"/>
         <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4062"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3979"/>
         <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4063"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3980"/>
         <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4066"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3983"/>
         <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4067"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3984"/>
         <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4068"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3985"/>
         <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4069"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="3986"/>
         <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4546"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4463"/>
         <source>Deleting map - please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgProfilePreferences.cpp" line="4555"/>
+        <location filename="../src/dlgProfilePreferences.cpp" line="4472"/>
         <source>Deleted map.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7246,7 +7257,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="407"/>
         <location filename="../src/dlgTriggerEditor.cpp" line="6717"/>
-        <location filename="../src/dlgTriggerEditor.h" line="473"/>
+        <location filename="../src/dlgTriggerEditor.h" line="474"/>
         <source>Triggers</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7259,7 +7270,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
         <location filename="../src/dlgTriggerEditor.cpp" line="6745"/>
-        <location filename="../src/dlgTriggerEditor.h" line="479"/>
+        <location filename="../src/dlgTriggerEditor.h" line="480"/>
         <source>Buttons</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7271,7 +7282,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="412"/>
-        <location filename="../src/dlgTriggerEditor.h" line="474"/>
+        <location filename="../src/dlgTriggerEditor.h" line="475"/>
         <source>Aliases</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7284,7 +7295,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
         <location filename="../src/dlgTriggerEditor.cpp" line="6724"/>
-        <location filename="../src/dlgTriggerEditor.h" line="476"/>
+        <location filename="../src/dlgTriggerEditor.h" line="477"/>
         <source>Timers</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7297,7 +7308,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="417"/>
         <location filename="../src/dlgTriggerEditor.cpp" line="6731"/>
-        <location filename="../src/dlgTriggerEditor.h" line="475"/>
+        <location filename="../src/dlgTriggerEditor.h" line="476"/>
         <source>Scripts</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7309,7 +7320,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="427"/>
-        <location filename="../src/dlgTriggerEditor.h" line="477"/>
+        <location filename="../src/dlgTriggerEditor.h" line="478"/>
         <source>Keys</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7322,7 +7333,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
         <location filename="../src/dlgTriggerEditor.cpp" line="7240"/>
-        <location filename="../src/dlgTriggerEditor.h" line="478"/>
+        <location filename="../src/dlgTriggerEditor.h" line="479"/>
         <source>Variables</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7348,7 +7359,6 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgTriggerEditor.h" line="464"/>
         <location filename="../src/dlgTriggerEditor.h" line="465"/>
         <location filename="../src/dlgTriggerEditor.h" line="466"/>
         <location filename="../src/dlgTriggerEditor.h" line="467"/>
@@ -7356,6 +7366,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
         <location filename="../src/dlgTriggerEditor.h" line="469"/>
         <location filename="../src/dlgTriggerEditor.h" line="470"/>
         <location filename="../src/dlgTriggerEditor.h" line="471"/>
+        <location filename="../src/dlgTriggerEditor.h" line="472"/>
         <source>Ctrl+S</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7398,12 +7409,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="540"/>
         <location filename="../src/dlgTriggerEditor.cpp" line="9883"/>
-        <location filename="../src/dlgTriggerEditor.h" line="472"/>
+        <location filename="../src/dlgTriggerEditor.h" line="473"/>
         <source>Save Profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgTriggerEditor.h" line="472"/>
+        <location filename="../src/dlgTriggerEditor.h" line="473"/>
         <source>Ctrl+Shift+S</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7419,7 +7430,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="448"/>
-        <location filename="../src/dlgTriggerEditor.h" line="481"/>
+        <location filename="../src/dlgTriggerEditor.h" line="482"/>
         <source>Statistics</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7455,7 +7466,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="453"/>
-        <location filename="../src/dlgTriggerEditor.h" line="482"/>
+        <location filename="../src/dlgTriggerEditor.h" line="483"/>
         <source>Debug</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7835,7 +7846,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
-        <location filename="../src/dlgTriggerEditor.h" line="465"/>
+        <location filename="../src/dlgTriggerEditor.h" line="466"/>
         <source>Save Trigger</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7876,7 +7887,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7859"/>
-        <location filename="../src/dlgTriggerEditor.h" line="466"/>
+        <location filename="../src/dlgTriggerEditor.h" line="467"/>
         <source>Save Timer</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7917,7 +7928,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
-        <location filename="../src/dlgTriggerEditor.h" line="467"/>
+        <location filename="../src/dlgTriggerEditor.h" line="468"/>
         <source>Save Alias</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7958,7 +7969,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7879"/>
-        <location filename="../src/dlgTriggerEditor.h" line="468"/>
+        <location filename="../src/dlgTriggerEditor.h" line="469"/>
         <source>Save Script</source>
         <translation type="unfinished"></translation>
     </message>
@@ -7999,7 +8010,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
-        <location filename="../src/dlgTriggerEditor.h" line="469"/>
+        <location filename="../src/dlgTriggerEditor.h" line="470"/>
         <source>Save Button</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8040,7 +8051,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7899"/>
-        <location filename="../src/dlgTriggerEditor.h" line="470"/>
+        <location filename="../src/dlgTriggerEditor.h" line="471"/>
         <source>Save Key</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8081,7 +8092,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="7909"/>
-        <location filename="../src/dlgTriggerEditor.h" line="471"/>
+        <location filename="../src/dlgTriggerEditor.h" line="472"/>
         <source>Save Variable</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8224,7 +8235,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgTriggerEditor.h" line="482"/>
+        <location filename="../src/dlgTriggerEditor.h" line="483"/>
         <source>Ctrl+0</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8357,49 +8368,49 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
-        <location filename="../src/dlgTriggerEditor.h" line="473"/>
+        <location filename="../src/dlgTriggerEditor.h" line="474"/>
         <source>Ctrl+1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
-        <location filename="../src/dlgTriggerEditor.h" line="474"/>
+        <location filename="../src/dlgTriggerEditor.h" line="475"/>
         <source>Ctrl+2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="419"/>
-        <location filename="../src/dlgTriggerEditor.h" line="475"/>
+        <location filename="../src/dlgTriggerEditor.h" line="476"/>
         <source>Ctrl+3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="424"/>
-        <location filename="../src/dlgTriggerEditor.h" line="476"/>
+        <location filename="../src/dlgTriggerEditor.h" line="477"/>
         <source>Ctrl+4</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="429"/>
-        <location filename="../src/dlgTriggerEditor.h" line="477"/>
+        <location filename="../src/dlgTriggerEditor.h" line="478"/>
         <source>Ctrl+5</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
-        <location filename="../src/dlgTriggerEditor.h" line="478"/>
+        <location filename="../src/dlgTriggerEditor.h" line="479"/>
         <source>Ctrl+6</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="439"/>
-        <location filename="../src/dlgTriggerEditor.h" line="479"/>
+        <location filename="../src/dlgTriggerEditor.h" line="480"/>
         <source>Ctrl+7</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="443"/>
-        <location filename="../src/dlgTriggerEditor.h" line="480"/>
+        <location filename="../src/dlgTriggerEditor.h" line="481"/>
         <source>Errors</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8415,7 +8426,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
-        <location filename="../src/dlgTriggerEditor.h" line="480"/>
+        <location filename="../src/dlgTriggerEditor.h" line="481"/>
         <source>Ctrl+8</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8431,7 +8442,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     </message>
     <message>
         <location filename="../src/dlgTriggerEditor.cpp" line="450"/>
-        <location filename="../src/dlgTriggerEditor.h" line="481"/>
+        <location filename="../src/dlgTriggerEditor.h" line="482"/>
         <source>Ctrl+9</source>
         <translation type="unfinished"></translation>
     </message>
@@ -11840,7 +11851,7 @@ try again when it has finished.</source>
     </message>
     <message>
         <location filename="../src/ui/profile_preferences.ui" line="329"/>
-        <location filename="../src/ui/profile_preferences.ui" line="4035"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4061"/>
         <source>Please reconnect to your game for the change to take effect</source>
         <translation type="unfinished"></translation>
     </message>
@@ -11965,199 +11976,204 @@ try again when it has finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="789"/>
+        <location filename="../src/ui/profile_preferences.ui" line="742"/>
         <source>Font:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="796"/>
+        <location filename="../src/ui/profile_preferences.ui" line="768"/>
+        <source>Size:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/profile_preferences.ui" line="797"/>
         <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="799"/>
+        <location filename="../src/ui/profile_preferences.ui" line="800"/>
         <source>Enable anti-aliasing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="815"/>
+        <location filename="../src/ui/profile_preferences.ui" line="841"/>
         <source>Display Border</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="833"/>
-        <location filename="../src/ui/profile_preferences.ui" line="852"/>
+        <location filename="../src/ui/profile_preferences.ui" line="859"/>
+        <location filename="../src/ui/profile_preferences.ui" line="878"/>
         <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="836"/>
+        <location filename="../src/ui/profile_preferences.ui" line="862"/>
         <source>Top border height:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="880"/>
-        <location filename="../src/ui/profile_preferences.ui" line="899"/>
+        <location filename="../src/ui/profile_preferences.ui" line="906"/>
+        <location filename="../src/ui/profile_preferences.ui" line="925"/>
         <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="883"/>
+        <location filename="../src/ui/profile_preferences.ui" line="909"/>
         <source>Left border width:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="927"/>
-        <location filename="../src/ui/profile_preferences.ui" line="946"/>
+        <location filename="../src/ui/profile_preferences.ui" line="953"/>
+        <location filename="../src/ui/profile_preferences.ui" line="972"/>
         <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="930"/>
+        <location filename="../src/ui/profile_preferences.ui" line="956"/>
         <source>Bottom border height:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="974"/>
-        <location filename="../src/ui/profile_preferences.ui" line="993"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1000"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1019"/>
         <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="977"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1003"/>
         <source>Right border width:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1021"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1047"/>
         <source>Word wrapping</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1045"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1071"/>
         <source>Wrap lines at:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1068"/>
-        <location filename="../src/ui/profile_preferences.ui" line="1122"/>
-        <location filename="../src/ui/profile_preferences.ui" line="1179"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1094"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1148"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1205"/>
         <source>characters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1099"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1125"/>
         <source>Indent wrapped lines by:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1153"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1179"/>
         <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1195"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1221"/>
         <source>Double-click</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1201"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1227"/>
         <source>Stop selecting a word on these characters:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1214"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1240"/>
         <source>&apos;&quot;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1227"/>
-        <location filename="../src/ui/profile_preferences.ui" line="1422"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1253"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1448"/>
         <source>Display options</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1236"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1262"/>
         <source>Fix unnecessary linebreaks on GA servers</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1431"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1457"/>
         <source>Show Spaces/Tabs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1441"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1467"/>
         <source>Show Line/Paragraphs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1263"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1289"/>
         <source>Echo Lua errors to the main console</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1250"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1276"/>
         <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1322"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1348"/>
         <source>Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1328"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1354"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1396"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1422"/>
         <source>Updating themes from colorsublime.github.io...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1448"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1474"/>
         <source>&lt;p&gt;Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1485"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1511"/>
         <source>Color view</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1491"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1517"/>
         <source>Select your color preferences</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1497"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1523"/>
         <source>Foreground:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1523"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1549"/>
         <source>Background:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1546"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1572"/>
         <source>Command line foreground:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1566"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1592"/>
         <source>Command line background:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1586"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1612"/>
         <source>Command foreground:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1609"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1635"/>
         <source>Command background:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -12227,236 +12243,236 @@ try again when it has finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="763"/>
+        <location filename="../src/ui/profile_preferences.ui" line="812"/>
         <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1211"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1237"/>
         <source>&lt;p&gt;Enter the characters you&apos;d like double-clicking to stop selecting text on here. If you don&apos;t enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on &apos; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1217"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1243"/>
         <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1233"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1259"/>
         <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1428"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1454"/>
         <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1438"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1464"/>
         <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1260"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1286"/>
         <source>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1243"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1269"/>
         <source>Enable text analyzer</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2144"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2170"/>
         <source>Delete map:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2329"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2355"/>
         <source>Use large area exit arrows in 2D view</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2580"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2606"/>
         <source>Map info background:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3094"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3120"/>
         <source>Server password: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3114"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3140"/>
         <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3117"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3143"/>
         <source>Use a secure connection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3647"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3673"/>
         <source>Allow secure connection reminder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3644"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3670"/>
         <source>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2177"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2203"/>
         <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2190"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2216"/>
         <source>&lt;p&gt;Copy map into the selected profiles on the left.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2222"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2248"/>
         <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2261"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2274"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2287"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2300"/>
         <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2303"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2329"/>
         <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2316"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2342"/>
         <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3199"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3225"/>
         <source>&lt;p&gt;Allow Lua to set Discord status.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3705"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3731"/>
         <source>&lt;p&gt;Username for logging into the proxy if required.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3721"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3747"/>
         <source>&lt;p&gt;Password for logging into the proxy if required.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3754"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3780"/>
         <source>Shortcuts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3769"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3795"/>
         <source>Main window shortcuts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3781"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3807"/>
         <source>To disable shortcut input &apos;Esc&apos; key.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3800"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3826"/>
         <source>Reset to defaults</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3836"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3862"/>
         <source>&lt;p&gt;On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3846"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3872"/>
         <source>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3853"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3879"/>
         <source>Enable closed caption for media</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3923"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3949"/>
         <source>&lt;p&gt;Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3972"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3998"/>
         <source>&lt;p&gt;This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3990"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4016"/>
         <source>Force NEW_ENVIRON negotiation off</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4004"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4030"/>
         <source>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4007"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4033"/>
         <source>Send Mudlet version in terminal type</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4014"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4040"/>
         <source>&lt;p&gt;Some servers do not negotiate Mud eXtension Protocol (MXP). When checked, this preference forces the MXP processor to be enabled. Note: To disable MXP entirely, leave this unchecked and also uncheck MXP in Choose protocols section of the General tab in Settings.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4017"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4043"/>
         <source>Force MXP processing on</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4051"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4077"/>
         <source>Clear stored media</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4057"/>
-        <location filename="../src/ui/profile_preferences.ui" line="4070"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4083"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4096"/>
         <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4060"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4086"/>
         <source>Purge stored media files for the current profile:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4073"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4099"/>
         <source>Clear</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4133"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4159"/>
         <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4237"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4263"/>
         <source>h:mm:ss.zzz</source>
         <comment>Used to set a time interval only</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1406"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1432"/>
         <source>Autocomplete</source>
         <translation type="unfinished"></translation>
     </message>
@@ -12511,311 +12527,306 @@ try again when it has finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="747"/>
+        <location filename="../src/ui/profile_preferences.ui" line="824"/>
         <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
         <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="776"/>
-        <source>Select Font</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1156"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1182"/>
         <source>Indent hanging wrapped lines by:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1270"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1296"/>
         <source>Display control characters as:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1287"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1313"/>
         <source>nothing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1292"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1318"/>
         <source>Unicode Control Pictures</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1297"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1323"/>
         <source>CP437 (OEM Font)- like</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1412"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1438"/>
         <source>Autocomplete Lua functions in code editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1451"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1477"/>
         <source>Show invisible Unicode control characters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1458"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1484"/>
         <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1461"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1487"/>
         <source>Show Items&apos; ID number</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1507"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1533"/>
         <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1533"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1559"/>
         <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1556"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1582"/>
         <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1576"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1602"/>
         <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1596"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1622"/>
         <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1619"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1645"/>
         <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1645"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1671"/>
         <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1655"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2664"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1681"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2690"/>
         <source>Black:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1665"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1691"/>
         <source>ANSI Color Number 0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1678"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2684"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1704"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2710"/>
         <source>Light black:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1688"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1714"/>
         <source>ANSI Color Number 8</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1701"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2704"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1727"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2730"/>
         <source>Red:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1711"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1737"/>
         <source>ANSI Color Number 1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1724"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2724"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1750"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2750"/>
         <source>Light red:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1734"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1760"/>
         <source>ANSI Color Number 9</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1747"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2744"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1773"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2770"/>
         <source>Green:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1757"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1783"/>
         <source>ANSI Color Number 2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1770"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2764"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1796"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2790"/>
         <source>Light green:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1780"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1806"/>
         <source>ANSI Color Number 10</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1793"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2784"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1819"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2810"/>
         <source>Yellow:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1803"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1829"/>
         <source>ANSI Color Number 3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1816"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2804"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1842"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2830"/>
         <source>Light yellow:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1826"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1852"/>
         <source>ANSI Color Number 11</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1839"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2824"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1865"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2850"/>
         <source>Blue:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1849"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1875"/>
         <source>ANSI Color Number 4</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1862"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2844"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1888"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2870"/>
         <source>Light blue:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1872"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1898"/>
         <source>ANSI Color Number 12</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1885"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2864"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1911"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2890"/>
         <source>Magenta:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1895"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1921"/>
         <source>ANSI Color Number 5</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1908"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2884"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1934"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2910"/>
         <source>Light magenta:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1918"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1944"/>
         <source>ANSI Color Number 13</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1931"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2904"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1957"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2930"/>
         <source>Cyan:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1941"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1967"/>
         <source>ANSI Color Number 6</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1954"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2924"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1980"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2950"/>
         <source>Light cyan:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1964"/>
+        <location filename="../src/ui/profile_preferences.ui" line="1990"/>
         <source>ANSI Color Number 14</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1977"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2944"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2003"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2970"/>
         <source>White:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="1987"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2013"/>
         <source>ANSI Color Number 7</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2000"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2964"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2026"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2990"/>
         <source>Light white:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2010"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2036"/>
         <source>ANSI Color Number 15</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2033"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2984"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2059"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3010"/>
         <source>Reset all colors to default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2023"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2049"/>
         <source>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos; to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2026"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2052"/>
         <source>Server allowed to redefine these colors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2057"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2083"/>
         <source>Mapper</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2063"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2089"/>
         <source>Map files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2069"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2095"/>
         <source>Save your current map:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2096"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2122"/>
         <source>Load another map file in:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2086"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2112"/>
         <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -12830,246 +12841,246 @@ you can use it but there could be issues with aligning columns of text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2089"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2115"/>
         <source>report map issues on screen</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2106"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2132"/>
         <source>choose map...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2113"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2139"/>
         <source>Or load an older version:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2130"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2156"/>
         <source>◀ load this map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2157"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2183"/>
         <source>delete</source>
         <comment>Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2180"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2206"/>
         <source>pick destinations...</source>
         <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2264"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2290"/>
         <source>Download latest map provided by your game:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2293"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2319"/>
         <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2378"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2404"/>
         <source>2D map player room marker style:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2388"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2414"/>
         <source>Outer ring color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2398"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2424"/>
         <source>Inner ring color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2412"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2438"/>
         <source>Original</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2417"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2443"/>
         <source>Red ring</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2422"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2448"/>
         <source>Blue/Yellow ring</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2427"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2453"/>
         <source>Custom ring</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2435"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2461"/>
         <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2441"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2469"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2467"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2495"/>
         <source>%</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2444"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2470"/>
         <source>Outer diameter: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2463"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2489"/>
         <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2472"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2498"/>
         <source>Inner diameter: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2319"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2345"/>
         <source>Show room borders</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2560"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2586"/>
         <source>Room border color:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3008"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3034"/>
         <source>Chat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3959"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3985"/>
         <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3997"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4023"/>
         <source>Force CHARSET negotiation off</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4154"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4180"/>
         <source>the computer&apos;s password manager (secure)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4159"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4185"/>
         <source>plaintext with the profile (portable)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4247"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4273"/>
         <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4136"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4162"/>
         <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4143"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4169"/>
         <source>Store character login passwords in:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3311"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3337"/>
         <source>TLS/SSL secure connection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3412"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3438"/>
         <source>Accept self-signed certificates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3422"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3448"/>
         <source>Accept expired certificates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3329"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3355"/>
         <source>Certificate</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3389"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3415"/>
         <source>Serial:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3338"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3364"/>
         <source>Issuer:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3355"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3381"/>
         <source>Issued to:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3372"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3398"/>
         <source>Expires:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3432"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3458"/>
         <source>Accept all certificate errors       (unsecure)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2164"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2190"/>
         <source>Copy map to other profile(s):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2245"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2271"/>
         <source>An action above happened</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2200"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2226"/>
         <source>Map format version:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2228"/>
-        <location filename="../src/ui/profile_preferences.ui" line="2232"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2254"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2258"/>
         <source># {default version}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2255"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2281"/>
         <source>Map download</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2277"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2303"/>
         <source>Download</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2287"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2313"/>
         <source>Map view</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2339"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2365"/>
         <source>2D Map Room Symbol Font</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2296"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2322"/>
         <source>Use high quality graphics in 2D view</source>
         <translation type="unfinished"></translation>
     </message>
@@ -13089,354 +13100,354 @@ you can use it but there could be issues with aligning columns of text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2079"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2105"/>
         <source>choose location...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2306"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2332"/>
         <source>Show the default area in map area selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2349"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2375"/>
         <source>Only use symbols (glyphs) from chosen font</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2356"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2382"/>
         <source>Show symbol usage...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2505"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2531"/>
         <source>Mapper colors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2511"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2537"/>
         <source>Select your color preferences for the map display</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2517"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2543"/>
         <source>Link color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2540"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2566"/>
         <source>Background color:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2597"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2623"/>
         <source>Lower level color:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2617"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2643"/>
         <source>Upper level color:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="2637"/>
+        <location filename="../src/ui/profile_preferences.ui" line="2663"/>
         <source>Overlapping rooms border:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3926"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3952"/>
         <source>Enable F3 search shortcuts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3953"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3979"/>
         <source>Special Options</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3965"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3991"/>
         <source>Force compression off</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3983"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4009"/>
         <source>Force telnet GA signal interpretation off</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3976"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4002"/>
         <source>Force new line on empty commands</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3127"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3153"/>
         <source>Discord privacy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3160"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3186"/>
         <source>Don&apos;t hide small icon or tooltip</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3165"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3191"/>
         <source>Hide small icon tooltip</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3170"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3196"/>
         <source>Hide small icon and tooltip</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3192"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3218"/>
         <source>Hide timer</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3215"/>
-        <location filename="../src/ui/profile_preferences.ui" line="3231"/>
-        <location filename="../src/ui/profile_preferences.ui" line="3247"/>
-        <location filename="../src/ui/profile_preferences.ui" line="3263"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3241"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3257"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3273"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3289"/>
         <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3221"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3247"/>
         <source>Restrict to:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3134"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3160"/>
         <source>Don&apos;t hide large icon or tooltip</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3139"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3165"/>
         <source>Hide large icon tooltip</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3144"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3170"/>
         <source>Hide large icon and tooltip</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3202"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3228"/>
         <source>Enable Lua API</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3237"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3263"/>
         <source>specific Discord username</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3178"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3204"/>
         <source>Hide state</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3185"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3211"/>
         <source>Hide party details</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3152"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3178"/>
         <source>Hide detail</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3014"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3040"/>
         <source>IRC client options</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3033"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3059"/>
         <source>irc.example.net</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3040"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3066"/>
         <source>Port:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3087"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3113"/>
         <source>#channel1 #channel2 #etc...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3070"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3096"/>
         <source>MudletUser123</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3020"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3046"/>
         <source>Server address:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3077"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3103"/>
         <source>Auto-join channels: </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3060"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3086"/>
         <source>Nickname:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3053"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3079"/>
         <source>6667</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4099"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4125"/>
         <source>Search Engine</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4083"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4109"/>
         <source>Mudlet updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4089"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4115"/>
         <source>Disable automatic updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4111"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4137"/>
         <source>Other Special options</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4117"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4143"/>
         <source>Show icons on menus</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3305"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3331"/>
         <source>Connection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3660"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3686"/>
         <source>Connect to the game via proxy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3675"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3701"/>
         <source>Address</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3695"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3721"/>
         <source>port</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3711"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3737"/>
         <source>username (optional)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3107"/>
-        <location filename="../src/ui/profile_preferences.ui" line="3727"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3133"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3753"/>
         <source>password (optional)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4203"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4229"/>
         <source>Show debug messages for timers not smaller than:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4200"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4226"/>
         <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
         <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4250"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4276"/>
         <source>Report all Codepoint problems immediately</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4257"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4283"/>
         <source>Additional text wait time:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4267"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4293"/>
         <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4270"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4296"/>
         <source> seconds</source>
         <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3824"/>
-        <location filename="../src/ui/profile_preferences.ui" line="3830"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3850"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3856"/>
         <source>Accessibility</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3839"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3865"/>
         <source>Announce incoming text in screen reader</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3871"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3897"/>
         <source>show them</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3876"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3902"/>
         <source>hide them</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3881"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3907"/>
         <source>replace with a space</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3860"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3886"/>
         <source>When the game sends blank lines:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3889"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3915"/>
         <source>Switch between input line and main window using:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3900"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3926"/>
         <source>no key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3905"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3931"/>
         <source>Tab</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3910"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3936"/>
         <source>Ctrl+Tab</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="3915"/>
+        <location filename="../src/ui/profile_preferences.ui" line="3941"/>
         <source>F6</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="4340"/>
+        <location filename="../src/ui/profile_preferences.ui" line="4366"/>
         <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
