@@ -1126,7 +1126,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</translation>
       <location filename="../src/TCommandLine.cpp" line="68"/>
       <location filename="../src/TCommandLine.cpp" line="1682"/>
       <source>Show password</source>
-      <translation type="unfinished"/>
+      <translation>Show password</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
@@ -1231,7 +1231,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TCommandLine.cpp" line="1678"/>
       <source>Hide password</source>
-      <translation type="unfinished"/>
+      <translation>Hide password</translation>
     </message>
   </context>
   <context>
