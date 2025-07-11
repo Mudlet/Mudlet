@@ -619,22 +619,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
 
-    mDisplayFont = pHost->getDisplayFont();
-    pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
+    fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    // Accomodate an initial font size being larger than expected - and ensure
+    // it is a positive value:
+    spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
+    spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
+    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
 
-    connect(pushButton_fontDialog, &QPushButton::clicked, this, [this, pHost](){
-        bool ok;
-        QFont font = QFontDialog::getFont(&ok, pHost->getDisplayFont(), this->window());
-        if (ok) {
-            qDebug() << "Font selected: " << font.toString();
-            qDebug() << "Font family: " << font.family();
-            qDebug() << "Font size: " << font.pointSize();
-            mDisplayFont = font;
-            mFontSize = font.pointSize();
-            slot_setFontSize();
-            pushButton_fontDialog->setText(QString("%1, %2, %3pt").arg(mDisplayFont.family()).arg(mDisplayFont.styleName()).arg(mDisplayFont.pointSize()));
-        }
-    });
+    connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged);
+    connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged);
+    connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged);
 
     // search engine load
     search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
@@ -771,12 +765,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
 
-    mDisplayFont = pHost->getDisplayFont();
-    mFontSize = pHost->getDisplayFont().pointSize();
-    if (mFontSize < 0) {
-        mFontSize = 10;
-    }
-
     wrap_at_spinBox->setValue(pHost->mWrapAt);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
@@ -862,7 +850,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
-    mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
@@ -1291,7 +1278,10 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
 
-    disconnect(pushButton_fontDialog, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
+
     disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(pushButton_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1431,7 +1421,9 @@ void dlgProfilePreferences::clearHostDetails()
     mIsToLogInHtml->setChecked(false);
     mIsLoggingTimestamps->setChecked(false);
     commandLineMinimumHeight->clear();
-    mNoAntiAlias->setChecked(false);
+    fontComboBox_displayFont->clear();
+    spinBox_displayFontSize->setValue(14);
+    checkBox_antiAlias->setChecked(false);
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -1887,81 +1879,6 @@ void dlgProfilePreferences::slot_setCommandBgColor()
         setButtonAndProfileColor(pushButton_command_background_color, pHost->mCommandBgColor);
     }
 }
-
-void dlgProfilePreferences::slot_setFontSize()
-{
-    slot_setDisplayFont();
-
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
-}
-
-void dlgProfilePreferences::slot_setDisplayFont()
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
-
-    if (pHost->getDisplayFont() == mDisplayFont) {
-        return;
-    }
-
-    label_invalidFontError->hide();
-    label_variableWidthFontWarning->hide();
-    if (auto [validFont, errorMessage] = pHost->setDisplayFont(mDisplayFont); !validFont) {
-        label_invalidFontError->show();
-        return;
-    } else if (!QFontInfo(mDisplayFont).fixedPitch()) {
-        label_variableWidthFontWarning->show();
-    }
-
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
-    // if this font doesn't support it:
-    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
-#endif
-
-    auto mainConsole = pHost->mpConsole;
-    if (!mainConsole) {
-        return;
-    }
-
-    // update the display properly when font or size selections change.
-    mainConsole->changeColors();
-    mainConsole->mUpperPane->updateScreenView();
-    mainConsole->mUpperPane->forceUpdate();
-    mainConsole->mLowerPane->updateScreenView();
-    mainConsole->mLowerPane->forceUpdate();
-    mainConsole->refresh();
-
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setFont(mDisplayFont);
-    config->endChanges();
-
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
-}
-
-// Currently UNUSED!
-//void dlgProfilePreferences::slot_setCommandLineFont()
-//{
-//    Host* pHost = mpHost;
-//    if (!pHost) {
-//        return;
-//    }
-//    bool ok;
-//    QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
-//    pHost->mCommandLineFont = font;
-//    if (pHost->mpConsole) {
-//        pHost->mpConsole->changeColors();
-//    }
-//}
 
 void dlgProfilePreferences::slot_setColorBlack()
 {
@@ -2953,7 +2870,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
-        pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
+        pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
         pHost->mUseProxy = groupBox_proxy->isChecked();
@@ -4566,4 +4483,71 @@ void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
     }
 
     pHost->setLargeAreaExitArrows(state);
+}
+
+bool dlgProfilePreferences::updateDisplayFont()
+{
+    if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
+        return false;
+    }
+
+    QFont displayFont = fontComboBox_displayFont->currentFont();
+    displayFont.setPointSize(spinBox_displayFontSize->value());
+    displayFont.setStyleHint(QFont::AnyStyle, checkBox_antiAlias->isChecked()
+                              ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
+
+    if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
+        // No change!
+        return false;
+    }
+
+    const QFontMetrics metrics(displayFont);
+    if (metrics.averageCharWidth() == 0) {
+        label_invalidFontError->show();
+        return false;
+    }
+    label_invalidFontError->hide();
+
+    if (!QFontInfo(displayFont).fixedPitch()) {
+        label_variableWidthFontWarning->show();
+    } else {
+        label_variableWidthFontWarning->hide();
+    }
+
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
+    // if this font doesn't support it:
+    QFont::insertSubstitution(mpHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
+#endif
+
+    // update the display properly when font or size or antiAliasing selections
+    // change.
+    mpHost->setDisplayFont(displayFont);
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(displayFont);
+    config->endChanges();
+
+    return true;
+}
+
+void dlgProfilePreferences::slot_displayFontChanged()
+{
+    if (!mpHost.isNull() && updateDisplayFont()) {
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
+    }
+}
+
+void dlgProfilePreferences::slot_displayFontSizeChanged()
+{
+    if (!mpHost.isNull() && updateDisplayFont()) {
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    }
+}
+
+void dlgProfilePreferences::slot_displayFontAliasingChanged()
+{
+    updateDisplayFont();
 }

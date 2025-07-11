@@ -54,6 +54,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
 , mClipboard(pH)
 {
+    setFont(pH->getAndClearTempDisplayFont());
+
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
     // non-null mudlet::self() - the connect(...) will produce a debug
