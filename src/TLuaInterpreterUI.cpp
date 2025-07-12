@@ -929,6 +929,8 @@ int TLuaInterpreter::getFgColor(lua_State* L)
     }
     return result.size();
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
 int TLuaInterpreter::getFont(lua_State* L)
 {
     QString windowName = qsl("main");
@@ -1224,14 +1226,20 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
         windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
-    const Host& host = getHostFromLua(L);
-    QPair<quint8, TChar> const result = host.mpConsole->getTextAttributes(windowName);
-    if (result.first == 1) {
+    auto console = getHostFromLua(L).findConsole(windowName);
+
+    if (!console) {
         return warnArgumentValue(L, __func__, qsl("window '%1' not found").arg(windowName));
     }
 
+    QPair<quint8, TChar> const result = console->getTextAttributes();
+
     if (result.first == 2) {
         return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
+    }
+
+    if (result.first != 0) {
+        return warnArgumentValue(L, __func__, qsl("no character under cursor or selection in window '%1'").arg(windowName));
     }
 
     lua_newtable(L);

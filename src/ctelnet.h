@@ -330,8 +330,8 @@ private:
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
-    void promptEnableTTYPEVersion();
     void finalizeConnection();
+    void autoEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
@@ -436,6 +436,10 @@ private:
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
+    
+    // Flag to track if this cTelnet instance is being destroyed
+    // Used to prevent access to Host/Console during destruction
+    bool mIsBeingDestroyed = false;
 };
 
 #endif // MUDLET_CTELNET_H

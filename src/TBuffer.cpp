@@ -142,6 +142,8 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
 {
+    // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
+    // Direct modification of the `buffer` vector may bypass formatting and should be avoided.
     clear();
 
 #ifdef QT_DEBUG

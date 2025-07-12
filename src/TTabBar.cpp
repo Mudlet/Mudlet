@@ -28,6 +28,11 @@
 #include "pre_guard.h"
 #include <QPainter>
 #include <QVariant>
+#include <QMouseEvent>
+#include <QDrag>
+#include <QMimeData>
+#include <QApplication>
+#include <QScreen>
 #include "post_guard.h"
 
 
@@ -201,4 +206,81 @@ void TTabBar::paintEvent(QPaintEvent* event)
         painter.drawControl(QStyle::CE_TabBarTabLabel, opt);
         painter.restore();
     }
+}
+
+void TTabBar::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        mDragStartPos = event->pos();
+        mDragIndex = tabAt(event->pos());
+    }
+    QTabBar::mousePressEvent(event);
+}
+
+void TTabBar::mouseMoveEvent(QMouseEvent* event)
+{
+    // Check if we should start a drag operation
+    if (!(event->buttons() & Qt::LeftButton) || mDragIndex == -1) {
+        QTabBar::mouseMoveEvent(event);
+        return;
+    }
+
+    // Calculate distance moved
+    const int distance = (event->pos() - mDragStartPos).manhattanLength();
+    
+    if (distance >= QApplication::startDragDistance()) {
+        // Check if drag is moving outside the tab bar area
+        const QPoint globalPos = mapToGlobal(event->pos());
+        const QRect tabBarGlobalRect = QRect(mapToGlobal(rect().topLeft()), rect().size());
+        
+        // If dragged outside tab bar and beyond threshold, initiate detach
+        if (!tabBarGlobalRect.contains(globalPos)) {
+            const QPoint distanceFromBar = globalPos - tabBarGlobalRect.center();
+            if (distanceFromBar.manhattanLength() > DETACH_DISTANCE_THRESHOLD) {
+                emit tabDetachRequested(mDragIndex, globalPos);
+                mDragIndex = -1; // Reset drag state
+                return;
+            }
+        }
+    }
+    
+    QTabBar::mouseMoveEvent(event);
+}
+
+void TTabBar::dragEnterEvent(QDragEnterEvent* event)
+{
+    const QMimeData* mimeData = event->mimeData();
+    if (mimeData->hasFormat("application/x-mudlet-tab")) {
+        event->acceptProposedAction();
+    } else {
+        event->ignore();
+    }
+}
+
+void TTabBar::dragMoveEvent(QDragMoveEvent* event)
+{
+    const QMimeData* mimeData = event->mimeData();
+    if (mimeData->hasFormat("application/x-mudlet-tab")) {
+        event->acceptProposedAction();
+    } else {
+        event->ignore();
+    }
+}
+
+void TTabBar::dropEvent(QDropEvent* event)
+{
+    const QMimeData* mimeData = event->mimeData();
+    if (mimeData->hasFormat("application/x-mudlet-tab")) {
+        const QString tabName = QString::fromUtf8(mimeData->data("application/x-mudlet-tab"));
+        const int dropIndex = tabAt(event->pos());
+        emit tabReattachRequested(tabName, dropIndex);
+        event->acceptProposedAction();
+    }
+}
+
+void TTabBar::onDetachedTabReattach(const QString& tabName)
+{
+    // This slot can be connected to detached windows for reattachment
+    const int insertIndex = count(); // Insert at end by default
+    emit tabReattachRequested(tabName, insertIndex);
 }

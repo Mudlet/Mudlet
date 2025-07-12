@@ -33,6 +33,7 @@
 #include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
+#include "TDetachedWindow.h"
 #include "TMediaData.h"
 #include "utils.h"
 #include <memory>
@@ -244,6 +245,7 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
+    const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
@@ -418,6 +420,7 @@ public:
 public slots:
     void slot_closeCurrentProfile();
     void slot_closeProfileRequested(int);
+    void slot_closeProfileByName(const QString& profileName);
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
@@ -441,6 +444,9 @@ public slots:
     void slot_processEventLoopHackTimerRun();
     void slot_profileDiscord();
     void slot_reconnect();
+    void slot_reattachAllDetachedWindows();
+    void slot_toggleAlwaysOnTop();
+    void slot_minimize();
     void slot_replay();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
@@ -459,11 +465,30 @@ public slots:
     void slot_toggleReplay();
     void slot_toggleLogging();
     void slot_toggleEmergencyStop();
-
+    void slot_tabDetachRequested(int index, const QPoint& globalPos);
+    void slot_tabReattachRequested(const QString& tabName, int insertIndex = -1);
+    void slot_detachedWindowClosed(const QString& profileName);
+    void slot_profileDetachToWindow(const QString& profileName, TDetachedWindow* targetWindow);
+    void updateDetachedWindowToolbars();
+    void updateMainWindowTabIndicators();
+    void updateMainWindowTabBarAutoHide();
+    void slot_showActionDialog();
+    void slot_showAliasDialog();
+    void slot_showEditorDialog();
+    void slot_showHelpDialog();
+    void slot_showKeyDialog();
+    void slot_showPreferencesDialog();
+    void slot_showScriptDialog();
+    void slot_showTimerDialog();
+    void slot_showTriggerDialog();
+    void slot_showVariableDialog();
 
 protected:
     void closeEvent(QCloseEvent*) override;
     void changeEvent(QEvent*) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
 
 
 signals:
@@ -500,16 +525,6 @@ private slots:
 #if defined(INCLUDE_UPDATER)
     void slot_reportIssue();
 #endif
-    void slot_showActionDialog();
-    void slot_showAliasDialog();
-    void slot_showEditorDialog();
-    void slot_showHelpDialog();
-    void slot_showKeyDialog();
-    void slot_showPreferencesDialog();
-    void slot_showScriptDialog();
-    void slot_showTimerDialog();
-    void slot_showTriggerDialog();
-    void slot_showVariableDialog();
     void slot_tabMoved(const int oldPos, const int newPos);
     void slot_toggleCompactInputLine();
 #if defined(INCLUDE_UPDATER)
@@ -544,6 +559,14 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+
+    // Profile detachment helper methods
+    void moveProfileFromMainToDetachedWindow(const QString& profileName, int tabIndex, TDetachedWindow* targetWindow);
+    void moveProfileBetweenDetachedWindows(const QString& profileName, TDetachedWindow* sourceWindow, TDetachedWindow* targetWindow);
+    void moveProfileFromDetachedToMainWindow(const QString& profileName, TDetachedWindow* sourceWindow);
+    int findTabIndex(const QString& profileName) const;
+    void cleanupDetachedWindowsMap(); // Remove null pointers from the map
+
 
     inline static QPointer<mudlet> smpSelf = nullptr;
 
@@ -694,6 +717,15 @@ private:
     void shutdownAI();
     bool findAIModel();
     void setupAIConfig();
+
+    // Detached windows for profiles
+    QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+
+    // Helper methods for detached windows
+    void detachTab(int tabIndex, const QPoint& position);
+    void reattachTab(const QString& profileName, int insertIndex = -1);
+    TMainConsole* removeConsoleFromSplitter(const QString& profileName);
+    void addConsoleToSplitter(TMainConsole* console, int index = -1);
 };
 
 

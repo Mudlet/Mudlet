@@ -1214,8 +1214,12 @@ void TMainConsole::runTriggers(int line)
 
 void TMainConsole::finalize()
 {
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
+    if (mUpperPane) {
+        mUpperPane->showNewLines();
+    }
+    if (mLowerPane) {
+        mLowerPane->showNewLines();
+    }
 }
 
 // TODO: It may be worth considering moving the (now) three following methods
