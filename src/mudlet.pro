@@ -703,6 +703,7 @@ SOURCES += \
     TSplitterHandle.cpp \
     TStringUtils.cpp \
     TTabBar.cpp \
+    TDetachedWindow.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
@@ -841,6 +842,7 @@ HEADERS += \
     TStringUtils.h \
     TriggerHighlighter.h \
     TTabBar.h \
+    TDetachedWindow.h \
     TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
