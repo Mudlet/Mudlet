@@ -229,7 +229,7 @@ private slots:
         // Real life example from Aldebaran: (there are more sensible ones with EXPIRE which Mudlet does not yet support)
         //
         // <!EL WH '<SEND "whisper &NAME; |finger &NAME; |tell &NAME; " HINT="whisper &NAME;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAME=someone'>
-        // 
+        //
         // Used like <WH playerid>Player</WH> says: Hello!
         // However, if player is invisible, playerid is empty, like <WH >Someone</WH> says: Hello!
         //

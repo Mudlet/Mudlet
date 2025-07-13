@@ -54,6 +54,7 @@ public:
     bool isIn3DMode() const { return pushButton_3D->isDown(); }
     bool isFloatAndDockable() const;
     int getCurrentShownAreaIndex();
+    void setFont(const QFont&);
 
 public slots:
     void slot_toggleRoundRooms(const bool);

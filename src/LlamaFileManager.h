@@ -103,22 +103,22 @@ public:
     Status status() const noexcept { return currentStatus; }
     bool isRunning() const noexcept { return currentStatus == Status::Running; }
     std::optional<qint64> processId() const noexcept;
-    
+
     // Configuration
     void setConfig(const Config& config) { this->config = config; }
     const Config& getConfig() const noexcept { return config; }
-    
+
     // API calls
     void chatCompletion(const ApiRequest& request, ApiCallback callback);
     void textCompletion(const ApiRequest& request, ApiCallback callback);
     void embeddings(const ApiRequest& request, ApiCallback callback);
     void getModels(ApiCallback callback);
     void textCompletionStream(const ApiRequest& request, StreamChunkCallback chunkCallback, StreamErrorCallback errorCallback);
-    
+
     // Health monitoring
     void enableHealthCheck(bool enable = true);
     bool isHealthy() const noexcept { return healthy; }
-    
+
     // Utility functions
     static bool isLlamafileExecutable(const QString& path);
     static QString findLlamafileExecutable(const QStringList& searchPaths = {});
@@ -146,14 +146,14 @@ private:
     std::unique_ptr<QProcess> process;
     std::unique_ptr<QTimer> healthCheckTimer;
     std::unique_ptr<QNetworkAccessManager> networkManager;
-    
+
     // State
     Config config;
     Status currentStatus = Status::Stopped;
     bool healthy = false;
     int restartAttempts = 0;
     QString lastError;
-    
+
     // Helper methods
     void setStatus(Status newStatus);
     void makeApiRequest(const QString& endpoint, const QJsonObject& requestData, ApiCallback callback);
@@ -163,7 +163,7 @@ private:
     QStringList buildProcessArguments() const;
     void attemptRestart();
     void resetRestartAttempts() { restartAttempts = 0; }
-    
+
     // Validation
     bool validateConfig();
     bool isPortAvailable(int port) const;

@@ -1575,7 +1575,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             QDialog::accept();
             return;
         }
-        
+
         pHost->setName(profile_name);
 
         if (!host_name_entry->text().trimmed().isEmpty()) {

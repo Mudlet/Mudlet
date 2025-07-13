@@ -54,7 +54,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    setFont(mpHost->getDisplayFont());
+    setFont(mpConsole->font());
     document()->setDocumentMargin(2);
 
     // Create password toggle button for MainCommandLine only
