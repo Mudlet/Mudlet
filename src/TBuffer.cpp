@@ -2561,7 +2561,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, 
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline,
     const int maxWidth, const int indent, const int hangingIndent)
 {
     QList<WrapInfo> output;
@@ -2605,7 +2605,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
                 needsIndent = true;
             }
             lineBreakFinder.setPosition(indexOfChar);
-            // we check c == QChar::Space since we are happy to break at -any- space, 
+            // we check c == QChar::Space since we are happy to break at -any- space,
             // unlike the indirect-linebreak permission of QTextBoundaryFinder::Line
             // (see: https://www.unicode.org/reports/tr14/#LD9) which will only break at
             // at the first char after 1+ space(s)
@@ -2740,7 +2740,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const QString lineText = lineBuffer[i];
         // a blank timestamp indicates a wrapped line
         const bool isNewline = (time != mudlet::smBlankTimeStamp);
-        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent); 
+        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
         if (lineBreaks.isEmpty()) {
             tempList.append(lineText);
             queue.push(buffer[i]);

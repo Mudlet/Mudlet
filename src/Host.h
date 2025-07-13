@@ -426,7 +426,7 @@ public:
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled) { 
+    void setF3SearchEnabled(const bool enabled) {
         mF3SearchEnabled = enabled;
         if (mpConsole) {
             mpConsole->setF3SearchEnabled(enabled);

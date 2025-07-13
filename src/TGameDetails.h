@@ -647,7 +647,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "venue of original ideas, mind boggling quests, and bloodcurdling "
                  "beasts, spinning into realms of power, magic, and technology, "
                  "and many players with which to share your adventures.")},
-                 
+
             {qsl("Medievia"),
              qsl("medievia.com"),
              4000,

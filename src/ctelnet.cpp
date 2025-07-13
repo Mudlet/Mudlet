@@ -167,7 +167,7 @@ cTelnet::~cTelnet()
 {
     // Set flag to prevent any further access to Host/Console during destruction
     mIsBeingDestroyed = true;
-    
+
     // Stop all timers immediately
     if (mTimerLogin) {
         mTimerLogin->stop();
@@ -178,7 +178,7 @@ cTelnet::~cTelnet()
     if (mpPostingTimer) {
         mpPostingTimer->stop();
     }
-    
+
     // Aggressively disconnect the socket to prevent signals during destruction
     if (socket.state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
@@ -187,10 +187,10 @@ cTelnet::~cTelnet()
         // Force immediate closure without waiting
         socket.abort();
     }
-    
+
     // Disconnect all signal connections to prevent callbacks during destruction
     disconnect();
-    
+
     if (loadingReplay) {
         // If we are doing a replay we had better abort it so that if we are
         // NOT the "last profile standing" the replay system gets reset for
