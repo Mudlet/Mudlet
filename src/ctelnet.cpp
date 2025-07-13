@@ -3370,7 +3370,8 @@ void cTelnet::postMessage(QString msg)
     messageStack.append(msg);
 
     if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
-        // Console doesn't exist (yet), or Host is shutting down, stack up messages until it does...
+        // Console doesn't exist (yet), or Host is shutting down; stack up
+        // messages until it does (or they are dumped out by the destructor)...
         return;
     }
 
