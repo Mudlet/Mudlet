@@ -33,6 +33,8 @@
 #include <QString>
 #include <QStringList>
 #include <QTextDecoder>
+#include <QToolButton>
+#include <QResizeEvent>
 #include "post_guard.h"
 
 
@@ -114,6 +116,9 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void updatePasswordToggleButton();
+    void positionPasswordToggleButton();
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -143,11 +148,18 @@ private:
 
     // Track echo suppression state
     bool mIsEchoSuppressed = false;
+    // Track password visibility state when echo is suppressed
+    bool mPasswordVisible = false;
+    // Button to toggle password visibility
+    QToolButton* mpPasswordToggleButton = nullptr;
     // Store text that was in the command line before echo suppression started
     // This allows us to restore user input after password prompts complete
     QString mTextToRestoreAfterEchoSuppression;
     // Track whether the preserved text was originally selected (for auto-clear OFF)
     bool mRestoredTextShouldBeSelected = false;
+
+private slots:
+    void slot_togglePasswordVisibility();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

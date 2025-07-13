@@ -37,6 +37,8 @@
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
+#include <QToolButton>
+#include <QIcon>
 #include "post_guard.h"
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -54,6 +56,19 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setFont(mpHost->getDisplayFont());
     document()->setDocumentMargin(2);
+
+    // Create password toggle button for MainCommandLine only
+    if (mType == MainCommandLine) {
+        mpPasswordToggleButton = new QToolButton(this);
+        mpPasswordToggleButton->setMinimumSize(QSize(20, 20));
+        mpPasswordToggleButton->setMaximumSize(QSize(20, 20));
+        mpPasswordToggleButton->setFocusPolicy(Qt::NoFocus);
+        mpPasswordToggleButton->setCursor(Qt::PointingHandCursor);
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
+        mpPasswordToggleButton->setToolTip(tr("Show password"));
+        mpPasswordToggleButton->setVisible(false); // Hidden by default
+        connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
+    }
 
     if (mType & (MainCommandLine|ConsoleCommandLine)) {
         // put an outline around the command line when it is integrated into
@@ -1665,6 +1680,14 @@ void TCommandLine::setEchoSuppression(bool suppress)
         mTextToRestoreAfterEchoSuppression = textToRestoreAfterPassword;
         clear();  // Clear command line for password input
         
+        // Show password toggle button and reset visibility state
+        if (mpPasswordToggleButton) {
+            mPasswordVisible = false; // Start with password hidden
+            updatePasswordToggleButton();
+            mpPasswordToggleButton->setVisible(true);
+            positionPasswordToggleButton();
+        }
+        
         // If user was already typing password characters, restore them and continue
         if (!partialPasswordToKeep.isEmpty()) {
             setPlainText(partialPasswordToKeep);
@@ -1678,6 +1701,11 @@ void TCommandLine::setEchoSuppression(bool suppress)
         // This handles the transition from hidden password input back to normal command entry
         
         clear();  // Clear the password field first for security
+        
+        // Hide password toggle button
+        if (mpPasswordToggleButton) {
+            mpPasswordToggleButton->setVisible(false);
+        }
         
         // Restore any command text that was preserved when password mode started
         if (!mTextToRestoreAfterEchoSuppression.isEmpty()) {
@@ -1709,8 +1737,8 @@ void TCommandLine::setEchoSuppression(bool suppress)
 
 void TCommandLine::paintEvent(QPaintEvent* event)
 {
-    // Only mask text for the main command line when echo is suppressed
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
+    // Only mask text for the main command line when echo is suppressed and password is not visible
+    if (mIsEchoSuppressed && mType == MainCommandLine && !mPasswordVisible) {
         QPainter painter(viewport());
         QTextCursor cursor = textCursor();
         QTextBlock block = document()->firstBlock();
@@ -1727,4 +1755,61 @@ void TCommandLine::paintEvent(QPaintEvent* event)
     }
 
     QPlainTextEdit::paintEvent(event);
+}
+
+void TCommandLine::slot_togglePasswordVisibility()
+{
+    if (!mIsEchoSuppressed || mType != MainCommandLine) {
+        return;
+    }
+
+    mPasswordVisible = !mPasswordVisible;
+    updatePasswordToggleButton();
+    viewport()->update(); // triggers paintEvent to mask/unmask
+}
+
+void TCommandLine::updatePasswordToggleButton()
+{
+    if (!mpPasswordToggleButton) {
+        return;
+    }
+
+    if (mPasswordVisible) {
+        // Password is visible, show "hide" icon (eye with slash)
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-off.png")));
+        mpPasswordToggleButton->setToolTip(tr("Hide password"));
+    } else {
+        // Password is hidden, show "show" icon (eye)
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
+        mpPasswordToggleButton->setToolTip(tr("Show password"));
+    }
+}
+
+void TCommandLine::positionPasswordToggleButton()
+{
+    if (!mpPasswordToggleButton) {
+        return;
+    }
+
+    // Position the button at the right side of the text edit
+    const QRect viewportRect = viewport()->geometry();
+    const int buttonWidth = mpPasswordToggleButton->width();
+    const int buttonHeight = mpPasswordToggleButton->height();
+    const int margin = 5;
+
+    // Position at the right edge, vertically centered
+    const int x = viewportRect.width() - buttonWidth - margin;
+    const int y = (viewportRect.height() - buttonHeight) / 2;
+
+    mpPasswordToggleButton->move(x, y);
+}
+
+void TCommandLine::resizeEvent(QResizeEvent* event)
+{
+    QPlainTextEdit::resizeEvent(event);
+
+    // Reposition the password toggle button when the widget is resized
+    if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
+        positionPasswordToggleButton();
+    }
 }
