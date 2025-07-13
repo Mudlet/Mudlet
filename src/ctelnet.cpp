@@ -588,7 +588,7 @@ void cTelnet::slot_socketDisconnected()
             if (mDontReconnect) {
                 reason = qsl("User Disconnected");
             // successful connection duration under 5s == rejected by server
-            } else if (mConnectionTimer.elapsed() > 0 && mConnectionTimer.elapsed() < 5000) { 
+            } else if (mConnectionTimer.elapsed() > 0 && mConnectionTimer.elapsed() < 5000) {
                 reason = qsl("Connection/login attempt rejected by server");
             } else {
                 reason = socket.errorString();
