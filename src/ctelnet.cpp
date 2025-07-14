@@ -165,9 +165,6 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
-    // Set flag to prevent any further access to Host/Console during destruction
-    mIsBeingDestroyed = true;
-
     // Stop all timers immediately
     if (mTimerLogin) {
         mTimerLogin->stop();
@@ -487,9 +484,9 @@ void cTelnet::slot_send_pass()
 
 void cTelnet::slot_socketConnected()
 {
-    // Check if we're being destroyed or if Host is null/invalid
-    if (mIsBeingDestroyed || !mpHost) {
-        qDebug() << "cTelnet::slot_socketConnected() - Aborting due to destruction in progress or null Host";
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
+        qDebug() << "cTelnet::slot_socketConnected() - Aborting due to Host shutdown in progress or null Host";
         return;
     }
 
@@ -529,9 +526,9 @@ void cTelnet::slot_socketDisconnected()
     QString spacer = "    ";
     bool sslerr = false;
 
-    // Check if we're being destroyed or if Host is null/invalid
-    if (mIsBeingDestroyed || !mpHost) {
-        qDebug() << "cTelnet::slot_socketDisconnected() - Aborting due to destruction in progress or null Host";
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
+        qDebug() << "cTelnet::slot_socketDisconnected() - Aborting due to Host shutdown in progress or null Host";
         return;
     }
 
@@ -540,7 +537,7 @@ void cTelnet::slot_socketDisconnected()
     emit signal_disconnected(mpHost);
 
     // Double-check Host is still valid before raising event
-    if (mpHost && !mIsBeingDestroyed) {
+    if (mpHost && !mpHost->isClosingDown()) {
         event.mArgumentList.append(qsl("sysDisconnectionEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
@@ -614,8 +611,8 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
 void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
-    // Check if we're being destroyed or if Host is null/invalid
-    if (mIsBeingDestroyed || !mpHost) {
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
         return;
     }
 
@@ -3372,8 +3369,9 @@ void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (mIsBeingDestroyed || !mpHost || !mpHost->mpConsole) {
-        // Console doesn't exist (yet), or cTelnet is being destroyed, stack up messages until it does...
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+        // Console doesn't exist (yet), or Host is shutting down; stack up
+        // messages until it does (or they are dumped out by the destructor)...
         return;
     }
 
@@ -3644,7 +3642,7 @@ void cTelnet::slot_timerPosting()
 
 void cTelnet::postData()
 {
-    if (mIsBeingDestroyed || !mpHost || !mpHost->mpConsole) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
         return;
     }
     mpHost->mpConsole->printOnDisplay(mMudData, true);
@@ -3899,8 +3897,8 @@ void cTelnet::slot_processReplayChunk()
 
 void cTelnet::slot_socketReadyToBeRead()
 {
-    // Check if we're being destroyed or if Host is null/invalid
-    if (mIsBeingDestroyed || !mpHost) {
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
         return;
     }
 
