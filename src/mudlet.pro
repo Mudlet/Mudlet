@@ -633,6 +633,7 @@ SOURCES += \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
+    SecureStringUtils.cpp \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
@@ -767,6 +768,7 @@ HEADERS += \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
+    SecureStringUtils.h \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \

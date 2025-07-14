@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "SecureStringUtils.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -450,7 +451,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
+    // Encrypt proxy password for secure storage in XML
+    QString encryptedProxyPassword = SecureStringUtils::encryptString(pHost->mProxyPassword);
+    host.append_attribute("mProxyPassword") = encryptedProxyPassword.toUtf8().constData();
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";

@@ -25,6 +25,7 @@
 
 #include "dlgMapper.h"
 #include "LuaInterface.h"
+#include "SecureStringUtils.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -794,7 +795,9 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
-    pHost->mProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+    // Decrypt proxy password from secure storage in XML
+    QString encryptedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+    pHost->mProxyPassword = SecureStringUtils::decryptString(encryptedProxyPassword);
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
     pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
