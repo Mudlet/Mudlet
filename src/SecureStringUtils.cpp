@@ -25,6 +25,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QRandomGenerator>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 QString SecureStringUtils::encryptString(const QString& plaintext)
@@ -100,6 +101,49 @@ void SecureStringUtils::secureByteArrayClear(QByteArray& array)
         array.clear();
         array.squeeze(); // Free memory if possible
     }
+}
+
+bool SecureStringUtils::isEncryptedFormat(const QString& text)
+{
+    if (text.isEmpty()) {
+        return false;
+    }
+    
+    // Check if string contains only valid Base64 characters
+    static const QRegularExpression base64Regex(qsl("^[A-Za-z0-9+/]*={0,2}$"));
+    if (!base64Regex.match(text).hasMatch()) {
+        return false;
+    }
+    
+    // Check if length is compatible with Base64 (multiple of 4)
+    if (text.length() % 4 != 0) {
+        return false;
+    }
+    
+    // Try to decode as Base64 - if it fails, it's not encrypted
+    QByteArray decoded = QByteArray::fromBase64(text.toLatin1());
+    if (decoded.isEmpty() && !text.isEmpty()) {
+        return false; // Failed to decode non-empty string
+    }
+    
+    // Be more conservative: encrypted passwords should be reasonably long
+    // Most real proxy passwords are short, so require a minimum length that's
+    // longer than typical passwords to avoid false positives
+    // The minimum encrypted output for even a 1-character password would be longer
+    if (text.length() < 12) {
+        return false;
+    }
+    
+    return true;
+}
+
+QString SecureStringUtils::safeEncryptString(const QString& text)
+{
+    // Only encrypt if not already encrypted
+    if (isEncryptedFormat(text)) {
+        return text; // Already encrypted
+    }
+    return encryptString(text); // Encrypt plaintext
 }
 
 QByteArray SecureStringUtils::generateKey()

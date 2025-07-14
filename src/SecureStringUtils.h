@@ -42,6 +42,12 @@ public:
     
     // Secure memory clearing for QByteArray
     static void secureByteArrayClear(QByteArray& array);
+    
+    // Check if a string appears to be encrypted (Base64 format)
+    static bool isEncryptedFormat(const QString& text);
+    
+    // Safely encrypt a string that might already be encrypted
+    static QString safeEncryptString(const QString& text);
 
 private:
     // Generate a deterministic key from a fixed seed (for config file encryption)
