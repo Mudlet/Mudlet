@@ -451,8 +451,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+
     // Safely encrypt proxy password (handles both plaintext and already-encrypted passwords)
     QString secureProxyPassword = SecureStringUtils::safeEncryptString(pHost->mProxyPassword);
+
     host.append_attribute("mProxyPassword") = secureProxyPassword.toUtf8().constData();
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";

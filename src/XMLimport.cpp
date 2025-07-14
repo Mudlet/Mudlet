@@ -795,8 +795,10 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
+
     // Handle backward compatibility: decrypt only if password appears to be encrypted
     QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+
     if (SecureStringUtils::isEncryptedFormat(storedProxyPassword)) {
         // Decrypt encrypted password
         pHost->mProxyPassword = SecureStringUtils::decryptString(storedProxyPassword);
@@ -804,6 +806,7 @@ void XMLimport::readHost(Host* pHost)
         // Use plaintext password as-is (backward compatibility)
         pHost->mProxyPassword = storedProxyPassword;
     }
+
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
     pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
