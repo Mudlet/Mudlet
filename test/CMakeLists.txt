@@ -76,3 +76,9 @@ find_package(Lua51 REQUIRED)
 target_link_libraries(
     TLuaInterfaceTest
     LUA51::LUA51)
+
+add_executable(SecureStringUtilsTest SecureStringUtilsTest.cpp ../src/SecureStringUtils.cpp)
+add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
+
+add_executable(ProxyPasswordCompatibilityTest ProxyPasswordCompatibilityTest.cpp ../src/SecureStringUtils.cpp)
+add_test(NAME ProxyPasswordCompatibilityTest COMMAND ProxyPasswordCompatibilityTest)

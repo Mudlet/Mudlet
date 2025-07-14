@@ -1685,6 +1685,8 @@ OTHER_FILES += \
     ../docker/Dockerfile \
     ../test/CMakeLists.txt \
     ../test/GUIConsoleTests.mpackage \
+    ../test/ProxyPasswordCompatibilityTest.cpp \
+    ../test/SecureStringUtilsTest.cpp \
     ../test/TEntityHandlerTest.cpp \
     ../test/TEntityResolverTest.cpp \
     ../test/TLinkStoreTest.cpp \
