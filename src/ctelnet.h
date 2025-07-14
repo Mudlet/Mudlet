@@ -329,7 +329,7 @@ private:
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
-    void promptEnableTTYPEVersion();
+    void autoEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)

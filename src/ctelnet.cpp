@@ -165,6 +165,29 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    // Stop all timers immediately
+    if (mTimerLogin) {
+        mTimerLogin->stop();
+    }
+    if (mTimerPass) {
+        mTimerPass->stop();
+    }
+    if (mpPostingTimer) {
+        mpPostingTimer->stop();
+    }
+
+    // Aggressively disconnect the socket to prevent signals during destruction
+    if (socket.state() != QAbstractSocket::UnconnectedState) {
+        // Block all signals from the socket first
+        socket.blockSignals(true);
+        socket.disconnectFromHost();
+        // Force immediate closure without waiting
+        socket.abort();
+    }
+
+    // Disconnect all signal connections to prevent callbacks during destruction
+    disconnect();
+
     if (loadingReplay) {
         // If we are doing a replay we had better abort it so that if we are
         // NOT the "last profile standing" the replay system gets reset for
@@ -461,6 +484,12 @@ void cTelnet::slot_send_pass()
 
 void cTelnet::slot_socketConnected()
 {
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
+        qDebug() << "cTelnet::slot_socketConnected() - Aborting due to Host shutdown in progress or null Host";
+        return;
+    }
+
     QString msg;
 
     reset();
@@ -497,13 +526,22 @@ void cTelnet::slot_socketDisconnected()
     QString spacer = "    ";
     bool sslerr = false;
 
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
+        qDebug() << "cTelnet::slot_socketDisconnected() - Aborting due to Host shutdown in progress or null Host";
+        return;
+    }
+
     postData();
 
     emit signal_disconnected(mpHost);
 
-    event.mArgumentList.append(qsl("sysDisconnectionEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    // Double-check Host is still valid before raising event
+    if (mpHost && !mpHost->isClosingDown()) {
+        event.mArgumentList.append(qsl("sysDisconnectionEvent"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 
     QTime timeDiff(0, 0, 0, 0);
     msg = tr("[ INFO ]  - Connection time: %1\n    ")
@@ -573,6 +611,11 @@ void cTelnet::slot_socketDisconnected()
 #if !defined(QT_NO_SSL)
 void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+
     QSslCertificate cert = socket.peerCertificate();
     QList<QSslError> ignoreErrorList;
 
@@ -1567,32 +1610,20 @@ void cTelnet::trackKaVirNegotiation(unsigned char option)
 
     qDebug().nospace() << "Matched KaVir protocol handling negotiation order: [" << optList.join(", ") << "]";
 #endif
-        promptEnableTTYPEVersion();
+        autoEnableTTYPEVersion();
     }
 }
 
-// Prompt user to enable TTYPE version compatibility mode and reconnect
-void cTelnet::promptEnableTTYPEVersion()
+// Auto-enable TTYPE version compatibility mode when KaVir protocol is detected
+void cTelnet::autoEnableTTYPEVersion()
 {
     mpHost->mPromptedForVersionInTTYPE = true;
 
-    auto msgBox = new QMessageBox();
-    msgBox->setIcon(QMessageBox::Question);
-    msgBox->setText(tr("This game appears to use a protocol that works best if Mudlet reports its version number during connection.\n\nEnable this compatibility mode for improved color support and reconnect?"));
-    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgBox->setDefaultButton(QMessageBox::Yes);
-
-    int ret = msgBox->exec();
-    delete msgBox;
-
-    if (ret == QMessageBox::Yes) {
-        disconnectIt();
-        mpHost->mVersionInTTYPE = true;
-        postMessage(tr("[ INFO ]  - Compatibility mode enabled: Mudlet will now send its version number in the terminal type for this profile. Reconnecting..."));
-        reconnect();
-    } else {
-        postMessage(tr("[ INFO ]  - Compatibility mode not enabled. You can enable version in the terminal type later in Special Options."));
-    }
+    // Automatically enable TTYPE version compatibility
+    disconnectIt();
+    mpHost->mVersionInTTYPE = true;
+    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting..."));
+    reconnect();
 }
 
 // Auto-enable MXP processor when indicators are detected
@@ -2905,7 +2936,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     mudlet::self()->setNetworkRequestDefaults(url, request);
     mpPackageDownloadReply = mpDownloader->get(request);
 
-    mpProgressDialog = new QProgressDialog(tr("Downloading game GUI from server..."), tr("Cancel"), 0, 4000000, mpHost->mpConsole);
+    mpProgressDialog = new QProgressDialog(tr("Downloading game GUI from server..."), tr("Cancel"), 0, 4000000, mpHost && mpHost->mpConsole ? mpHost->mpConsole : nullptr);
     connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
     connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -3338,8 +3369,9 @@ void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (!mpHost->mpConsole) {
-        // Console doesn't exist (yet), stack up messages until it does...
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+        // Console doesn't exist (yet), or Host is shutting down; stack up
+        // messages until it does (or they are dumped out by the destructor)...
         return;
     }
 
@@ -3603,14 +3635,17 @@ void cTelnet::slot_timerPosting()
     postData();
     mMudData = "";
     mIsTimerPosting = false;
-    mpHost->mpConsole->finalize();
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->finalize();
+    }
 }
 
 void cTelnet::postData()
 {
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->printOnDisplay(mMudData, true);
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+        return;
     }
+    mpHost->mpConsole->printOnDisplay(mMudData, true);
 }
 
 void cTelnet::initStreamDecompressor()
@@ -3852,7 +3887,9 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
 
-    mpHost->mpConsole->finalize();
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->finalize();
+    }
     if (loadingReplay) {
         loadReplayChunk();
     }
@@ -3860,6 +3897,11 @@ void cTelnet::slot_processReplayChunk()
 
 void cTelnet::slot_socketReadyToBeRead()
 {
+    // Check if Host is closing down or null/invalid
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+
     if (mWaitingForResponse) {
         networkLatencyTime = networkLatencyTimer.elapsed() / 1000.0;
         mWaitingForResponse = false;
@@ -3896,7 +3938,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         }
         // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
         buffer[static_cast<size_t>(datalen)] = '\0';
-        if (!loopbackTesting && mpHost->mpConsole->mRecordReplay) {
+        if (!loopbackTesting && mpHost && mpHost->mpConsole && mpHost->mpConsole->mRecordReplay) {
             ++mRecordingChunkCount;
             // QElapsedTimer::elapsed() returns a qint64, it replaces a
             // previous QTime::elapsed() which returns a int (effectively a
@@ -4069,7 +4111,9 @@ Some data loss is likely - please mention this problem to the game admins.)", co
     if (!cleandata.empty()) {
         gotRest(cleandata);
     }
-    mpHost->mpConsole->finalize();
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->finalize();
+    }
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
 }
 

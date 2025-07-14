@@ -1600,7 +1600,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
         // This preserves any command the user may have typed while waiting for login
         mPreEchoText = toPlainText();
         clear();  // Clear for password input
-        
+
         // Show password toggle button and reset visibility state
         if (mpPasswordToggleButton) {
             mPasswordVisible = false; // Start with password hidden
@@ -1611,12 +1611,12 @@ void TCommandLine::setEchoSuppression(bool suppress)
     } else {
         // Clear the password field first
         clear();
-        
+
         // Hide password toggle button
         if (mpPasswordToggleButton) {
             mpPasswordToggleButton->setVisible(false);
         }
-        
+
         // Restore the previously typed text if any
         // This allows users to continue with commands they typed during login sequences
         if (!mPreEchoText.isEmpty()) {
@@ -1660,7 +1660,7 @@ void TCommandLine::slot_togglePasswordVisibility()
     if (!mIsEchoSuppressed || mType != MainCommandLine) {
         return;
     }
-    
+
     mPasswordVisible = !mPasswordVisible;
     updatePasswordToggleButton();
     viewport()->update(); // triggers paintEvent to mask/unmask
@@ -1671,7 +1671,7 @@ void TCommandLine::updatePasswordToggleButton()
     if (!mpPasswordToggleButton) {
         return;
     }
-    
+
     if (mPasswordVisible) {
         // Password is visible, show "hide" icon (eye with slash)
         mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-off.png")));
@@ -1688,24 +1688,24 @@ void TCommandLine::positionPasswordToggleButton()
     if (!mpPasswordToggleButton) {
         return;
     }
-    
+
     // Position the button at the right side of the text edit
     const QRect viewportRect = viewport()->geometry();
     const int buttonWidth = mpPasswordToggleButton->width();
     const int buttonHeight = mpPasswordToggleButton->height();
     const int margin = 5;
-    
+
     // Position at the right edge, vertically centered
     const int x = viewportRect.width() - buttonWidth - margin;
     const int y = (viewportRect.height() - buttonHeight) / 2;
-    
+
     mpPasswordToggleButton->move(x, y);
 }
 
 void TCommandLine::resizeEvent(QResizeEvent* event)
 {
     QPlainTextEdit::resizeEvent(event);
-    
+
     // Reposition the password toggle button when the widget is resized
     if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
         positionPasswordToggleButton();

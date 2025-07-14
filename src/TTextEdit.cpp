@@ -2812,8 +2812,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         QWidget::keyPressEvent(event);
         return;
     }
-    
-    // #7933 Auto-reditect focus to command line from output window when press alpha-numeric characters 
+
+    // #7933 Auto-reditect focus to command line from output window when press alpha-numeric characters
     // skips ctrl,alt, etc. This improves experiencie and makes fast switch to screenreader users focusing on output
     if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
         if (mpHost && mpConsole && mpConsole->mpCommandLine) {
@@ -2824,7 +2824,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             return;
         }
         // if not command line ignore
-    }        
+    }
 
     qsizetype newCaretLine = -1;
     qsizetype newCaretColumn = -1;

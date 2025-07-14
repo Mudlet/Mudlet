@@ -100,11 +100,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_OpaquePaintEvent, false);
-
-    QPalette transparentBgPalette;
-    transparentBgPalette.setColor(QPalette::Window, QColor(0, 0, 0, 0));
-    setPalette(transparentBgPalette);
+    setAttribute(Qt::WA_OpaquePaintEvent, (mType == MainConsole));
 
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -113,7 +109,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     const QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
-    mpMainFrame->setPalette(transparentBgPalette);
+
+    if (mType == MainConsole) {
+        QPalette framePalette;
+        framePalette.setColor(QPalette::Text, QColor(Qt::black));
+        framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+        framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
+        mpMainFrame->setPalette(framePalette);
+        mpMainFrame->setAutoFillBackground(true);
+    } else {
+        QPalette transparentBgPalette;
+        transparentBgPalette.setColor(QPalette::Window, QColor(0, 0, 0, 0));
+        setPalette(transparentBgPalette);
+        mpMainFrame->setPalette(transparentBgPalette);
+    }
     mpMainFrame->setObjectName(qsl("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
@@ -1329,13 +1338,38 @@ std::list<int> TConsole::getBgColor()
 
 QPair<quint8, TChar> TConsole::getTextAttributes() const
 {
-    const int x = P_begin.x();
-    const int y = P_begin.y();
-    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
+    // Take snapshots of cursor/selection coordinates to avoid race conditions
+    const QPoint beginPoint = P_begin;
+    const QPoint endPoint = P_end;
+    const QPoint userCursorPoint = mUserCursor;
+
+    int x = beginPoint.x();
+    int y = beginPoint.y();
+
+    // Fallback to cursor position if no selection is active
+    if (beginPoint == endPoint) {
+        x = userCursorPoint.x();
+        y = userCursorPoint.y();
+    }
+
+    // Take a snapshot of buffer size to avoid TOCTOU issues
+    const int bufferSize = static_cast<int>(buffer.buffer.size());
+
+    // Early bounds check
+    if (y < 0 || x < 0 || y >= bufferSize) {
         return qMakePair(2, TChar());
     }
 
-    return qMakePair(0, buffer.buffer.at(y).at(x));
+    // Get line reference and check its bounds safely
+    const auto& line = buffer.buffer.at(y);
+    const int lineSize = static_cast<int>(line.size());
+
+    if (x >= lineSize) {
+        return qMakePair(2, TChar());
+    }
+
+    // Safe access with bounds already verified
+    return qMakePair(0, line.at(x));
 }
 
 void TConsole::luaWrapLine(int line)
