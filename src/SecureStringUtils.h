@@ -1,3 +1,6 @@
+#ifndef SECURESTRINGUTILS_H
+#define SECURESTRINGUTILS_H
+
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
@@ -16,9 +19,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef SECURESTRINGUTILS_H
-#define SECURESTRINGUTILS_H
 
 #include "pre_guard.h"
 #include <QString>
