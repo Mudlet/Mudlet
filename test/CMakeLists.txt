@@ -34,6 +34,29 @@ link_libraries(
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
+# Include the same keychain configuration as main project
+include(IncludeOptionalModule)
+include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
+                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
+                        READABLE_NAME "own QtKeychain library")
+
+if(NOT DEFINED USE_OWN_QTKEYCHAIN)
+    # Check the parent project's setting
+    get_directory_property(parent_USE_OWN_QTKEYCHAIN PARENT_DIRECTORY USE_OWN_QTKEYCHAIN)
+    if(DEFINED parent_USE_OWN_QTKEYCHAIN)
+        set(USE_OWN_QTKEYCHAIN ${parent_USE_OWN_QTKEYCHAIN})
+    endif()
+endif()
+
+# Configure QtKeychain linking
+if(USE_OWN_QTKEYCHAIN)
+    # Link to the already built qt6keychain target from parent
+    set(KEYCHAIN_LIBRARY qt6keychain)
+else()
+    find_package(Qt6Keychain REQUIRED)
+    set(KEYCHAIN_LIBRARY Qt6::Keychain)
+endif()
+
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
@@ -78,7 +101,22 @@ target_link_libraries(
     LUA51::LUA51)
 
 add_executable(SecureStringUtilsTest SecureStringUtilsTest.cpp ../src/SecureStringUtils.cpp)
+target_link_libraries(SecureStringUtilsTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(SecureStringUtilsTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
 add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
 
 add_executable(ProxyPasswordCompatibilityTest ProxyPasswordCompatibilityTest.cpp ../src/SecureStringUtils.cpp)
+target_link_libraries(ProxyPasswordCompatibilityTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(ProxyPasswordCompatibilityTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
 add_test(NAME ProxyPasswordCompatibilityTest COMMAND ProxyPasswordCompatibilityTest)
+
+add_executable(ProfileEncryptionTest ProfileEncryptionTest.cpp ../src/SecureStringUtils.cpp)
+target_link_libraries(ProfileEncryptionTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(ProfileEncryptionTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+add_test(NAME ProfileEncryptionTest COMMAND ProfileEncryptionTest)

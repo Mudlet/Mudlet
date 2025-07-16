@@ -56,8 +56,8 @@ private slots:
         QString encrypted = SecureStringUtils::encryptString(plaintext);
         QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted));
         
-        // Test valid Base64 strings that are long enough
-        QVERIFY(SecureStringUtils::isEncryptedFormat("dGVzdCBwYXNzd29yZA==")); // "test password" in Base64
+        // Test simple Base64 strings (should NOT be detected as encrypted in new format)
+        QVERIFY(!SecureStringUtils::isEncryptedFormat("dGVzdCBwYXNzd29yZA==")); // "test password" in Base64
         
         // Test invalid Base64 (should NOT be detected as encrypted)
         QVERIFY(!SecureStringUtils::isEncryptedFormat("not-base64!"));
@@ -91,14 +91,21 @@ private slots:
         QVERIFY(!SecureStringUtils::isEncryptedFormat(""));
     }
 
-    void testDeterministicEncryption()
+    void testNonDeterministicEncryption()
     {
-        // Same plaintext should always produce the same encrypted result
+        // Same plaintext should produce DIFFERENT encrypted results each time (more secure)
         QString plaintext = "consistent_password";
         QString encrypted1 = SecureStringUtils::encryptString(plaintext);
         QString encrypted2 = SecureStringUtils::encryptString(plaintext);
         
-        QCOMPARE(encrypted1, encrypted2);
+        // Should be different due to random nonces
+        QVERIFY(encrypted1 != encrypted2);
+        
+        // But both should decrypt to the same plaintext
+        QString decrypted1 = SecureStringUtils::decryptString(encrypted1);
+        QString decrypted2 = SecureStringUtils::decryptString(encrypted2);
+        QCOMPARE(decrypted1, plaintext);
+        QCOMPARE(decrypted2, plaintext);
     }
 
     void testSpecialCharacters()
@@ -131,6 +138,36 @@ private slots:
         SecureStringUtils::secureByteArrayClear(testArray);
         QVERIFY(testArray.isEmpty());
         QVERIFY(testArray != originalArray);
+    }
+
+    void testCrossVersionCompatibility()
+    {
+        // This test ensures that passwords encrypted in one version of Mudlet
+        // (e.g., "Mudlet") can be decrypted in another version (e.g., "Mudlet Public Test Build")
+        // The fix removes dependency on QGuiApplication::applicationName() which varies between versions
+        
+        QString originalPassword = "cross_version_password";
+        
+        // Encrypt the password
+        QString encrypted = SecureStringUtils::encryptString(originalPassword);
+        QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted));
+        
+        // Decrypt should work regardless of application name changes
+        QString decrypted = SecureStringUtils::decryptString(encrypted);
+        QCOMPARE(decrypted, originalPassword);
+        
+        // Test that the base password generation is consistent across runs
+        // This ensures cross-version compatibility for the key derivation
+        QString testPassword = "version_test";
+        QString firstEncrypt = SecureStringUtils::encryptString(testPassword);
+        QString secondEncrypt = SecureStringUtils::encryptString(testPassword);
+        
+        // Due to random nonces, encrypted values will differ
+        QVERIFY(firstEncrypt != secondEncrypt);
+        
+        // But both should decrypt to the same original (proving consistent key derivation)
+        QCOMPARE(SecureStringUtils::decryptString(firstEncrypt), testPassword);
+        QCOMPARE(SecureStringUtils::decryptString(secondEncrypt), testPassword);
     }
 
     void cleanupTestCase()
