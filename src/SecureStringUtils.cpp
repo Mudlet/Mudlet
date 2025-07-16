@@ -27,132 +27,12 @@
 #include <QObject>
 #include <QRandomGenerator>
 #include <QRegularExpression>
-#include <QStandardPaths>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include "../3rdparty/qtkeychain/keychain.h"
 #else
 #include <qt6keychain/keychain.h>
 #endif
 #include "post_guard.h"
-
-QString SecureStringUtils::encryptString(const QString& plaintext)
-{
-    if (plaintext.isEmpty()) {
-        return QString();
-    }
-    
-    try {
-        // Convert to UTF-8 bytes
-        QByteArray plaintextBytes = plaintext.toUtf8();
-        
-        // Generate random salt and nonce for this encryption
-        QByteArray salt = generateSalt();
-        QByteArray nonce = generateNonce();
-        
-        // Generate key using PBKDF2-like approach
-        QByteArray basePassword = getBasePassword();
-        QByteArray key = generateKey(basePassword, salt);
-        
-        // Create keystream using hash-based approach
-        QByteArray keystream = generateKeystream(key, nonce, plaintextBytes.size());
-        
-        // Encrypt by XORing with keystream
-        QByteArray encrypted;
-        encrypted.resize(plaintextBytes.size());
-        for (int i = 0; i < plaintextBytes.size(); ++i) {
-            encrypted[i] = plaintextBytes[i] ^ keystream[i];
-        }
-        
-        // Build the final format: [VERSION:1][SALT:16][NONCE:16][ENCRYPTED_DATA]
-        QByteArray result;
-        result.append(static_cast<char>(ENCRYPTION_VERSION));
-        result.append(salt);
-        result.append(nonce);
-        result.append(encrypted);
-        
-        // Encode as Base64 for safe storage in XML
-        QString base64Result = result.toBase64();
-        
-        // Clear sensitive data
-        secureByteArrayClear(plaintextBytes);
-        secureByteArrayClear(basePassword);
-        secureByteArrayClear(key);
-        secureByteArrayClear(keystream);
-        secureByteArrayClear(salt);
-        secureByteArrayClear(nonce);
-        secureByteArrayClear(encrypted);
-        secureByteArrayClear(result);
-        
-        return base64Result;
-        
-    } catch (...) {
-        // If encryption fails for any reason, return empty string
-        return QString();
-    }
-}
-
-QString SecureStringUtils::decryptString(const QString& ciphertext)
-{
-    if (ciphertext.isEmpty()) {
-        return QString();
-    }
-    
-    try {
-        // Decode from Base64
-        QByteArray encrypted = QByteArray::fromBase64(ciphertext.toLatin1());
-        if (encrypted.size() < MIN_ENCRYPTED_SIZE) {
-            return QString(); // Invalid format
-        }
-        
-        // Extract version
-        quint8 version = static_cast<quint8>(encrypted[0]);
-        if (version != ENCRYPTION_VERSION) {
-            return QString(); // Unsupported version
-        }
-        
-        // Extract salt (bytes 1-16)
-        QByteArray salt = encrypted.mid(1, SALT_SIZE);
-        
-        // Extract nonce (bytes 17-32)
-        QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
-        
-        // Extract encrypted data (bytes 33+)
-        QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE);
-        
-        // Generate key using the same process
-        QByteArray basePassword = getBasePassword();
-        QByteArray key = generateKey(basePassword, salt);
-        
-        // Create keystream using hash-based approach
-        QByteArray keystream = generateKeystream(key, nonce, encryptedData.size());
-        
-        // Decrypt by XORing with keystream
-        QByteArray decrypted;
-        decrypted.resize(encryptedData.size());
-        for (int i = 0; i < encryptedData.size(); ++i) {
-            decrypted[i] = encryptedData[i] ^ keystream[i];
-        }
-        
-        // Convert back to QString
-        QString result = QString::fromUtf8(decrypted);
-        
-        // Clear sensitive data
-        secureByteArrayClear(encrypted);
-        secureByteArrayClear(salt);
-        secureByteArrayClear(nonce);
-        secureByteArrayClear(encryptedData);
-        secureByteArrayClear(basePassword);
-        secureByteArrayClear(key);
-        secureByteArrayClear(keystream);
-        secureByteArrayClear(decrypted);
-        
-        return result;
-        
-    } catch (...) {
-        // If decryption fails for any reason, return empty string
-        return QString();
-    }
-}
 
 bool SecureStringUtils::isEncryptedFormat(const QString& text)
 {
@@ -161,7 +41,7 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
     }
     
     // Quick length check - encrypted strings will be much longer due to Base64 encoding
-    // and the overhead of version + salt + IV
+    // and the overhead of version + salt + nonce
     if (text.length() < (MIN_ENCRYPTED_SIZE * 4 / 3)) { // Base64 overhead
         return false;
     }
@@ -188,14 +68,7 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
     }
 }
 
-QString SecureStringUtils::safeEncryptString(const QString& text)
-{
-    // Only encrypt if not already encrypted
-    if (isEncryptedFormat(text)) {
-        return text; // Already encrypted
-    }
-    return encryptString(text); // Encrypt plaintext
-}
+
 
 void SecureStringUtils::secureStringClear(QString& str)
 {
@@ -243,26 +116,7 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     return derivedKey;
 }
 
-QByteArray SecureStringUtils::getBasePassword()
-{
-    // TODO: Get per-profile encryption key from secure storage
-    // For now, use a machine-specific approach as a fallback
-    // This will be replaced with profile-specific keys stored in QtKeychain
-    
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    
-    // Use application name for base compatibility
-    hash.addData(qsl("Mudlet").toUtf8());
-    
-    // Add machine-specific entropy sources (these vary per installation)
-    hash.addData(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation).toUtf8());
-    hash.addData(QStandardPaths::writableLocation(QStandardPaths::HomeLocation).toUtf8());
-    
-    // Add a fixed string for additional entropy (not a secret, just entropy)
-    hash.addData(qsl("MudletConfigEncryption2025").toUtf8());
-    
-    return hash.result();
-}
+
 
 QByteArray SecureStringUtils::generateSalt()
 {
@@ -488,14 +342,12 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         return newKey;
     }
     
-    // If we can't store in secure storage, fall back to the old method
+    // If we can't store in secure storage, fall back to deterministic key
     // This ensures compatibility in portable mode or when keychain is unavailable
-    QByteArray fallbackKey = getBasePassword();
-    fallbackKey.append(profileName.toUtf8());
-    
     QCryptographicHash hash(QCryptographicHash::Sha256);
-    hash.addData(fallbackKey);
-    secureByteArrayClear(fallbackKey);
+    hash.addData(qsl("Mudlet").toUtf8());
+    hash.addData(profileName.toUtf8());
+    hash.addData(qsl("MudletProfileEncryption2025").toUtf8());
     
     return hash.result();
 }

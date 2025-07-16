@@ -800,8 +800,8 @@ void XMLimport::readHost(Host* pHost)
     QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
 
     if (SecureStringUtils::isEncryptedFormat(storedProxyPassword)) {
-        // Decrypt encrypted password
-        pHost->mProxyPassword = SecureStringUtils::decryptString(storedProxyPassword);
+        // Decrypt encrypted password using profile-aware decryption
+        pHost->mProxyPassword = SecureStringUtils::decryptStringForProfile(storedProxyPassword, pHost->getName());
     } else {
         // Use plaintext password as-is (backward compatibility)
         pHost->mProxyPassword = storedProxyPassword;

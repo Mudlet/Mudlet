@@ -19,175 +19,91 @@
 
 #include <SecureStringUtils.h>
 #include <QtTest/QtTest>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
-#include <QBuffer>
 
 class ProxyPasswordCompatibilityTest : public QObject {
 Q_OBJECT
 
-private:
-
 private slots:
-
-    void initTestCase()
-    {
-    }
-
-    void testLegacyPlaintextPasswordImport()
-    {
-        // Simulate importing a legacy XML file with plaintext proxy password
-        QString xmlContent = R"(
-            <Host mProxyAddress="proxy.example.com" 
-                  mProxyPort="8080" 
-                  mProxyUsername="user" 
-                  mProxyPassword="plaintext_password" 
-                  mUseProxy="yes">
-            </Host>
-        )";
-
-        QByteArray xmlData = xmlContent.toUtf8();
-        QBuffer buffer(&xmlData);
-        buffer.open(QIODevice::ReadOnly);
-        
-        QXmlStreamReader reader(&buffer);
-        
-        // Find the Host element
-        while (!reader.atEnd() && !reader.isStartElement()) {
-            reader.readNext();
-        }
-        
-        QVERIFY(reader.isStartElement());
-        QCOMPARE(reader.name().toString(), "Host");
-        
-        // Test backward compatibility detection
-        QString storedPassword = reader.attributes().value("mProxyPassword").toString();
-        QCOMPARE(storedPassword, "plaintext_password");
-        
-        // Should NOT be detected as encrypted format
-        QVERIFY(!SecureStringUtils::isEncryptedFormat(storedPassword));
-        
-        // Import logic should use plaintext as-is
-        QString importedPassword;
-        if (SecureStringUtils::isEncryptedFormat(storedPassword)) {
-            importedPassword = SecureStringUtils::decryptString(storedPassword);
-        } else {
-            importedPassword = storedPassword; // Use plaintext as-is
-        }
-        
-        QCOMPARE(importedPassword, "plaintext_password");
-    }
-
-    void testEncryptedPasswordImport()
-    {
-        // Test importing an XML file with encrypted proxy password
-        QString originalPassword = "my_secure_password";
-        QString encryptedPassword = SecureStringUtils::encryptString(originalPassword);
-        
-        QString xmlTemplate = R"(
-            <Host mProxyAddress="proxy.example.com" 
-                  mProxyPort="8080" 
-                  mProxyUsername="user" 
-                  mProxyPassword="%1" 
-                  mUseProxy="yes">
-            </Host>
-        )";
-        
-        QString xmlContent = xmlTemplate.arg(encryptedPassword);
-        QByteArray xmlData = xmlContent.toUtf8();
-        QBuffer buffer(&xmlData);
-        buffer.open(QIODevice::ReadOnly);
-        
-        QXmlStreamReader reader(&buffer);
-        
-        // Find the Host element
-        while (!reader.atEnd() && !reader.isStartElement()) {
-            reader.readNext();
-        }
-        
-        QVERIFY(reader.isStartElement());
-        QCOMPARE(reader.name().toString(), "Host");
-        
-        // Test encrypted password detection and decryption
-        QString storedPassword = reader.attributes().value("mProxyPassword").toString();
-        QCOMPARE(storedPassword, encryptedPassword);
-        
-        // Should be detected as encrypted format
-        QVERIFY(SecureStringUtils::isEncryptedFormat(storedPassword));
-        
-        // Import logic should decrypt it
-        QString importedPassword;
-        if (SecureStringUtils::isEncryptedFormat(storedPassword)) {
-            importedPassword = SecureStringUtils::decryptString(storedPassword);
-        } else {
-            importedPassword = storedPassword;
-        }
-        
-        QCOMPARE(importedPassword, originalPassword);
-    }
-
-    void testPasswordExportEncryption()
-    {
-        // Test that export always encrypts passwords
-        QString originalPassword = "export_test_password";
-        
-        // Test safe encryption (should encrypt plaintext)
-        QString exportedPassword = SecureStringUtils::safeEncryptString(originalPassword);
-        QVERIFY(SecureStringUtils::isEncryptedFormat(exportedPassword));
-        
-        // Verify it can be decrypted back to original
-        QString decryptedPassword = SecureStringUtils::decryptString(exportedPassword);
-        QCOMPARE(decryptedPassword, originalPassword);
-    }
-
-    void testExportAlreadyEncryptedPassword()
-    {
-        // Test that export handles already-encrypted passwords correctly
-        QString originalPassword = "already_encrypted_test";
-        QString alreadyEncrypted = SecureStringUtils::encryptString(originalPassword);
-        
-        // Safe encryption should return the same encrypted value
-        QString exportedPassword = SecureStringUtils::safeEncryptString(alreadyEncrypted);
-        QCOMPARE(exportedPassword, alreadyEncrypted);
-        
-        // Should still decrypt to original
-        QString decryptedPassword = SecureStringUtils::decryptString(exportedPassword);
-        QCOMPARE(decryptedPassword, originalPassword);
-    }
-
-    void testRoundTripCompatibility()
-    {
-        // Test full round trip: plaintext -> export (encrypt) -> import (detect & decrypt)
-        QString originalPassword = "roundtrip_password";
-        
-        // Step 1: Export (encrypt)
-        QString exportedPassword = SecureStringUtils::safeEncryptString(originalPassword);
-        QVERIFY(SecureStringUtils::isEncryptedFormat(exportedPassword));
-        
-        // Step 2: Import (detect and decrypt)
-        QString importedPassword;
-        if (SecureStringUtils::isEncryptedFormat(exportedPassword)) {
-            importedPassword = SecureStringUtils::decryptString(exportedPassword);
-        } else {
-            importedPassword = exportedPassword;
-        }
-        
-        // Should match original
-        QCOMPARE(importedPassword, originalPassword);
-    }
-
-    void testEmptyPasswordHandling()
-    {
-        // Test handling of empty passwords
-        QVERIFY(!SecureStringUtils::isEncryptedFormat(""));
-        QCOMPARE(SecureStringUtils::safeEncryptString(""), QString());
-        QCOMPARE(SecureStringUtils::decryptString(""), QString());
-    }
-
-    void cleanupTestCase()
-    {
-    }
+    void initTestCase();
+    void testPlaintextToEncryptedMigration();
+    void testProfileIsolation();
+    void testRegressionFromPlaintext();
+    void cleanupTestCase();
 };
+
+void ProxyPasswordCompatibilityTest::initTestCase()
+{
+}
+
+void ProxyPasswordCompatibilityTest::testPlaintextToEncryptedMigration()
+{
+    QString plainPassword = "legacy_password";
+    QString profileName = "MigrationTestProfile";
+    
+    // Simulate reading a plaintext password from settings (legacy behavior)
+    QVERIFY(!SecureStringUtils::isEncryptedFormat(plainPassword));
+    
+    // "Migrate" by encrypting the plaintext password
+    QString encryptedPassword = SecureStringUtils::encryptStringForProfile(plainPassword, profileName);
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encryptedPassword));
+    
+    // Verify it can be decrypted back to original
+    QString decryptedPassword = SecureStringUtils::decryptStringForProfile(encryptedPassword, profileName);
+    QCOMPARE(decryptedPassword, plainPassword);
+}
+
+void ProxyPasswordCompatibilityTest::testProfileIsolation()
+{
+    QString password = "shared_password";
+    QString profile1 = "Profile_A";
+    QString profile2 = "Profile_B";
+    
+    // Encrypt same password for different profiles
+    QString encrypted1 = SecureStringUtils::encryptStringForProfile(password, profile1);
+    QString encrypted2 = SecureStringUtils::encryptStringForProfile(password, profile2);
+    
+    // Should be different encrypted values
+    QVERIFY(encrypted1 != encrypted2);
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted1));
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted2));
+    
+    // Each should only decrypt with correct profile
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted1, profile1), password);
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted2, profile2), password);
+    
+    // Cross-profile decryption should fail
+    QVERIFY(SecureStringUtils::decryptStringForProfile(encrypted1, profile2) != password);
+    QVERIFY(SecureStringUtils::decryptStringForProfile(encrypted2, profile1) != password);
+}
+
+void ProxyPasswordCompatibilityTest::testRegressionFromPlaintext()
+{
+    // Test various plaintext passwords that should NOT be detected as encrypted
+    QStringList plaintextPasswords = {
+        "password",
+        "admin123",
+        "P@ssw0rd!",
+        "user@domain.com",
+        "very_long_password_with_underscores_and_numbers_12345",
+        "短密码",  // Short Unicode password
+        ""
+    };
+    
+    for (const QString& password : plaintextPasswords) {
+        QVERIFY(!SecureStringUtils::isEncryptedFormat(password));
+        
+        if (!password.isEmpty()) {
+            // Should be able to encrypt and decrypt properly
+            QString encrypted = SecureStringUtils::encryptStringForProfile(password, "TestProfile");
+            QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted));
+            QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted, "TestProfile"), password);
+        }
+    }
+}
+
+void ProxyPasswordCompatibilityTest::cleanupTestCase()
+{
+}
 
 #include "ProxyPasswordCompatibilityTest.moc"
 QTEST_MAIN(ProxyPasswordCompatibilityTest)

@@ -28,14 +28,15 @@
 /**
  * @brief Utility class for secure string operations
  * 
- * This class provides cryptographic encryption for sensitive data like passwords
- * stored in configuration files. It uses Qt's built-in cryptographic functions
- * for secure encryption and provides additional security features like:
+ * This class provides cryptographically secure encryption for sensitive data like passwords
+ * stored in configuration files. All encryption is profile-aware, using unique encryption
+ * keys stored in platform secure storage (QtKeychain).
  * 
- * - ChaCha20-like stream cipher encryption with random nonce per encryption
- * - PBKDF2 key derivation with salt using QCryptographicHash
+ * Features:
+ * - Per-profile encryption keys stored in secure platform storage
+ * - SHA-256 based stream cipher encryption with random salts/nonces
  * - Secure memory clearing
- * - Backward compatibility detection for migration from plaintext
+ * - Automatic migration from plaintext passwords
  * 
  * The encrypted format includes: [VERSION:1][SALT:16][NONCE:16][ENCRYPTED_DATA]
  * All encoded as Base64 for safe XML storage.
@@ -43,27 +44,6 @@
 class SecureStringUtils
 {
 public:
-    /**
-     * @brief Encrypt a plaintext string using AES-256-CTR
-     * @param plaintext The string to encrypt
-     * @return Base64-encoded encrypted string, or empty string if input is empty
-     */
-    static QString encryptString(const QString& plaintext);
-    
-    /**
-     * @brief Decrypt an encrypted string
-     * @param ciphertext Base64-encoded encrypted string
-     * @return Decrypted plaintext, or empty string if input is empty/invalid
-     */
-    static QString decryptString(const QString& ciphertext);
-    
-    /**
-     * @brief Safely encrypt a string, detecting if it's already encrypted
-     * @param text String that may be plaintext or already encrypted
-     * @return Encrypted string (unchanged if already encrypted)
-     */
-    static QString safeEncryptString(const QString& text);
-    
     /**
      * @brief Encrypt a string using a profile-specific encryption key
      * @param plaintext The string to encrypt
@@ -108,12 +88,6 @@ private:
      * @return 32-byte key
      */
     static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations = 10000);
-    
-    /**
-     * @brief Get the base password for key derivation
-     * @return Application-specific password
-     */
-    static QByteArray getBasePassword();
     
     /**
      * @brief Get or create a profile-specific encryption key
