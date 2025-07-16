@@ -23,10 +23,16 @@
 
 #include "pre_guard.h"
 #include <QCryptographicHash>
+#include <QDataStream>
+#include <QDir>
 #include <QEventLoop>
+#include <QFile>
 #include <QObject>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QSaveFile>
+#include <QStandardPaths>
+#include <QVersionNumber>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include "../3rdparty/qtkeychain/keychain.h"
 #else
@@ -301,7 +307,7 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
 
 QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName)
 {
-    // Try to load existing key from secure storage
+    // Try to load existing key from secure storage first
     auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile encryption"));
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
@@ -328,6 +334,12 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         return existingKey;
     }
     
+    // If keychain failed, try to load from profile directory (portable mode)
+    QByteArray fileKey = loadEncryptionKeyFromFile(profileName);
+    if (fileKey.size() == KEY_SIZE) {
+        return fileKey;
+    }
+    
     // Generate a new random key
     QByteArray newKey;
     newKey.resize(KEY_SIZE);
@@ -337,13 +349,18 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         newKey[i] = static_cast<char>(rng->bounded(256));
     }
     
-    // Store the new key in secure storage
+    // Try to store the new key in secure storage first
     if (storeProfileEncryptionKey(profileName, newKey)) {
         return newKey;
     }
     
-    // If we can't store in secure storage, fall back to deterministic key
-    // This ensures compatibility in portable mode or when keychain is unavailable
+    // If secure storage failed, store in profile directory (portable mode)
+    if (storeEncryptionKeyToFile(profileName, newKey)) {
+        return newKey;
+    }
+    
+    // Final fallback to deterministic key if all else fails
+    // This ensures compatibility when profile directory is read-only
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(qsl("Mudlet").toUtf8());
     hash.addData(profileName.toUtf8());
@@ -378,4 +395,73 @@ bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, co
     job->deleteLater();
     
     return success;
+}
+
+QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileName)
+{
+    // Build path manually to avoid circular dependencies
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString keyFilePath = QString("%1/profiles/%2/encryption_key").arg(configPath, profileName);
+    
+    QFile file(keyFilePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QByteArray(); // File doesn't exist or can't be read
+    }
+    
+    QDataStream ifs(&file);
+    // Use compatible data stream format
+    ifs.setVersion(QDataStream::Qt_5_12);
+    
+    QString base64Key;
+    ifs >> base64Key;
+    file.close();
+    
+    if (base64Key.isEmpty()) {
+        return QByteArray();
+    }
+    
+    QByteArray key = QByteArray::fromBase64(base64Key.toLatin1());
+    return (key.size() == KEY_SIZE) ? key : QByteArray();
+}
+
+bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, const QByteArray& key)
+{
+    if (key.size() != KEY_SIZE) {
+        return false;
+    }
+    
+    // Build path manually to avoid circular dependencies
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString profileDir = QString("%1/profiles/%2").arg(configPath, profileName);
+    QString keyFilePath = QString("%1/encryption_key").arg(profileDir);
+    
+    // Ensure profile directory exists
+    QDir dir;
+    if (!dir.mkpath(profileDir)) {
+        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" 
+                                     << profileName << "\". Falling back to deterministic key derivation.";
+        return false;
+    }
+    
+    QSaveFile file(keyFilePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" 
+                                     << profileName << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        return false;
+    }
+    
+    QDataStream ofs(&file);
+    // Use compatible data stream format
+    ofs.setVersion(QDataStream::Qt_5_12);
+    
+    QString base64Key = key.toBase64();
+    ofs << base64Key;
+    
+    if (!file.commit()) {
+        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \"" 
+                                     << profileName << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        return false;
+    }
+    
+    return true;
 }

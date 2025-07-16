@@ -105,6 +105,21 @@ private:
     static bool storeProfileEncryptionKey(const QString& profileName, const QByteArray& key);
     
     /**
+     * @brief Load encryption key from profile directory file (portable mode)
+     * @param profileName Name of the profile
+     * @return 32-byte encryption key, or empty if not found/invalid
+     */
+    static QByteArray loadEncryptionKeyFromFile(const QString& profileName);
+    
+    /**
+     * @brief Store encryption key to profile directory file (portable mode)
+     * @param profileName Name of the profile
+     * @param key 32-byte encryption key to store
+     * @return true if storage was successful
+     */
+    static bool storeEncryptionKeyToFile(const QString& profileName, const QByteArray& key);
+    
+    /**
      * @brief Generate a random salt
      * @return 16-byte random salt
      */

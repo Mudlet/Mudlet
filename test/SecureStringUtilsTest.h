@@ -1,0 +1,11 @@
+private slots:
+    void testBasicEncryption();
+    void testInvalidInput();
+    void testEmptyInput();
+    void testVersionUpgrade();
+    void testSecureMemoryClear();
+    void testEncryptedFormat();
+    void testProfileIsolation();
+    void testErrorHandling();
+    void testProfileKeyPersistence();
+    void testPortableModeFileStorage();

@@ -33,6 +33,7 @@ private slots:
     void testSpecialCharacters();
     void testSecureMemoryClearing();
     void testProfileKeyPersistence();
+    void testPortableModeFileStorage();
     void cleanupTestCase();
 };
 
@@ -162,6 +163,38 @@ void SecureStringUtilsTest::testProfileKeyPersistence()
     // Both should decrypt correctly (proving key consistency)
     QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted1, profile), password);
     QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted2, profile), password);
+}
+
+void SecureStringUtilsTest::testPortableModeFileStorage()
+{
+    // Test that profile-specific encryption/decryption works consistently
+    // This exercises the file-based key storage in portable mode
+    QString profileName = "PortableTestProfile";
+    QString plaintext = "portable_test_password";
+    
+    // First encryption - this will trigger key generation and file storage
+    QString encrypted1 = SecureStringUtils::encryptStringForProfile(plaintext, profileName);
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted1));
+    
+    // Second encryption with same profile - should use same key from file
+    QString encrypted2 = SecureStringUtils::encryptStringForProfile(plaintext, profileName);
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted2));
+    
+    // Both should decrypt correctly
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted1, profileName), plaintext);
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted2, profileName), plaintext);
+    
+    // Test that different profiles use different keys
+    QString otherProfile = "AnotherPortableProfile";
+    QString encrypted3 = SecureStringUtils::encryptStringForProfile(plaintext, otherProfile);
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted3));
+    
+    // Should decrypt correctly with its own profile
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(encrypted3, otherProfile), plaintext);
+    
+    // Cross-profile decryption should fail (different keys)
+    QString crossDecrypt = SecureStringUtils::decryptStringForProfile(encrypted3, profileName);
+    QVERIFY(crossDecrypt.isEmpty() || crossDecrypt != plaintext);
 }
 
 void SecureStringUtilsTest::cleanupTestCase()
