@@ -593,7 +593,7 @@ void cTelnet::slot_socketDisconnected()
             } else {
                 reason = socket.errorString();
             }
-            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: %1.").arg(reason);
             postMessage(err);
         }
         postMessage(msg);
