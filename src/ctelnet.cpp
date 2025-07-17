@@ -589,7 +589,7 @@ void cTelnet::slot_socketDisconnected()
                 reason = tr("Connection/login attempt rejected by server");
             // SocketError(13) == SslHandshakeFailedError (https://doc.qt.io/qt-6/qabstractsocket.html#SocketError-enum)
             } else if (socket.error() == QAbstractSocket::SocketError(13)) {
-                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
+                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off");
             } else {
                 reason = socket.errorString();
             }
