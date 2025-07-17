@@ -2042,7 +2042,7 @@ void dlgProfilePreferences::slot_setMapBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
     }
 }
 
