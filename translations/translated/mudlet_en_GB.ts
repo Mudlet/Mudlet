@@ -1589,107 +1589,107 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="66"/>
       <location filename="../src/TDetachedWindow.cpp" line="741"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (Detached)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="149"/>
       <source>&amp;Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="151"/>
       <source>&amp;Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Save Profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="153"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Save the current profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="159"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Export Profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="160"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>Export profile as package</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="164"/>
       <source>Profile &amp;Settings</source>
-      <translation type="unfinished"/>
+      <translation>Profile &amp;Settings</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="166"/>
       <source>Open profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Open profile settings</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="172"/>
       <source>&amp;Close Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Close Profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="174"/>
       <source>Close the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Close the current profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="178"/>
       <source>&amp;Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Window</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="180"/>
       <source>&amp;Reattach to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Reattach to Main Window</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="182"/>
       <source>Reattach this profile window to the main Mudlet window</source>
-      <translation type="unfinished"/>
+      <translation>Reattach this profile window to the main Mudlet window</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="188"/>
       <source>&amp;Close</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Close</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="196"/>
       <source>Always on &amp;Top</source>
-      <translation type="unfinished"/>
+      <translation>Always on &amp;Top</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="199"/>
       <source>Keep this window always on top of other windows</source>
-      <translation type="unfinished"/>
+      <translation>Keep this window always on top of other windows</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="204"/>
       <source>&amp;Minimize</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Minimise</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="357"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Reattach &apos;%1&apos; to Main Window</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="367"/>
       <source>Close Profile &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Close Profile &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="376"/>
       <source>Close Window (All Profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Close Window (All Profiles)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="426"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Profile Toolbar</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="433"/>
@@ -1706,7 +1706,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="449"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Reconnect</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="453"/>
@@ -1717,12 +1717,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="465"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Triggers</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="466"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit triggers</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="470"/>
@@ -1732,7 +1732,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="471"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit aliases</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="475"/>
@@ -1742,7 +1742,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="476"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit timers</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="480"/>
@@ -1752,7 +1752,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="481"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit easy buttons</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="485"/>
@@ -1762,7 +1762,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="486"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit scripts</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="490"/>
@@ -1772,7 +1772,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="491"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit keys</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="495"/>
@@ -1782,7 +1782,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="496"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Show and edit Lua variables</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="502"/>
@@ -1810,58 +1810,58 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="534"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Map</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="535"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Show/hide the map</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="539"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Manual</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="540"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Browse reference material and documentation</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="544"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Settings</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="545"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>See and edit profile preferences</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="549"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Notepad</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="550"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Open a notepad that you can store your notes in</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="556"/>
       <location filename="../src/TDetachedWindow.cpp" line="566"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>Packages</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Package Manager</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="569"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Module Manager</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="573"/>
@@ -1881,18 +1881,18 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="591"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Toggle Full Screen View</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="646"/>
       <source>Ready</source>
-      <translation type="unfinished"/>
+      <translation>Ready</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="649"/>
       <location filename="../src/TDetachedWindow.cpp" line="779"/>
       <source>Profile: %1</source>
-      <translation type="unfinished"/>
+      <translation>Profile: %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="649"/>
@@ -1904,67 +1904,67 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="657"/>
       <source>Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Disconnected</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="743"/>
       <source>Mudlet (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (Detached)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="751"/>
       <source> - Connected</source>
-      <translation type="unfinished"/>
+      <translation> - Connected</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="753"/>
       <source> to %1</source>
-      <translation type="unfinished"/>
+      <translation> to %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
       <source> - Connecting...</source>
-      <translation type="unfinished"/>
+      <translation> - Connecting...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="758"/>
       <source> - Disconnected</source>
-      <translation type="unfinished"/>
+      <translation> - Disconnected</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="763"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (%1 profiles) - %2 (Detached)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="781"/>
       <source>Profiles: %1 | Active: %2</source>
-      <translation type="unfinished"/>
+      <translation>Profiles: %1 | Active: %2</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="789"/>
       <source>Connected to %1</source>
-      <translation type="unfinished"/>
+      <translation>Connected to %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="792"/>
       <source>Connecting to %1...</source>
-      <translation type="unfinished"/>
+      <translation>Connecting to %1...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="795"/>
       <source>Disconnected from %1</source>
-      <translation type="unfinished"/>
+      <translation>Disconnected from %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="799"/>
       <source>No Profile</source>
-      <translation type="unfinished"/>
+      <translation>No Profile</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="889"/>
       <source>Profile &apos;%1&apos; saved</source>
-      <translation type="unfinished"/>
+      <translation>Profile &apos;%1&apos; saved</translation>
     </message>
   </context>
   <context>
@@ -4545,7 +4545,7 @@ changed.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="1628"/>
       <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved colour support. Reconnecting...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1639"/>
@@ -6988,13 +6988,13 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgProfilePreferences.cpp" line="683"/>
       <source>Enable spell check using Mudlet dictionary:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Enable spell check using Mudlet dictionary:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="686"/>
       <source>Enable spell check using System dictionary:</source>
       <extracomment>On *nix systems where we find the system ones we use them</extracomment>
-      <translation type="unfinished"/>
+      <translation>Enable spell check using System dictionary:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="879"/>
@@ -9676,7 +9676,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="152"/>
       <source>Window</source>
-      <translation type="unfinished"/>
+      <translation>Window</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -9686,32 +9686,32 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="180"/>
       <source>Reattach detached windows</source>
-      <translation type="unfinished"/>
+      <translation>Reattach detached windows</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="183"/>
       <source>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="194"/>
       <source>Always on Top</source>
-      <translation type="unfinished"/>
+      <translation>Always on Top</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
       <source>&lt;p&gt;Keep the main Mudlet window always on top of other windows.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Keep the main Mudlet window always on top of other windows.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="202"/>
       <source>Minimize</source>
-      <translation type="unfinished"/>
+      <translation>Minimise</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>&lt;p&gt;Minimize the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Minimise the main Mudlet window.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
@@ -10852,7 +10852,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="988"/>
       <source>Esperanto</source>
-      <translation type="unfinished"/>
+      <translation>Esperanto</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="989"/>
@@ -10998,12 +10998,12 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1018"/>
       <source>Faroese</source>
-      <translation type="unfinished"/>
+      <translation>Faroese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1019"/>
       <source>Faroese (Faroe Islands)</source>
-      <translation type="unfinished"/>
+      <translation>Faroese (Faroe Islands)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1020"/>
@@ -11151,17 +11151,17 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1082"/>
       <source>Mongolian</source>
-      <translation type="unfinished"/>
+      <translation>Mongolian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1083"/>
       <source>Mongolian (Mongolia)</source>
-      <translation type="unfinished"/>
+      <translation>Mongolian (Mongolia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1148"/>
       <source>Tagalog</source>
-      <translation type="unfinished"/>
+      <translation>Tagalog</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1251"/>
