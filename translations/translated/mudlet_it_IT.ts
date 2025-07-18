@@ -1602,12 +1602,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="153"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Salva il profilo corrente</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="159"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Esporta Profilo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="160"/>
@@ -1622,17 +1622,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="166"/>
       <source>Open profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Apri le impostazioni del profilo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="172"/>
       <source>&amp;Close Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Chiudi Profilo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="174"/>
       <source>Close the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi il profilo corrente</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="178"/>
@@ -1662,12 +1662,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="199"/>
       <source>Keep this window always on top of other windows</source>
-      <translation type="unfinished"/>
+      <translation>Mantieni sempre questa finestra in primo piano</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="204"/>
       <source>&amp;Minimize</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Minimizza</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="357"/>
@@ -1677,12 +1677,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="367"/>
       <source>Close Profile &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi Profilo &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="376"/>
       <source>Close Window (All Profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi Finestra (Tutti i Profili)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="426"/>
@@ -1884,13 +1884,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="646"/>
       <source>Ready</source>
-      <translation type="unfinished"/>
+      <translation>Pronto</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="649"/>
       <location filename="../src/TDetachedWindow.cpp" line="779"/>
       <source>Profile: %1</source>
-      <translation type="unfinished"/>
+      <translation>Profilo: %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="649"/>
@@ -1902,7 +1902,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="657"/>
       <source>Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Disconnesso</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="743"/>
@@ -1922,12 +1922,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
       <source> - Connecting...</source>
-      <translation type="unfinished"/>
+      <translation> - Connessione...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="758"/>
       <source> - Disconnected</source>
-      <translation type="unfinished"/>
+      <translation> - Disconnesso</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="763"/>
@@ -1957,12 +1957,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="799"/>
       <source>No Profile</source>
-      <translation type="unfinished"/>
+      <translation>Nessun Profilo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="889"/>
       <source>Profile &apos;%1&apos; saved</source>
-      <translation type="unfinished"/>
+      <translation>Profilo &apos;%1&apos; salvato</translation>
     </message>
   </context>
   <context>
@@ -7064,13 +7064,13 @@ Inserisci altro materiale utile, per esempio un link alla wiki di mudlet, al for
       <location filename="../src/dlgProfilePreferences.cpp" line="683"/>
       <source>Enable spell check using Mudlet dictionary:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Abilita il controllo ortografico usando il dizionario di Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="686"/>
       <source>Enable spell check using System dictionary:</source>
       <extracomment>On *nix systems where we find the system ones we use them</extracomment>
-      <translation type="unfinished"/>
+      <translation>Abilita il controllo ortografico usando il dizionario di sistema:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="879"/>
@@ -9808,12 +9808,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="202"/>
       <source>Minimize</source>
-      <translation type="unfinished"/>
+      <translation>Minimizza</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>&lt;p&gt;Minimize the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Minimizza la finestra principale di Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
@@ -10954,7 +10954,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="988"/>
       <source>Esperanto</source>
-      <translation type="unfinished"/>
+      <translation>Esperanto</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="989"/>
@@ -11100,12 +11100,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="1018"/>
       <source>Faroese</source>
-      <translation type="unfinished"/>
+      <translation>Faroese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1019"/>
       <source>Faroese (Faroe Islands)</source>
-      <translation type="unfinished"/>
+      <translation>Faroese (Isole Faroe)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1020"/>
@@ -11253,17 +11253,17 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="1082"/>
       <source>Mongolian</source>
-      <translation type="unfinished"/>
+      <translation>Mongolo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1083"/>
       <source>Mongolian (Mongolia)</source>
-      <translation type="unfinished"/>
+      <translation>Mongolo (Mongolia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1148"/>
       <source>Tagalog</source>
-      <translation type="unfinished"/>
+      <translation>Tagalog</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1251"/>
