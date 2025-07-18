@@ -634,6 +634,7 @@ SOURCES += \
     MxpTag.cpp \
     ScriptUnit.cpp \
     SecureStringUtils.cpp \
+    CredentialManager.cpp \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
@@ -769,6 +770,7 @@ HEADERS += \
     post_guard.h \
     ScriptUnit.h \
     SecureStringUtils.h \
+    CredentialManager.h \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
@@ -1685,7 +1687,7 @@ OTHER_FILES += \
     ../docker/Dockerfile \
     ../test/CMakeLists.txt \
     ../test/GUIConsoleTests.mpackage \
-    ../test/ProxyPasswordCompatibilityTest.cpp \
+    ../test/CredentialManagerTest.cpp \
     ../test/SecureStringUtilsTest.cpp \
     ../test/TEntityHandlerTest.cpp \
     ../test/TEntityResolverTest.cpp \
