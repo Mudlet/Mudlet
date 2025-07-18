@@ -17,14 +17,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "PasswordManager.h"
+#include "CredentialManager.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
 #include "pre_guard.h"
+#include <QCoreApplication>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
+#include <QFileInfo>
 #include <QObject>
 #include <QStandardPaths>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
@@ -34,7 +36,7 @@
 #endif
 #include "post_guard.h"
 
-bool PasswordManager::storePassword(const QString& profileName, const QString& key, const QString& password)
+bool CredentialManager::storePassword(const QString& profileName, const QString& key, const QString& password)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         return false;
@@ -43,6 +45,11 @@ bool PasswordManager::storePassword(const QString& profileName, const QString& k
     // Empty password is valid - it means "no password"
     if (password.isEmpty()) {
         return removePassword(profileName, key);
+    }
+    
+    // Skip keychain in test environment to avoid password prompts
+    if (isTestEnvironment()) {
+        return storeEncrypted(profileName, key, password);
     }
     
     // Try QtKeychain first
@@ -56,10 +63,15 @@ bool PasswordManager::storePassword(const QString& profileName, const QString& k
     return storeEncrypted(profileName, key, password);
 }
 
-QString PasswordManager::retrievePassword(const QString& profileName, const QString& key)
+QString CredentialManager::retrievePassword(const QString& profileName, const QString& key)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         return QString();
+    }
+    
+    // Skip keychain in test environment to avoid password prompts
+    if (isTestEnvironment()) {
+        return retrieveEncrypted(profileName, key);
     }
     
     // Try QtKeychain first
@@ -72,20 +84,25 @@ QString PasswordManager::retrievePassword(const QString& profileName, const QStr
     return retrieveEncrypted(profileName, key);
 }
 
-bool PasswordManager::removePassword(const QString& profileName, const QString& key)
+bool CredentialManager::removePassword(const QString& profileName, const QString& key)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         return false;
     }
     
-    bool keychainRemoved = removeFromKeychain(profileName, key);
+    bool keychainRemoved = true; // Assume success in test environment
     bool encryptedRemoved = removeEncrypted(profileName, key);
+    
+    // Skip keychain in test environment to avoid password prompts
+    if (!isTestEnvironment()) {
+        keychainRemoved = removeFromKeychain(profileName, key);
+    }
     
     // Success if at least one method succeeded (or both failed because nothing was stored)
     return keychainRemoved || encryptedRemoved;
 }
 
-bool PasswordManager::isKeychainAvailable()
+bool CredentialManager::isKeychainAvailable()
 {
     // Test by trying to read a non-existent key
     auto *job = new QKeychain::ReadPasswordJob(qsl("MudletKeychainTest"));
@@ -111,7 +128,7 @@ bool PasswordManager::isKeychainAvailable()
     return available;
 }
 
-bool PasswordManager::storeInKeychain(const QString& profileName, const QString& key, const QString& password)
+bool CredentialManager::storeInKeychain(const QString& profileName, const QString& key, const QString& password)
 {
     auto *job = new QKeychain::WritePasswordJob(generateServiceName(profileName, key));
     job->setAutoDelete(false);
@@ -134,7 +151,7 @@ bool PasswordManager::storeInKeychain(const QString& profileName, const QString&
     return success;
 }
 
-QString PasswordManager::retrieveFromKeychain(const QString& profileName, const QString& key)
+QString CredentialManager::retrieveFromKeychain(const QString& profileName, const QString& key)
 {
     auto *job = new QKeychain::ReadPasswordJob(generateServiceName(profileName, key));
     job->setAutoDelete(false);
@@ -159,7 +176,7 @@ QString PasswordManager::retrieveFromKeychain(const QString& profileName, const 
     return password;
 }
 
-bool PasswordManager::removeFromKeychain(const QString& profileName, const QString& key)
+bool CredentialManager::removeFromKeychain(const QString& profileName, const QString& key)
 {
     auto *job = new QKeychain::DeletePasswordJob(generateServiceName(profileName, key));
     job->setAutoDelete(false);
@@ -181,13 +198,13 @@ bool PasswordManager::removeFromKeychain(const QString& profileName, const QStri
     return success;
 }
 
-bool PasswordManager::storeEncrypted(const QString& profileName, const QString& key, const QString& password)
+bool CredentialManager::storeEncrypted(const QString& profileName, const QString& key, const QString& password)
 {
     QString filePath = generateFilePath(profileName, key);
     
-    // Ensure directory exists
-    QDir dir = QDir(filePath).absolutePath();
-    dir.cdUp();
+    // Ensure directory exists - get the directory part of the file path
+    QFileInfo fileInfo(filePath);
+    QDir dir = fileInfo.absoluteDir();
     if (!dir.mkpath(dir.absolutePath())) {
         return false;
     }
@@ -210,7 +227,7 @@ bool PasswordManager::storeEncrypted(const QString& profileName, const QString& 
     return true;
 }
 
-QString PasswordManager::retrieveEncrypted(const QString& profileName, const QString& key)
+QString CredentialManager::retrieveEncrypted(const QString& profileName, const QString& key)
 {
     QString filePath = generateFilePath(profileName, key);
     
@@ -230,19 +247,35 @@ QString PasswordManager::retrieveEncrypted(const QString& profileName, const QSt
     return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
 }
 
-bool PasswordManager::removeEncrypted(const QString& profileName, const QString& key)
+bool CredentialManager::removeEncrypted(const QString& profileName, const QString& key)
 {
     QString filePath = generateFilePath(profileName, key);
     return QFile::remove(filePath);
 }
 
-QString PasswordManager::generateServiceName(const QString& profileName, const QString& key)
+QString CredentialManager::generateServiceName(const QString& profileName, const QString& key)
 {
     return QString("Mudlet-%1-%2").arg(profileName, key);
 }
 
-QString PasswordManager::generateFilePath(const QString& profileName, const QString& key)
+QString CredentialManager::generateFilePath(const QString& profileName, const QString& key)
 {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     return QString("%1/profiles/%2/passwords/%3").arg(configPath, profileName, key);
+}
+
+bool CredentialManager::isTestEnvironment()
+{
+    // Check if we're running in a test environment by looking for Qt Test
+    // This prevents keychain access during automated testing
+    static bool isTest = []() {
+        // Check various indicators that we're in a test
+        QString appName = QCoreApplication::applicationName();
+        QStringList args = QCoreApplication::arguments();
+        
+        return qEnvironmentVariableIsSet("MUDLET_TEST_MODE") ||
+               appName.contains("Test", Qt::CaseInsensitive) ||
+               args.first().contains("Test", Qt::CaseInsensitive);
+    }();
+    return isTest;
 }

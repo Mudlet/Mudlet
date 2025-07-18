@@ -17,14 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_PASSWORDMANAGER_H
-#define MUDLET_PASSWORDMANAGER_H
+#ifndef MUDLET_CREDENTIALMANAGER_H
+#define MUDLET_CREDENTIALMANAGER_H
 
 #include "pre_guard.h"
 #include <QString>
 #include "post_guard.h"
 
-class PasswordManager
+class CredentialManager
 {
 public:
     // Store a password securely for a given profile and key
@@ -40,6 +40,9 @@ public:
     
     // Check if QtKeychain is available and working
     static bool isKeychainAvailable();
+    
+    // Check if running in test environment (to avoid keychain prompts)
+    static bool isTestEnvironment();
 
 private:
     // Try to store in QtKeychain first
@@ -67,4 +70,4 @@ private:
     static QString generateFilePath(const QString& profileName, const QString& key);
 };
 
-#endif // MUDLET_PASSWORDMANAGER_H
+#endif // MUDLET_CREDENTIALMANAGER_H

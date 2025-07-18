@@ -26,7 +26,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
-#include "PasswordManager.h"
+#include "CredentialManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -455,7 +455,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // Store proxy password securely (QtKeychain preferred, encrypted file fallback)
     // Don't store password in XML anymore - use secure storage
     if (!pHost->mProxyPassword.isEmpty()) {
-        PasswordManager::storePassword(pHost->getName(), "proxy", pHost->mProxyPassword);
+        CredentialManager::storePassword(pHost->getName(), "proxy", pHost->mProxyPassword);
     }
     host.append_attribute("mProxyPassword") = "";
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";

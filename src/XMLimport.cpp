@@ -25,7 +25,7 @@
 
 #include "dlgMapper.h"
 #include "LuaInterface.h"
-#include "PasswordManager.h"
+#include "CredentialManager.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -801,11 +801,11 @@ void XMLimport::readHost(Host* pHost)
     
     if (!storedProxyPassword.isEmpty()) {
         // Legacy plaintext password - migrate to secure storage
-        PasswordManager::storePassword(pHost->getName(), "proxy", storedProxyPassword);
+        CredentialManager::storePassword(pHost->getName(), "proxy", storedProxyPassword);
         pHost->mProxyPassword = storedProxyPassword;
     } else {
         // Load from secure storage if available
-        pHost->mProxyPassword = PasswordManager::retrievePassword(pHost->getName(), "proxy");
+        pHost->mProxyPassword = CredentialManager::retrievePassword(pHost->getName(), "proxy");
     }
 
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);

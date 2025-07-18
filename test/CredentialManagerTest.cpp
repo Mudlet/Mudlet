@@ -17,10 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <PasswordManager.h>
+#include <CredentialManager.h>
 #include <QtTest/QtTest>
 
-class PasswordManagerTest : public QObject {
+class CredentialManagerTest : public QObject {
 Q_OBJECT
 
 private slots:
@@ -33,25 +33,28 @@ private slots:
     void cleanupTestCase();
 };
 
-void PasswordManagerTest::initTestCase()
+void CredentialManagerTest::initTestCase()
 {
+    // Set environment variable to indicate we're in test mode
+    // This prevents keychain access that would require user password input
+    qputenv("MUDLET_TEST_MODE", "1");
 }
 
-void PasswordManagerTest::testStoreAndRetrieve()
+void CredentialManagerTest::testStoreAndRetrieve()
 {
     QString profile = "TestProfile";
     QString key = "test_password";
     QString password = "secret123";
     
     // Store password
-    QVERIFY(PasswordManager::storePassword(profile, key, password));
+    QVERIFY(CredentialManager::storePassword(profile, key, password));
     
     // Retrieve password
-    QString retrieved = PasswordManager::retrievePassword(profile, key);
+    QString retrieved = CredentialManager::retrievePassword(profile, key);
     QCOMPARE(retrieved, password);
 }
 
-void PasswordManagerTest::testProfileIsolation()
+void CredentialManagerTest::testProfileIsolation()
 {
     QString profile1 = "Profile1";
     QString profile2 = "Profile2";
@@ -60,15 +63,15 @@ void PasswordManagerTest::testProfileIsolation()
     QString password2 = "password2";
     
     // Store different passwords for different profiles
-    QVERIFY(PasswordManager::storePassword(profile1, key, password1));
-    QVERIFY(PasswordManager::storePassword(profile2, key, password2));
+    QVERIFY(CredentialManager::storePassword(profile1, key, password1));
+    QVERIFY(CredentialManager::storePassword(profile2, key, password2));
     
     // Verify isolation
-    QCOMPARE(PasswordManager::retrievePassword(profile1, key), password1);
-    QCOMPARE(PasswordManager::retrievePassword(profile2, key), password2);
+    QCOMPARE(CredentialManager::retrievePassword(profile1, key), password1);
+    QCOMPARE(CredentialManager::retrievePassword(profile2, key), password2);
 }
 
-void PasswordManagerTest::testKeyIsolation()
+void CredentialManagerTest::testKeyIsolation()
 {
     QString profile = "TestProfile";
     QString key1 = "proxy";
@@ -77,56 +80,56 @@ void PasswordManagerTest::testKeyIsolation()
     QString password2 = "db_pass";
     
     // Store different passwords for different keys
-    QVERIFY(PasswordManager::storePassword(profile, key1, password1));
-    QVERIFY(PasswordManager::storePassword(profile, key2, password2));
+    QVERIFY(CredentialManager::storePassword(profile, key1, password1));
+    QVERIFY(CredentialManager::storePassword(profile, key2, password2));
     
     // Verify isolation
-    QCOMPARE(PasswordManager::retrievePassword(profile, key1), password1);
-    QCOMPARE(PasswordManager::retrievePassword(profile, key2), password2);
+    QCOMPARE(CredentialManager::retrievePassword(profile, key1), password1);
+    QCOMPARE(CredentialManager::retrievePassword(profile, key2), password2);
 }
 
-void PasswordManagerTest::testEmptyPassword()
+void CredentialManagerTest::testEmptyPassword()
 {
     QString profile = "TestProfile";
     QString key = "empty_test";
     
     // Store empty password (should remove any existing password)
-    QVERIFY(PasswordManager::storePassword(profile, key, ""));
+    QVERIFY(CredentialManager::storePassword(profile, key, ""));
     
     // Should return empty string
-    QString retrieved = PasswordManager::retrievePassword(profile, key);
+    QString retrieved = CredentialManager::retrievePassword(profile, key);
     QVERIFY(retrieved.isEmpty());
 }
 
-void PasswordManagerTest::testRemovePassword()
+void CredentialManagerTest::testRemovePassword()
 {
     QString profile = "TestProfile";
     QString key = "remove_test";
     QString password = "temp_password";
     
     // Store password
-    QVERIFY(PasswordManager::storePassword(profile, key, password));
-    QCOMPARE(PasswordManager::retrievePassword(profile, key), password);
+    QVERIFY(CredentialManager::storePassword(profile, key, password));
+    QCOMPARE(CredentialManager::retrievePassword(profile, key), password);
     
     // Remove password
-    QVERIFY(PasswordManager::removePassword(profile, key));
+    QVERIFY(CredentialManager::removePassword(profile, key));
     
     // Should return empty string after removal
-    QString retrieved = PasswordManager::retrievePassword(profile, key);
+    QString retrieved = CredentialManager::retrievePassword(profile, key);
     QVERIFY(retrieved.isEmpty());
 }
 
-void PasswordManagerTest::cleanupTestCase()
+void CredentialManagerTest::cleanupTestCase()
 {
     // Clean up test passwords
-    PasswordManager::removePassword("TestProfile", "test_password");
-    PasswordManager::removePassword("Profile1", "shared_key");
-    PasswordManager::removePassword("Profile2", "shared_key");
-    PasswordManager::removePassword("TestProfile", "proxy");
-    PasswordManager::removePassword("TestProfile", "database");
-    PasswordManager::removePassword("TestProfile", "empty_test");
-    PasswordManager::removePassword("TestProfile", "remove_test");
+    CredentialManager::removePassword("TestProfile", "test_password");
+    CredentialManager::removePassword("Profile1", "shared_key");
+    CredentialManager::removePassword("Profile2", "shared_key");
+    CredentialManager::removePassword("TestProfile", "proxy");
+    CredentialManager::removePassword("TestProfile", "database");
+    CredentialManager::removePassword("TestProfile", "empty_test");
+    CredentialManager::removePassword("TestProfile", "remove_test");
 }
 
-#include "PasswordManagerTest.moc"
-QTEST_MAIN(PasswordManagerTest)
+#include "CredentialManagerTest.moc"
+QTEST_MAIN(CredentialManagerTest)
