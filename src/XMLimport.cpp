@@ -26,6 +26,7 @@
 #include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "SecureStringUtils.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -803,6 +804,7 @@ void XMLimport::readHost(Host* pHost)
         // Legacy plaintext password - migrate to secure storage
         CredentialManager::storePassword(pHost->getName(), "proxy", storedProxyPassword);
         pHost->mProxyPassword = storedProxyPassword;
+        SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
     } else {
         // Load from secure storage if available
         pHost->mProxyPassword = CredentialManager::retrievePassword(pHost->getName(), "proxy");

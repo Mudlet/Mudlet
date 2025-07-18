@@ -77,7 +77,9 @@ QString CredentialManager::retrievePassword(const QString& profileName, const QS
     // Try QtKeychain first
     QString password = retrieveFromKeychain(profileName, key);
     if (!password.isNull()) {
-        return password;
+        QString result = password;
+        SecureStringUtils::secureStringClear(password);
+        return result;
     }
     
     // Fallback to encrypted storage
@@ -173,7 +175,9 @@ QString CredentialManager::retrieveFromKeychain(const QString& profileName, cons
     loop.exec();
     job->deleteLater();
     
-    return password;
+    QString result = password;
+    SecureStringUtils::secureStringClear(password);
+    return result;
 }
 
 bool CredentialManager::removeFromKeychain(const QString& profileName, const QString& key)
