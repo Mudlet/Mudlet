@@ -1797,79 +1797,79 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="516"/>
       <location filename="../src/TDetachedWindow.cpp" line="518"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Medien von Mudlet (Trigger, Skripte, etc.) werden stumm abgespielt</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="522"/>
       <location filename="../src/TDetachedWindow.cpp" line="524"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Töne vom Spiel (MCMP, MSP, etc.) stumm schalten</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="534"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Karte</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="535"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Zeige/Verberge die Karte</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="539"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Handbuch</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="540"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Durchsuche Referenzmaterial und Dokumentation</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="544"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="545"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Zeige und bearbeite Profileinstellungen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="549"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Notiz</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="550"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen Texteditor, um deine Notizen zu speichern</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="556"/>
       <location filename="../src/TDetachedWindow.cpp" line="566"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>Pakete</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Pakete</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="569"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Module</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="573"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="582"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="590"/>
@@ -1879,7 +1879,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="591"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Vollbildanzeige umschalten</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="646"/>
@@ -1897,7 +1897,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="765"/>
       <location filename="../src/TDetachedWindow.cpp" line="783"/>
       <source>None</source>
-      <translation type="unfinished"/>
+      <translation>Ohne</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="657"/>
@@ -1922,7 +1922,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
       <source> - Connecting...</source>
-      <translation type="unfinished"/>
+      <translation> - Verbinde mit...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="758"/>
@@ -1942,7 +1942,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="789"/>
       <source>Connected to %1</source>
-      <translation type="unfinished"/>
+      <translation>Verbunden mit %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="792"/>
@@ -1952,7 +1952,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="795"/>
       <source>Disconnected from %1</source>
-      <translation type="unfinished"/>
+      <translation>Getrennt von %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="799"/>
