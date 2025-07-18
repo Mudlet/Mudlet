@@ -227,7 +227,7 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
         result.append(nonce);
         result.append(encrypted);
         
-        // Encode as Base64 for safe storage in XML
+        // Encode as Base64 for safe text storage
         QString base64Result = result.toBase64();
         
         // Clear sensitive data

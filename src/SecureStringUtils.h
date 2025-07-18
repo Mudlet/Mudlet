@@ -39,7 +39,7 @@
  * - Automatic migration from plaintext passwords
  * 
  * The encrypted format includes: [VERSION:1][SALT:16][NONCE:16][ENCRYPTED_DATA]
- * All encoded as Base64 for safe XML storage.
+ * All encoded as Base64 for safe text storage (QtKeychain, encrypted files).
  */
 class SecureStringUtils
 {
