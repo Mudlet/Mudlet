@@ -47,9 +47,8 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
         return false;
     }
     
-    // Quick length check - encrypted strings will be much longer due to Base64 encoding
-    // and the overhead of version + salt + nonce
-    if (text.length() < (MIN_ENCRYPTED_SIZE * 4 / 3)) { // Base64 overhead
+    // Quick length check - encrypted strings are much longer due to overhead
+    if (text.length() < (MIN_ENCRYPTED_SIZE * 4 / 3)) { // Base64 encoding overhead
         return false;
     }
     
@@ -155,8 +154,8 @@ QByteArray SecureStringUtils::generateNonce()
 
 QByteArray SecureStringUtils::generateKeystream(const QByteArray& key, const QByteArray& nonce, int length)
 {
-    // Generate a keystream using hash-based approach (ChaCha20-like)
-    // This is cryptographically secure when using a proper hash function
+    // Generate a keystream using hash-based approach (ChaCha20-inspired)
+    // This provides cryptographically secure stream cipher encryption
     QByteArray keystream;
     keystream.reserve(length);
     
@@ -310,7 +309,7 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
 {
     QByteArray existingKey;
     
-    // Skip keychain in test environment to avoid password prompts
+    // Skip keychain in test environment
     if (!isTestEnvironment()) {
         // Try to load existing key from secure storage first
         auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile encryption"));
@@ -376,7 +375,7 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
 
 bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, const QByteArray& key)
 {
-    // Skip keychain in test environment to avoid password prompts
+    // Skip keychain in test environment
     if (isTestEnvironment()) {
         return false; // Let caller fall back to file storage
     }
@@ -478,10 +477,10 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
 
 bool SecureStringUtils::isTestEnvironment()
 {
-    // Check if we're running in a test environment by looking for Qt Test
+    // Check if we're running in a test environment
     // This prevents keychain access during automated testing
     
-    // Check various indicators that we're in a test
+    // Check various indicators that we're in a test environment
     QString appName = QCoreApplication::applicationName();
     QStringList args = QCoreApplication::arguments();
     

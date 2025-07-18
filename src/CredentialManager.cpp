@@ -47,7 +47,7 @@ bool CredentialManager::storePassword(const QString& profileName, const QString&
         return removePassword(profileName, key);
     }
     
-    // Skip keychain in test environment to avoid password prompts
+    // Skip keychain in test environment
     if (isTestEnvironment()) {
         return storeEncrypted(profileName, key, password);
     }
@@ -69,7 +69,7 @@ QString CredentialManager::retrievePassword(const QString& profileName, const QS
         return QString();
     }
     
-    // Skip keychain in test environment to avoid password prompts
+    // Skip keychain in test environment
     if (isTestEnvironment()) {
         return retrieveEncrypted(profileName, key);
     }
@@ -95,7 +95,7 @@ bool CredentialManager::removePassword(const QString& profileName, const QString
     bool keychainRemoved = true; // Assume success in test environment
     bool encryptedRemoved = removeEncrypted(profileName, key);
     
-    // Skip keychain in test environment to avoid password prompts
+    // Skip keychain in test environment
     if (!isTestEnvironment()) {
         keychainRemoved = removeFromKeychain(profileName, key);
     }
@@ -270,10 +270,10 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
 
 bool CredentialManager::isTestEnvironment()
 {
-    // Check if we're running in a test environment by looking for Qt Test
+    // Check if we're running in a test environment
     // This prevents keychain access during automated testing
     
-    // Check various indicators that we're in a test
+    // Check various indicators that we're in a test environment
     QString appName = QCoreApplication::applicationName();
     QStringList args = QCoreApplication::arguments();
     
