@@ -1589,7 +1589,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="66"/>
       <location filename="../src/TDetachedWindow.cpp" line="741"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (Отсоединен)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="149"/>
@@ -1604,17 +1604,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="153"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить текущий профиль</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="159"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Экспортировать профиль</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="160"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>Экспортировать профиль как пакет</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="164"/>
