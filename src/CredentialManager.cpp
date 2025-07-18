@@ -268,14 +268,12 @@ bool CredentialManager::isTestEnvironment()
 {
     // Check if we're running in a test environment by looking for Qt Test
     // This prevents keychain access during automated testing
-    static bool isTest = []() {
-        // Check various indicators that we're in a test
-        QString appName = QCoreApplication::applicationName();
-        QStringList args = QCoreApplication::arguments();
-        
-        return qEnvironmentVariableIsSet("MUDLET_TEST_MODE") ||
-               appName.contains("Test", Qt::CaseInsensitive) ||
-               args.first().contains("Test", Qt::CaseInsensitive);
-    }();
-    return isTest;
+    
+    // Check various indicators that we're in a test
+    QString appName = QCoreApplication::applicationName();
+    QStringList args = QCoreApplication::arguments();
+    
+    return qEnvironmentVariableIsSet("MUDLET_TEST_MODE") ||
+           appName.contains("Test", Qt::CaseInsensitive) ||
+           args.first().contains("Test", Qt::CaseInsensitive);
 }

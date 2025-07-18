@@ -22,6 +22,7 @@
 #include "utils.h"
 
 #include "pre_guard.h"
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDir>
@@ -307,34 +308,38 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
 
 QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName)
 {
-    // Try to load existing key from secure storage first
-    auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile encryption"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-    job->setKey(profileName);
-    
-    // Create a blocking call using QEventLoop
-    QEventLoop loop;
     QByteArray existingKey;
     
-    QObject::connect(job, &QKeychain::ReadPasswordJob::finished, [&](QKeychain::Job* task) {
-        if (!task->error()) {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-            existingKey = QByteArray::fromBase64(readJob->textData().toLatin1());
+    // Skip keychain in test environment to avoid password prompts
+    if (!isTestEnvironment()) {
+        // Try to load existing key from secure storage first
+        auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile encryption"));
+        job->setAutoDelete(false);
+        job->setInsecureFallback(false);
+        job->setKey(profileName);
+        
+        // Create a blocking call using QEventLoop
+        QEventLoop loop;
+        
+        QObject::connect(job, &QKeychain::ReadPasswordJob::finished, [&](QKeychain::Job* task) {
+            if (!task->error()) {
+                auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
+                existingKey = QByteArray::fromBase64(readJob->textData().toLatin1());
+            }
+            loop.quit();
+        });
+        
+        job->start();
+        loop.exec();
+        job->deleteLater();
+        
+        // If we found an existing key and it's the right size, use it
+        if (existingKey.size() == KEY_SIZE) {
+            return existingKey;
         }
-        loop.quit();
-    });
-    
-    job->start();
-    loop.exec();
-    job->deleteLater();
-    
-    // If we found an existing key and it's the right size, use it
-    if (existingKey.size() == KEY_SIZE) {
-        return existingKey;
     }
     
-    // If keychain failed, try to load from profile directory (portable mode)
+    // If keychain failed or we're in test mode, try to load from profile directory (portable mode)
     QByteArray fileKey = loadEncryptionKeyFromFile(profileName);
     if (fileKey.size() == KEY_SIZE) {
         return fileKey;
@@ -349,12 +354,12 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         newKey[i] = static_cast<char>(rng->bounded(256));
     }
     
-    // Try to store the new key in secure storage first
-    if (storeProfileEncryptionKey(profileName, newKey)) {
+    // Try to store the new key in secure storage first (skip in test mode)
+    if (!isTestEnvironment() && storeProfileEncryptionKey(profileName, newKey)) {
         return newKey;
     }
     
-    // If secure storage failed, store in profile directory (portable mode)
+    // If secure storage failed or we're in test mode, store in profile directory (portable mode)
     if (storeEncryptionKeyToFile(profileName, newKey)) {
         return newKey;
     }
@@ -371,6 +376,11 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
 
 bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, const QByteArray& key)
 {
+    // Skip keychain in test environment to avoid password prompts
+    if (isTestEnvironment()) {
+        return false; // Let caller fall back to file storage
+    }
+    
     auto *job = new QKeychain::WritePasswordJob(qsl("Mudlet profile encryption"));
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
@@ -464,4 +474,18 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     }
     
     return true;
+}
+
+bool SecureStringUtils::isTestEnvironment()
+{
+    // Check if we're running in a test environment by looking for Qt Test
+    // This prevents keychain access during automated testing
+    
+    // Check various indicators that we're in a test
+    QString appName = QCoreApplication::applicationName();
+    QStringList args = QCoreApplication::arguments();
+    
+    return qEnvironmentVariableIsSet("MUDLET_TEST_MODE") ||
+           appName.contains("Test", Qt::CaseInsensitive) ||
+           args.first().contains("Test", Qt::CaseInsensitive);
 }

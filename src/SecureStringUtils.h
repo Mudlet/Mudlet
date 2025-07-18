@@ -140,6 +140,12 @@ private:
      */
     static QByteArray generateKeystream(const QByteArray& key, const QByteArray& nonce, int length);
     
+    /**
+     * @brief Check if running in test environment (to avoid keychain prompts)
+     * @return true if in test environment, false otherwise
+     */
+    static bool isTestEnvironment();
+    
     // Constants for the encrypted format
     static constexpr quint8 ENCRYPTION_VERSION = 1;
     static constexpr int SALT_SIZE = 16;
