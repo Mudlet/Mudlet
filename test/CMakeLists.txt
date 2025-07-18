@@ -107,6 +107,13 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
 
+add_executable(PasswordManagerTest PasswordManagerTest.cpp ../src/PasswordManager.cpp ../src/SecureStringUtils.cpp)
+target_link_libraries(PasswordManagerTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(PasswordManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+add_test(NAME PasswordManagerTest COMMAND PasswordManagerTest)
+
 add_executable(ProxyPasswordCompatibilityTest ProxyPasswordCompatibilityTest.cpp ../src/SecureStringUtils.cpp)
 target_link_libraries(ProxyPasswordCompatibilityTest ${KEYCHAIN_LIBRARY})
 if(USE_OWN_QTKEYCHAIN)

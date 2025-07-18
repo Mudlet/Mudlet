@@ -26,7 +26,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
-#include "SecureStringUtils.h"
+#include "PasswordManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -451,20 +451,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-
-    // Safely encrypt proxy password for profile-aware storage
-    QString secureProxyPassword;
+    
+    // Store proxy password securely (QtKeychain preferred, encrypted file fallback)
+    // Don't store password in XML anymore - use secure storage
     if (!pHost->mProxyPassword.isEmpty()) {
-        if (SecureStringUtils::isEncryptedFormat(pHost->mProxyPassword)) {
-            // Already encrypted, use as-is
-            secureProxyPassword = pHost->mProxyPassword;
-        } else {
-            // Encrypt plaintext password for this profile
-            secureProxyPassword = SecureStringUtils::encryptStringForProfile(pHost->mProxyPassword, pHost->getName());
-        }
+        PasswordManager::storePassword(pHost->getName(), "proxy", pHost->mProxyPassword);
     }
-
-    host.append_attribute("mProxyPassword") = secureProxyPassword.toUtf8().constData();
+    host.append_attribute("mProxyPassword") = "";
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";

@@ -25,7 +25,7 @@
 
 #include "dlgMapper.h"
 #include "LuaInterface.h"
-#include "SecureStringUtils.h"
+#include "PasswordManager.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -795,16 +795,17 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
-
-    // Handle backward compatibility: decrypt only if password appears to be encrypted
+    
+    // Handle backward compatibility: migrate plaintext passwords from XML to secure storage
     QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
-
-    if (SecureStringUtils::isEncryptedFormat(storedProxyPassword)) {
-        // Decrypt encrypted password using profile-aware decryption
-        pHost->mProxyPassword = SecureStringUtils::decryptStringForProfile(storedProxyPassword, pHost->getName());
-    } else {
-        // Use plaintext password as-is (backward compatibility)
+    
+    if (!storedProxyPassword.isEmpty()) {
+        // Legacy plaintext password - migrate to secure storage
+        PasswordManager::storePassword(pHost->getName(), "proxy", storedProxyPassword);
         pHost->mProxyPassword = storedProxyPassword;
+    } else {
+        // Load from secure storage if available
+        pHost->mProxyPassword = PasswordManager::retrievePassword(pHost->getName(), "proxy");
     }
 
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);

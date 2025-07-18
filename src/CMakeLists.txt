@@ -102,6 +102,7 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
+    PasswordManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
     ShortcutsManager.cpp
