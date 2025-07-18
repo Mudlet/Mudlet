@@ -61,6 +61,7 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
     try {
         // Try to decode and check structure
         QByteArray decoded = QByteArray::fromBase64(text.toLatin1());
+
         if (decoded.size() < MIN_ENCRYPTED_SIZE) {
             return false;
         }
@@ -73,8 +74,6 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
         return false;
     }
 }
-
-
 
 void SecureStringUtils::secureStringClear(QString& str)
 {
@@ -116,13 +115,12 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
             hash.addData(derivedKey);
             derivedKey.append(hash.result());
         }
+
         derivedKey = derivedKey.left(KEY_SIZE);
     }
     
     return derivedKey;
 }
-
-
 
 QByteArray SecureStringUtils::generateSalt()
 {
@@ -131,6 +129,7 @@ QByteArray SecureStringUtils::generateSalt()
     salt.resize(SALT_SIZE);
     
     QRandomGenerator* rng = QRandomGenerator::system();
+
     for (int i = 0; i < SALT_SIZE; ++i) {
         salt[i] = static_cast<char>(rng->bounded(256));
     }
@@ -142,9 +141,11 @@ QByteArray SecureStringUtils::generateNonce()
 {
     // Generate a random 16-byte nonce
     QByteArray nonce;
+
     nonce.resize(NONCE_SIZE);
     
     QRandomGenerator* rng = QRandomGenerator::system();
+
     for (int i = 0; i < NONCE_SIZE; ++i) {
         nonce[i] = static_cast<char>(rng->bounded(256));
     }
@@ -163,11 +164,13 @@ QByteArray SecureStringUtils::generateKeystream(const QByteArray& key, const QBy
     
     for (int block = 0; block < blocks; ++block) {
         QCryptographicHash hash(QCryptographicHash::Sha256);
+
         hash.addData(key);
         hash.addData(nonce);
         
         // Add block counter as 4-byte little-endian integer
         QByteArray blockCounter;
+
         blockCounter.resize(4);
         blockCounter[0] = static_cast<char>(block & 0xFF);
         blockCounter[1] = static_cast<char>((block >> 8) & 0xFF);
@@ -209,13 +212,16 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
         
         // Encrypt by XORing with keystream
         QByteArray encrypted;
+
         encrypted.resize(plaintextBytes.size());
+
         for (int i = 0; i < plaintextBytes.size(); ++i) {
             encrypted[i] = plaintextBytes[i] ^ keystream[i];
         }
         
         // Build the final format: [VERSION:1][SALT:16][NONCE:16][ENCRYPTED_DATA]
         QByteArray result;
+
         result.append(static_cast<char>(ENCRYPTION_VERSION));
         result.append(salt);
         result.append(nonce);
@@ -251,12 +257,14 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
     try {
         // Decode from Base64
         QByteArray encrypted = QByteArray::fromBase64(ciphertext.toLatin1());
+
         if (encrypted.size() < MIN_ENCRYPTED_SIZE) {
             return QString(); // Invalid format
         }
         
         // Extract version
         quint8 version = static_cast<quint8>(encrypted[0]);
+
         if (version != ENCRYPTION_VERSION) {
             return QString(); // Unsupported version
         }
@@ -280,6 +288,7 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         // Decrypt by XORing with keystream
         QByteArray decrypted;
         decrypted.resize(encryptedData.size());
+
         for (int i = 0; i < encryptedData.size(); ++i) {
             decrypted[i] = encryptedData[i] ^ keystream[i];
         }
@@ -298,7 +307,6 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         secureByteArrayClear(decrypted);
         
         return result;
-        
     } catch (...) {
         // If decryption fails for any reason, return empty string
         return QString();
@@ -313,6 +321,7 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
     if (!isTestEnvironment()) {
         // Try to load existing key from secure storage first
         auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile encryption"));
+
         job->setAutoDelete(false);
         job->setInsecureFallback(false);
         job->setKey(profileName);
@@ -340,15 +349,18 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
     
     // If keychain failed or we're in test mode, try to load from profile directory (portable mode)
     QByteArray fileKey = loadEncryptionKeyFromFile(profileName);
+
     if (fileKey.size() == KEY_SIZE) {
         return fileKey;
     }
     
     // Generate a new random key
     QByteArray newKey;
+
     newKey.resize(KEY_SIZE);
     
     QRandomGenerator* rng = QRandomGenerator::system();
+
     for (int i = 0; i < KEY_SIZE; ++i) {
         newKey[i] = static_cast<char>(rng->bounded(256));
     }
@@ -366,6 +378,7 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
     // Final fallback to deterministic key if all else fails
     // This ensures compatibility when profile directory is read-only
     QCryptographicHash hash(QCryptographicHash::Sha256);
+
     hash.addData(qsl("Mudlet").toUtf8());
     hash.addData(profileName.toUtf8());
     hash.addData(qsl("MudletProfileEncryption2025").toUtf8());
@@ -381,6 +394,7 @@ bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, co
     }
     
     auto *job = new QKeychain::WritePasswordJob(qsl("Mudlet profile encryption"));
+
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
     job->setKey(profileName);
@@ -392,10 +406,12 @@ bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, co
     
     QObject::connect(job, &QKeychain::WritePasswordJob::finished, [&](QKeychain::Job* task) {
         success = !task->error();
+
         if (task->error()) {
             qDebug().nospace().noquote() << "SecureStringUtils::storeProfileEncryptionKey() WARNING - could not store encryption key for profile \"" 
                                          << profileName << "\", error: " << task->errorString() << ". Falling back to legacy key derivation.";
         }
+
         loop.quit();
     });
     
@@ -413,6 +429,7 @@ QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileNa
     QString keyFilePath = QString("%1/profiles/%2/encryption_key").arg(configPath, profileName);
     
     QFile file(keyFilePath);
+
     if (!file.open(QIODevice::ReadOnly)) {
         return QByteArray(); // File doesn't exist or can't be read
     }
@@ -422,6 +439,7 @@ QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileNa
     ifs.setVersion(QDataStream::Qt_5_12);
     
     QString base64Key;
+
     ifs >> base64Key;
     file.close();
     
@@ -446,6 +464,7 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     
     // Ensure profile directory exists
     QDir dir;
+
     if (!dir.mkpath(profileDir)) {
         qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" 
                                      << profileName << "\". Falling back to deterministic key derivation.";
@@ -453,6 +472,7 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     }
     
     QSaveFile file(keyFilePath);
+
     if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" 
                                      << profileName << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";

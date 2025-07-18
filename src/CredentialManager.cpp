@@ -76,6 +76,7 @@ QString CredentialManager::retrievePassword(const QString& profileName, const QS
     
     // Try QtKeychain first
     QString password = retrieveFromKeychain(profileName, key);
+
     if (!password.isNull()) {
         QString result = password;
         SecureStringUtils::secureStringClear(password);
@@ -93,7 +94,7 @@ bool CredentialManager::removePassword(const QString& profileName, const QString
     }
     
     bool keychainRemoved = true; // Assume success in test environment
-    bool encryptedRemoved = removeEncrypted(profileName, key);
+    const bool encryptedRemoved = removeEncrypted(profileName, key);
     
     // Skip keychain in test environment
     if (!isTestEnvironment()) {
@@ -108,6 +109,7 @@ bool CredentialManager::isKeychainAvailable()
 {
     // Test by trying to read a non-existent key
     auto *job = new QKeychain::ReadPasswordJob(qsl("MudletKeychainTest"));
+
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
     job->setKey(qsl("NonExistentTestKey"));
@@ -133,6 +135,7 @@ bool CredentialManager::isKeychainAvailable()
 bool CredentialManager::storeInKeychain(const QString& profileName, const QString& key, const QString& password)
 {
     auto *job = new QKeychain::WritePasswordJob(generateServiceName(profileName, key));
+
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
     job->setKey(profileName);
@@ -156,6 +159,7 @@ bool CredentialManager::storeInKeychain(const QString& profileName, const QStrin
 QString CredentialManager::retrieveFromKeychain(const QString& profileName, const QString& key)
 {
     auto *job = new QKeychain::ReadPasswordJob(generateServiceName(profileName, key));
+
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
     job->setKey(profileName);
@@ -183,6 +187,7 @@ QString CredentialManager::retrieveFromKeychain(const QString& profileName, cons
 bool CredentialManager::removeFromKeychain(const QString& profileName, const QString& key)
 {
     auto *job = new QKeychain::DeletePasswordJob(generateServiceName(profileName, key));
+
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
     job->setKey(profileName);
@@ -209,18 +214,21 @@ bool CredentialManager::storeEncrypted(const QString& profileName, const QString
     // Ensure directory exists - get the directory part of the file path
     QFileInfo fileInfo(filePath);
     QDir dir = fileInfo.absoluteDir();
+
     if (!dir.mkpath(dir.absolutePath())) {
         return false;
     }
     
     // Encrypt password using SecureStringUtils
     QString encrypted = SecureStringUtils::encryptStringForProfile(password, profileName);
+
     if (encrypted.isEmpty()) {
         return false;
     }
     
     // Write to file
     QFile file(filePath);
+
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return false;
     }
@@ -236,6 +244,7 @@ QString CredentialManager::retrieveEncrypted(const QString& profileName, const Q
     QString filePath = generateFilePath(profileName, key);
     
     QFile file(filePath);
+
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return QString();
     }

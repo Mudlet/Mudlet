@@ -457,6 +457,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     if (!pHost->mProxyPassword.isEmpty()) {
         CredentialManager::storePassword(pHost->getName(), "proxy", pHost->mProxyPassword);
     }
+
     host.append_attribute("mProxyPassword") = "";
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
