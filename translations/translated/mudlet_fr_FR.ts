@@ -1684,12 +1684,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="446"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Déconnecter</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="449"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Reconnecter</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="453"/>
@@ -1700,7 +1700,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="465"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Déclencheurs</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="466"/>
@@ -1720,7 +1720,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="475"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Minuteurs</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="476"/>
@@ -1730,7 +1730,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="480"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Boutons</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="481"/>
@@ -1740,7 +1740,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="485"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Scripts</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="486"/>
@@ -1750,7 +1750,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="490"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Touches</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="491"/>
@@ -1823,7 +1823,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="549"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Bloc-notes</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="550"/>
