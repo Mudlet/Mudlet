@@ -1721,27 +1721,27 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="470"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="471"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar alias</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="475"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="476"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar temporizadores</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="480"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Botones</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="481"/>
@@ -1751,17 +1751,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="485"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Scripts</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="486"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar los scripts</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="490"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Teclas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="491"/>
@@ -1771,12 +1771,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="495"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variables</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="496"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar variables de Lua</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="502"/>
@@ -1804,42 +1804,42 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="534"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Mapa</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="535"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar/ocultar el mapa</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="539"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Manual</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="540"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Examinar el material de referencia y documentación</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="544"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Configuración</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="545"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Ver y editar preferencias de perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="549"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Bloc de notas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="550"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Abrir un bloc de notas en el que puede almacenar sus notas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="556"/>
@@ -1850,22 +1850,22 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de paquetes</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="569"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de módulo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="573"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Exportador de paquetes</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="582"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Repetir</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="590"/>
@@ -1893,7 +1893,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="765"/>
       <location filename="../src/TDetachedWindow.cpp" line="783"/>
       <source>None</source>
-      <translation type="unfinished"/>
+      <translation>Ninguno</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="657"/>
@@ -1918,7 +1918,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
       <source> - Connecting...</source>
-      <translation type="unfinished"/>
+      <translation> - Conectando...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="758"/>
@@ -1938,7 +1938,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="789"/>
       <source>Connected to %1</source>
-      <translation type="unfinished"/>
+      <translation>Conectado a %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="792"/>
@@ -1948,7 +1948,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="795"/>
       <source>Disconnected from %1</source>
-      <translation type="unfinished"/>
+      <translation>Desconectado de %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="799"/>
