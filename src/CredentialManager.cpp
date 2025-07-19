@@ -57,18 +57,10 @@ bool CredentialManager::storeCredential(const QString& profileName, const QStrin
     
     // Try QtKeychain first
     if (storeInKeychain(profileName, key, credential)) {
-        // Success! Also store an encrypted backup for timeout fallback scenarios
-        // This ensures we have a fallback if keychain access times out later
-        if (!storeEncrypted(profileName, key, credential)) {
-            qWarning() << "CredentialManager: Failed to create encrypted backup for profile" << profileName;
-            // Still return true since keychain storage succeeded
-        }
+        // Also remove any encrypted fallback file if it exists
+        removeEncrypted(profileName, key);
         return true;
     }
-    
-    // If keychain storage failed (possibly due to timeout), warn and use encrypted fallback
-    qWarning() << "CredentialManager: Keychain storage failed for profile" << profileName 
-               << "- using encrypted fallback (keychain access may have timed out)";
     
     // Fallback to encrypted storage for portable mode or when keychain fails
     return storeEncrypted(profileName, key, credential);
@@ -88,24 +80,14 @@ QString CredentialManager::retrieveCredential(const QString& profileName, const 
     // Try QtKeychain first
     QString credential = retrieveFromKeychain(profileName, key);
 
-    // If we got a credential from keychain, use it
-    if (!credential.isEmpty()) {
+    if (!credential.isNull()) {
         QString result = credential;
         SecureStringUtils::secureStringClear(credential);
         return result;
     }
     
-    // If keychain returned empty, try encrypted fallback
-    QString fallbackCredential = retrieveEncrypted(profileName, key);
-    
-    // If we have a fallback credential, this suggests keychain access may have timed out
-    // Only warn if we actually found a fallback (indicating the credential exists but keychain failed)
-    if (!fallbackCredential.isEmpty()) {
-        qDebug() << "CredentialManager: Using encrypted fallback for profile" << profileName 
-                 << "- keychain access may have timed out or been canceled";
-    }
-    
-    return fallbackCredential;
+    // Fallback to encrypted storage
+    return retrieveEncrypted(profileName, key);
 }
 
 bool CredentialManager::removeCredential(const QString& profileName, const QString& key)
@@ -122,9 +104,8 @@ bool CredentialManager::removeCredential(const QString& profileName, const QStri
         keychainRemoved = removeFromKeychain(profileName, key);
     }
     
-    // Success if at least one method succeeded
-    // Both should be removed since we now store backups in both locations
-    return keychainRemoved && encryptedRemoved;
+    // Success if at least one method succeeded (or both failed because nothing was stored)
+    return keychainRemoved || encryptedRemoved;
 }
 
 bool CredentialManager::isKeychainAvailable()
