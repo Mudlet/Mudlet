@@ -1643,7 +1643,7 @@ db.__SheetMT = {
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
     local field_type = ""
     local rt
-    if assert(field, errormsg:format(k, sht_name, db_name)) then
+    if assert(field ~= nil, errormsg:format(k, sht_name, db_name)) then
       field_type = type(field)
       if field_type == "table" and field._timestamp ~= nil then
         field_type = "datetime"
