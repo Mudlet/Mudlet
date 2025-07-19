@@ -49,9 +49,12 @@ private:
     static bool removeFromKeychain(const QString& profileName, const QString& key);
     
     // Fallback: store encrypted in profile directory (portable mode)
+    // Uses AES-256-CBC encryption with PBKDF2-SHA256 key derivation via SecureStringUtils
+    // Key is derived from profile name combined with system-specific entropy
     static bool storeEncrypted(const QString& profileName, const QString& key, const QString& credential);
     
     // Fallback: retrieve encrypted from profile directory
+    // Decrypts using the same AES-256-CBC/PBKDF2-SHA256 scheme as storeEncrypted
     static QString retrieveEncrypted(const QString& profileName, const QString& key);
     
     // Remove encrypted file
