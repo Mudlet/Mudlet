@@ -455,7 +455,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // Store proxy password securely (QtKeychain preferred, encrypted file fallback)
     // Don't store password in XML anymore - use secure storage
     if (!pHost->mProxyPassword.isEmpty()) {
-        CredentialManager::storePassword(pHost->getName(), "proxy", pHost->mProxyPassword);
+        CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword);
     }
 
     host.append_attribute("mProxyPassword") = "";

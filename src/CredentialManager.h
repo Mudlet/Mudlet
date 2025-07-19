@@ -27,16 +27,10 @@
 class CredentialManager
 {
 public:
-    // Store a password securely for a given profile and key
-    // Uses QtKeychain when available, falls back to encrypted storage for portability
-    static bool storePassword(const QString& profileName, const QString& key, const QString& password);
-    
-    // Retrieve a password securely for a given profile and key
-    // Handles both QtKeychain and encrypted storage automatically
-    static QString retrievePassword(const QString& profileName, const QString& key);
-    
-    // Remove a stored password
-    static bool removePassword(const QString& profileName, const QString& key);
+    // Preferred methods for credential management
+    static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
+    static QString retrieveCredential(const QString& profileName, const QString& key);
+    static bool removeCredential(const QString& profileName, const QString& key);
     
     // Check if QtKeychain is available and working
     static bool isKeychainAvailable();
@@ -46,7 +40,7 @@ public:
 
 private:
     // Try to store in QtKeychain first
-    static bool storeInKeychain(const QString& profileName, const QString& key, const QString& password);
+    static bool storeInKeychain(const QString& profileName, const QString& key, const QString& credential);
     
     // Try to retrieve from QtKeychain
     static QString retrieveFromKeychain(const QString& profileName, const QString& key);
@@ -55,7 +49,7 @@ private:
     static bool removeFromKeychain(const QString& profileName, const QString& key);
     
     // Fallback: store encrypted in profile directory (portable mode)
-    static bool storeEncrypted(const QString& profileName, const QString& key, const QString& password);
+    static bool storeEncrypted(const QString& profileName, const QString& key, const QString& credential);
     
     // Fallback: retrieve encrypted from profile directory
     static QString retrieveEncrypted(const QString& profileName, const QString& key);

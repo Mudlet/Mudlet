@@ -36,34 +36,35 @@
 #endif
 #include "post_guard.h"
 
-bool CredentialManager::storePassword(const QString& profileName, const QString& key, const QString& password)
+// Public API for secure credential storage with QtKeychain and encrypted fallback
+bool CredentialManager::storeCredential(const QString& profileName, const QString& key, const QString& credential)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         return false;
     }
     
-    // Empty password is valid - it means "no password"
-    if (password.isEmpty()) {
-        return removePassword(profileName, key);
+    // Empty credential is valid - it means "no credential"
+    if (credential.isEmpty()) {
+        return removeCredential(profileName, key);
     }
     
     // Skip keychain in test environment
     if (isTestEnvironment()) {
-        return storeEncrypted(profileName, key, password);
+        return storeEncrypted(profileName, key, credential);
     }
     
     // Try QtKeychain first
-    if (storeInKeychain(profileName, key, password)) {
+    if (storeInKeychain(profileName, key, credential)) {
         // Also remove any encrypted fallback file if it exists
         removeEncrypted(profileName, key);
         return true;
     }
     
     // Fallback to encrypted storage for portable mode
-    return storeEncrypted(profileName, key, password);
+    return storeEncrypted(profileName, key, credential);
 }
 
-QString CredentialManager::retrievePassword(const QString& profileName, const QString& key)
+QString CredentialManager::retrieveCredential(const QString& profileName, const QString& key)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         return QString();
@@ -75,11 +76,11 @@ QString CredentialManager::retrievePassword(const QString& profileName, const QS
     }
     
     // Try QtKeychain first
-    QString password = retrieveFromKeychain(profileName, key);
+    QString credential = retrieveFromKeychain(profileName, key);
 
-    if (!password.isNull()) {
-        QString result = password;
-        SecureStringUtils::secureStringClear(password);
+    if (!credential.isNull()) {
+        QString result = credential;
+        SecureStringUtils::secureStringClear(credential);
         return result;
     }
     
@@ -87,7 +88,7 @@ QString CredentialManager::retrievePassword(const QString& profileName, const QS
     return retrieveEncrypted(profileName, key);
 }
 
-bool CredentialManager::removePassword(const QString& profileName, const QString& key)
+bool CredentialManager::removeCredential(const QString& profileName, const QString& key)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         return false;
@@ -107,7 +108,7 @@ bool CredentialManager::removePassword(const QString& profileName, const QString
 
 bool CredentialManager::isKeychainAvailable()
 {
-    // Test by trying to read a non-existent key
+    // Test keychain availability by attempting to read a non-existent key
     auto *job = new QKeychain::ReadPasswordJob(qsl("MudletKeychainTest"));
 
     job->setAutoDelete(false);
@@ -118,8 +119,7 @@ bool CredentialManager::isKeychainAvailable()
     bool available = false;
     
     QObject::connect(job, &QKeychain::ReadPasswordJob::finished, [&](QKeychain::Job* task) {
-        // If error is "Entry not found", keychain is working
-        // If error is "No such keychain service" or similar, keychain is not available
+        // Keychain is available if we get NoError or EntryNotFound (service exists)
         available = (task->error() == QKeychain::NoError || 
                     task->error() == QKeychain::EntryNotFound);
         loop.quit();
@@ -132,14 +132,14 @@ bool CredentialManager::isKeychainAvailable()
     return available;
 }
 
-bool CredentialManager::storeInKeychain(const QString& profileName, const QString& key, const QString& password)
+bool CredentialManager::storeInKeychain(const QString& profileName, const QString& key, const QString& credential)
 {
     auto *job = new QKeychain::WritePasswordJob(generateServiceName(profileName, key));
 
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
     job->setKey(profileName);
-    job->setTextData(password);
+    job->setTextData(credential);
     
     QEventLoop loop;
     bool success = false;
@@ -165,12 +165,12 @@ QString CredentialManager::retrieveFromKeychain(const QString& profileName, cons
     job->setKey(profileName);
     
     QEventLoop loop;
-    QString password;
+    QString credential;
     
     QObject::connect(job, &QKeychain::ReadPasswordJob::finished, [&](QKeychain::Job* task) {
         if (!task->error()) {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-            password = readJob->textData();
+            credential = readJob->textData();
         }
         loop.quit();
     });
@@ -179,8 +179,8 @@ QString CredentialManager::retrieveFromKeychain(const QString& profileName, cons
     loop.exec();
     job->deleteLater();
     
-    QString result = password;
-    SecureStringUtils::secureStringClear(password);
+    QString result = credential;
+    SecureStringUtils::secureStringClear(credential);
     return result;
 }
 
@@ -207,11 +207,11 @@ bool CredentialManager::removeFromKeychain(const QString& profileName, const QSt
     return success;
 }
 
-bool CredentialManager::storeEncrypted(const QString& profileName, const QString& key, const QString& password)
+bool CredentialManager::storeEncrypted(const QString& profileName, const QString& key, const QString& credential)
 {
     QString filePath = generateFilePath(profileName, key);
     
-    // Ensure directory exists - get the directory part of the file path
+    // Create directory structure if it doesn't exist
     QFileInfo fileInfo(filePath);
     QDir dir = fileInfo.absoluteDir();
 
@@ -219,8 +219,8 @@ bool CredentialManager::storeEncrypted(const QString& profileName, const QString
         return false;
     }
     
-    // Encrypt password using SecureStringUtils
-    QString encrypted = SecureStringUtils::encryptStringForProfile(password, profileName);
+    // Encrypt credential using profile-specific key
+    QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
 
     if (encrypted.isEmpty()) {
         return false;
@@ -256,7 +256,7 @@ QString CredentialManager::retrieveEncrypted(const QString& profileName, const Q
         return QString();
     }
     
-    // Decrypt using SecureStringUtils
+    // Decrypt credential using profile-specific key
     return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
 }
 
@@ -279,10 +279,9 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
 
 bool CredentialManager::isTestEnvironment()
 {
-    // Check if we're running in a test environment
-    // This prevents keychain access during automated testing
+    // Detect test environment to avoid keychain prompts during automated testing
     
-    // Check various indicators that we're in a test environment
+    // Check environment variables and application context
     QString appName = QCoreApplication::applicationName();
     QStringList args = QCoreApplication::arguments();
     

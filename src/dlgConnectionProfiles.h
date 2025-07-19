@@ -29,11 +29,6 @@
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
-#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
-#else
-#include <qt6keychain/keychain.h>
-#endif
 #include "post_guard.h"
 
 class QDir;
@@ -122,6 +117,7 @@ private:
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
+    void loadPasswordAsync(const QString& profileName);
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -157,9 +153,8 @@ private slots:
     void slot_setCustomColor();
     void slot_resetCustomIcon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_passwordSaved(QKeychain::Job* job);
-    void slot_passwordDeleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
+    void slot_loadPasswordAsync();
 };
 
 

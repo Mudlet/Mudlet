@@ -802,12 +802,12 @@ void XMLimport::readHost(Host* pHost)
     
     if (!storedProxyPassword.isEmpty()) {
         // Legacy plaintext password - migrate to secure storage
-        CredentialManager::storePassword(pHost->getName(), "proxy", storedProxyPassword);
+        CredentialManager::storeCredential(pHost->getName(), "proxy", storedProxyPassword);
         pHost->mProxyPassword = storedProxyPassword;
         SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
     } else {
         // Load from secure storage if available
-        pHost->mProxyPassword = CredentialManager::retrievePassword(pHost->getName(), "proxy");
+        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
     }
 
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
