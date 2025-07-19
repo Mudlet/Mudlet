@@ -654,7 +654,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     comboBox_dictionary->clear();
-    comboBox_dictionary->setInsertPolicy(QComboBox::InsertAlphabetically);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
@@ -677,7 +676,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
     const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
-    checkBox_spellCheck->setText(tr("Enable spell check using dictionary:"));
+    // Tweak the label for the provided spelling dictionaries depending on where
+    // they come from:
+    if (mudlet::self()->mUsingMudletDictionaries) {
+        //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
+        checkBox_spellCheck->setText(tr("Enable spell check using Mudlet dictionary:"));
+    } else {
+        //: On *nix systems where we find the system ones we use them
+        checkBox_spellCheck->setText(tr("Enable spell check using System dictionary:"));
+    }
 
     const QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
@@ -691,6 +698,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_dictionary->blockSignals(true);
     if (!entries.isEmpty()) {
         int currentIndex = -1;
+        // Because the list needs to be sorted by translated "display" name
+        // which will not follow the order of files seen we need to build a
+        // sorted map and then insert items into the QComboBox in that order:
+        QMap<QString, int> translatedNameToEntriesMap;
         for (int i = 0, total = entries.size(); i < total; ++i) {
             entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
@@ -701,16 +712,24 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             auto key = entries.at(i).toLower();
             key.replace(QLatin1String("-"), QLatin1String("_"));
 
-            QString displayText;
-            QString toolTip;
-            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
-                displayText = mudlet::self()->mDictionaryLanguageCodeMap.value(key);
-                toolTip = utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i))));
-            } else {
-                displayText = tr("%1 - not recognised").arg(entries.at(i));
-                toolTip = tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
-                            "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i)));
-            }
+            QString displayText = mudlet::self()->mDictionaryLanguageCodeMap.contains(key)
+                    ? mudlet::self()->mDictionaryLanguageCodeMap.value(key)
+                    : tr("%1 - not recognised").arg(entries.at(i));
+            translatedNameToEntriesMap.insert(displayText, i);
+        }
+
+        QMapIterator<QString, int> itTranslatedName(translatedNameToEntriesMap);
+        while (itTranslatedName.hasNext()) {
+            itTranslatedName.next();
+            const auto displayText = itTranslatedName.key();
+            const auto i = itTranslatedName.value();
+            auto key = entries.at(i).toLower();
+            key.replace(QLatin1String("-"), QLatin1String("_"));
+
+            QString toolTip = mudlet::self()->mDictionaryLanguageCodeMap.contains(key)
+                    ? utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i))))
+                    : tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
+                         "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i)));
 
             comboBox_dictionary->addItem(displayText, entries.at(i));
             comboBox_dictionary->setItemData(comboBox_dictionary->count() - 1, toolTip, Qt::ToolTipRole);
