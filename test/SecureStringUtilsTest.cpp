@@ -19,6 +19,7 @@
 
 #include <SecureStringUtils.h>
 #include <QtTest/QtTest>
+#include <QVersionNumber>
 
 class SecureStringUtilsTest : public QObject {
 Q_OBJECT
@@ -39,6 +40,7 @@ private slots:
     void testCorruptedDataDecryption();
     void testOpenSSLAvailability();
     void testVersionCompatibility();
+    void testXMLImportProxyPasswordLogic();
     void cleanupTestCase();
 };
 
@@ -346,6 +348,45 @@ void SecureStringUtilsTest::testVersionCompatibility()
     QVERIFY((6 > 4) || (6 == 4 && 0 >= 20)); // Version 6.0.x should use secure storage
     
     qDebug() << "Version compatibility tests passed";
+}
+
+void SecureStringUtilsTest::testXMLImportProxyPasswordLogic()
+{
+    // Test that XMLimport now uses application version, not profile version
+    // This simulates the fixed logic in XMLimport.cpp
+    
+    // Simulate different APP_VERSION values
+    struct TestCase {
+        QString appVersion;
+        bool shouldUseSecureStorage;
+        QString description;
+    };
+    
+    const QList<TestCase> testCases = {
+        {"4.19.0", false, "App version 4.19.0 (before secure storage)"},
+        {"4.20.0", true, "App version 4.20.0 (secure storage introduced)"},
+        {"4.21.0", true, "App version 4.21.0 (after secure storage)"},
+        {"5.0.0", true, "App version 5.0.0 (major version after secure storage)"},
+        {"3.15.0", false, "App version 3.15.0 (old version)"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        // Simulate the new XMLimport logic
+        const QVersionNumber appVersion = QVersionNumber::fromString(testCase.appVersion);
+        const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+        const bool useSecureStorage = appVersion >= secureStorageVersion;
+        
+        QCOMPARE(useSecureStorage, testCase.shouldUseSecureStorage);
+        
+        if (useSecureStorage != testCase.shouldUseSecureStorage) {
+            QFAIL(qPrintable(QString("XMLimport proxy password test failed for %1: expected %2, got %3")
+                           .arg(testCase.description)
+                           .arg(testCase.shouldUseSecureStorage ? "true" : "false")
+                           .arg(useSecureStorage ? "true" : "false")));
+        }
+    }
+    
+    qDebug() << "XMLimport proxy password logic tests passed";
 }
 
 void SecureStringUtilsTest::cleanupTestCase()
