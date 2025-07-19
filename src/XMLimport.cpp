@@ -797,16 +797,25 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
     
-    // Handle backward compatibility: migrate plaintext passwords from XML to secure storage
+    // Handle backward compatibility based on profile version
     QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
     
+    // For profiles created before version 4.20.0, maintain plaintext in XML for compatibility
+    // Version check: mVersionMajor >= 4 and (mVersionMajor > 4 || mVersionMinor >= 20)
+    const bool useSecureStorage = (mVersionMajor > 4) || (mVersionMajor == 4 && mVersionMinor >= 20);
+    
     if (!storedProxyPassword.isEmpty()) {
-        // Legacy plaintext password - migrate to secure storage
-        CredentialManager::storeCredential(pHost->getName(), "proxy", storedProxyPassword);
-        pHost->mProxyPassword = storedProxyPassword;
-        SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
-    } else {
-        // Load from secure storage if available
+        if (useSecureStorage) {
+            // Modern profiles: migrate plaintext password to secure storage and clear from XML
+            CredentialManager::storeCredential(pHost->getName(), "proxy", storedProxyPassword);
+            pHost->mProxyPassword = storedProxyPassword;
+            SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
+        } else {
+            // Legacy profiles: keep plaintext password for backward compatibility
+            pHost->mProxyPassword = storedProxyPassword;
+        }
+    } else if (useSecureStorage) {
+        // Modern profiles: load from secure storage if available
         pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
     }
 

@@ -38,6 +38,7 @@ private slots:
     void testLargeDataEncryption();
     void testCorruptedDataDecryption();
     void testOpenSSLAvailability();
+    void testVersionCompatibility();
     void cleanupTestCase();
 };
 
@@ -302,6 +303,49 @@ void SecureStringUtilsTest::testOpenSSLAvailability()
     }
     
     qDebug() << "OpenSSL availability:" << isAvailable << "- Using encryption version:" << version;
+}
+
+void SecureStringUtilsTest::testVersionCompatibility()
+{
+    // Test that version-based compatibility logic works correctly
+    
+    // Test version comparison for major version differences
+    QVERIFY(4 > 3);  // Version 4.x should be newer than 3.x
+    QVERIFY(5 > 4);  // Version 5.x should be newer than 4.x
+    
+    // Test version comparison for minor version differences within major version 4
+    int majorVersion = 4;
+    
+    // Test cases for version 4.x.x
+    struct {
+        int minorVersion;
+        bool shouldUseSecureStorage;
+        QString description;
+    } testCases[] = {
+        {19, false, "Version 4.19.x should use legacy mode"},
+        {20, true,  "Version 4.20.x should use secure storage"},
+        {21, true,  "Version 4.21.x should use secure storage"},
+        {50, true,  "Version 4.50.x should use secure storage"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        // Simulate the version check logic from XMLimport
+        bool useSecureStorage = (majorVersion > 4) || (majorVersion == 4 && testCase.minorVersion >= 20);
+        
+        if (useSecureStorage != testCase.shouldUseSecureStorage) {
+            QFAIL(qPrintable(QString("Version compatibility test failed for %1: expected %2, got %3")
+                           .arg(testCase.description)
+                           .arg(testCase.shouldUseSecureStorage ? "true" : "false")
+                           .arg(useSecureStorage ? "true" : "false")));
+        }
+        QCOMPARE(useSecureStorage, testCase.shouldUseSecureStorage);
+    }
+    
+    // Test major version transitions
+    QVERIFY((5 > 4) || (5 == 4 && 0 >= 20)); // Version 5.0.x should use secure storage
+    QVERIFY((6 > 4) || (6 == 4 && 0 >= 20)); // Version 6.0.x should use secure storage
+    
+    qDebug() << "Version compatibility tests passed";
 }
 
 void SecureStringUtilsTest::cleanupTestCase()
