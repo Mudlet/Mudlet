@@ -37,6 +37,7 @@ private slots:
     void testInvalidInputHandling();
     void testLargeDataEncryption();
     void testCorruptedDataDecryption();
+    void testOpenSSLAvailability();
     void cleanupTestCase();
 };
 
@@ -266,6 +267,41 @@ void SecureStringUtilsTest::testCorruptedDataDecryption()
         QString decrypted3 = SecureStringUtils::decryptStringForProfile(truncated, profile);
         QVERIFY(decrypted3.isEmpty() || decrypted3 != password); // Should fail due to truncation
     }
+}
+
+void SecureStringUtilsTest::testOpenSSLAvailability()
+{
+    // Test that the OpenSSL availability check returns a consistent result
+    bool isAvailable = SecureStringUtils::isOpenSSLAvailable();
+    
+    // The result should be deterministic
+    QCOMPARE(SecureStringUtils::isOpenSSLAvailable(), isAvailable);
+    
+    // Basic smoke test - encrypt and decrypt should work regardless of OpenSSL availability
+    QString plaintext = "test message for availability check";
+    QString profileName = "AvailabilityTestProfile";
+    
+    QString encrypted = SecureStringUtils::encryptStringForProfile(plaintext, profileName);
+    QVERIFY(!encrypted.isEmpty());
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted));
+    
+    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profileName);
+    QCOMPARE(decrypted, plaintext);
+    
+    // Check that the encrypted data contains the correct version byte
+    QByteArray encryptedBytes = QByteArray::fromBase64(encrypted.toLatin1());
+    QVERIFY(encryptedBytes.size() > 0);
+    
+    quint8 version = static_cast<quint8>(encryptedBytes[0]);
+    if (isAvailable) {
+        // OpenSSL available - should use AES-GCM (version 1)
+        QCOMPARE(version, static_cast<quint8>(1));
+    } else {
+        // OpenSSL not available - should use Qt fallback (version 2)
+        QCOMPARE(version, static_cast<quint8>(2));
+    }
+    
+    qDebug() << "OpenSSL availability:" << isAvailable << "- Using encryption version:" << version;
 }
 
 void SecureStringUtilsTest::cleanupTestCase()

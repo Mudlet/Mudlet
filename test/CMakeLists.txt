@@ -22,6 +22,9 @@ find_package(Qt6 6.4.0 REQUIRED
     Concurrent
     Test)
 
+# Find OpenSSL for cryptographic operations
+find_package(OpenSSL REQUIRED)
+
 link_libraries(
     Qt6::Test
     Qt6::Concurrent
@@ -101,14 +104,14 @@ target_link_libraries(
     LUA51::LUA51)
 
 add_executable(SecureStringUtilsTest SecureStringUtilsTest.cpp ../src/SecureStringUtils.cpp)
-target_link_libraries(SecureStringUtilsTest ${KEYCHAIN_LIBRARY})
+target_link_libraries(SecureStringUtilsTest ${KEYCHAIN_LIBRARY} OpenSSL::SSL OpenSSL::Crypto)
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(SecureStringUtilsTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
 
 add_executable(CredentialManagerTest CredentialManagerTest.cpp ../src/CredentialManager.cpp ../src/SecureStringUtils.cpp)
-target_link_libraries(CredentialManagerTest ${KEYCHAIN_LIBRARY})
+target_link_libraries(CredentialManagerTest ${KEYCHAIN_LIBRARY} OpenSSL::SSL OpenSSL::Crypto)
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
