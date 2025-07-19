@@ -34,6 +34,9 @@ private slots:
     void testSecureMemoryClearing();
     void testProfileKeyPersistence();
     void testPortableModeFileStorage();
+    void testInvalidInputHandling();
+    void testLargeDataEncryption();
+    void testCorruptedDataDecryption();
     void cleanupTestCase();
 };
 
@@ -195,6 +198,74 @@ void SecureStringUtilsTest::testPortableModeFileStorage()
     // Cross-profile decryption should fail (different keys)
     QString crossDecrypt = SecureStringUtils::decryptStringForProfile(encrypted3, profileName);
     QVERIFY(crossDecrypt.isEmpty() || crossDecrypt != plaintext);
+}
+
+void SecureStringUtilsTest::testInvalidInputHandling()
+{
+    // Test null/empty profile names
+    QString password = "testpassword";
+    QString encrypted1 = SecureStringUtils::encryptStringForProfile(password, "");
+    QVERIFY(encrypted1.isEmpty()); // Should return empty for empty profile
+    
+    QString encrypted2 = SecureStringUtils::encryptStringForProfile(password, QString());
+    QVERIFY(encrypted2.isEmpty()); // Should return empty for null profile
+    
+    // Test with empty password
+    QString validProfile = "ValidProfile";
+    QString encrypted3 = SecureStringUtils::encryptStringForProfile("", validProfile);
+    QVERIFY(encrypted3.isEmpty()); // Should return empty for empty password
+    
+    // Test decryption with mismatched profiles
+    QString profile1 = "Profile1";
+    QString profile2 = "Profile2";
+    QString encrypted = SecureStringUtils::encryptStringForProfile(password, profile1);
+    
+    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profile2);
+    QVERIFY(decrypted.isEmpty() || decrypted != password); // Should fail or return wrong data
+}
+
+void SecureStringUtilsTest::testLargeDataEncryption()
+{
+    // Test with larger strings to ensure robustness
+    QString largeString = QString("A").repeated(10000); // 10KB string
+    QString profile = "LargeDataProfile";
+    
+    QString encrypted = SecureStringUtils::encryptStringForProfile(largeString, profile);
+    QVERIFY(!encrypted.isEmpty());
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted));
+    
+    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profile);
+    QCOMPARE(decrypted, largeString);
+}
+
+void SecureStringUtilsTest::testCorruptedDataDecryption()
+{
+    QString password = "testpassword";
+    QString profile = "CorruptionTestProfile";
+    
+    QString encrypted = SecureStringUtils::encryptStringForProfile(password, profile);
+    QVERIFY(SecureStringUtils::isEncryptedFormat(encrypted));
+    
+    // Test with completely invalid format
+    QString invalid1 = "notencrypted";
+    QVERIFY(!SecureStringUtils::isEncryptedFormat(invalid1));
+    QString decrypted1 = SecureStringUtils::decryptStringForProfile(invalid1, profile);
+    QVERIFY(decrypted1.isEmpty()); // Should return empty for invalid format
+    
+    // Test with corrupted encrypted data (modify a character in the middle)
+    if (encrypted.length() > 10) {
+        QString corrupted = encrypted;
+        corrupted[encrypted.length() / 2] = 'X'; // Corrupt middle character
+        QString decrypted2 = SecureStringUtils::decryptStringForProfile(corrupted, profile);
+        QVERIFY(decrypted2.isEmpty() || decrypted2 != password); // Should fail due to corruption
+    }
+    
+    // Test with truncated encrypted data
+    if (encrypted.length() > 5) {
+        QString truncated = encrypted.left(encrypted.length() - 5);
+        QString decrypted3 = SecureStringUtils::decryptStringForProfile(truncated, profile);
+        QVERIFY(decrypted3.isEmpty() || decrypted3 != password); // Should fail due to truncation
+    }
 }
 
 void SecureStringUtilsTest::cleanupTestCase()
