@@ -158,19 +158,20 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
 echo ""
-echo "Copying FFmpeg libraries for multimedia support..."
-# Copy FFmpeg libraries for OGG/Opus and other advanced codec support
-# These enable comprehensive audio format support beyond Windows Media Foundation
-if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/avcodec-61.dll" ]; then
-    cp -v -p -t . \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/avcodec-61.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/avformat-61.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/avutil-59.dll" \
-        "${MINGW_INTERNAL_BASE_DIR}/bin/swresample-5.dll" || true
-    echo "    FFmpeg DLLs copied for comprehensive codec support"
-else
-    echo "    FFmpeg DLLs not found - only basic Windows Media Foundation codecs available"
-fi
+echo "Aggressively copying FFmpeg and Qt multimedia plugin DLLs for maximum compatibility..."
+# Copy all FFmpeg DLLs from MSYS2/mingw64, vcpkg, and Qt bin directories
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avcodec-*.dll" -exec cp -v -p {} . \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avformat-*.dll" -exec cp -v -p {} . \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avutil-*.dll" -exec cp -v -p {} . \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "swresample-*.dll" -exec cp -v -p {} . \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "swscale-*.dll" -exec cp -v -p {} . \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "*.dll" -exec cp -v -p {} . \;
+# Copy all Qt multimedia plugin DLLs
+mkdir -p plugins/multimedia
+find "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia" -iname "*.dll" -exec cp -v -p {} plugins/multimedia/ \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qffmpeg.dll" -exec cp -v -p {} plugins/multimedia/ \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qwindowsmediaplugin.dll" -exec cp -v -p {} plugins/multimedia/ \;
+echo "    All FFmpeg and Qt multimedia plugin DLLs copied for maximum compatibility."
 
 echo ""
 echo "Copying OpenSSL libraries in..."

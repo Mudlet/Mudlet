@@ -459,7 +459,14 @@ int main(int argc, char* argv[])
     // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #if defined(Q_OS_WINDOWS)
-    // Windows-specific multimedia backend configuration
+    // Windows-specific: Add plugins/multimedia to PATH for FFmpeg backend DLL discovery
+    {
+        QString pluginPath = QCoreApplication::applicationDirPath() + QLatin1String("/plugins/multimedia");
+        QString currentPath = QString::fromLocal8Bit(qgetenv("PATH"));
+        QString newPath = pluginPath + ";" + currentPath;
+        qputenv("PATH", newPath.toLocal8Bit());
+        qDebug().noquote() << "main(...) INFO - Added plugins/multimedia to PATH for FFmpeg DLL discovery:" << pluginPath;
+    }
     // Prefer FFmpeg for comprehensive codec support (OGG, Opus, etc.), but allow fallback to WMF
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         qDebug().noquote() << "main(...) INFO - Windows detected: attempting to use FFmpeg backend for comprehensive format support.";
