@@ -193,11 +193,18 @@ if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
 fi
 
 # If qffmpeg.dll is still missing, try to install it via MSYS2
+
+# If qffmpeg.dll is still missing, try to install it via MSYS2 and then search recursively
 if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
   echo "qffmpeg.dll still not found. Attempting to install via MSYS2 pacman..."
   pacman -S --noconfirm mingw-w64-x86_64-qt6-multimedia-ffmpeg
-  if [ -f "/mingw64/lib/qt6/plugins/multimedia/qffmpeg.dll" ]; then
-    cp -v -p "/mingw64/lib/qt6/plugins/multimedia/qffmpeg.dll" plugins/multimedia/
+  # Recursively search for qffmpeg.dll under /mingw64
+  QFFMPEG_PATH=$(find /mingw64 -iname 'qffmpeg.dll' | head -n 1)
+  if [ -n "$QFFMPEG_PATH" ]; then
+    echo "Found qffmpeg.dll at $QFFMPEG_PATH, copying to plugins/multimedia/"
+    cp -v -p "$QFFMPEG_PATH" plugins/multimedia/
+  else
+    echo "qffmpeg.dll still not found anywhere under /mingw64 after install."
   fi
 fi
 
