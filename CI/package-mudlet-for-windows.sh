@@ -47,22 +47,32 @@
 # 6 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
-  echo "does not supported what is needed."
+  echo "Please run this script from a MINGW64, CLANG64 or UCRT64 type bash terminal as the MSYS one"
+  echo "does not support what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="clang-x86_64"
+elif [ "${MSYSTEM}" = "UCRT64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="ucrt-x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
-  echo "that type."
+  echo "MINGW64, CLANG64 or UCRT64 are currently supported. Please rerun this in a bash terminal of"
+  echo "one of those types."
   exit 2
 fi
 
 BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
+if [ -z "${MINGW_INTERNAL_BASE_DIR}" ]; then
+  MINGW_BASE_DIR="$(cygpath -m "${MSYSTEM_PREFIX}")"
+  export MINGW_BASE_DIR
+  MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  export MINGW_INTERNAL_BASE_DIR
+fi
 GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
 
@@ -131,11 +141,32 @@ echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
 NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
   | /usr/bin/grep -v "Qt6" \
-  | /usr/bin/grep -i "mingw" \
+  | /usr/bin/grep -i "mingw\|clang\|ucrt" \
   | /usr/bin/cut -d ">" -f2 \
   | /usr/bin/cut -d "(" -f1 \
   | /usr/bin/sort \
   | /usr/bin/uniq)
+
+# As well as the executable we also need to scan the plugins as they are not
+# checked in the above use of ntldd as they get loaded dynamically on demand:
+echo "Examining all the plugin sub-directories:"
+PLUGIN_DIRS=( "generic" "iconengines" "imageformats" "multimedia" "networkinformation" "platforms" "styles" "texttospeech" "tls" )
+for PLUGIN_DIR in "${PLUGIN_DIRS[@]}" ; do
+  if [ -d "${PLUGIN_DIR}" ]; then
+    echo "  Checking ${PLUGIN_DIR} directory..."
+    PLUGIN_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./${PLUGIN_DIR}/*.dll 2>/dev/null \
+      | /usr/bin/grep -v "Qt6" \
+      | /usr/bin/grep -i "mingw\|clang\|ucrt" \
+      | /usr/bin/cut -d ">" -f2 \
+      | /usr/bin/cut -d "(" -f1 \
+      | /usr/bin/sort \
+      | /usr/bin/uniq)
+    NEEDED_LIBS=( "${NEEDED_LIBS[@]}" ${PLUGIN_LIBS} )
+  fi
+done
+
+# Remove duplicates from the combined array
+NEEDED_LIBS=( $(printf '%s\n' "${NEEDED_LIBS[@]}" | sort -u) )
 
 echo ""
 echo "Copying these identified libraries..."
@@ -166,10 +197,60 @@ find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avutil-*.dll" -exec cp -v -p {} . 
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "swresample-*.dll" -exec cp -v -p {} . \;
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "swscale-*.dll" -exec cp -v -p {} . \;
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "*.dll" -exec cp -v -p {} . \;
-# Copy all Qt multimedia plugin DLLs
-mkdir -p plugins/multimedia
-find "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia" -iname "*.dll" -exec cp -v -p {} plugins/multimedia/ \;
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qwindowsmediaplugin.dll" -exec cp -v -p {} plugins/multimedia/ \;
+
+echo ""
+echo "Copying comprehensive Qt plugins like SlySven's approach..."
+
+# Define plugins to copy with their respective directories (matching SlySven's setup)
+declare -A QT_PLUGINS=(
+  ["generic"]="qtuiotouchplugin.dll"
+  ["iconengines"]="qsvgicon.dll"
+  ["imageformats"]="qgif.dll qico.dll qjpeg.dll qpdf.dll qsvg.dll qwebp.dll"
+  ["multimedia"]="ffmpegmediaplugin.dll dsengine.dll windowsmediaplugin.dll"
+  ["networkinformation"]="qnetworklistmanager.dll"
+  ["platforms"]="qdirect2d.dll qminimal.dll qoffscreen.dll qwindows.dll"
+  ["styles"]="qwindowsvistastyle.dll"
+  ["texttospeech"]="qtexttospeech_sapi.dll"
+  ["tls"]="qschannelbackend.dll qcertonlybackend.dll"
+)
+
+# Create plugin directories and copy files
+for PLUGIN_TYPE in "${!QT_PLUGINS[@]}"; do
+  if [ ! -d "plugins/${PLUGIN_TYPE}" ]; then
+    echo "  Creating plugins/${PLUGIN_TYPE} directory..."
+    mkdir -p "plugins/${PLUGIN_TYPE}"
+  fi
+  
+  # Convert plugin list to array
+  read -ra PLUGIN_FILES <<< "${QT_PLUGINS[$PLUGIN_TYPE]}"
+  
+  for PLUGIN_FILE in "${PLUGIN_FILES[@]}"; do
+    # Try multiple Qt plugin locations
+    FOUND=false
+    for QT_PLUGIN_DIR in \
+      "${QT_DIR}/plugins/${PLUGIN_TYPE}" \
+      "${MINGW_INTERNAL_BASE_DIR}/lib/qt6/plugins/${PLUGIN_TYPE}" \
+      "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/${PLUGIN_TYPE}" \
+      "${MINGW_INTERNAL_BASE_DIR}/plugins/${PLUGIN_TYPE}"; do
+      
+      if [ -f "${QT_PLUGIN_DIR}/${PLUGIN_FILE}" ]; then
+        echo "    Copying ${PLUGIN_FILE} from ${QT_PLUGIN_DIR}..."
+        cp "${QT_PLUGIN_DIR}/${PLUGIN_FILE}" "plugins/${PLUGIN_TYPE}/"
+        FOUND=true
+        break
+      fi
+    done
+    
+    if [ "$FOUND" = false ]; then
+      echo "    WARNING: ${PLUGIN_FILE} not found in any Qt plugin directory"
+    fi
+  done
+done
+
+# Special focus on ffmpegmediaplugin.dll - critical for OGG/Opus
+if [ ! -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
+  echo "  CRITICAL: ffmpegmediaplugin.dll missing - OGG/Opus support will not work!"
+fi
 
 echo ""
 echo "Copying OpenSSL libraries in..."

@@ -52,16 +52,22 @@
 
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
-  echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
-  echo "does not supported what is needed."
+  echo "Please run this script from a MINGW64, CLANG64 or UCRT64 type bash terminal as the MSYS one"
+  echo "does not support what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "CLANG64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="clang-x86_64"
+elif [ "${MSYSTEM}" = "UCRT64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="ucrt-x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
-  echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
-  echo "that type."
+  echo "MINGW64, CLANG64 or UCRT64 are currently supported. Please rerun this in a bash terminal of"
+  echo "one of those types."
   exit 2
 fi
 
@@ -69,7 +75,12 @@ fi
 export MINGW_BASE_DIR=${MSYSTEM_PREFIX}
 # A more compact - but not necessarily understood by other than MSYS/MINGW
 # executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+if [ -z "${MINGW_INTERNAL_BASE_DIR}" ]; then
+  MINGW_BASE_DIR="$(cygpath -m "${MSYSTEM_PREFIX}")"
+  export MINGW_BASE_DIR
+  MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  export MINGW_INTERNAL_BASE_DIR
+fi
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
@@ -137,6 +148,29 @@ while true; do
     exit 7
   fi
 done
+
+echo ""
+echo "=== Verifying FFmpeg multimedia plugin availability ==="
+# Check if the critical ffmpegmediaplugin.dll is available after installation
+FFMPEG_PLUGIN_FOUND=false
+for SEARCH_DIR in \
+  "${MINGW_INTERNAL_BASE_DIR}/lib/qt6/plugins/multimedia" \
+  "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia" \
+  "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia"; do
+  
+  if [ -f "${SEARCH_DIR}/ffmpegmediaplugin.dll" ]; then
+    echo "Found ffmpegmediaplugin.dll in ${SEARCH_DIR}"
+    FFMPEG_PLUGIN_FOUND=true
+    break
+  fi
+done
+
+if [ "$FFMPEG_PLUGIN_FOUND" = false ]; then
+  echo "WARNING: ffmpegmediaplugin.dll not found after installation!"
+  echo "This may affect OGG/Opus audio support in Mudlet."
+  echo "Attempting to reinstall qt6-multimedia package..."
+  pacman -S --noconfirm "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" || echo "Reinstall failed"
+fi
 
 echo "Removing harfbuzz installed by qt"
 pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
@@ -218,6 +252,34 @@ else
   exit 6
 fi
 cd ~ || exit 1
+echo ""
+echo "=== Final validation for OGG/Opus support ==="
+echo "Checking for critical multimedia components..."
+echo ""
+
+# Check FFmpeg libraries
+echo "FFmpeg libraries:"
+for lib in avcodec avformat avutil swresample swscale; do
+  if find "${MINGW_INTERNAL_BASE_DIR}/bin" -name "${lib}-*.dll" 2>/dev/null | head -1; then
+    echo "  ✓ ${lib} found"
+  else
+    echo "  ✗ ${lib} missing"
+  fi
+done
+
+echo ""
+echo "Qt6 multimedia plugins:"
+if [ -d "${MINGW_INTERNAL_BASE_DIR}/lib/qt6/plugins/multimedia" ]; then
+  echo "  Plugin directory: ${MINGW_INTERNAL_BASE_DIR}/lib/qt6/plugins/multimedia"
+  ls -la "${MINGW_INTERNAL_BASE_DIR}/lib/qt6/plugins/multimedia/"*.dll 2>/dev/null || echo "  No plugins found"
+elif [ -d "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia" ]; then
+  echo "  Plugin directory: ${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia"
+  ls -la "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/"*.dll 2>/dev/null || echo "  No plugins found"
+else
+  echo "  ✗ No Qt6 multimedia plugin directory found"
+fi
+
+echo ""
 echo "  ... setup-windows-sdk.sh shell script finished."
 echo ""
 
