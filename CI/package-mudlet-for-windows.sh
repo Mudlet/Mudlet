@@ -158,6 +158,21 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
 echo ""
+echo "Copying FFmpeg libraries for multimedia support..."
+# Copy FFmpeg libraries for OGG/Opus and other advanced codec support
+# These enable comprehensive audio format support beyond Windows Media Foundation
+if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/avcodec-61.dll" ]; then
+    cp -v -p -t . \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/avcodec-61.dll" \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/avformat-61.dll" \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/avutil-59.dll" \
+        "${MINGW_INTERNAL_BASE_DIR}/bin/swresample-5.dll" || true
+    echo "    FFmpeg DLLs copied for comprehensive codec support"
+else
+    echo "    FFmpeg DLLs not found - only basic Windows Media Foundation codecs available"
+fi
+
+echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:

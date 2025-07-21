@@ -459,16 +459,30 @@ int main(int argc, char* argv[])
     // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #if defined(Q_OS_WINDOWS)
+    // Windows-specific multimedia backend configuration
+    // Prefer FFmpeg for comprehensive codec support (OGG, Opus, etc.), but allow fallback to WMF
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
-        // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work:
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        qDebug().noquote() << "main(...) INFO - Windows detected: attempting to use FFmpeg backend for comprehensive format support.";
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("ffmpeg"))) {
+            qDebug().noquote() << "main(...) INFO - Set QT_MEDIA_BACKEND to \"ffmpeg\" for OGG/Opus/comprehensive codec support.";
+            qDebug().noquote() << "main(...) INFO - If FFmpeg fails to load, Qt will automatically fallback to Windows Media Foundation (WMF).";
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+            qWarning().noquote() << "main(...) WARNING - Failed to set QT_MEDIA_BACKEND to \"ffmpeg\", falling back to WMF.";
+            if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
+                qDebug().noquote() << "main(...) INFO - Set QT_MEDIA_BACKEND to \"windows\" (WMF) as fallback.";
+            } else {
+                qWarning().noquote() << "main(...) WARNING - Failed to set any QT_MEDIA_BACKEND, sound may not work.";
+            }
         }
     } else {
-        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+        QString currentBackend = qgetenv("QT_MEDIA_BACKEND");
+        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environment variable is already set to: \"" << currentBackend << "\".";
+        
+        if (currentBackend == "ffmpeg") {
+            qDebug().noquote() << "main(...) INFO - FFmpeg backend explicitly requested - comprehensive format support (WAV, MP3, M4A, OGG, Opus, WMA).";
+        } else if (currentBackend == "windows") {
+            qDebug().noquote() << "main(...) INFO - Windows Media Foundation backend explicitly requested - native Windows formats (WAV, MP3, M4A, WMA), no OGG/Opus.";
+        }
     }
 #elif defined(Q_OS_MACOS)
     // macOS-specific: AVFoundation supports most formats including OGG/Vorbis natively since macOS 10.15+

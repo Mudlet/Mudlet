@@ -43,6 +43,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     qt6-speech-speechd-plugin \
     qt6-multimedia-dev \
     qt6-tools-dev \
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
     ubuntu-restricted-extras \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*

@@ -95,6 +95,7 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+    "mingw-w64-${BUILDCOMPONENT}-ffmpeg" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
