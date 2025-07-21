@@ -470,6 +470,23 @@ int main(int argc, char* argv[])
     } else {
         qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
     }
+#elif defined(Q_OS_MACOS)
+    // macOS-specific: AVFoundation supports most formats including OGG/Vorbis natively since macOS 10.15+
+    // and handles all other formats well, so we use the default backend unless explicitly overridden
+    if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        qDebug().noquote() << "main(...) INFO - macOS detected: using default multimedia backend (AVFoundation supports most formats including OGG natively).";
+        // Don't set QT_MEDIA_BACKEND - let Qt use the platform default (AVFoundation)
+        // AVFoundation on modern macOS versions handles OGG/Vorbis/Opus and all other formats well
+    } else {
+        QString currentBackend = qgetenv("QT_MEDIA_BACKEND");
+        qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environment variable is already set to: \"" << currentBackend << "\".";
+        
+        if (currentBackend == "ffmpeg") {
+            qDebug().noquote() << "main(...) INFO - FFmpeg backend explicitly requested - comprehensive codec support should be available.";
+        } else if (currentBackend == "darwin") {
+            qDebug().noquote() << "main(...) INFO - AVFoundation (darwin) backend explicitly requested - native macOS multimedia support.";
+        }
+    }
 #endif
 #endif
 
