@@ -1342,7 +1342,7 @@ QPair<quint8, TChar> TConsole::getTextAttributes() const
     const QPoint beginPoint = P_begin;
     const QPoint endPoint = P_end;
     const QPoint userCursorPoint = mUserCursor;
-    
+
     int x = beginPoint.x();
     int y = beginPoint.y();
 
@@ -1354,7 +1354,7 @@ QPair<quint8, TChar> TConsole::getTextAttributes() const
 
     // Take a snapshot of buffer size to avoid TOCTOU issues
     const int bufferSize = static_cast<int>(buffer.buffer.size());
-    
+
     // Early bounds check
     if (y < 0 || x < 0 || y >= bufferSize) {
         return qMakePair(2, TChar());
@@ -1363,7 +1363,7 @@ QPair<quint8, TChar> TConsole::getTextAttributes() const
     // Get line reference and check its bounds safely
     const auto& line = buffer.buffer.at(y);
     const int lineSize = static_cast<int>(line.size());
-    
+
     if (x >= lineSize) {
         return qMakePair(2, TChar());
     }

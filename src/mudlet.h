@@ -711,7 +711,7 @@ private:
     std::unique_ptr<LlamafileManager> mpLlamafileManager;
     QString mAIModelPath;
     bool mAIAutoStart = true;
-    
+
     // Helper methods for AI integration
     void initializeAI();
     void shutdownAI();

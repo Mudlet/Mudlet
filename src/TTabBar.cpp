@@ -227,12 +227,12 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
 
     // Calculate distance moved
     const int distance = (event->pos() - mDragStartPos).manhattanLength();
-    
+
     if (distance >= QApplication::startDragDistance()) {
         // Check if drag is moving outside the tab bar area
         const QPoint globalPos = mapToGlobal(event->pos());
         const QRect tabBarGlobalRect = QRect(mapToGlobal(rect().topLeft()), rect().size());
-        
+
         // If dragged outside tab bar and beyond threshold, initiate detach
         if (!tabBarGlobalRect.contains(globalPos)) {
             const QPoint distanceFromBar = globalPos - tabBarGlobalRect.center();
@@ -243,7 +243,7 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
             }
         }
     }
-    
+
     QTabBar::mouseMoveEvent(event);
 }
 

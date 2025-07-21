@@ -55,19 +55,19 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
 {
     // Add the initial profile
     mProfileConsoleMap[profileName] = console;
-    
+
     setupUI();
     createToolBar();
     createMenus();
     createStatusBar();
     restoreWindowGeometry();
-    
+
     // Set window properties
     setWindowTitle(tr("Mudlet - %1 (Detached)").arg(profileName));
     setWindowIcon(parent ? parent->windowIcon() : QIcon());
     setAttribute(Qt::WA_DeleteOnClose);
     setAcceptDrops(true);
-    
+
     // Update toolbar state and window title for this profile
     updateToolBarActions();
     updateWindowTitle();
@@ -87,7 +87,7 @@ TDetachedWindow::~TDetachedWindow()
             }
         }
     }
-    
+
     saveWindowGeometry();
 }
 
@@ -95,28 +95,28 @@ void TDetachedWindow::setupUI()
 {
     auto centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
-    
+
     mpMainLayout = new QVBoxLayout(centralWidget);
     mpMainLayout->setContentsMargins(0, 0, 0, 0);
     mpMainLayout->setSpacing(0);
-    
+
     // Create a tab bar to show the profile names and allow reattachment
     mpTabBar = new TTabBar(centralWidget);
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setTabsClosable(true);
-    
+
     // Add initial tab for the first profile
     if (!mCurrentProfileName.isEmpty()) {
         mpTabBar->addTab(mCurrentProfileName);
         mpTabBar->setTabData(0, mCurrentProfileName);
     }
-    
+
     mpMainLayout->addWidget(mpTabBar);
-    
+
     // Create a stacked widget to hold multiple consoles
     mpConsoleContainer = new QStackedWidget(centralWidget);
     mpMainLayout->addWidget(mpConsoleContainer);
-    
+
     // Add the initial console
     if (!mCurrentProfileName.isEmpty() && mProfileConsoleMap.contains(mCurrentProfileName)) {
         auto console = mProfileConsoleMap[mCurrentProfileName];
@@ -126,20 +126,20 @@ void TDetachedWindow::setupUI()
             console->show();
         }
     }
-    
+
     updateTabIndicator(0);  // Set initial connection status
-    
+
     // Connect signals
     connect(mpTabBar, &TTabBar::tabDetachRequested, this, &TDetachedWindow::onReattachAction);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &TDetachedWindow::closeProfileByIndex);
     connect(mpTabBar, &QTabBar::currentChanged, this, &TDetachedWindow::slot_tabChanged);
-    
+
     // Connect double-click to reattach
     connect(mpTabBar, &QTabBar::tabBarDoubleClicked, this, &TDetachedWindow::onReattachAction);
-    
+
     // Connect context menu for right-click reattach
     mpTabBar->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(mpTabBar, &QWidget::customContextMenuRequested, 
+    connect(mpTabBar, &QWidget::customContextMenuRequested,
             this, &TDetachedWindow::showTabContextMenu);
 }
 
@@ -147,28 +147,28 @@ void TDetachedWindow::createMenus()
 {
     // Profile menu with quick actions
     auto profileMenu = menuBar()->addMenu(tr("&Profile"));
-    
+
     auto saveProfileAction = new QAction(QIcon(qsl(":/icons/document-save.png")), tr("&Save Profile"), this);
     saveProfileAction->setShortcut(QKeySequence::Save);
     saveProfileAction->setStatusTip(tr("Save the current profile"));
     connect(saveProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_saveProfile);
     profileMenu->addAction(saveProfileAction);
-    
+
     profileMenu->addSeparator();
-    
+
     auto exportProfileAction = new QAction(QIcon(qsl(":/icons/document-export.png")), tr("&Export Profile"), this);
     exportProfileAction->setStatusTip(tr("Export profile as package"));
     connect(exportProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_exportProfile);
     profileMenu->addAction(exportProfileAction);
-    
+
     auto profileSettingsAction = new QAction(QIcon(qsl(":/icons/configure.png")), tr("Profile &Settings"), this);
     profileSettingsAction->setShortcut(QKeySequence::Preferences);
     profileSettingsAction->setStatusTip(tr("Open profile settings"));
     connect(profileSettingsAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showPreferencesDialog);
     profileMenu->addAction(profileSettingsAction);
-    
+
     profileMenu->addSeparator();
-    
+
     auto closeProfileAction = new QAction(QIcon(qsl(":/icons/profile-close.png")), tr("&Close Profile"), this);
     closeProfileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
     closeProfileAction->setStatusTip(tr("Close the current profile"));
@@ -176,22 +176,22 @@ void TDetachedWindow::createMenus()
     profileMenu->addAction(closeProfileAction);
 
     auto windowMenu = menuBar()->addMenu(tr("&Window"));
-    
+
     auto reattachAction = new QAction(tr("&Reattach to Main Window"), this);
     reattachAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     reattachAction->setStatusTip(tr("Reattach this profile window to the main Mudlet window"));
     connect(reattachAction, &QAction::triggered, this, &TDetachedWindow::onReattachAction);
     windowMenu->addAction(reattachAction);
-    
+
     windowMenu->addSeparator();
-    
+
     auto closeAction = new QAction(tr("&Close"), this);
     closeAction->setShortcut(QKeySequence::Close);
     connect(closeAction, &QAction::triggered, this, &QWidget::close);
     windowMenu->addAction(closeAction);
-    
+
     windowMenu->addSeparator();
-    
+
     // Always on top toggle
     auto alwaysOnTopAction = new QAction(tr("Always on &Top"), this);
     alwaysOnTopAction->setCheckable(true);
@@ -199,7 +199,7 @@ void TDetachedWindow::createMenus()
     alwaysOnTopAction->setStatusTip(tr("Keep this window always on top of other windows"));
     connect(alwaysOnTopAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleAlwaysOnTop);
     windowMenu->addAction(alwaysOnTopAction);
-    
+
     // Minimize action
     auto minimizeAction = new QAction(tr("&Minimize"), this);
     minimizeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
@@ -220,7 +220,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         }
         mProfileConsoleMap.clear();
     }
-    
+
     // Emit signal to notify main window only if not reattaching
     if (!mIsReattaching) {
         // Emit for each profile being closed
@@ -256,7 +256,7 @@ void TDetachedWindow::dropEvent(QDropEvent* event)
     const QMimeData* mimeData = event->mimeData();
     if (mimeData->hasFormat("application/x-mudlet-tab")) {
         const QString profileName = QString::fromUtf8(mimeData->data("application/x-mudlet-tab"));
-        
+
         // Don't allow dropping a tab that's already in this window
         if (!mProfileConsoleMap.contains(profileName)) {
             // Request main window to detach this tab to this detached window
@@ -270,7 +270,7 @@ void TDetachedWindow::moveEvent(QMoveEvent* event)
 {
     mLastPosition = event->pos();
     QMainWindow::moveEvent(event);
-    
+
     // Check if we should offer to merge with another detached window
     QTimer::singleShot(100, this, &TDetachedWindow::checkForWindowMergeOpportunity);
 }
@@ -289,13 +289,13 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
         QMainWindow::hideEvent(event);
         return;
     }
-    
+
     // Allow hiding if we're changing window flags (e.g., always on top)
     if (mIsChangingWindowFlags) {
         QMainWindow::hideEvent(event);
         return;
     }
-             
+
     // Prevent the window from being hidden if it should stay visible (has profiles)
     // IMPORTANT: Only allow hiding if there are NO profiles remaining, regardless of mIsReattaching
     if (mShouldStayVisible && mpTabBar && mpTabBar->count() > 0) {
@@ -312,7 +312,7 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
         event->ignore();
         return;
     }
-    
+
     QMainWindow::hideEvent(event);
 }
 
@@ -322,18 +322,18 @@ void TDetachedWindow::onReattachAction()
     if (mReattachInProgress) {
         return;
     }
-    
+
     // Only set mIsReattaching if this is the last profile (which will close the window)
     if (getProfileCount() <= 1) {
         mIsReattaching = true;
     }
-    
+
     // Reattach the currently active profile
     if (!mCurrentProfileName.isEmpty()) {
         mReattachInProgress = true;
-        
+
         emit reattachRequested(mCurrentProfileName);
-        
+
         // Reset the flag after a short delay to allow for the operation to complete
         QTimer::singleShot(500, this, [this]() {
             mReattachInProgress = false;
@@ -348,35 +348,35 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     if (tabIndex == -1) {
         return;
     }
-    
+
     QString profileName = mpTabBar->tabData(tabIndex).toString();
-    
+
     QMenu contextMenu(this);
-    
-    auto reattachAction = contextMenu.addAction(QIcon(qsl(":/icons/view-restore.png")), 
+
+    auto reattachAction = contextMenu.addAction(QIcon(qsl(":/icons/view-restore.png")),
                                                tr("Reattach '%1' to Main Window").arg(profileName));
     connect(reattachAction, &QAction::triggered, [this, profileName] {
         // Switch to this profile first, then reattach
         switchToProfile(profileName);
         onReattachAction();
     });
-    
+
     contextMenu.addSeparator();
-    
-    auto closeTabAction = contextMenu.addAction(QIcon(qsl(":/icons/profile-close.png")), 
+
+    auto closeTabAction = contextMenu.addAction(QIcon(qsl(":/icons/profile-close.png")),
                                                tr("Close Profile '%1'").arg(profileName));
     connect(closeTabAction, &QAction::triggered, [this, tabIndex] {
         closeProfileByIndex(tabIndex);
     });
-    
+
     if (mProfileConsoleMap.size() > 1) {
         contextMenu.addSeparator();
-        
-        auto closeWindowAction = contextMenu.addAction(QIcon(qsl(":/icons/dialog-close.png")), 
+
+        auto closeWindowAction = contextMenu.addAction(QIcon(qsl(":/icons/dialog-close.png")),
                                                       tr("Close Window (All Profiles)"));
         connect(closeWindowAction, &QAction::triggered, this, &QWidget::close);
     }
-    
+
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
 
@@ -394,16 +394,16 @@ void TDetachedWindow::restoreWindowGeometry()
     QSettings settings;
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
-    
+
     const QByteArray geometry = settings.value(key + "/geometry").toByteArray();
     const QByteArray windowState = settings.value(key + "/windowState").toByteArray();
-    
+
     if (!geometry.isEmpty()) {
         restoreGeometry(geometry);
     } else {
         // Default size and position
         resize(800, 600);
-        
+
         // Center on screen containing the main window
         if (parentWidget()) {
             const QScreen* screen = QApplication::screenAt(parentWidget()->pos());
@@ -413,7 +413,7 @@ void TDetachedWindow::restoreWindowGeometry()
             }
         }
     }
-    
+
     if (!windowState.isEmpty()) {
         restoreState(windowState);
     }
@@ -644,15 +644,15 @@ void TDetachedWindow::createStatusBar()
     // Create status bar with connection and profile information
     auto statusBar = this->statusBar();
     statusBar->showMessage(tr("Ready"));
-    
+
     // Profile information (left side)
     mpStatusBarProfileLabel = new QLabel(tr("Profile: %1").arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName));
     mpStatusBarProfileLabel->setStyleSheet(qsl("QLabel { padding: 2px 8px; }"));
     statusBar->addWidget(mpStatusBarProfileLabel);
-    
+
     // Add stretcher to push connection info to the right
     statusBar->addWidget(new QWidget(), 1);
-    
+
     // Connection information (right side)
     mpStatusBarConnectionLabel = new QLabel(tr("Disconnected"));
     mpStatusBarConnectionLabel->setStyleSheet(qsl("QLabel { padding: 2px 8px; }"));
@@ -687,10 +687,10 @@ void TDetachedWindow::updateToolBarActions()
     if (hasActiveProfile) {
         bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
         bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-        
+
         // Update status bar
         updateStatusBar(pHost, isConnected, isConnecting);
-        
+
         // Enable/disable individual actions based on connection state
         // All actions should always be enabled to match main window behavior
         mpActionConnect->setEnabled(true);
@@ -700,7 +700,7 @@ void TDetachedWindow::updateToolBarActions()
     } else {
         // Update status bar
         updateStatusBar(nullptr, false, false);
-        
+
         // Even when no profile is active, keep all actions enabled to match main window
         mpActionConnect->setEnabled(true);
         mpActionDisconnect->setEnabled(true);
@@ -732,7 +732,7 @@ void TDetachedWindow::updateToolbarForProfile(Host* pHost)
 void TDetachedWindow::updateWindowTitle()
 {
     QString title;
-    
+
     if (mProfileConsoleMap.size() == 1) {
         // Single profile - use the simple format
         Host* pHost = nullptr;
@@ -742,11 +742,11 @@ void TDetachedWindow::updateWindowTitle()
         } else {
             title = tr("Mudlet (Detached)");
         }
-        
+
         if (pHost) {
             bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
             bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-            
+
             if (isConnected) {
                 title += tr(" - Connected");
                 if (!pHost->getUrl().isEmpty()) {
@@ -764,7 +764,7 @@ void TDetachedWindow::updateWindowTitle()
                 .arg(mProfileConsoleMap.size())
                 .arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName);
     }
-    
+
     setWindowTitle(title);
 }
 
@@ -773,7 +773,7 @@ void TDetachedWindow::updateStatusBar(Host* pHost, bool isConnected, bool isConn
     if (!mpStatusBarConnectionLabel || !mpStatusBarProfileLabel) {
         return;
     }
-    
+
     // Update profile label
     if (mProfileConsoleMap.size() == 1) {
         mpStatusBarProfileLabel->setText(tr("Profile: %1").arg(mCurrentProfileName));
@@ -782,7 +782,7 @@ void TDetachedWindow::updateStatusBar(Host* pHost, bool isConnected, bool isConn
                                        .arg(mProfileConsoleMap.size())
                                        .arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName));
     }
-    
+
     // Update connection label
     if (pHost) {
         if (isConnected) {
@@ -806,29 +806,29 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     if (!mpTabBar || mpTabBar->count() == 0) {
         return;
     }
-    
+
     // If no tab index specified, update current tab
     if (tabIndex == -1) {
         tabIndex = mpTabBar->currentIndex();
     }
-    
+
     if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
         return;
     }
-    
+
     QString profileName = mpTabBar->tabData(tabIndex).toString();
     if (profileName.isEmpty()) {
         return;
     }
-    
+
     // Get the host and determine connection status
     Host* pHost = mudlet::self()->getHostManager().getHost(profileName);
     QIcon tabIcon;
-    
+
     if (pHost) {
         bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
         bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-        
+
         if (isConnected) {
             tabIcon = QIcon(qsl(":/icons/dialog-ok-apply.png"));
         } else if (isConnecting) {
@@ -839,7 +839,7 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     } else {
         tabIcon = QIcon(qsl(":/icons/dialog-error.png"));
     }
-    
+
     // Set the tab text and icon
     mpTabBar->setTabText(tabIndex, profileName);
     mpTabBar->setTabIcon(tabIndex, tabIcon);
@@ -860,7 +860,7 @@ void TDetachedWindow::slot_toggleAlwaysOnTop()
 {
     // Set flag to allow hiding during window flag changes
     mIsChangingWindowFlags = true;
-    
+
     Qt::WindowFlags flags = windowFlags();
     if (flags & Qt::WindowStaysOnTopHint) {
         // Remove always on top flag
@@ -870,7 +870,7 @@ void TDetachedWindow::slot_toggleAlwaysOnTop()
         setWindowFlags(flags | Qt::WindowStaysOnTopHint);
     }
     show();  // Required after changing window flags
-    
+
     // Reset flag after a short delay to allow the window operations to complete
     QTimer::singleShot(100, this, [this]() {
         mIsChangingWindowFlags = false;
@@ -882,7 +882,7 @@ void TDetachedWindow::slot_saveProfile()
     if (mCurrentProfileName.isEmpty()) {
         return;
     }
-    
+
     Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
     if (pHost) {
         pHost->saveProfile();
@@ -901,7 +901,7 @@ void TDetachedWindow::closeProfile()
     if (mCurrentProfileName.isEmpty()) {
         return;
     }
-    
+
     // Close the current profile
     closeProfileByIndex(mpTabBar->currentIndex());
 }
@@ -911,65 +911,65 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
     if (mProfileConsoleMap.contains(profileName) || !console) {
         return false;
     }
-    
+
     // Add to our map
     mProfileConsoleMap[profileName] = console;
-    
+
     // Ensure window should stay visible when it has profiles
     mShouldStayVisible = true;
-    
+
     // Add tab
     int tabIndex = mpTabBar->addTab(profileName);
     mpTabBar->setTabData(tabIndex, profileName);
-    
+
     // Add console to stacked widget
     mpConsoleContainer->addWidget(console);
-    
+
     // Force console to properly resize and fill the available space
     console->setParent(mpConsoleContainer);
     console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    
+
     // Clear any size constraints that might have been set in the previous window
     console->setMinimumSize(0, 0);
     console->setMaximumSize(16777215, 16777215);  // Qt's maximum size
-    
+
     // Force immediate visibility and geometry updates
     console->setVisible(true);
     console->show();
     console->raise();
-    
+
     // Multiple rounds of geometry updates to ensure proper sizing
     console->updateGeometry();
     console->adjustSize();
-    
+
     // Force immediate redraw
     console->update();
     console->repaint();
-    
+
     // Update the container to ensure proper layout
     mpConsoleContainer->updateGeometry();
     mpConsoleContainer->update();
     mpConsoleContainer->repaint();
-    
+
     // Update tab indicator for the new tab
     updateTabIndicator(tabIndex);
-    
+
     // Switch to the new profile
     mpTabBar->setCurrentIndex(tabIndex);
-    
+
     // Explicitly switch to the new profile to ensure toolbar actions are updated
     switchToProfile(profileName);
-    
+
     // Additional forced updates after switching to the profile
     console->updateGeometry();
     console->update();
     console->repaint();
-    
+
     // Update the entire window layout
     updateGeometry();
     update();
     repaint();
-    
+
     // Schedule a delayed update to handle any Qt layout timing issues
     QTimer::singleShot(10, this, [this, profileName]() {
         auto console = mProfileConsoleMap.value(profileName);
@@ -980,7 +980,7 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
             console->repaint();
         }
     });
-    
+
     return true;
 }
 
@@ -989,7 +989,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
     if (!mProfileConsoleMap.contains(profileName)) {
         return false;
     }
-    
+
     // Find the tab index
     int tabIndex = -1;
     for (int i = 0; i < mpTabBar->count(); ++i) {
@@ -998,11 +998,11 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             break;
         }
     }
-    
+
     if (tabIndex == -1) {
         return false;
     }
-    
+
     // Remove console from stacked widget
     auto console = mProfileConsoleMap[profileName];
     if (console) {
@@ -1010,15 +1010,15 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
         // DON'T set parent to nullptr here - let the receiving window handle reparenting
         // console->setParent(nullptr);
     }
-    
+
     // Remove from map
     mProfileConsoleMap.remove(profileName);
-    
+
     // Remember which tab was currently selected and adjust selection intelligently
     const int currentTabIndex = mpTabBar->currentIndex();
     const int tabCount = mpTabBar->count();
     int newSelectedIndex = -1;
-    
+
     // Determine what tab should be selected after removal
     if (tabCount > 1) { // There will be tabs remaining after removal
         if (tabIndex == currentTabIndex) {
@@ -1038,18 +1038,18 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             newSelectedIndex = currentTabIndex;
         }
     }
-    
+
     mpTabBar->removeTab(tabIndex);
-    
+
     // Set the new selected tab if there are remaining tabs
     if (newSelectedIndex >= 0 && newSelectedIndex < mpTabBar->count()) {
         mpTabBar->setCurrentIndex(newSelectedIndex);
     }
-    
+
     // Force tab bar to update and repaint
     mpTabBar->update();
     mpTabBar->repaint();
-    
+
     // Update current profile if necessary
     if (mCurrentProfileName == profileName) {
         if (mpTabBar->count() > 0) {
@@ -1067,7 +1067,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             mShouldStayVisible = false;
         }
     }
-    
+
     // Ensure the window remains visible if it still has profiles
     if (mpTabBar->count() > 0) {
         // Force layout update
@@ -1075,29 +1075,29 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
         if (layout()) {
             layout()->update();
         }
-        
+
         // Ensure window is not minimized
         if (isMinimized()) {
             showNormal();
         }
-        
+
         // Make sure the window is visible and on top
         setVisible(true);
         show();
         raise();
         activateWindow();
-        
+
         // Force window to front on macOS
         #ifdef Q_OS_MACOS
         setAttribute(Qt::WA_ShowWithoutActivating, false);
         #endif
-        
+
         // Force repaint to ensure visibility
         repaint();
-        
+
         // Additional forced update after event processing
         update();
-        
+
         // Also schedule a delayed visibility restoration in case the drag operation
         // affects window state after this method returns
         QTimer::singleShot(100, this, [this, profileName]() {
@@ -1110,7 +1110,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             }
         });
     }
-    
+
     return true;
 }
 
@@ -1142,37 +1142,37 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
     if (!mProfileConsoleMap.contains(profileName)) {
         return;
     }
-    
+
     mCurrentProfileName = profileName;
-    
+
     auto console = mProfileConsoleMap[profileName];
     if (console && mpConsoleContainer) {
         // Set the current widget in the stacked container
         mpConsoleContainer->setCurrentWidget(console);
-        
+
         // Ensure console has proper size policy and constraints for the container
         console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         console->setMinimumSize(0, 0);
         console->setMaximumSize(16777215, 16777215);  // Qt's maximum size
-        
+
         // Force console visibility and proper sizing
         console->setVisible(true);
         console->show();
         console->raise();
-        
+
         // Multiple rounds of geometry updates
         console->updateGeometry();
         console->adjustSize();
-        
+
         // Force immediate redraw
         console->update();
         console->repaint();
-        
+
         // Update container to ensure proper layout
         mpConsoleContainer->updateGeometry();
         mpConsoleContainer->update();
         mpConsoleContainer->repaint();
-        
+
         // Force parent widget updates
         if (console->parentWidget()) {
             console->parentWidget()->updateGeometry();
@@ -1180,7 +1180,7 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             console->parentWidget()->repaint();
         }
     }
-    
+
     // Update tab selection to match the profile switch
     for (int i = 0; i < mpTabBar->count(); ++i) {
         if (mpTabBar->tabData(i).toString() == profileName) {
@@ -1190,21 +1190,21 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             break;
         }
     }
-    
+
     // Force tab bar repainting
     mpTabBar->update();
     mpTabBar->repaint();
-    
+
     // Update UI for the new active profile
     updateToolBarActions();
     updateWindowTitle();
     updateTabIndicator();
-    
+
     // Force window repainting and layout update
     updateGeometry();
     update();
     repaint();
-    
+
     // Schedule a delayed update to handle any Qt layout timing issues
     QTimer::singleShot(10, this, [this, profileName]() {
         auto console = mProfileConsoleMap.value(profileName);
@@ -1222,7 +1222,7 @@ void TDetachedWindow::slot_tabChanged(int index)
     if (index < 0 || index >= mpTabBar->count()) {
         return;
     }
-    
+
     QString profileName = mpTabBar->tabData(index).toString();
     if (!profileName.isEmpty() && profileName != mCurrentProfileName) {
         switchToProfile(profileName);
@@ -1234,18 +1234,18 @@ void TDetachedWindow::closeProfileByIndex(int index)
     if (index < 0 || index >= mpTabBar->count()) {
         return;
     }
-    
+
     QString profileName = mpTabBar->tabData(index).toString();
     if (profileName.isEmpty()) {
         return;
     }
-    
+
     // Close the specific profile
     mudlet::self()->slot_closeProfileByName(profileName);
-    
+
     // Remove the profile from this detached window
     removeProfile(profileName);
-    
+
     // If this was the last profile, close the detached window
     if (mProfileConsoleMap.isEmpty()) {
         QTimer::singleShot(0, this, [this] {
@@ -1260,44 +1260,44 @@ void TDetachedWindow::checkForWindowMergeOpportunity()
     if (mIsReattaching || !isVisible() || !isActiveWindow()) {
         return;
     }
-    
+
     // Don't check if we have no profiles
     if (mProfileConsoleMap.isEmpty()) {
         return;
     }
-    
+
     // Get our window geometry
     const QRect ourRect = geometry();
-    
+
     // Get list of all detached windows from mudlet
     auto mudletInstance = mudlet::self();
     if (!mudletInstance) {
         return;
     }
-    
+
     // Look for overlapping detached windows
     const auto& detachedWindows = mudletInstance->getDetachedWindows();
     for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
         TDetachedWindow* otherWindow = it.value();
-        
+
         // Skip ourselves
         if (otherWindow == this || !otherWindow || !otherWindow->isVisible()) {
             continue;
         }
-        
+
         const QRect otherRect = otherWindow->geometry();
-        
+
         // Check if windows significantly overlap (more than 50% of smaller window)
         const QRect intersection = ourRect.intersected(otherRect);
         if (intersection.isEmpty()) {
             continue;
         }
-        
+
         const int ourArea = ourRect.width() * ourRect.height();
         const int otherArea = otherRect.width() * otherRect.height();
         const int intersectionArea = intersection.width() * intersection.height();
         const int smallerArea = qMin(ourArea, otherArea);
-        
+
         // If overlap is significant (more than 60% of the smaller window)
         if (intersectionArea > (smallerArea * 0.6)) {
             // Automatically merge windows
@@ -1312,41 +1312,41 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
     if (!otherWindow || otherWindow == this || mIsReattaching) {
         return;
     }
-    
+
     // Additional safety checks
     if (!isVisible() || !otherWindow->isVisible()) {
         return;
     }
-    
+
     // Prevent multiple merge operations for the same windows
     static QSet<QPair<TDetachedWindow*, TDetachedWindow*>> activeMergeOperations;
     const auto mergePair = qMakePair(this, otherWindow);
     const auto reverseMergePair = qMakePair(otherWindow, this);
-    
+
     if (activeMergeOperations.contains(mergePair) || activeMergeOperations.contains(reverseMergePair)) {
         return;
     }
-    
+
     activeMergeOperations.insert(mergePair);
-    
+
     // Get profile names for the merge
     const QStringList ourProfiles = getProfileNames();
-    
+
     if (ourProfiles.isEmpty()) {
         activeMergeOperations.remove(mergePair);
         return;
     }
-    
+
     // Automatically merge without prompting - defer the operation to avoid timing issues
     QTimer::singleShot(0, this, [this, otherWindow, ourProfiles, mergePair]() {
         // Check if the other window is still valid
         if (!otherWindow) {
             return;
         }
-        
+
         // Set flag to prevent cleanup during merge
         mIsReattaching = true;
-        
+
         // Merge all our profiles into the other window
         for (const QString& profileName : ourProfiles) {
             // Double-check the profile still exists in this window
@@ -1355,7 +1355,7 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
             }
         }
     });
-    
+
     // Clean up the active merge tracking after a delay
     QTimer::singleShot(100, [mergePair]() {
         activeMergeOperations.remove(mergePair);
@@ -1377,21 +1377,21 @@ void TDetachedWindow::withCurrentProfileActive(const std::function<void()>& acti
     if (!mudletInstance || mCurrentProfileName.isEmpty()) {
         return;
     }
-    
+
     Host* pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName);
     if (!pHost) {
         return;
     }
-    
+
     // Store the current active host
     Host* previousActiveHost = mudletInstance->mpCurrentActiveHost;
-    
+
     // Temporarily set our profile's host as active
     mudletInstance->mpCurrentActiveHost = pHost;
-    
+
     // Execute the action
     action();
-    
+
     // Restore the previous active host
     mudletInstance->mpCurrentActiveHost = previousActiveHost;
 }
@@ -1559,7 +1559,7 @@ void TDetachedWindow::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::WindowStateChange) {
         auto stateChangeEvent = static_cast<QWindowStateChangeEvent*>(event);
-        
+
         // Check if window is being minimized
         if (windowState() & Qt::WindowMinimized) {
             mIsBeingMinimized = true;
@@ -1572,6 +1572,6 @@ void TDetachedWindow::changeEvent(QEvent* event)
             }
         }
     }
-    
+
     QMainWindow::changeEvent(event);
 }

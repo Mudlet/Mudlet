@@ -438,7 +438,7 @@ public:
     void initMMCPServer();
     void setMMCPChatName(const QString&, bool shouldSignal = true);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled) { 
+    void setF3SearchEnabled(const bool enabled) {
         mF3SearchEnabled = enabled;
         if (mpConsole) {
             mpConsole->setF3SearchEnabled(enabled);

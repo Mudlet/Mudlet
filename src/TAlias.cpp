@@ -167,7 +167,7 @@ bool TAlias::match(const QString& haystack)
             auto name = QString::fromUtf8(&tabptr[2]).trimmed();
             auto* substring_start = haystackC + ovector[2*n];
             auto substring_length = ovector[2*n+1] - ovector[2*n];
-            auto utf16_pos = haystack.indexOf(QString(substring_start));
+            auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;

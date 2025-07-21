@@ -38,11 +38,11 @@ LlamafileManager::LlamafileManager(QObject* parent)
             this, &LlamafileManager::onProcessFinished);
     connect(process.get(), &QProcess::errorOccurred, this, &LlamafileManager::onProcessError);
     connect(process.get(), &QProcess::stateChanged, this, &LlamafileManager::onProcessStateChanged);
-    
+
     // Configure health check timer
     healthCheckTimer->setSingleShot(false);
     connect(healthCheckTimer.get(), &QTimer::timeout, this, &LlamafileManager::performHealthCheck);
-    
+
     // Configure network manager
     networkManager->setTransferTimeout(10000); // 10 second timeout
 }
@@ -58,30 +58,30 @@ bool LlamafileManager::start(const Config& newConfig) {
         qDebug() << "LlamafileManager: Already starting or running";
         return currentStatus == Status::Running;
     }
-    
+
     config = newConfig;
-    
+
     if (!validateConfig()) {
         qDebug() << "LlamafileManager: Invalid configuration: " << lastError;
         setStatus(Status::Error);
         return false;
     }
-    
+
     setStatus(Status::Starting);
-    
+
     const QString executable = qsl("/bin/sh");
     const QStringList args = buildProcessArguments();
-    
+
     qDebug().noquote() << "Starting llamafile:" << executable << args.join(" ");
-    
+
     // Set working directory to the model's directory
     QFileInfo fileInfo(config.modelPath);
     if (fileInfo.exists()) {
         process->setWorkingDirectory(fileInfo.absolutePath());
     }
-    
+
     process->start(executable, args);
-    
+
     // Wait for startup with timeout
     if (!process->waitForStarted(config.startupTimeoutMs)) {
         const QString error = QString("Failed to start llamafile: %1").arg(process->errorString());
@@ -90,7 +90,7 @@ bool LlamafileManager::start(const Config& newConfig) {
         emit processError(error);
         return false;
     }
-    
+
     return true;
 }
 
@@ -98,15 +98,15 @@ void LlamafileManager::stop() {
     if (currentStatus == Status::Stopped || currentStatus == Status::Stopping) {
         return;
     }
-    
+
     setStatus(Status::Stopping);
     healthCheckTimer->stop();
     healthy = false;
-    
+
     if (process && process->state() != QProcess::NotRunning) {
         // Try graceful termination first
         process->terminate();
-        
+
         // Wait up to 5 seconds for graceful shutdown
         if (!process->waitForFinished(5000)) {
             qDebug() << "LlamafileManager: Graceful shutdown failed, killing process";
@@ -114,7 +114,7 @@ void LlamafileManager::stop() {
             process->waitForFinished(3000);
         }
     }
-    
+
     setStatus(Status::Stopped);
     emit processStopped();
 }
@@ -131,19 +131,19 @@ void LlamafileManager::chatCompletion(const ApiRequest& request, ApiCallback cal
         callback({false, "Llamafile not running", {}, 0});
         return;
     }
-    
+
     QJsonObject requestData;
     requestData["model"] = request.model;
     requestData["messages"] = request.messages;
     requestData["temperature"] = request.temperature;
     requestData["max_tokens"] = request.maxTokens;
     requestData["stream"] = request.stream;
-    
+
     // Merge extra parameters
     for (auto it = request.extraParams.begin(); it != request.extraParams.end(); ++it) {
         requestData[it.key()] = it.value();
     }
-    
+
     makeApiRequest("/v1/chat/completions", requestData, std::move(callback));
 }
 
@@ -152,7 +152,7 @@ void LlamafileManager::textCompletion(const ApiRequest& request, ApiCallback cal
         callback({false, "Llamafile not running", {}, 0});
         return;
     }
-    
+
     QJsonObject requestData;
     requestData["prompt"] = request.prompt;
     requestData["temperature"] = request.temperature;
@@ -160,12 +160,12 @@ void LlamafileManager::textCompletion(const ApiRequest& request, ApiCallback cal
         requestData["n_predict"] = request.maxTokens;
     }
     requestData["stream"] = request.stream;
-    
+
     // Merge extra parameters
     for (auto it = request.extraParams.begin(); it != request.extraParams.end(); ++it) {
         requestData[it.key()] = it.value();
     }
-    
+
     makeApiRequest("/completion", requestData, std::move(callback));
 }
 
@@ -174,10 +174,10 @@ void LlamafileManager::embeddings(const ApiRequest& request, ApiCallback callbac
         callback({false, "Llamafile not running", {}, 0});
         return;
     }
-    
+
     QJsonObject requestData;
     requestData["model"] = request.model;
-    
+
     if (request.input.size() == 1) {
         requestData["input"] = request.input.first();
     } else {
@@ -187,7 +187,7 @@ void LlamafileManager::embeddings(const ApiRequest& request, ApiCallback callbac
         }
         requestData["input"] = inputArray;
     }
-    
+
     makeApiRequest("/v1/embeddings", requestData, std::move(callback));
 }
 
@@ -196,7 +196,7 @@ void LlamafileManager::getModels(ApiCallback callback) {
         callback({false, "Llamafile not running", {}, 0});
         return;
     }
-    
+
     makeApiRequest("/v1/models", {}, std::move(callback));
 }
 
@@ -213,12 +213,12 @@ bool LlamafileManager::isLlamafileExecutable(const QString& path) {
     if (!info.exists() || !info.isFile()) {
         return false;
     }
-    
+
     // Check if it's executable
     if (!info.isExecutable()) {
         return false;
     }
-    
+
     // Basic heuristics for llamafile detection
     const QString fileName = info.fileName().toLower();
 #ifdef Q_OS_WIN
@@ -230,7 +230,7 @@ bool LlamafileManager::isLlamafileExecutable(const QString& path) {
 
 QString LlamafileManager::findLlamafileExecutable(const QStringList& searchPaths) {
     QStringList paths = searchPaths;
-    
+
     // Add default search paths
     if (paths.isEmpty()) {
         paths << QCoreApplication::applicationDirPath()
@@ -239,21 +239,21 @@ QString LlamafileManager::findLlamafileExecutable(const QStringList& searchPaths
               << "/usr/local/bin"
               << "/opt/llamafile";
     }
-    
+
     for (const QString& path : paths) {
         QDir dir(path);
         if (!dir.exists()) continue;
-        
+
         const QStringList filters{"*.llamafile"};
         const auto entries = dir.entryInfoList(filters, QDir::Files | QDir::Executable);
-        
+
         for (const QFileInfo& entry : entries) {
             if (isLlamafileExecutable(entry.absoluteFilePath())) {
                 return entry.absoluteFilePath();
             }
         }
     }
-    
+
     return {};
 }
 
@@ -264,17 +264,17 @@ QUrl LlamafileManager::apiBaseUrl() const {
 // Private slots
 void LlamafileManager::onProcessStarted() {
     qDebug() << "LlamafileManager: Process started with PID" << process->processId();
-    
+
     // Wait a moment for the server to initialize before declaring it running
     QTimer::singleShot(2000, this, [this]() {
         if (process && process->state() == QProcess::Running) {
             setStatus(Status::Running);
             resetRestartAttempts();
             emit processStarted();
-            
+
             // Start health checking
             enableHealthCheck(true);
-            
+
             // Perform initial health check
             QTimer::singleShot(1000, this, &LlamafileManager::performHealthCheck);
         }
@@ -282,37 +282,37 @@ void LlamafileManager::onProcessStarted() {
 }
 
 void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    qDebug() << "LlamafileManager: Process finished with exit code" << exitCode 
+    qDebug() << "LlamafileManager: Process finished with exit code" << exitCode
              << "status" << (exitStatus == QProcess::NormalExit ? "normal" : "crashed");
-    
+
     // Capture any remaining output from the process
     QString stdoutOutput = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
     QString stderrOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
-    
+
     // Get last few lines of output for context
     auto getLastLines = [](const QString& text, int maxLines = 5) -> QString {
         if (text.isEmpty()) return QString();
-        
+
         QStringList lines = text.split('\n', Qt::SkipEmptyParts);
         if (lines.size() <= maxLines) {
             return text;
         }
-        
+
         QStringList lastLines = lines.mid(lines.size() - maxLines);
         return lastLines.join('\n');
     };
-    
+
     QString recentStdout = getLastLines(stdoutOutput);
     QString recentStderr = getLastLines(stderrOutput);
-    
+
     healthCheckTimer->stop();
     healthy = false;
-    
+
     if (currentStatus != Status::Stopping) {
         if (config.autoRestart && restartAttempts < config.maxRestartAttempts) {
-            qDebug() << "LlamafileManager: Attempting restart" << (restartAttempts + 1) 
+            qDebug() << "LlamafileManager: Attempting restart" << (restartAttempts + 1)
                      << "of" << config.maxRestartAttempts;
-            
+
             // Log the output for debugging restart scenarios
             if (!recentStdout.isEmpty()) {
                 qDebug() << "LlamafileManager: Recent stdout:" << recentStdout;
@@ -320,12 +320,12 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
             if (!recentStderr.isEmpty()) {
                 qDebug() << "LlamafileManager: Recent stderr:" << recentStderr;
             }
-            
+
             setStatus(Status::Stopped);
             attemptRestart();
         } else {
             QString errorMsg = QString("Process exited unexpectedly (code: %1)").arg(exitCode);
-            
+
             // Append recent output to error message
             if (!recentStderr.isEmpty()) {
                 errorMsg += QString("\nRecent stderr:\n%1").arg(recentStderr);
@@ -333,7 +333,7 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
             if (!recentStdout.isEmpty()) {
                 errorMsg += QString("\nRecent stdout:\n%1").arg(recentStdout);
             }
-            
+
             setStatus(Status::Error);
             lastError = errorMsg;
             emit processError(lastError);
@@ -365,10 +365,10 @@ void LlamafileManager::onProcessError(QProcess::ProcessError error) {
             errorString = "Unknown error: " + process->errorString();
             break;
     }
-    
+
     qDebug() << "LlamafileManager: Process error:" << errorString;
     lastError = errorString;
-    
+
     if (currentStatus == Status::Starting) {
         setStatus(Status::Error);
         emit processError(errorString);
@@ -383,15 +383,15 @@ void LlamafileManager::performHealthCheck() {
     if (!isRunning()) {
         return;
     }
-    
+
     const QUrl url = apiBaseUrl().resolved(QUrl("/v1/models"));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer no-key");
-    
+
     auto* reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, this, &LlamafileManager::onHealthCheckReply);
-    
+
     // Set a property to identify this as a health check
     reply->setProperty("isHealthCheck", true);
 }
@@ -399,11 +399,11 @@ void LlamafileManager::performHealthCheck() {
 void LlamafileManager::onHealthCheckReply() {
     auto* reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply) return;
-    
+
     reply->deleteLater();
-    
+
     const bool wasHealthy = healthy;
-    
+
     if (reply->error() == QNetworkReply::NoError) {
         healthy = true;
         if (!wasHealthy) {
@@ -415,11 +415,11 @@ void LlamafileManager::onHealthCheckReply() {
         const QString reason = QString("HTTP %1: %2")
                               .arg(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt())
                               .arg(reply->errorString());
-        
+
         qDebug() << "LlamafileManager: Health check failed:" << reason;
         setStatus(Status::Unhealthy);
         emit healthCheckFailed(reason);
-        
+
         // Consider restarting if health checks consistently fail
         if (config.autoRestart && !wasHealthy) {
             QTimer::singleShot(5000, this, [this]() {
@@ -436,9 +436,9 @@ void LlamafileManager::setStatus(Status newStatus) {
     if (currentStatus != newStatus) {
         const Status oldStatus = currentStatus;
         currentStatus = newStatus;
-        
+
         qDebug() << "LlamafileManager: Status changed from" << oldStatus << "to" << newStatus;
-        
+
         emit statusChanged(newStatus, oldStatus);
     }
 }
@@ -448,7 +448,7 @@ void LlamafileManager::makeApiRequest(const QString& endpoint, const QJsonObject
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer no-key");
-    
+
     QNetworkReply* reply;
     if (requestData.isEmpty()) {
         reply = networkManager->get(request);
@@ -456,7 +456,7 @@ void LlamafileManager::makeApiRequest(const QString& endpoint, const QJsonObject
         const QByteArray data = QJsonDocument(requestData).toJson(QJsonDocument::Compact);
         reply = networkManager->post(request, data);
     }
-    
+
     connect(reply, &QNetworkReply::finished, [this, reply, callback = std::move(callback)]() {
         handleApiReply(reply, callback);
     });
@@ -464,15 +464,15 @@ void LlamafileManager::makeApiRequest(const QString& endpoint, const QJsonObject
 
 void LlamafileManager::handleApiReply(QNetworkReply* reply, ApiCallback callback) {
     reply->deleteLater();
-    
+
     ApiResponse response;
     response.statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    
+
     if (reply->error() == QNetworkReply::NoError) {
         const QByteArray data = reply->readAll();
         QJsonParseError parseError;
         const QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
-        
+
         if (parseError.error == QJsonParseError::NoError) {
             response.success = true;
             response.data = doc.object();
@@ -484,7 +484,7 @@ void LlamafileManager::handleApiReply(QNetworkReply* reply, ApiCallback callback
         response.success = false;
         response.error = reply->errorString();
     }
-    
+
     callback(response);
 }
 
@@ -496,13 +496,13 @@ QString LlamafileManager::constructExecutablePath() const {
 #endif
 
     executable = executable + config.modelPath;
-    
+
     return executable;
 }
 
 QStringList LlamafileManager::buildProcessArguments() const {
     QStringList args;
-    
+
     // Basic server arguments
     args << config.modelPath;
     args << "--server";
@@ -516,17 +516,17 @@ QStringList LlamafileManager::buildProcessArguments() const {
 
     // required for v1 only, incompatible with v2
     args << "--nobrowser";
-    
+
     // GPU settings
     if (config.enableGpu) {
         // doesn't work with v1
         // args << "--gpu auto";
         // args << "--ngl 999"
     }
-    
+
     // Add any extra arguments
     args << config.extraArgs;
-    
+
     return args;
 }
 
@@ -537,10 +537,10 @@ void LlamafileManager::attemptRestart() {
         emit processError(lastError);
         return;
     }
-    
+
     ++restartAttempts;
     qDebug() << "LlamafileManager: Restart attempt" << restartAttempts;
-    
+
     // Wait a bit before restarting
     QTimer::singleShot(2000, this, [this]() {
         start(config);
@@ -552,23 +552,23 @@ bool LlamafileManager::validateConfig() {
         lastError = "Model path is empty";
         return false;
     }
-    
+
     const QFileInfo fileInfo(config.modelPath);
     if (!fileInfo.exists()) {
         lastError = "Model file does not exist: " + config.modelPath;
         return false;
     }
-    
+
     if (!fileInfo.isExecutable()) {
         lastError = "Model file is not executable: " + config.modelPath;
         return false;
     }
-    
+
     if (config.port <= 0 || config.port > 65535) {
         lastError = QString("Invalid port: %1").arg(config.port);
         return false;
     }
-    
+
     return true;
 }
 
@@ -585,7 +585,7 @@ void LlamafileManager::textCompletionStream(const ApiRequest& request, StreamChu
         errorCallback("Llamafile not running");
         return;
     }
-    
+
     QJsonObject requestData;
     requestData["prompt"] = request.prompt;
     requestData["temperature"] = request.temperature;
@@ -593,12 +593,12 @@ void LlamafileManager::textCompletionStream(const ApiRequest& request, StreamChu
         requestData["n_predict"] = request.maxTokens;
     }
     requestData["stream"] = true; // Force streaming
-    
+
     // Merge extra parameters
     for (auto it = request.extraParams.begin(); it != request.extraParams.end(); ++it) {
         requestData[it.key()] = it.value();
     }
-    
+
     makeStreamingApiRequest("/completion", requestData, chunkCallback, errorCallback);
 }
 
@@ -607,15 +607,15 @@ void LlamafileManager::makeStreamingApiRequest(const QString& endpoint, const QJ
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer no-key");
-    
+
     const QByteArray data = QJsonDocument(requestData).toJson(QJsonDocument::Compact);
     auto* reply = networkManager->post(request, data);
-    
+
     // Handle streaming response
     connect(reply, &QNetworkReply::readyRead, [reply, chunkCallback]() {
         QByteArray data = reply->readAll();
         QString chunk = QString::fromUtf8(data);
-        
+
         // Parse Server-Sent Events format
         QStringList lines = chunk.split('\n');
         for (const QString& line : lines) {
@@ -625,7 +625,7 @@ void LlamafileManager::makeStreamingApiRequest(const QString& endpoint, const QJ
                     chunkCallback("", true); // Signal completion
                     return;
                 }
-                
+
                 QJsonParseError parseError;
                 QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8(), &parseError);
                 if (parseError.error == QJsonParseError::NoError) {
@@ -637,10 +637,10 @@ void LlamafileManager::makeStreamingApiRequest(const QString& endpoint, const QJ
             }
         }
     });
-    
+
     connect(reply, &QNetworkReply::finished, [reply, chunkCallback, errorCallback]() {
         reply->deleteLater();
-        
+
         if (reply->error() != QNetworkReply::NoError) {
             errorCallback(reply->errorString());
         } else {

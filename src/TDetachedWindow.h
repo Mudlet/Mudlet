@@ -51,7 +51,7 @@ public:
     TMainConsole* getCurrentConsole() const;
     TMainConsole* getConsole(const QString& profileName) const;
     int getProfileCount() const { return mProfileConsoleMap.size(); }
-    
+
     void updateToolbarForProfile(Host* pHost);
     void setReattaching(bool reattaching) { mIsReattaching = reattaching; }
 
@@ -80,7 +80,7 @@ private slots:
     void slot_toggleAlwaysOnTop();
     void slot_saveProfile();
     void slot_exportProfile();
-    
+
     // Detached window specific toolbar action slots
     void slot_connectProfile();
     void slot_disconnectProfile();
@@ -121,7 +121,7 @@ private:
     void checkForWindowMergeOpportunity();  // Check if this window overlaps with another detached window
     void performWindowMerge(TDetachedWindow* otherWindow);  // Automatically merge with another window
     void logWindowState(const QString& context);  // Debug method to track window state
-    
+
     // Helper method to temporarily set the active host for actions
     void withCurrentProfileActive(const std::function<void()>& action);
 
@@ -132,7 +132,7 @@ private:
     QVBoxLayout* mpMainLayout{nullptr};
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
-    
+
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};
     QAction* mpActionDisconnect{nullptr};
@@ -157,32 +157,32 @@ private:
     QAction* mpActionMuteAPI{nullptr};
     QAction* mpActionMuteGame{nullptr};
     QAction* mpActionFullScreenView{nullptr};
-    
+
     // Toolbar buttons
     QToolButton* mpButtonConnect{nullptr};
     QToolButton* mpButtonMute{nullptr};
     QToolButton* mpButtonPackageManagers{nullptr};
-    
+
     // Status bar
     QLabel* mpStatusBarConnectionLabel{nullptr};
     QLabel* mpStatusBarProfileLabel{nullptr};
-    
+
     // Store window state
     QPoint mLastPosition;
     QSize mLastSize;
-    
+
     // Flag to indicate if window is being closed due to reattachment
     bool mIsReattaching{false};
-    
+
     // Flag to force window to stay visible when it has profiles
     bool mShouldStayVisible{true};
-    
+
     // Flag to track if window is being minimized (to allow hiding during minimize)
     bool mIsBeingMinimized{false};
-    
+
     // Flag to allow hiding during window flag changes (always on top, etc.)
     bool mIsChangingWindowFlags{false};
-    
+
     // Flag to prevent duplicate reattach operations on this window
     bool mReattachInProgress{false};
 };
