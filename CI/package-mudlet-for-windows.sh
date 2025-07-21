@@ -170,11 +170,12 @@ find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "*.dll" -exec cp -v -p {} . \;
 mkdir -p plugins/multimedia
 find "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia" -iname "*.dll" -exec cp -v -p {} plugins/multimedia/ \;
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qffmpeg.dll" -exec cp -v -p {} plugins/multimedia/ \;
+find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "ffmpegmediaplugin.dll" -exec cp -v -p {} plugins/multimedia/ \;
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qwindowsmediaplugin.dll" -exec cp -v -p {} plugins/multimedia/ \;
 echo "    All FFmpeg and Qt multimedia plugin DLLs copied for maximum compatibility."
-echo "Checking for qffmpeg.dll in plugins/multimedia..."
-if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
-  echo "qffmpeg.dll not found in plugins/multimedia. Searching additional locations..."
+echo "Checking for FFmpeg plugin DLL in plugins/multimedia..."
+if [ ! -f plugins/multimedia/qffmpeg.dll ] && [ ! -f plugins/multimedia/ffmpegmediaplugin.dll ]; then
+  echo "FFmpeg plugin DLL not found in plugins/multimedia. Searching additional locations..."
   QT_PLUGIN_PATHS=(
     "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia"
     "${MINGW_INTERNAL_BASE_DIR}/bin"
@@ -186,6 +187,9 @@ if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
     if [ -f "$path/qffmpeg.dll" ]; then
       cp -v -p "$path/qffmpeg.dll" plugins/multimedia/
     fi
+    if [ -f "$path/ffmpegmediaplugin.dll" ]; then
+      cp -v -p "$path/ffmpegmediaplugin.dll" plugins/multimedia/
+    fi
     if [ -d "$path" ]; then
       find "$path" -iname "*.dll" -exec cp -v -p {} plugins/multimedia/ \;
     fi
@@ -194,28 +198,28 @@ fi
 
 # If qffmpeg.dll is still missing, try to install it via MSYS2
 
-# If qffmpeg.dll is still missing, try to install it via MSYS2 and then search recursively
-if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
-  echo "qffmpeg.dll still not found. Attempting to install via MSYS2 pacman..."
+# If FFmpeg plugin is still missing, try to install it via MSYS2 and then search recursively
+if [ ! -f plugins/multimedia/qffmpeg.dll ] && [ ! -f plugins/multimedia/ffmpegmediaplugin.dll ]; then
+  echo "FFmpeg plugin DLL still not found. Attempting to install via MSYS2 pacman..."
   pacman -S --noconfirm mingw-w64-x86_64-qt6-multimedia-ffmpeg
-  # Recursively search for qffmpeg.dll under /mingw64
-  QFFMPEG_PATH=$(find /mingw64 -iname 'qffmpeg.dll' | head -n 1)
-  if [ -n "$QFFMPEG_PATH" ]; then
-    echo "Found qffmpeg.dll at $QFFMPEG_PATH, copying to plugins/multimedia/"
-    cp -v -p "$QFFMPEG_PATH" plugins/multimedia/
+  # Recursively search for FFmpeg plugin DLL under /mingw64 (try both possible names)
+  FFMPEG_PLUGIN_PATH=$(find /mingw64 -iname 'qffmpeg.dll' -o -iname 'ffmpegmediaplugin.dll' | head -n 1)
+  if [ -n "$FFMPEG_PLUGIN_PATH" ]; then
+    echo "Found FFmpeg plugin at $FFMPEG_PLUGIN_PATH, copying to plugins/multimedia/"
+    cp -v -p "$FFMPEG_PLUGIN_PATH" plugins/multimedia/
   else
-    echo "qffmpeg.dll still not found anywhere under /mingw64 after install."
+    echo "FFmpeg plugin DLL still not found anywhere under /mingw64 after install."
   fi
 fi
 
 # Final check and warning
-if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
-  echo "WARNING: qffmpeg.dll is still missing from plugins/multimedia!"
+if [ ! -f plugins/multimedia/qffmpeg.dll ] && [ ! -f plugins/multimedia/ffmpegmediaplugin.dll ]; then
+  echo "WARNING: FFmpeg plugin DLL is still missing from plugins/multimedia!"
   echo "OGG/Opus/FFmpeg support will NOT work."
   echo "To fix: Install the Qt6 FFmpeg plugin for your environment."
   echo "For MSYS2: pacman -S mingw-w64-x86_64-qt6-multimedia-ffmpeg"
   echo "For other environments: Download or build the Qt Multimedia FFmpeg plugin matching your Qt version and architecture."
-  echo "Then copy qffmpeg.dll to plugins/multimedia."
+  echo "Then copy qffmpeg.dll or ffmpegmediaplugin.dll to plugins/multimedia."
 fi
 
 echo ""
