@@ -172,6 +172,44 @@ find "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia" -iname "*.dll" -exec cp -v 
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qffmpeg.dll" -exec cp -v -p {} plugins/multimedia/ \;
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "qwindowsmediaplugin.dll" -exec cp -v -p {} plugins/multimedia/ \;
 echo "    All FFmpeg and Qt multimedia plugin DLLs copied for maximum compatibility."
+echo "Checking for qffmpeg.dll in plugins/multimedia..."
+if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
+  echo "qffmpeg.dll not found in plugins/multimedia. Searching additional locations..."
+  QT_PLUGIN_PATHS=(
+    "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia"
+    "${MINGW_INTERNAL_BASE_DIR}/bin"
+    "/mingw64/lib/qt6/plugins/multimedia"
+    "/mingw64/plugins/multimedia"
+    "/opt/qt6/plugins/multimedia"
+  )
+  for path in "${QT_PLUGIN_PATHS[@]}"; do
+    if [ -f "$path/qffmpeg.dll" ]; then
+      cp -v -p "$path/qffmpeg.dll" plugins/multimedia/
+    fi
+    if [ -d "$path" ]; then
+      find "$path" -iname "*.dll" -exec cp -v -p {} plugins/multimedia/ \;
+    fi
+  done
+fi
+
+# If qffmpeg.dll is still missing, try to install it via MSYS2
+if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
+  echo "qffmpeg.dll still not found. Attempting to install via MSYS2 pacman..."
+  pacman -S --noconfirm mingw-w64-x86_64-qt6-multimedia-ffmpeg
+  if [ -f "/mingw64/lib/qt6/plugins/multimedia/qffmpeg.dll" ]; then
+    cp -v -p "/mingw64/lib/qt6/plugins/multimedia/qffmpeg.dll" plugins/multimedia/
+  fi
+fi
+
+# Final check and warning
+if [ ! -f plugins/multimedia/qffmpeg.dll ]; then
+  echo "WARNING: qffmpeg.dll is still missing from plugins/multimedia!"
+  echo "OGG/Opus/FFmpeg support will NOT work."
+  echo "To fix: Install the Qt6 FFmpeg plugin for your environment."
+  echo "For MSYS2: pacman -S mingw-w64-x86_64-qt6-multimedia-ffmpeg"
+  echo "For other environments: Download or build the Qt Multimedia FFmpeg plugin matching your Qt version and architecture."
+  echo "Then copy qffmpeg.dll to plugins/multimedia."
+fi
 
 echo ""
 echo "Copying OpenSSL libraries in..."
