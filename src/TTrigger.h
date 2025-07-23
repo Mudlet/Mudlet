@@ -109,6 +109,8 @@ public:
     bool setScript(const QString& script);
     bool compileScript();
     bool match(char*, const QString&, int line, int posOffset = 0);
+    bool checkIfNew();
+    void unmarkAsNew();
 
     bool isMultiline() const { return mIsMultiline; }
     int getTriggerType() const { return mTriggerType; }
@@ -166,6 +168,7 @@ public:
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction;
+    bool isNew;
 
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
