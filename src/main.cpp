@@ -461,11 +461,22 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_WINDOWS)
     // Windows-specific: Add plugins/multimedia to PATH for FFmpeg backend DLL discovery
     {
-        QString pluginPath = QCoreApplication::applicationDirPath() + QLatin1String("/plugins/multimedia");
+        QString appDir = QCoreApplication::applicationDirPath();
+        QString pluginPath = appDir + QLatin1String("/plugins/multimedia");
         QString currentPath = QString::fromLocal8Bit(qgetenv("PATH"));
-        QString newPath = pluginPath + ";" + currentPath;
+        QString newPath = pluginPath + ";" + appDir + ";" + currentPath;
         qputenv("PATH", newPath.toLocal8Bit());
-        qDebug().noquote() << "main(...) INFO - Added plugins/multimedia to PATH for FFmpeg DLL discovery:" << pluginPath;
+        qDebug().noquote() << "main(...) INFO - Added to PATH for FFmpeg DLL discovery:" << pluginPath;
+        
+        // Add library paths for Qt to find plugins - critical for plugin loading
+        QCoreApplication::addLibraryPath(appDir + "/plugins");
+        QCoreApplication::addLibraryPath(appDir);
+        qDebug().noquote() << "main(...) INFO - Added Qt library paths for plugin discovery";
+        
+        // Enable multimedia plugin debugging if environment variable is set
+        if (qEnvironmentVariableIsSet("QT_MEDIA_PLUGINS")) {
+            qDebug().noquote() << "main(...) INFO - Qt multimedia plugin debugging enabled";
+        }
     }
     // Prefer FFmpeg for comprehensive codec support (OGG, Opus, etc.), but allow fallback to WMF
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {

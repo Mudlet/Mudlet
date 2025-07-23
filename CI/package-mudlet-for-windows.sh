@@ -189,6 +189,43 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
 echo ""
+echo "Copying additional system dependencies identified from ntldd analysis..."
+# Copy all libraries that ntldd shows might be missing or loaded from system
+ADDITIONAL_DEPS=(
+    "libdatrie-1.dll"
+    "libexpat-1.dll" 
+    "libfribidi-0.dll"
+    "libgmodule-2.0-0.dll"
+    "libgmp-10.dll"
+    "libgomp-1.dll"
+    "libhogweed-6.dll"
+    "libidn2-0.dll"
+    "libnettle-8.dll"
+    "libp11-kit-0.dll"
+    "libpangoft2-1.0-0.dll"
+    "libpangowin32-1.0-0.dll"
+    "libshaderc_shared.dll"
+    "libsharpyuv-0.dll"
+    "libspirv-cross-c-shared.dll"
+    "libtasn1-6.dll"
+    "libthai-0.dll"
+    "libunibreak-6.dll"
+    "libunistring-5.dll"
+    "vulkan-1.dll"
+)
+
+for DEP in "${ADDITIONAL_DEPS[@]}"; do
+    if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${DEP}" ]; then
+        if [ ! -f "./${DEP}" ]; then
+            echo "  Copying additional dependency: ${DEP}"
+            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${DEP}" .
+        fi
+    else
+        echo "  WARNING: ${DEP} not found in ${MINGW_INTERNAL_BASE_DIR}/bin/"
+    fi
+done
+
+echo ""
 echo "Aggressively copying FFmpeg and Qt multimedia plugin DLLs for maximum compatibility..."
 # Copy all FFmpeg DLLs from MSYS2/mingw64, vcpkg, and Qt bin directories
 find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avcodec-*.dll" -exec cp -v -p {} . \;
@@ -253,6 +290,38 @@ if [ ! -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
 fi
 
 echo ""
+echo "Verifying ffmpegmediaplugin.dll dependencies and copying missing ones..."
+if [ -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
+    echo "Checking dependencies of ffmpegmediaplugin.dll:"
+    "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" | grep -E "(not found|${MINGW_INTERNAL_BASE_DIR})"
+    
+    # Copy any missing dependencies specifically for the FFmpeg plugin
+    FFMPEG_DEPS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null \
+      | grep "${MINGW_INTERNAL_BASE_DIR}" \
+      | cut -d ">" -f2 \
+      | cut -d "(" -f1 \
+      | tr -d ' ')
+    
+    echo "FFmpeg plugin dependencies found:"
+    for DEP in ${FFMPEG_DEPS}; do
+        DEP_NAME=$(basename "${DEP}")
+        echo "  Checking: ${DEP_NAME}"
+        if [ -f "${DEP}" ] && [ ! -f "./${DEP_NAME}" ]; then
+            echo "    Copying missing FFmpeg plugin dependency: ${DEP_NAME}"
+            cp -v -p "${DEP}" .
+        else
+            echo "    Already present: ${DEP_NAME}"
+        fi
+    done
+    
+    echo "FFmpeg plugin verification complete."
+else
+    echo "ERROR: ffmpegmediaplugin.dll not found - OGG/Opus will not work!"
+    echo "Available multimedia plugins:"
+    ls -la plugins/multimedia/ || echo "No multimedia plugins directory found"
+fi
+
+echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:
@@ -314,13 +383,58 @@ cp -v -p -t . \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
 echo ""
+echo "Creating debug batch file for multimedia plugin diagnostics..."
+cat > mudlet-debug.bat << 'EOF'
+@echo off
+echo Setting debug environment variables for Qt multimedia troubleshooting...
+set QT_MEDIA_PLUGINS=1
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=qt.multimedia*=true
+echo Starting Mudlet with multimedia debug output...
+mudlet.exe
+pause
+EOF
+echo "Created mudlet-debug.bat - run this to see detailed plugin loading information"
+
+echo ""
 
 # For debugging purposes:
 # echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "~/src/mudlet/package"):"
 # /usr/bin/ls -aRl
 # echo ""
 
+echo ""
+echo "Final verification of multimedia plugin setup..."
+echo "Multimedia plugins present:"
+ls -la plugins/multimedia/ 2>/dev/null || echo "No multimedia plugins directory found"
+
+echo ""
+echo "FFmpeg libraries present in main directory:"
+ls -la *ffmpeg* *avcodec* *avformat* *avutil* *swresample* *swscale* 2>/dev/null || echo "No FFmpeg libraries found"
+
+echo ""
+echo "Critical multimedia files check:"
+if [ -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
+    echo "  ✓ ffmpegmediaplugin.dll found - OGG/Opus support should work"
+else
+    echo "  ✗ ffmpegmediaplugin.dll MISSING - OGG/Opus support will NOT work"
+fi
+
+if [ -f "avcodec-61.dll" ] && [ -f "avformat-61.dll" ] && [ -f "avutil-59.dll" ]; then
+    echo "  ✓ Core FFmpeg libraries found"
+else
+    echo "  ✗ Some core FFmpeg libraries missing"
+fi
+
+echo ""
+echo "Package verification complete. For OGG/Opus troubleshooting:"
+echo "1. Run mudlet-debug.bat to see plugin loading details"
+echo "2. Check that ffmpegmediaplugin.dll is in plugins/multimedia/"
+echo "3. Verify all FFmpeg libraries are in the main directory"
+echo "4. Set QT_MEDIA_BACKEND=ffmpeg if needed"
+
 FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
+echo ""
 echo "${FINAL_DIR} should contain everything needed to run Mudlet!"
 echo ""
 echo "   ... package-mudlet-for-windows.sh shell script finished."
