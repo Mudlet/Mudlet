@@ -410,7 +410,7 @@ ls -la plugins/multimedia/ 2>/dev/null || echo "No multimedia plugins directory 
 
 echo ""
 echo "FFmpeg libraries present in main directory:"
-ls -la *ffmpeg* *avcodec* *avformat* *avutil* *swresample* *swscale* 2>/dev/null || echo "No FFmpeg libraries found"
+ls -la ./*ffmpeg* ./*avcodec* ./*avformat* ./*avutil* ./*swresample* ./*swscale* 2>/dev/null || echo "No FFmpeg libraries found"
 
 echo ""
 echo "Critical multimedia files check:"
