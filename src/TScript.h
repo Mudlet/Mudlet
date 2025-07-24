@@ -62,9 +62,12 @@ public:
     void clearLoadingError();
     QString packageName(TScript* pScript);
     QString moduleName(TScript* pScript);
+    bool checkIfNew();
+    void unmarkAsNew();
 
     bool exportItem;
     bool mModuleMasterFolder;
+    bool isNew;
 
 private:
     TScript() = default;
