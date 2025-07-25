@@ -50,10 +50,6 @@ CredentialManager::~CredentialManager()
     cleanupCurrentOperation();
 }
 
-// ============================================================================
-// PRIVATE TIMEOUT AND CLEANUP METHODS
-// ============================================================================
-
 void CredentialManager::setupTimeout()
 {
     cleanupTimeout(); // Clean up any existing timer
@@ -106,10 +102,6 @@ void CredentialManager::cleanupCurrentOperation()
     m_currentAvailabilityCallback = nullptr;
 }
 
-// ============================================================================
-// ASYNC KEYCHAIN API (Primary - fulfills original PR intent)
-// ============================================================================
-
 void CredentialManager::storeCredential(const QString& service, const QString& account, 
                                        const QString& password, CredentialCallback callback)
 {
@@ -117,6 +109,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
         if (callback) {
             callback(false, "Service and account cannot be empty");
         }
+
         return;
     }
 
@@ -128,10 +121,12 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     
     // Encrypt the password before storing in keychain
     QString encryptedPassword = SecureStringUtils::encryptStringForProfile(password, service);
+
     if (encryptedPassword.isEmpty() && !password.isEmpty()) {
         if (callback) {
             callback(false, "Failed to encrypt password");
         }
+
         writeJob->deleteLater();
         return;
     }
@@ -158,6 +153,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
             
             // Use service as profile name and account as key for file storage
             bool fileSuccess = storeCredentialToFile(service, account, password);
+
             if (fileSuccess) {
                 success = true;
                 errorMessage = QString(); // Clear error message on successful fallback
@@ -186,6 +182,7 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
         if (callback) {
             callback(false, QString(), "Service and account cannot be empty");
         }
+
         return;
     }
 
@@ -212,9 +209,11 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
         
         if (success) {
             QString encryptedPassword = readJob->textData();
+
             if (!encryptedPassword.isEmpty()) {
                 // Decrypt the password
                 password = SecureStringUtils::decryptStringForProfile(encryptedPassword, service);
+
                 if (password.isEmpty() && !encryptedPassword.isEmpty()) {
                     success = false;
                     errorMessage = "Failed to decrypt stored password";
@@ -226,6 +225,7 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             qDebug() << "QtKeychain retrieval failed, attempting file fallback:" << readJob->errorString();
             
             password = retrieveCredentialFromFile(service, account);
+
             if (!password.isNull()) {
                 success = true;
                 errorMessage = QString(); // Clear error message on successful fallback
@@ -254,6 +254,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
         if (callback) {
             callback(false, "Service and account cannot be empty");
         }
+
         return;
     }
 
@@ -355,9 +356,11 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
 }
 
 // ============================================================================
-// STATIC API (Legacy compatibility - file storage only)
+// STATIC API (Synchronous file storage - for portable mode and backwards compatibility)
 // 
-// NOTE: This API only uses encrypted file storage for backwards compatibility.
+// NOTE: This API uses encrypted file storage and is suitable for:
+//   - Portable mode deployments where system keychain is not desired
+//   - Backwards compatibility with existing synchronous code
 // For QtKeychain integration with secure system keychain storage, please use
 // the async API methods (storeCredential, retrieveCredential, removeCredential
 // with callbacks) which provide:
@@ -379,13 +382,14 @@ bool CredentialManager::storeCredential(const QString& profileName, const QStrin
 
     // Log migration recommendation (only once per session to avoid spam)
     static bool migrationWarningLogged = false;
+
     if (!migrationWarningLogged) {
         qDebug() << "CredentialManager: Static API currently uses file storage only.";
         qDebug() << "CredentialManager: For QtKeychain integration, migrate to async API: storeCredential(service, account, password, callback)";
         migrationWarningLogged = true;
     }
 
-    // Static API uses encrypted file storage for legacy compatibility
+    // Static API uses encrypted file storage for synchronous operations and portable mode
     // NOTE: For QtKeychain integration, use the async API methods instead.
     //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
     return storeCredentialToFile(profileName, key, credential);
@@ -424,10 +428,6 @@ bool CredentialManager::removeCredential(const QString& profileName, const QStri
     //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
     return removeCredentialFromFile(profileName, key);
 }
-
-// ============================================================================
-// UTILITY METHODS (File-based storage for static API)
-// ============================================================================
 
 bool CredentialManager::storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential)
 {
@@ -500,6 +500,7 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         if (file.exists()) {
             qWarning() << "CredentialManager: Failed to open existing file for reading:" << filePath << "Error:" << file.errorString();
         }
+
         return QString();
     }
     
@@ -556,6 +557,7 @@ QString CredentialManager::generateServiceName(const QString& profileName, const
         if (sanitized.length() > 50) {
             sanitized = sanitized.left(50);
         }
+
         return sanitized;
     };
     
@@ -575,6 +577,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
     
     // Check for invalid characters that could cause path traversal or filesystem issues
     QRegularExpression pathTraversalPattern(R"(\.\.|[<>:"|?*\x00-\x1f])");
+
     if (profileName.contains(pathTraversalPattern) || key.contains(pathTraversalPattern)) {
         qWarning() << "CredentialManager: Invalid characters detected in path components";
         return QString();

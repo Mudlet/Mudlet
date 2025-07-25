@@ -378,6 +378,7 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
             QByteArray iv = generateIV();
             QByteArray tag;
             QByteArray encryptedData = encryptAES(plaintextBytes, derivedKey, iv, tag);
+
             if (encryptedData.isEmpty()) {
                 // Securely clear sensitive data before returning
                 secureByteArrayClear(plaintextBytes);
@@ -397,6 +398,7 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
             QByteArray nonce = generateNonce();
             QByteArray hmac;
             QByteArray encryptedData = encryptQtFallback(plaintextBytes, derivedKey, salt, nonce, hmac);
+
             if (encryptedData.isEmpty()) {
                 // Securely clear sensitive data before returning
                 secureByteArrayClear(plaintextBytes);
@@ -464,6 +466,7 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         
         // Derive encryption key using PBKDF2
         QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
+
         if (derivedKey.isEmpty()) {
             return QString();
         }
