@@ -386,7 +386,8 @@ bool CredentialManager::storeCredential(const QString& profileName, const QStrin
     }
 
     // Static API uses encrypted file storage for legacy compatibility
-    // TODO: Migrate calling code to async API for QtKeychain integration
+    // NOTE: For QtKeychain integration, use the async API methods instead.
+    //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
     return storeCredentialToFile(profileName, key, credential);
 }
 
@@ -402,7 +403,8 @@ QString CredentialManager::retrieveCredential(const QString& profileName, const 
     }
 
     // Static API uses encrypted file storage for synchronous operation
-    // TODO: Migrate calling code to async API for QtKeychain integration
+    // NOTE: For QtKeychain integration, use the async API methods instead.
+    //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
     return retrieveCredentialFromFile(profileName, key);
 }
 
@@ -418,7 +420,8 @@ bool CredentialManager::removeCredential(const QString& profileName, const QStri
     }
 
     // Static API uses encrypted file storage for synchronous operation
-    // TODO: Migrate calling code to async API for QtKeychain integration
+    // NOTE: For QtKeychain integration, use the async API methods instead.
+    //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
     return removeCredentialFromFile(profileName, key);
 }
 

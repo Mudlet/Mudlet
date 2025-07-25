@@ -30,10 +30,10 @@
 class QTimer;
 
 namespace QKeychain {
-    class Job;
-    class ReadPasswordJob;
-    class WritePasswordJob;
-    class DeletePasswordJob;
+class Job;
+class ReadPasswordJob;
+class WritePasswordJob;
+class DeletePasswordJob;
 }
 
 /**
