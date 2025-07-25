@@ -4572,12 +4572,12 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
       <source>User Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Пользователь отключен</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>Connection/login attempt rejected by server</source>
-      <translation type="unfinished"/>
+      <translation>Попытка подключения/входа в систему отклонена сервером</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="592"/>
