@@ -583,17 +583,17 @@ void cTelnet::slot_socketDisconnected()
         } else {
 #endif
             if (mDontReconnect) {
-                reason = qsl("User Disconnected");
+                reason = tr("User Disconnected");
             // successful connection duration under 5s == rejected by server
             } else if (mConnectionTimer.elapsed() > 0 && mConnectionTimer.elapsed() < 5000) {
-                reason = qsl("Connection/login attempt rejected by server");
+                reason = tr("Connection/login attempt rejected by server");
+            // SocketError(13) == SslHandshakeFailedError (https://doc.qt.io/qt-6/qabstractsocket.html#SocketError-enum)
+            } else if (socket.error() == QAbstractSocket::SocketError(13)) {
+                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off");
             } else {
                 reason = socket.errorString();
             }
-            if (reason == qsl("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
-                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
-            }
-            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: %1.").arg(reason);
             postMessage(err);
         }
         postMessage(msg);

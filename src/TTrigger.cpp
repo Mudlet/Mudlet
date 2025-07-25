@@ -71,6 +71,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
+, isNew(true)
 , mExpiryCount(-1)
 {
 }
@@ -105,6 +106,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
+, isNew(true)
 , mExpiryCount(-1)
 {
     setRegexCodeList(patterns, patternKinds);
@@ -1174,6 +1176,16 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
         return conditionMet;
     }
     return false;
+}
+
+bool TTrigger::checkIfNew()
+{
+    return isNew;
+}
+
+void TTrigger::unmarkAsNew()
+{
+    isNew = false;
 }
 
 
