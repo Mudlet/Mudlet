@@ -2077,19 +2077,19 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
 
     if (profileName.isEmpty()) {
         lua_pushboolean(L, false);
-        lua_pushstring(L, "loadProfile: profile name cannot be empty");
+        lua_pushstring(L, "setActiveProfile: profile name cannot be empty");
         return 2;
     }
 
     if (!mudlet::self()->profileExists(profileName)) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", profileName.toUtf8().constData());
         return 2;
     }
 
     if (!hostManager.hostLoaded(profileName)) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "loadProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
+        lua_pushfstring(L, "setActiveProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
         return 2;
     }
 
