@@ -272,7 +272,7 @@ void TTabBar::dropEvent(QDropEvent* event)
     const QMimeData* mimeData = event->mimeData();
     if (mimeData->hasFormat("application/x-mudlet-tab")) {
         const QString tabName = QString::fromUtf8(mimeData->data("application/x-mudlet-tab"));
-        const int dropIndex = tabAt(event->pos());
+        const int dropIndex = tabAt(event->position().toPoint());
         emit tabReattachRequested(tabName, dropIndex);
         event->acceptProposedAction();
     }

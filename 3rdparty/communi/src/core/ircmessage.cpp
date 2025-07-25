@@ -701,7 +701,7 @@ IrcMessage* IrcMessage::fromData(const QByteArray& data, IrcConnection* connecti
     if (!tag.isEmpty()) {
         QDateTime ts = QDateTime::fromString(QString::fromUtf8(tag), Qt::ISODate);
         if (ts.isValid())
-            message->d_ptr->timeStamp = ts.toTimeSpec(Qt::LocalTime);
+            message->d_ptr->timeStamp = ts.toLocalTime();
     }
     return message;
 }
