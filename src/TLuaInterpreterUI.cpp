@@ -2075,24 +2075,26 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
     auto& hostManager = mudlet::self()->getHostManager();
     const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
 
-    // if (profileName.isEmpty()) {
-    //     lua_pushnil(L);
-    //     lua_pushstring(L, "loadProfile: profile name cannot be empty");
-    //     return 2;
-    // }
+    if (profileName.isEmpty()) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "loadProfile: profile name cannot be empty");
+        return 2;
+    }
 
-    // if (!mudlet::self()->profileExists(profileName)) {
-    //     lua_pushnil(L);
-    //     lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
-    //     return 2;
-    // }
+    if (!mudlet::self()->profileExists(profileName)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "loadProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        return 2;
+    }
 
-    // if (profileIndex != -1) {
-    //     lua_pushnumber(L, profileIndex + 1);
-    //     return 1;
-    // }
+    if (!hostManager.hostLoaded(profileName)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "loadProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
+        return 2;
+    }
 
     mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(profileName));
+    lua_pushboolean(L, true);
     return 1;
 }
 
