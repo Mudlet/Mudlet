@@ -4502,12 +4502,12 @@ Reason: </translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
       <source>User Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>User Disconnected</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>Connection/login attempt rejected by server</source>
-      <translation type="unfinished"/>
+      <translation>Connection/login attempt rejected by server</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="592"/>
@@ -4518,7 +4518,8 @@ Reason: </translation>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Socket got disconnected.
+Reason: %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="644"/>
