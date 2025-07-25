@@ -21,50 +21,94 @@
 #define MUDLET_CREDENTIALMANAGER_H
 
 #include "pre_guard.h"
+#include <QObject>
 #include <QString>
+#include <QPointer>
+#include <functional>
 #include "post_guard.h"
 
-class CredentialManager
+class QTimer;
+
+namespace QKeychain {
+    class Job;
+    class ReadPasswordJob;
+    class WritePasswordJob;
+    class DeletePasswordJob;
+}
+
+/**
+ * @brief Secure credential management with QtKeychain integration and encrypted file fallback
+ * 
+ * This class provides a comprehensive credential management system following the principle:
+ * "QtKeychain first, encrypted file fallback". It offers both asynchronous and legacy APIs.
+ * 
+ * RECOMMENDED: Async API (QtKeychain + fallback)
+ * - Primary storage: System keychain (macOS Keychain, Windows Credential Store, Linux Secret Service)
+ * - Automatic fallback: AES-256 encrypted files when keychain unavailable
+ * - Non-blocking operations with callback-based results
+ * - Better security and user experience
+ * 
+ * LEGACY: Static API (file storage only)
+ * - Encrypted file storage only (no keychain integration)
+ * - Synchronous operations for backwards compatibility
+ * - Consider migrating to async API for better security
+ * 
+ * Features:
+ * - Per-profile credential isolation
+ * - Timeout protection and resource cleanup  
+ * - Input validation and sanitization
+ * - Test environment detection
+ * - Cross-platform compatibility
+ */
+class CredentialManager : public QObject
 {
+    Q_OBJECT
+
 public:
-    // Preferred methods for credential management
+    explicit CredentialManager(QObject* parent = nullptr);
+    ~CredentialManager();
+
+    // Callback types for asynchronous operations
+    using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
+    using CredentialRetrievalCallback = std::function<void(bool success, const QString& password, const QString& errorMessage)>;
+    using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
+
+    // Asynchronous methods for credential management (preferred)
+    void storeCredential(const QString& service, const QString& account, const QString& password, CredentialCallback callback);
+    void retrieveCredential(const QString& service, const QString& account, CredentialRetrievalCallback callback);
+    void removeCredential(const QString& service, const QString& account, CredentialCallback callback);
+    
+    // Check if QtKeychain is available and working (asynchronous)
+    void isKeychainAvailable(AvailabilityCallback callback);
+
+    // Static fallback methods (for migration only - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredential(const QString& profileName, const QString& key);
     static bool removeCredential(const QString& profileName, const QString& key);
-    
-    // Check if QtKeychain is available and working
-    static bool isKeychainAvailable();
-    
-    // Check if running in test environment (to avoid keychain prompts)
-    static bool isTestEnvironment();
 
 private:
-    // Try to store in QtKeychain first
-    static bool storeInKeychain(const QString& profileName, const QString& key, const QString& credential);
+    static constexpr int OPERATION_TIMEOUT_MS = 30000; // 30 seconds
     
-    // Try to retrieve from QtKeychain
-    static QString retrieveFromKeychain(const QString& profileName, const QString& key);
+    // Timeout and cleanup management
+    void setupTimeout();
+    void cleanupTimeout();
+    void handleTimeout();
+    void cleanupCurrentOperation();
     
-    // Remove from QtKeychain
-    static bool removeFromKeychain(const QString& profileName, const QString& key);
-    
-    // Fallback: store encrypted in profile directory (portable mode)
-    // Uses SHA-256-based stream cipher encryption with iterative key derivation via SecureStringUtils
-    // Key is derived from profile name combined with system-specific entropy
-    static bool storeEncrypted(const QString& profileName, const QString& key, const QString& credential);
-    
-    // Fallback: retrieve encrypted from profile directory
-    // Decrypts using the same SHA-256-based stream cipher scheme as storeEncrypted
-    static QString retrieveEncrypted(const QString& profileName, const QString& key);
-    
-    // Remove encrypted file
-    static bool removeEncrypted(const QString& profileName, const QString& key);
-    
-    // Generate keychain service name
-    static QString generateServiceName(const QString& profileName, const QString& key);
-    
-    // Generate file path for encrypted storage
+    // Static utility methods for fallback storage
     static QString generateFilePath(const QString& profileName, const QString& key);
+    static QString generateServiceName(const QString& profileName, const QString& key);
+    static bool isValidKeyName(const QString& key);
+    static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
+    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
+    static bool removeCredentialFromFile(const QString& profileName, const QString& key);
+    
+    // Current operation state
+    QKeychain::Job* m_currentJob;
+    QTimer* m_timeoutTimer;
+    CredentialCallback m_currentCallback;
+    CredentialRetrievalCallback m_currentRetrievalCallback;
+    AvailabilityCallback m_currentAvailabilityCallback;
 };
 
 #endif // MUDLET_CREDENTIALMANAGER_H

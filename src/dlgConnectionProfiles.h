@@ -88,6 +88,7 @@ public slots:
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
+    void loadPasswordFromSettings(const QString& profile_name);
 
 
 private:
@@ -145,6 +146,7 @@ private:
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
     QString mSearchText;
+    QTimer* mPasswordSaveTimer = nullptr;
 
 
 private slots:
@@ -155,6 +157,7 @@ private slots:
     void slot_togglePasswordVisibility(const bool);
     void slot_reenableAllProfileItems();
     void slot_loadPasswordAsync();
+    void slot_passwordTextChanged();
 };
 
 

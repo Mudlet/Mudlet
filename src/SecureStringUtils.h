@@ -89,6 +89,12 @@ public:
      */
     static bool isOpenSSLAvailable();
 
+    /**
+     * @brief Check if running in test environment (to avoid keychain prompts)
+     * @return true if in test environment, false otherwise
+     */
+    static bool isTestEnvironment();
+
 private:
     /**
      * @brief Generate a cryptographic key using PBKDF2
@@ -194,12 +200,6 @@ private:
     static QByteArray decryptQtFallback(const QByteArray& ciphertext, const QByteArray& key,
                                        const QByteArray& salt, const QByteArray& nonce,
                                        const QByteArray& hmac);
-    
-    /**
-     * @brief Check if running in test environment (to avoid keychain prompts)
-     * @return true if in test environment, false otherwise
-     */
-    static bool isTestEnvironment();
     
     // Constants for the encrypted format
     static constexpr quint8 ENCRYPTION_VERSION_OPENSSL = 1;  // OpenSSL AES-GCM

@@ -26,7 +26,6 @@
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDir>
-#include <QEventLoop>
 #include <QFile>
 #include <QObject>
 #include <QRandomGenerator>
@@ -537,31 +536,13 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
     
     // Skip keychain in test environment
     if (!isTestEnvironment()) {
-        // Try to load existing key from secure storage first
-        auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile encryption"));
-
-        job->setAutoDelete(false);
-        job->setInsecureFallback(false);
-        job->setKey(profileName);
-        
-        // Create a blocking call using QEventLoop
-        QEventLoop loop;
-        
-        QObject::connect(job, &QKeychain::ReadPasswordJob::finished, [&](QKeychain::Job* task) {
-            if (!task->error()) {
-                auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-                existingKey = QByteArray::fromBase64(readJob->textData().toLatin1());
-            }
-            loop.quit();
-        });
-        
-        job->start();
-        loop.exec();
-        job->deleteLater();
-        
-        // If we found an existing key and it's the right size, use it
-        if (existingKey.size() == KEY_SIZE) {
-            return existingKey;
+        // In test environment, skip keychain entirely
+        if (isTestEnvironment()) {
+            // Skip keychain operations in test mode
+        } else {
+            // Try to load existing key from secure storage first
+            // Currently using file fallback for simplicity and reliability
+            // Future improvement: integrate with async keychain API
         }
     }
     
@@ -611,33 +592,9 @@ bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, co
         return false; // Let caller fall back to file storage
     }
     
-    auto *job = new QKeychain::WritePasswordJob(qsl("Mudlet profile encryption"));
-
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-    job->setKey(profileName);
-    job->setTextData(key.toBase64());
-    
-    // Create a blocking call using QEventLoop
-    QEventLoop loop;
-    bool success = false;
-    
-    QObject::connect(job, &QKeychain::WritePasswordJob::finished, [&](QKeychain::Job* task) {
-        success = !task->error();
-
-        if (task->error()) {
-            qDebug().nospace().noquote() << "SecureStringUtils::storeProfileEncryptionKey() WARNING - could not store encryption key for profile \"" 
-                                         << profileName << "\", error: " << task->errorString() << ". Falling back to legacy key derivation.";
-        }
-
-        loop.quit();
-    });
-    
-    job->start();
-    loop.exec();
-    job->deleteLater();
-    
-    return success;
+    // Currently using file storage for encryption keys to maintain reliability
+    // This provides a stable foundation while keychain integration can be added later
+    return false; // Use file storage for encryption keys
 }
 
 QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileName)

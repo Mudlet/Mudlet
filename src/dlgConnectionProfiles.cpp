@@ -234,7 +234,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
 #endif
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateLogin);
-    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updatePassword);
+    // Use textChanged with timer debouncing to avoid saving on every keystroke
+    connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
 
     // Listen for password migration completion to refresh the form
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, this, [this]() {
@@ -371,21 +372,61 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
         return;
     }
 
+    const QString profileName = pItem->data(csmNameRole).toString();
+    
     if (mudlet::self()->storingPasswordsSecurely()) {
-        writeSecurePassword(pItem->data(csmNameRole).toString(), pass);
+        if (pass.trimmed().isEmpty()) {
+            // If password is empty, remove it from secure storage
+            deleteSecurePassword(profileName);
+        } else {
+            // Store the password securely
+            writeSecurePassword(profileName, pass);
+        }
     } else {
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("password"), pass);
+        writeProfileData(profileName, qsl("password"), pass);
     }
 }
 
 void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
 {
-    CredentialManager::storeCredential(profile, "character", pass);
+    // Validate that we have a password to store
+    if (pass.trimmed().isEmpty()) {
+        qDebug() << "dlgConnectionProfiles: Skipping storage of empty password for profile" << profile;
+        return;
+    }
+    
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
+    
+    credManager->storeCredential(profile, "character", pass, 
+        [credManager, profile](bool success, const QString& errorMessage) {
+            if (success) {
+                qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
+            } else {
+                qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
+            }
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
 {
-    CredentialManager::removeCredential(profile, "character");
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
+    
+    credManager->removeCredential(profile, "character", 
+        [credManager, profile](bool success, const QString& errorMessage) {
+            if (success) {
+                qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
+            } else {
+                qWarning() << "dlgConnectionProfiles: Failed to remove password for profile" << profile << ":" << errorMessage;
+            }
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 void dlgConnectionProfiles::slot_updateLogin(const QString& login)
@@ -819,11 +860,11 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     if (!mCopyingProfile) {
         character_password_entry->setText(QString());
         // Schedule password loading asynchronously to avoid event loop issues
-        QTimer::singleShot(0, this, [this, profile_name]() {
-            slot_loadPasswordAsync();
-        });
-        // Store the profile name for async loading
-        property("pendingPasswordProfile").setValue(profile_name);
+        auto* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        timer->setProperty("profileName", profile_name);
+        connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
+        timer->start(0);
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -1168,15 +1209,35 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
     const auto& password = character_password_entry->text().trimmed();
 
     deleteSecurePassword(oldProfile);
-    writeSecurePassword(newProfile, password);
+    
+    // Only store the password if it's not empty
+    if (!password.isEmpty()) {
+        writeSecurePassword(newProfile, password);
+    }
 }
 
 template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
-    QString password = CredentialManager::retrieveCredential(profile, "character");
-    callback(password);
-    SecureStringUtils::secureStringClear(password);
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
+    
+    credManager->retrieveCredential(profile, "character", 
+        [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
+            if (success) {
+                callback(password);
+                QString passwordCopy = password; // Make a copy for secure clearing
+                SecureStringUtils::secureStringClear(passwordCopy);
+            } else {
+                if (!errorMessage.isEmpty()) {
+                    qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
+                }
+                callback(QString()); // Call with empty string on failure
+            }
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 std::optional<QColor> getCustomColor(const QString& profileName)
@@ -1328,7 +1389,7 @@ void dlgConnectionProfiles::slot_copyProfile()
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         character_password_entry->setText(oldPassword);
-        if (mudlet::self()->storingPasswordsSecurely()) {
+        if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
         mCopyingProfile = false;
@@ -2038,14 +2099,43 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         return;
     }
 
-    const QString currentProfileName = profiles_tree_widget->currentItem()->text();
+    const QString currentProfileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     if (currentProfileName != profile_name) {
         // Selection has changed, ignore this async load
         return;
     }
 
-    // Proceed with password loading
+    // If secure storage is enabled, try keychain first, then fallback to QSettings
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        auto* credManager = new CredentialManager(this);
+        credManager->retrieveCredential(profile_name, "character", 
+            [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+                // Check if profile selection has changed while we were waiting
+                if (profiles_tree_widget->currentItem() && 
+                    profiles_tree_widget->currentItem()->data(csmNameRole).toString() == profile_name) {
+                    
+                    if (success && !retrievedPassword.isEmpty()) {
+                        character_password_entry->setText(retrievedPassword);
+                    } else {
+                        // Fallback to QSettings if keychain fails
+                        loadPasswordFromSettings(profile_name);
+                        if (!success && !errorMessage.isEmpty()) {
+                            qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
+                        }
+                    }
+                }
+                
+                credManager->deleteLater();
+            });
+    } else {
+        // Secure storage disabled, use QSettings directly
+        loadPasswordFromSettings(profile_name);
+    }
+}
+
+void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
+{
     auto& settings = *mudlet::self()->mpSettings;
     settings.beginGroup(qsl("profiles/%1").arg(profile_name));
 
@@ -2061,15 +2151,27 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         settings.setValue(qsl("password"), oldPassword);
         settings.remove(qsl("login"));
     } else {
-        // Try to retrieve from keychain
-        const QString retrievedPassword = CredentialManager::retrieveCredential(profile_name, "character");
-
-        if (!retrievedPassword.isEmpty()) {
-            character_password_entry->setText(retrievedPassword);
-        } else {
-            character_password_entry->setText(QString());
-        }
+        character_password_entry->setText(QString());
     }
 
     settings.endGroup();
+}
+
+void dlgConnectionProfiles::slot_passwordTextChanged()
+{
+    // Cancel any pending password save
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    } else {
+        mPasswordSaveTimer = new QTimer(this);
+        mPasswordSaveTimer->setSingleShot(true);
+        mPasswordSaveTimer->setInterval(500); // 500ms debounce
+        connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
+            QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+            if (pItem) {
+                slot_updatePassword(character_password_entry->text());
+            }
+        });
+    }
+    mPasswordSaveTimer->start();
 }
