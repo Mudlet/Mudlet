@@ -54,6 +54,7 @@ public:
 
     void updateToolbarForProfile(Host* pHost);
     void setReattaching(bool reattaching) { mIsReattaching = reattaching; }
+    void refreshTabBar();  // Update tab text to account for CDC identifiers
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -86,6 +87,7 @@ private slots:
     void slot_disconnectProfile();
     void slot_reconnectProfile();
     void slot_closeCurrentProfile();
+    void slot_closeApplication();
     void slot_showTriggerDialog();
     void slot_showAliasDialog();
     void slot_showTimerDialog();
@@ -104,6 +106,7 @@ private slots:
     void slot_muteMedia();
     void slot_muteAPI();
     void slot_muteGame();
+    void slot_showAboutDialog();
 
 private:
     void setupUI();
@@ -136,8 +139,8 @@ private:
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};
     QAction* mpActionDisconnect{nullptr};
-    QAction* mpActionReconnect{nullptr};
     QAction* mpActionCloseProfile{nullptr};
+    QAction* mpActionCloseApplication{nullptr};
     QAction* mpActionTriggers{nullptr};
     QAction* mpActionAliases{nullptr};
     QAction* mpActionTimers{nullptr};
@@ -157,6 +160,8 @@ private:
     QAction* mpActionMuteAPI{nullptr};
     QAction* mpActionMuteGame{nullptr};
     QAction* mpActionFullScreenView{nullptr};
+    QAction* mpActionAbout{nullptr};
+    QAction* mpActionReconnectStandalone{nullptr};
 
     // Toolbar buttons
     QToolButton* mpButtonConnect{nullptr};

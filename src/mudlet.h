@@ -470,6 +470,7 @@ public slots:
     void slot_detachedWindowClosed(const QString& profileName);
     void slot_profileDetachToWindow(const QString& profileName, TDetachedWindow* targetWindow);
     void updateDetachedWindowToolbars();
+    static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
     void slot_showActionDialog();

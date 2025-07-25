@@ -20,6 +20,7 @@
 #include "TDetachedWindow.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
+#include "TDebug.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
@@ -107,7 +108,20 @@ void TDetachedWindow::setupUI()
 
     // Add initial tab for the first profile
     if (!mCurrentProfileName.isEmpty()) {
-        mpTabBar->addTab(mCurrentProfileName);
+        QString displayText = mCurrentProfileName;
+        
+        // Apply CDC identifier prefix if debug mode is active
+        if (mudlet::smDebugMode) {
+            Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+            if (pHost) {
+                QString debugTag = TDebug::getTag(pHost);
+                if (!debugTag.isEmpty()) {
+                    displayText = debugTag + mCurrentProfileName;
+                }
+            }
+        }
+        
+        mpTabBar->addTab(displayText);
         mpTabBar->setTabData(0, mCurrentProfileName);
     }
 
@@ -446,19 +460,20 @@ void TDetachedWindow::createToolBar()
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
-    mpActionReconnect = new QAction(tr("Reconnect"), this);
-    mpActionReconnect->setIcon(QIcon(qsl(":/icons/system-restart.png")));
-    mpActionReconnect->setObjectName(qsl("reconnect"));
-
     mpActionCloseProfile = new QAction(tr("Close profile"), this);
     mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
+    mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
+    mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
+    mpActionCloseApplication->setIconText(tr("Close Mudlet"));
+    mpActionCloseApplication->setObjectName(qsl("close_application"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
-    mpButtonConnect->addAction(mpActionReconnect);
     mpButtonConnect->addAction(mpActionCloseProfile);
+    mpButtonConnect->addAction(mpActionCloseApplication);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     // Script Editor Actions
@@ -583,6 +598,18 @@ void TDetachedWindow::createToolBar()
     mpActionReplay->setObjectName(qsl("replay_action"));
     mpToolBar->addAction(mpActionReplay);
 
+    // Standalone Reconnect action (like main window)
+    mpActionReconnectStandalone = new QAction(QIcon(qsl(":/icons/system-restart.png")), tr("Reconnect"), this);
+    mpActionReconnectStandalone->setToolTip(utils::richText(tr("Disconnects you from the game and connects once again")));
+    mpActionReconnectStandalone->setObjectName(qsl("reconnect_standalone"));
+    mpToolBar->addAction(mpActionReconnectStandalone);
+
+    // About action (like main window)
+    mpActionAbout = new QAction(QIcon(qsl(":/icons/mudlet_information.png")), tr("About"), this);
+    mpActionAbout->setToolTip(utils::richText(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.")));
+    mpActionAbout->setObjectName(qsl("about_action"));
+    mpToolBar->addAction(mpActionAbout);
+
     // Full screen toggle
     QIcon fullScreenIcon;
     fullScreenIcon.addPixmap(qsl(":/icons/view-fullscreen.png"), QIcon::Normal, QIcon::Off);
@@ -607,8 +634,8 @@ void TDetachedWindow::connectToolBarActions()
     // Connection actions - use our custom slots to ensure correct profile context
     connect(mpActionConnect, &QAction::triggered, this, &TDetachedWindow::slot_connectProfile);
     connect(mpActionDisconnect, &QAction::triggered, this, &TDetachedWindow::slot_disconnectProfile);
-    connect(mpActionReconnect, &QAction::triggered, this, &TDetachedWindow::slot_reconnectProfile);
     connect(mpActionCloseProfile, &QAction::triggered, this, &TDetachedWindow::slot_closeCurrentProfile);
+    connect(mpActionCloseApplication, &QAction::triggered, this, &TDetachedWindow::slot_closeApplication);
 
     // Script editor actions - use our custom slots to ensure correct profile context
     connect(mpActionTriggers, &QAction::triggered, this, &TDetachedWindow::slot_showTriggerDialog);
@@ -636,6 +663,8 @@ void TDetachedWindow::connectToolBarActions()
     connect(mpActionPackageExporter, &QAction::triggered, this, &TDetachedWindow::slot_showPackageExporterDialog);
 
     connect(mpActionReplay, &QAction::triggered, this, &TDetachedWindow::slot_showReplayDialog);
+    connect(mpActionReconnectStandalone, &QAction::triggered, this, &TDetachedWindow::slot_reconnectProfile);
+    connect(mpActionAbout, &QAction::triggered, this, &TDetachedWindow::slot_showAboutDialog);
     connect(mpActionFullScreenView, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreenView);
 }
 
@@ -695,8 +724,9 @@ void TDetachedWindow::updateToolBarActions()
         // All actions should always be enabled to match main window behavior
         mpActionConnect->setEnabled(true);
         mpActionDisconnect->setEnabled(true);
-        mpActionReconnect->setEnabled(true);
+        mpActionReconnectStandalone->setEnabled(true);
         mpActionCloseProfile->setEnabled(true);
+        mpActionCloseApplication->setEnabled(true);
     } else {
         // Update status bar
         updateStatusBar(nullptr, false, false);
@@ -704,8 +734,9 @@ void TDetachedWindow::updateToolBarActions()
         // Even when no profile is active, keep all actions enabled to match main window
         mpActionConnect->setEnabled(true);
         mpActionDisconnect->setEnabled(true);
-        mpActionReconnect->setEnabled(true);
+        mpActionReconnectStandalone->setEnabled(true);
         mpActionCloseProfile->setEnabled(true);
+        mpActionCloseApplication->setEnabled(true);
     }
 
     // Mute actions are always enabled
@@ -713,8 +744,9 @@ void TDetachedWindow::updateToolBarActions()
     mpActionMuteAPI->setEnabled(true);
     mpActionMuteGame->setEnabled(true);
 
-    // Help is always enabled
+    // Help and About are always enabled
     mpActionHelp->setEnabled(true);
+    mpActionAbout->setEnabled(true);
 
     // Full screen toggle is always enabled
     mpActionFullScreenView->setEnabled(true);
@@ -828,20 +860,23 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     if (pHost) {
         bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
         bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-
-        if (isConnected) {
-            tabIcon = QIcon(qsl(":/icons/dialog-ok-apply.png"));
-        } else if (isConnecting) {
-            tabIcon = QIcon(qsl(":/icons/dialog-information.png"));
-        } else {
-            tabIcon = QIcon(qsl(":/icons/dialog-close.png"));
-        }
+        tabIcon = mudlet::createConnectionStatusIcon(isConnected, isConnecting, false);
     } else {
-        tabIcon = QIcon(qsl(":/icons/dialog-error.png"));
+        tabIcon = mudlet::createConnectionStatusIcon(false, false, true);
     }
 
-    // Set the tab text and icon
-    mpTabBar->setTabText(tabIndex, profileName);
+    // Set the tab text and icon, accounting for CDC identifiers
+    QString displayText = profileName;
+    
+    // Apply CDC identifier prefix if debug mode is active (like main window does)
+    if (mudlet::smDebugMode && pHost) {
+        QString debugTag = TDebug::getTag(pHost);
+        if (!debugTag.isEmpty()) {
+            displayText = debugTag + profileName;
+        }
+    }
+    
+    mpTabBar->setTabText(tabIndex, displayText);
     mpTabBar->setTabIcon(tabIndex, tabIcon);
 }
 
@@ -1425,6 +1460,13 @@ void TDetachedWindow::slot_closeCurrentProfile()
     });
 }
 
+void TDetachedWindow::slot_closeApplication()
+{
+    withCurrentProfileActive([this]() {
+        mudlet::self()->close();
+    });
+}
+
 void TDetachedWindow::slot_showTriggerDialog()
 {
     withCurrentProfileActive([this]() {
@@ -1530,6 +1572,13 @@ void TDetachedWindow::slot_showPackageExporterDialog()
     });
 }
 
+void TDetachedWindow::slot_showAboutDialog()
+{
+    withCurrentProfileActive([this]() {
+        mudlet::self()->slot_showAboutDialog();
+    });
+}
+
 void TDetachedWindow::slot_muteMedia()
 {
     withCurrentProfileActive([this]() {
@@ -1574,4 +1623,28 @@ void TDetachedWindow::changeEvent(QEvent* event)
     }
 
     QMainWindow::changeEvent(event);
+}
+
+void TDetachedWindow::refreshTabBar()
+{
+    // Update all tab texts to account for CDC identifiers (like main window does)
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        QString profileName = mpTabBar->tabData(i).toString();
+        if (!profileName.isEmpty()) {
+            QString displayText = profileName;
+            
+            // Apply CDC identifier prefix if debug mode is active
+            if (mudlet::smDebugMode) {
+                Host* pHost = mudlet::self()->getHostManager().getHost(profileName);
+                if (pHost) {
+                    QString debugTag = TDebug::getTag(pHost);
+                    if (!debugTag.isEmpty()) {
+                        displayText = debugTag + profileName;
+                    }
+                }
+            }
+            
+            mpTabBar->setTabText(i, displayText);
+        }
+    }
 }

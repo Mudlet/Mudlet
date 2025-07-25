@@ -1284,7 +1284,7 @@ void mudlet::loadMaps()
 // migrates the Central Debug Console to the next available host, if any
 void mudlet::migrateDebugConsole(Host* currentHost)
 {
-    if (!smpDebugArea) {
+    if (!smpDebugArea || !smpDebugConsole) {
         return;
     }
 
@@ -5256,6 +5256,14 @@ void mudlet::refreshTabBar()
             mpTabBar->applyPrefixToDisplayedText(hostName);
         }
     }
+    
+    // Also refresh all detached windows to ensure they show CDC identifiers
+    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow) {
+            detachedWindow->refreshTabBar();
+        }
+    }
 }
 
 //NOLINT(readability-convert-member-functions-to-static)
@@ -6079,6 +6087,49 @@ void mudlet::updateDetachedWindowToolbars()
     }
 }
 
+QIcon mudlet::createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError)
+{
+    // Create a 16x16 pixmap for the icon
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    
+    // Set up the dot properties
+    const int centerX = 8;
+    const int centerY = 8;
+    const int radius = 4;
+    
+    if (hasError) {
+        // Red filled triangle for error
+        painter.setBrush(QColor(220, 50, 50));
+        painter.setPen(QPen(QColor(180, 40, 40), 1));
+        QPolygon triangle;
+        triangle << QPoint(centerX, centerY - 4) 
+                 << QPoint(centerX - 4, centerY + 3)
+                 << QPoint(centerX + 4, centerY + 3);
+        painter.drawPolygon(triangle);
+    } else if (isConnected) {
+        // Green filled circle for connected
+        painter.setBrush(QColor(50, 180, 50));
+        painter.setPen(QPen(QColor(40, 150, 40), 1));
+        painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
+    } else if (isConnecting) {
+        // Yellow filled circle for connecting
+        painter.setBrush(QColor(220, 180, 50));
+        painter.setPen(QPen(QColor(180, 150, 40), 1));
+        painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
+    } else {
+        // Empty circle (just outline) for disconnected
+        painter.setBrush(Qt::transparent);
+        painter.setPen(QPen(QColor(120, 120, 120), 2));
+        painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
+    }
+    
+    return QIcon(pixmap);
+}
+
 void mudlet::updateMainWindowTabIndicators()
 {
     if (!mpTabBar) {
@@ -6098,16 +6149,9 @@ void mudlet::updateMainWindowTabIndicators()
         if (pHost) {
             bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
             bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-
-            if (isConnected) {
-                tabIcon = QIcon(qsl(":/icons/dialog-ok-apply.png"));
-            } else if (isConnecting) {
-                tabIcon = QIcon(qsl(":/icons/dialog-information.png"));
-            } else {
-                tabIcon = QIcon(qsl(":/icons/dialog-close.png"));
-            }
+            tabIcon = createConnectionStatusIcon(isConnected, isConnecting, false);
         } else {
-            tabIcon = QIcon(qsl(":/icons/dialog-error.png"));
+            tabIcon = createConnectionStatusIcon(false, false, true);
         }
 
         // Only set the tab icon, keep the original tab text as just the profile name
