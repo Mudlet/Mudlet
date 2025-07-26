@@ -221,6 +221,7 @@ CRITICAL_RUNTIME_DEPS=(
     "libpng16-16.dll"
     "libbrotlidec.dll"
     "libbrotlicommon.dll"
+    "libmd4c.dll"
 )
 
 for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
@@ -620,6 +621,11 @@ if exist "libdouble-conversion.dll" (
     echo [OK] libdouble-conversion.dll found
 ) else (
     echo [ERROR] libdouble-conversion.dll missing! - Mudlet will not start
+)
+if exist "libmd4c.dll" (
+    echo [OK] libmd4c.dll found
+) else (
+    echo [ERROR] libmd4c.dll missing! - Mudlet will not start
 )
 echo.
 echo === Additional Qt Dependencies ===
