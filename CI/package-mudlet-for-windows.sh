@@ -226,6 +226,10 @@ CRITICAL_RUNTIME_DEPS=(
     "libFLAC-12.dll"
     "libmad-0.dll"
     "libportaudio-2.dll"
+    "libmpg123-0.dll"
+    "libvorbisfile-3.dll"
+    "libopencore-amrnb-0.dll"
+    "libopencore-amrwb-0.dll"
 )
 
 for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
@@ -369,6 +373,10 @@ CODEC_DLLS=(
     "libsndfile-1.dll"
     "libwavpack-1.dll"
     "libmodplug-1.dll"
+    "libmpg123-0.dll"
+    "libvorbisfile-3.dll"
+    "libshout-3.dll"
+    "libsamplerate-0.dll"
 )
 
 echo "Copying codec libraries for FFmpeg..."
@@ -727,6 +735,43 @@ echo 2. Verify your default audio device in Windows Sound settings
 echo 3. Try running: mudlet.exe --multimedia-backend ffmpeg
 echo 4. Check Windows Event Viewer for detailed error messages
 echo 5. Ensure Windows Audio service is running
+echo 6. Try alternative backends: mudlet.exe --multimedia-backend windows
+echo 7. Test with: mudlet.exe --debug-audio --debug-plugins
+echo.
+echo === FFmpeg Backend Specific Checks ===
+echo Verifying FFmpeg backend is properly configured...
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
+    if exist "avcodec-61.dll" (
+        if exist "avformat-61.dll" (
+            if exist "avutil-59.dll" (
+                echo [OK] FFmpeg backend should be functional
+            ) else (
+                echo [ERROR] Missing avutil-59.dll - FFmpeg backend will fail
+            )
+        ) else (
+            echo [ERROR] Missing avformat-61.dll - FFmpeg backend will fail
+        )
+    ) else (
+        echo [ERROR] Missing avcodec-61.dll - FFmpeg backend will fail
+    )
+) else (
+    echo [ERROR] Missing ffmpegmediaplugin.dll - FFmpeg backend unavailable
+)
+echo.
+echo === OGG/Opus Specific Checks ===
+if exist "libogg-0.dll" (
+    if exist "libvorbis-0.dll" (
+        if exist "libopus-0.dll" (
+            echo [OK] OGG/Opus support libraries present
+        ) else (
+            echo [ERROR] Missing libopus-0.dll - Opus audio will not work
+        )
+    ) else (
+        echo [ERROR] Missing libvorbis-0.dll - OGG Vorbis will not work
+    )
+) else (
+    echo [ERROR] Missing libogg-0.dll - OGG container support missing
+)
 echo.
 mudlet.exe
 echo.
@@ -761,7 +806,33 @@ if exist "ntldd.exe" (
     if exist "libvorbis-0.dll" (echo [OK] libvorbis-0.dll) else (echo [MISSING] libvorbis-0.dll)
     if exist "libopus-0.dll" (echo [OK] libopus-0.dll) else (echo [MISSING] libopus-0.dll)
     if exist "libmp3lame-0.dll" (echo [OK] libmp3lame-0.dll) else (echo [MISSING] libmp3lame-0.dll)
+    if exist "libvorbisfile-3.dll" (echo [OK] libvorbisfile-3.dll) else (echo [MISSING] libvorbisfile-3.dll)
+    if exist "libmpg123-0.dll" (echo [OK] libmpg123-0.dll) else (echo [MISSING] libmpg123-0.dll)
+    echo.
+    echo Audio system libraries:
+    if exist "libsndfile-1.dll" (echo [OK] libsndfile-1.dll) else (echo [MISSING] libsndfile-1.dll)
+    if exist "libFLAC-12.dll" (echo [OK] libFLAC-12.dll) else (echo [MISSING] libFLAC-12.dll)
+    if exist "libopenal-1.dll" (echo [OK] libopenal-1.dll) else (echo [MISSING] libopenal-1.dll)
+    if exist "libportaudio-2.dll" (echo [OK] libportaudio-2.dll) else (echo [MISSING] libportaudio-2.dll)
 )
+echo.
+echo === Attempting FFmpeg backend test ===
+echo Setting FFmpeg as default backend...
+set QT_MEDIA_BACKEND=ffmpeg
+set QT_MEDIA_PLUGINS=1
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=qt.multimedia*=true
+echo.
+echo Testing with environment:
+echo QT_MEDIA_BACKEND=%QT_MEDIA_BACKEND%
+echo QT_MEDIA_PLUGINS=%QT_MEDIA_PLUGINS%
+echo QT_DEBUG_PLUGINS=%QT_DEBUG_PLUGINS%
+echo.
+echo Starting Mudlet with FFmpeg backend for testing...
+echo Look for "FFmpeg" mentions in the console output.
+echo Also look for "loaded" or "failed to load" messages about multimedia plugins.
+echo.
+mudlet.exe
 echo.
 echo Test complete. Press any key to continue.
 pause
@@ -810,6 +881,114 @@ pause
 EOF
 
 echo "Created audio-test.bat for comprehensive audio diagnostics"
+
+cat > ogg-opus-test.bat << 'EOF'
+@echo off
+echo OGG/Opus Audio Support Test
+echo ===========================
+echo.
+echo This script specifically tests OGG and Opus audio format support
+echo which is required for this Mudlet pull request.
+echo.
+echo === Checking OGG/Opus Dependencies ===
+echo Core container support:
+if exist "libogg-0.dll" (
+    echo [OK] libogg-0.dll - OGG container support
+) else (
+    echo [CRITICAL] libogg-0.dll MISSING - OGG files cannot be read!
+)
+
+echo.
+echo Codec support:
+if exist "libvorbis-0.dll" (
+    echo [OK] libvorbis-0.dll - OGG Vorbis codec
+) else (
+    echo [ERROR] libvorbis-0.dll MISSING - OGG Vorbis files will not play!
+)
+
+if exist "libopus-0.dll" (
+    echo [OK] libopus-0.dll - Opus codec
+) else (
+    echo [ERROR] libopus-0.dll MISSING - Opus files will not play!
+)
+
+if exist "libvorbisfile-3.dll" (
+    echo [OK] libvorbisfile-3.dll - Advanced OGG Vorbis support
+) else (
+    echo [WARNING] libvorbisfile-3.dll missing - May affect OGG playback quality
+)
+
+echo.
+echo === FFmpeg Backend Check ===
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
+    echo [OK] FFmpeg plugin available
+    
+    if exist "avcodec-61.dll" (
+        if exist "avformat-61.dll" (
+            if exist "avutil-59.dll" (
+                echo [OK] FFmpeg core libraries present
+            ) else (
+                echo [CRITICAL] avutil-59.dll missing - FFmpeg will not work!
+            )
+        ) else (
+            echo [CRITICAL] avformat-61.dll missing - FFmpeg will not work!
+        )
+    ) else (
+        echo [CRITICAL] avcodec-61.dll missing - FFmpeg will not work!
+    )
+) else (
+    echo [CRITICAL] FFmpeg plugin missing - OGG/Opus WILL NOT WORK!
+    echo.
+    echo The Windows Media backend does not support OGG or Opus formats.
+    echo FFmpeg backend is REQUIRED for this functionality.
+)
+
+echo.
+echo === Testing OGG/Opus with FFmpeg Backend ===
+echo Setting optimal environment for OGG/Opus support...
+set QT_MEDIA_BACKEND=ffmpeg
+set QT_MEDIA_PLUGINS=1
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=qt.multimedia*=true;*.ffmpeg*=true
+set QT_PLUGIN_PATH=%~dp0plugins
+
+echo Environment configured:
+echo   QT_MEDIA_BACKEND=%QT_MEDIA_BACKEND%
+echo   QT_PLUGIN_PATH=%QT_PLUGIN_PATH%
+echo.
+echo Starting Mudlet for OGG/Opus testing...
+echo.
+echo IMPORTANT: When Mudlet starts, try to play an OGG or Opus file.
+echo Watch the console output for:
+echo   - "FFmpeg" initialization messages
+echo   - Codec loading messages
+echo   - Any "format not supported" errors
+echo.
+echo If you see errors about OGG/Opus support, this indicates
+echo the FFmpeg backend is not properly configured.
+echo.
+mudlet.exe
+echo.
+echo === Post-Test Analysis ===
+echo Did OGG/Opus files play correctly? [Y/N]
+set /p AUDIO_WORKED="Enter Y if audio played, N if not: "
+if /i "%AUDIO_WORKED%"=="Y" (
+    echo SUCCESS: OGG/Opus support is working!
+) else (
+    echo FAILURE: OGG/Opus support is not working.
+    echo.
+    echo Troubleshooting steps:
+    echo 1. Ensure all DLLs above show [OK]
+    echo 2. Check that ffmpegmediaplugin.dll exists
+    echo 3. Verify FFmpeg core libraries are present
+    echo 4. Check Windows Event Viewer for detailed errors
+    echo 5. Try running mudlet-debug.bat for more diagnostics
+)
+echo.
+pause
+EOF
+
+echo "Created ogg-opus-test.bat for OGG/Opus specific testing"
 
 echo ""
 
@@ -925,6 +1104,14 @@ echo "2. Check that ffmpegmediaplugin.dll is in plugins/multimedia/"
 echo "3. Verify all FFmpeg libraries are in the main directory"
 echo "4. Set QT_MEDIA_BACKEND=ffmpeg if needed"
 echo "5. Run ffmpeg-test.bat for standalone dependency testing"
+echo "6. Run ogg-opus-test.bat for OGG/Opus specific diagnostics"
+echo "7. Run audio-test.bat for comprehensive audio system diagnostics"
+echo ""
+echo "CRITICAL for OGG/Opus support:"
+echo "- FFmpeg backend MUST be working (Windows Media backend cannot play OGG/Opus)"
+echo "- Required: libogg-0.dll, libvorbis-0.dll, libopus-0.dll"
+echo "- Required: avcodec-61.dll, avformat-61.dll, avutil-59.dll"
+echo "- Required: ffmpegmediaplugin.dll in plugins/multimedia/"
 
 FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
 echo ""
