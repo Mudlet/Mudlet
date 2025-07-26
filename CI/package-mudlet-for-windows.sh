@@ -205,6 +205,22 @@ CRITICAL_RUNTIME_DEPS=(
     "libhunspell-1.7-0.dll"
     "libboost_filesystem-mt.dll"
     "libboost_system-mt.dll"
+    "zlib1.dll"
+    "libicuuc77.dll"
+    "libicuin77.dll"
+    "libicudt77.dll"
+    "libdouble-conversion.dll"
+    "libpcre2-16-0.dll"
+    "libpcre2-8-0.dll"
+    "libfreetype-6.dll"
+    "libglib-2.0-0.dll"
+    "libgraphite2.dll"
+    "libharfbuzz-0.dll"
+    "libintl-8.dll"
+    "libiconv-2.dll"
+    "libpng16-16.dll"
+    "libbrotlidec.dll"
+    "libbrotlicommon.dll"
 )
 
 for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
@@ -590,6 +606,38 @@ if exist "libstdc++-6.dll" (
 ) else (
     echo [ERROR] libstdc++-6.dll missing! - Mudlet will not start
 )
+if exist "zlib1.dll" (
+    echo [OK] zlib1.dll found
+) else (
+    echo [ERROR] zlib1.dll missing! - Mudlet will not start
+)
+if exist "libicuuc77.dll" (
+    echo [OK] libicuuc77.dll found
+) else (
+    echo [ERROR] libicuuc77.dll missing! - Mudlet will not start
+)
+if exist "libdouble-conversion.dll" (
+    echo [OK] libdouble-conversion.dll found
+) else (
+    echo [ERROR] libdouble-conversion.dll missing! - Mudlet will not start
+)
+echo.
+echo === Additional Qt Dependencies ===
+if exist "libicuin77.dll" (
+    echo [OK] libicuin77.dll found
+) else (
+    echo [ERROR] libicuin77.dll missing! - May affect Qt functionality
+)
+if exist "libicudt77.dll" (
+    echo [OK] libicudt77.dll found
+) else (
+    echo [ERROR] libicudt77.dll missing! - May affect Qt functionality
+)
+if exist "libfreetype-6.dll" (
+    echo [OK] libfreetype-6.dll found
+) else (
+    echo [ERROR] libfreetype-6.dll missing! - May affect text rendering
+)
 echo.
 echo === Multimedia Libraries ===
 if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
@@ -684,7 +732,7 @@ ls -la ./*opus* ./*ogg* ./*vorbis* ./*mp3lame* ./*aom* ./*dav1d* 2>/dev/null || 
 
 echo ""
 echo "Critical runtime dependencies check:"
-CRITICAL_RUNTIME_CHECK=("lua51.dll" "libgcc_s_seh-1.dll" "libpcre-1.dll" "libpugixml.dll" "libstdc++-6.dll")
+CRITICAL_RUNTIME_CHECK=("lua51.dll" "libgcc_s_seh-1.dll" "libpcre-1.dll" "libpugixml.dll" "libstdc++-6.dll" "zlib1.dll" "libicuuc77.dll" "libdouble-conversion.dll")
 ALL_CRITICAL_PRESENT=true
 for CRITICAL in "${CRITICAL_RUNTIME_CHECK[@]}"; do
     if [ -f "$CRITICAL" ]; then
@@ -764,7 +812,10 @@ echo "Package verification complete. Troubleshooting guides:"
 echo ""
 echo "If Mudlet fails to start with missing DLL errors:"
 echo "1. Run mudlet-debug.bat to check critical runtime dependencies"
-echo "2. Verify lua51.dll, libgcc_s_seh-1.dll, libpcre-1.dll, libpugixml.dll are present"
+echo "2. Verify these critical DLLs are present:"
+echo "   - lua51.dll, libgcc_s_seh-1.dll, libpcre-1.dll, libpugixml.dll"
+echo "   - zlib1.dll, libicuuc77.dll, libdouble-conversion.dll"
+echo "   - libstdc++-6.dll, libfreetype-6.dll"
 echo "3. Check Windows Event Viewer for detailed DLL loading errors"
 echo ""
 echo "For OGG/Opus audio troubleshooting:"
