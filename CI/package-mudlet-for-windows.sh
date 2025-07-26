@@ -227,13 +227,78 @@ done
 
 echo ""
 echo "Aggressively copying FFmpeg and Qt multimedia plugin DLLs for maximum compatibility..."
-# Copy all FFmpeg DLLs from MSYS2/mingw64, vcpkg, and Qt bin directories
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avcodec-*.dll" -exec cp -v -p {} . \;
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avformat-*.dll" -exec cp -v -p {} . \;
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "avutil-*.dll" -exec cp -v -p {} . \;
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "swresample-*.dll" -exec cp -v -p {} . \;
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "swscale-*.dll" -exec cp -v -p {} . \;
-find "${MINGW_INTERNAL_BASE_DIR}/bin" -iname "*.dll" -exec cp -v -p {} . \;
+
+# Copy specific FFmpeg DLLs that we know work with Qt6 multimedia
+FFmpeg_DLLS=(
+    "avcodec-61.dll"
+    "avformat-61.dll" 
+    "avutil-59.dll"
+    "swresample-5.dll"
+    "swscale-8.dll"
+    "avfilter-10.dll"
+    "postproc-58.dll"
+)
+
+echo "Copying core FFmpeg libraries..."
+for DLL in "${FFmpeg_DLLS[@]}"; do
+    if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${DLL}" ]; then
+        echo "  Copying: ${DLL}"
+        cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${DLL}" .
+    else
+        echo "  WARNING: ${DLL} not found in ${MINGW_INTERNAL_BASE_DIR}/bin/"
+        # Try to find with wildcard
+        FOUND_DLL=$(find "${MINGW_INTERNAL_BASE_DIR}/bin" -name "${DLL%%-*}-*.dll" | head -1)
+        if [ -n "$FOUND_DLL" ]; then
+            echo "    Found alternative: $(basename "${FOUND_DLL}")"
+            cp -v -p "${FOUND_DLL}" .
+        fi
+    fi
+done
+
+# Copy all multimedia codec libraries that FFmpeg might need
+CODEC_DLLS=(
+    "libass-9.dll"
+    "libaom.dll"
+    "libdav1d-7.dll"
+    "libgsm.dll"
+    "liblc3-1.dll"
+    "libmp3lame-0.dll"
+    "libogg-0.dll"
+    "libopenal-1.dll"
+    "libopencore-amrnb-0.dll"
+    "libopencore-amrwb-0.dll"
+    "libopenjp2-7.dll"
+    "libopus-0.dll"
+    "librav1e.dll"
+    "libspeex-1.dll"
+    "libtheoradec-2.dll"
+    "libtheoraenc-2.dll"
+    "libvorbis-0.dll"
+    "libvorbisenc-2.dll"
+    "libvpx-1.dll"
+    "libwebp-7.dll"
+    "libwebpdemux-2.dll"
+    "libwebpmux-3.dll"
+    "libx264-164.dll"
+    "libx265-215.dll"
+    "xvidcore.dll"
+)
+
+echo "Copying codec libraries for FFmpeg..."
+for DLL in "${CODEC_DLLS[@]}"; do
+    if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${DLL}" ]; then
+        echo "  Copying codec: ${DLL}"
+        cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${DLL}" .
+    else
+        # Try to find with version wildcards for codec libraries
+        BASE_NAME="${DLL%%-*}"
+        FOUND_DLL=$(find "${MINGW_INTERNAL_BASE_DIR}/bin" -name "${BASE_NAME}-*.dll" -o -name "${BASE_NAME}.dll" | head -1)
+        if [ -n "$FOUND_DLL" ]; then
+            echo "  Copying codec variant: $(basename "${FOUND_DLL}")"
+            cp -v -p "${FOUND_DLL}" .
+        fi
+    fi
+done
 
 echo ""
 echo "Copying comprehensive Qt plugins like SlySven's approach..."
@@ -292,27 +357,87 @@ fi
 echo ""
 echo "Verifying ffmpegmediaplugin.dll dependencies and copying missing ones..."
 if [ -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
-    echo "Checking dependencies of ffmpegmediaplugin.dll:"
-    "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" | grep -E "(not found|${MINGW_INTERNAL_BASE_DIR})"
+    echo "Checking dependencies of ffmpegmediaplugin.dll with ntldd:"
     
-    # Copy any missing dependencies specifically for the FFmpeg plugin
-    FFMPEG_DEPS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null \
+    # Use ntldd to find all missing dependencies
+    echo "=== Full dependency analysis ==="
+    "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null || echo "ntldd failed"
+    
+    echo ""
+    echo "=== Missing dependencies ==="
+    MISSING_DEPS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null \
+      | grep "not found" \
+      | cut -d "=" -f1 \
+      | tr -d ' ')
+    
+    if [ -n "$MISSING_DEPS" ]; then
+        echo "Found missing dependencies:"
+        for DEP in $MISSING_DEPS; do
+            echo "  MISSING: $DEP"
+            # Try to find it in MINGW
+            if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${DEP}" ]; then
+                echo "    Found in MINGW - copying..."
+                cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${DEP}" .
+            else
+                echo "    Not found in MINGW bin directory"
+            fi
+        done
+    else
+        echo "No missing dependencies detected by ntldd"
+    fi
+    
+    echo ""
+    echo "=== Dependencies from MINGW that should be included ==="
+    MINGW_DEPS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null \
       | grep "${MINGW_INTERNAL_BASE_DIR}" \
       | cut -d ">" -f2 \
       | cut -d "(" -f1 \
       | tr -d ' ')
     
-    echo "FFmpeg plugin dependencies found:"
-    for DEP in ${FFMPEG_DEPS}; do
+    echo "FFmpeg plugin dependencies found in MINGW:"
+    for DEP in $MINGW_DEPS; do
         DEP_NAME=$(basename "${DEP}")
         echo "  Checking: ${DEP_NAME}"
         if [ -f "${DEP}" ] && [ ! -f "./${DEP_NAME}" ]; then
             echo "    Copying missing FFmpeg plugin dependency: ${DEP_NAME}"
             cp -v -p "${DEP}" .
-        else
+        elif [ -f "./${DEP_NAME}" ]; then
             echo "    Already present: ${DEP_NAME}"
+        else
+            echo "    WARNING: Dependency file not found: ${DEP}"
         fi
     done
+    
+    echo ""
+    echo "=== Comprehensive missing dependency scan ==="
+    # Scan all DLLs in the package for missing dependencies
+    echo "Scanning ALL DLLs for missing dependencies..."
+    ALL_MISSING=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./*/*.dll ./*.dll 2>/dev/null \
+      | grep "not found" \
+      | cut -d "=" -f1 \
+      | tr -d ' ' \
+      | sort -u)
+    
+    if [ -n "$ALL_MISSING" ]; then
+        echo "Additional missing dependencies found:"
+        for DEP in $ALL_MISSING; do
+            # Skip Windows system DLLs that we can't/shouldn't bundle
+            case "$DEP" in
+                *ext-ms-*|*api-ms-*|*kernel32.dll|*user32.dll|*shell32.dll|*advapi32.dll|*ole32.dll|*oleaut32.dll|*winmm.dll|*wsock32.dll|*ws2_32.dll|*gdi32.dll|*comdlg32.dll|*winspool.drv|*msvcrt.dll|*mpr.dll|*version.dll|*setupapi.dll|*imagehlp.dll|*psapi.dll|*userenv.dll|*netapi32.dll|*HvsiFileTrust.dll|*PdmUtilities.dll)
+                    echo "  SKIP (system): $DEP"
+                    ;;
+                *)
+                    echo "  MISSING: $DEP"
+                    if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${DEP}" ]; then
+                        echo "    Copying from MINGW: ${DEP}"
+                        cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${DEP}" .
+                    fi
+                    ;;
+            esac
+        done
+    else
+        echo "No additional missing dependencies found"
+    fi
     
     echo "FFmpeg plugin verification complete."
 else
@@ -389,12 +514,83 @@ cat > mudlet-debug.bat << 'EOF'
 echo Setting debug environment variables for Qt multimedia troubleshooting...
 set QT_MEDIA_PLUGINS=1
 set QT_DEBUG_PLUGINS=1
-set QT_LOGGING_RULES=qt.multimedia*=true
+set QT_LOGGING_RULES=qt.multimedia*=true;qt.core.plugin*=true;qt.core.library*=true
+set QT_PLUGIN_PATH=%~dp0plugins
+set QT_MEDIA_BACKEND=ffmpeg
+echo.
+echo Qt Plugin Path: %QT_PLUGIN_PATH%
+echo Media Backend: %QT_MEDIA_BACKEND%
+echo.
+echo Checking for critical multimedia files...
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
+    echo [OK] ffmpegmediaplugin.dll found
+) else (
+    echo [ERROR] ffmpegmediaplugin.dll missing!
+)
+if exist "avcodec-61.dll" (
+    echo [OK] avcodec-61.dll found
+) else (
+    echo [ERROR] avcodec-61.dll missing!
+)
+if exist "libogg-0.dll" (
+    echo [OK] libogg-0.dll found
+) else (
+    echo [ERROR] libogg-0.dll missing!
+)
+if exist "libvorbis-0.dll" (
+    echo [OK] libvorbis-0.dll found  
+) else (
+    echo [ERROR] libvorbis-0.dll missing!
+)
+if exist "libopus-0.dll" (
+    echo [OK] libopus-0.dll found
+) else (
+    echo [ERROR] libopus-0.dll missing!
+)
+echo.
 echo Starting Mudlet with multimedia debug output...
+echo Watch for "Cannot load library" or "procedure could not be found" errors
+echo.
 mudlet.exe
+echo.
+echo Mudlet has exited. Press any key to close this window.
 pause
 EOF
-echo "Created mudlet-debug.bat - run this to see detailed plugin loading information"
+
+cat > ffmpeg-test.bat << 'EOF'
+@echo off
+echo FFmpeg Plugin Dependency Test
+echo =============================
+echo.
+echo Testing ffmpegmediaplugin.dll dependencies...
+echo.
+
+REM Check if dependency tools are available (would need to be bundled or downloaded)
+if exist "ntldd.exe" (
+    echo Running dependency analysis...
+    ntldd.exe plugins\multimedia\ffmpegmediaplugin.dll
+) else (
+    echo ntldd.exe not available - manual dependency check:
+    echo.
+    echo Required FFmpeg libraries:
+    if exist "avcodec-61.dll" (echo [OK] avcodec-61.dll) else (echo [MISSING] avcodec-61.dll)
+    if exist "avformat-61.dll" (echo [OK] avformat-61.dll) else (echo [MISSING] avformat-61.dll)
+    if exist "avutil-59.dll" (echo [OK] avutil-59.dll) else (echo [MISSING] avutil-59.dll)
+    if exist "swresample-5.dll" (echo [OK] swresample-5.dll) else (echo [MISSING] swresample-5.dll)
+    if exist "swscale-8.dll" (echo [OK] swscale-8.dll) else (echo [MISSING] swscale-8.dll)
+    echo.
+    echo Required codec libraries:
+    if exist "libogg-0.dll" (echo [OK] libogg-0.dll) else (echo [MISSING] libogg-0.dll)
+    if exist "libvorbis-0.dll" (echo [OK] libvorbis-0.dll) else (echo [MISSING] libvorbis-0.dll)
+    if exist "libopus-0.dll" (echo [OK] libopus-0.dll) else (echo [MISSING] libopus-0.dll)
+    if exist "libmp3lame-0.dll" (echo [OK] libmp3lame-0.dll) else (echo [MISSING] libmp3lame-0.dll)
+)
+echo.
+echo Test complete. Press any key to continue.
+pause
+EOF
+
+echo "Created mudlet-debug.bat and ffmpeg-test.bat for comprehensive diagnostics"
 
 echo ""
 
@@ -410,21 +606,55 @@ ls -la plugins/multimedia/ 2>/dev/null || echo "No multimedia plugins directory 
 
 echo ""
 echo "FFmpeg libraries present in main directory:"
-ls -la ./*ffmpeg* ./*avcodec* ./*avformat* ./*avutil* ./*swresample* ./*swscale* 2>/dev/null || echo "No FFmpeg libraries found"
+ls -la ./*ffmpeg* ./*avcodec* ./*avformat* ./*avutil* ./*swresample* ./*swscale* ./*avfilter* ./*postproc* 2>/dev/null || echo "No FFmpeg libraries found"
+
+echo ""
+echo "Codec libraries present:"
+ls -la ./*opus* ./*ogg* ./*vorbis* ./*mp3lame* ./*aom* ./*dav1d* 2>/dev/null || echo "No codec libraries found"
 
 echo ""
 echo "Critical multimedia files check:"
 if [ -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
     echo "  ✓ ffmpegmediaplugin.dll found - OGG/Opus support should work"
+    
+    # Final dependency check
+    echo ""
+    echo "=== FINAL DEPENDENCY CHECK ==="
+    echo "Running ntldd on ffmpegmediaplugin.dll to verify all dependencies are satisfied:"
+    if command -v "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" >/dev/null 2>&1; then
+        FINAL_MISSING=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null | grep "not found" | wc -l)
+        if [ "$FINAL_MISSING" -eq 0 ]; then
+            echo "  ✓ All dependencies satisfied for ffmpegmediaplugin.dll"
+        else
+            echo "  ✗ $FINAL_MISSING dependencies still missing:"
+            "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "plugins/multimedia/ffmpegmediaplugin.dll" 2>/dev/null | grep "not found"
+        fi
+    else
+        echo "  ? ntldd not available for final verification"
+    fi
 else
     echo "  ✗ ffmpegmediaplugin.dll MISSING - OGG/Opus support will NOT work"
 fi
 
+# Check for specific version-numbered libraries
 if [ -f "avcodec-61.dll" ] && [ -f "avformat-61.dll" ] && [ -f "avutil-59.dll" ]; then
-    echo "  ✓ Core FFmpeg libraries found"
+    echo "  ✓ Core FFmpeg libraries found (matching Qt6 requirements)"
 else
-    echo "  ✗ Some core FFmpeg libraries missing"
+    echo "  ✗ Some core FFmpeg libraries missing or wrong version"
+    echo "    Expected: avcodec-61.dll, avformat-61.dll, avutil-59.dll"
+    echo "    Found:"
+    ls -la ./avcodec-*.dll ./avformat-*.dll ./avutil-*.dll 2>/dev/null || echo "    None found"
 fi
+
+# Check for critical codec libraries
+CRITICAL_CODECS=("libogg-0.dll" "libvorbis-0.dll" "libopus-0.dll")
+for CODEC in "${CRITICAL_CODECS[@]}"; do
+    if [ -f "$CODEC" ]; then
+        echo "  ✓ $CODEC found"
+    else
+        echo "  ✗ $CODEC missing (needed for OGG/Opus support)"
+    fi
+done
 
 echo ""
 echo "Package verification complete. For OGG/Opus troubleshooting:"
@@ -432,6 +662,7 @@ echo "1. Run mudlet-debug.bat to see plugin loading details"
 echo "2. Check that ffmpegmediaplugin.dll is in plugins/multimedia/"
 echo "3. Verify all FFmpeg libraries are in the main directory"
 echo "4. Set QT_MEDIA_BACKEND=ffmpeg if needed"
+echo "5. Check Windows Event Viewer for detailed DLL loading errors"
 
 FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
 echo ""
