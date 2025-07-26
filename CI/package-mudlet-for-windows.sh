@@ -222,6 +222,10 @@ CRITICAL_RUNTIME_DEPS=(
     "libbrotlidec.dll"
     "libbrotlicommon.dll"
     "libmd4c.dll"
+    "libsndfile-1.dll"
+    "libFLAC-12.dll"
+    "libmad-0.dll"
+    "libportaudio-2.dll"
 )
 
 for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
@@ -243,6 +247,26 @@ for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
             cp -v -p "${FOUND_DLL}" .
         else
             echo "    ERROR: No alternative found for ${CRITICAL_DLL} - Mudlet may fail to start!"
+            
+            # Special handling for libmd4c - try additional locations
+            if [[ "$CRITICAL_DLL" == "libmd4c.dll" ]]; then
+                echo "    Searching for libmd4c in additional locations..."
+                for SEARCH_DIR in \
+                    "${MINGW_INTERNAL_BASE_DIR}/lib" \
+                    "${MINGW_INTERNAL_BASE_DIR}" \
+                    "/usr/lib" \
+                    "/usr/local/lib"; do
+                    
+                    if [ -d "$SEARCH_DIR" ]; then
+                        FOUND_MD4C=$(find "$SEARCH_DIR" -name "*md4c*.dll" 2>/dev/null | head -1)
+                        if [ -n "$FOUND_MD4C" ]; then
+                            echo "    Found libmd4c variant: $FOUND_MD4C"
+                            cp -v -p "$FOUND_MD4C" "./libmd4c.dll"
+                            break
+                        fi
+                    fi
+                done
+            fi
         fi
     fi
 done
@@ -341,6 +365,10 @@ CODEC_DLLS=(
     "libx264-164.dll"
     "libx265-215.dll"
     "xvidcore.dll"
+    "libFLAC-12.dll"
+    "libsndfile-1.dll"
+    "libwavpack-1.dll"
+    "libmodplug-1.dll"
 )
 
 echo "Copying codec libraries for FFmpeg..."
@@ -671,9 +699,34 @@ if exist "libopus-0.dll" (
 ) else (
     echo [ERROR] libopus-0.dll missing!
 )
+if exist "libsndfile-1.dll" (
+    echo [OK] libsndfile-1.dll found
+) else (
+    echo [ERROR] libsndfile-1.dll missing!
+)
+if exist "libFLAC-12.dll" (
+    echo [OK] libFLAC-12.dll found
+) else (
+    echo [ERROR] libFLAC-12.dll missing!
+)
+echo.
+echo === Audio System Check ===
+if exist "libopenal-1.dll" (
+    echo [OK] libopenal-1.dll found
+) else (
+    echo [ERROR] libopenal-1.dll missing - May affect audio output!
+)
 echo.
 echo Starting Mudlet with multimedia debug output...
 echo Watch for "Cannot load library" or "procedure could not be found" errors
+echo.
+echo === Advanced Audio Troubleshooting ===
+echo If you hear no sound, try these steps:
+echo 1. Check Windows Volume Mixer - ensure Mudlet is not muted
+echo 2. Verify your default audio device in Windows Sound settings
+echo 3. Try running: mudlet.exe --multimedia-backend ffmpeg
+echo 4. Check Windows Event Viewer for detailed error messages
+echo 5. Ensure Windows Audio service is running
 echo.
 mudlet.exe
 echo.
@@ -715,6 +768,48 @@ pause
 EOF
 
 echo "Created mudlet-debug.bat and ffmpeg-test.bat for comprehensive diagnostics"
+
+cat > audio-test.bat << 'EOF'
+@echo off
+echo Audio System Diagnostics
+echo ========================
+echo.
+echo Checking audio-related DLLs...
+echo.
+echo === Core Audio Libraries ===
+if exist "libopenal-1.dll" (echo [OK] libopenal-1.dll) else (echo [MISSING] libopenal-1.dll)
+if exist "libsndfile-1.dll" (echo [OK] libsndfile-1.dll) else (echo [MISSING] libsndfile-1.dll)
+if exist "libFLAC-12.dll" (echo [OK] libFLAC-12.dll) else (echo [MISSING] libFLAC-12.dll)
+if exist "libportaudio-2.dll" (echo [OK] libportaudio-2.dll) else (echo [MISSING] libportaudio-2.dll)
+echo.
+echo === Multimedia Plugins ===
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (echo [OK] FFmpeg plugin) else (echo [MISSING] FFmpeg plugin)
+if exist "plugins\multimedia\dsengine.dll" (echo [OK] DirectShow plugin) else (echo [MISSING] DirectShow plugin) 
+if exist "plugins\multimedia\windowsmediaplugin.dll" (echo [OK] Windows Media plugin) else (echo [MISSING] Windows Media plugin)
+echo.
+echo === Windows Audio Services ===
+echo Checking Windows Audio service status...
+sc query AudioSrv | findstr "STATE"
+echo.
+echo === Audio Device Information ===
+echo Current audio devices:
+wmic sounddev get name,status
+echo.
+echo Testing basic audio functionality...
+echo This will attempt to play a system beep - listen for sound:
+echo.
+rundll32 user32.dll,MessageBeep
+echo.
+echo Did you hear a beep? If not, check:
+echo 1. Volume levels in Windows
+echo 2. Default audio device settings
+echo 3. Audio drivers
+echo 4. Hardware connections
+echo.
+pause
+EOF
+
+echo "Created audio-test.bat for comprehensive audio diagnostics"
 
 echo ""
 
