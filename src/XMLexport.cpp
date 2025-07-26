@@ -386,7 +386,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
     host.append_attribute("mUSE_UNIX_EOL") = pHost->mUSE_UNIX_EOL ? "yes" : "no";
-    host.append_attribute("mNoAntiAlias") = pHost->mNoAntiAlias ? "yes" : "no";
+    // THIS one is stored in a backwards manner - *sigh*:
+    host.append_attribute("mNoAntiAlias") = pHost->fontsAntiAlias() ? "no" : "yes";
     host.append_attribute("mEchoLuaErrors") = pHost->mEchoLuaErrors ? "yes" : "no";
     host.append_attribute("runAllKeyMatches") = pHost->getKeyUnit()->mRunAllKeyMatches ? "yes" : "no";
     host.append_attribute("AmbigousWidthGlyphsToBeWide") = pHost->mAutoAmbigousWidthGlyphsSetting ? "auto" : (pHost->mWideAmbigousWidthGlyphs ? "yes" : "no");
@@ -408,6 +409,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";
     host.append_attribute("mEnableMTTS") = pHost->mEnableMTTS ? "yes" : "no";
     host.append_attribute("mEnableMNES") = pHost->mEnableMNES ? "yes" : "no";
+    host.append_attribute("mEnableMXP") = pHost->mEnableMXP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
@@ -422,8 +424,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
-    host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
+    host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
+    host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
+    host.append_attribute("mForceMXPProcessorOn") = pHost->getForceMXPProcessorOn() ? "yes" : "no";
+    host.append_attribute("mPromptedForMXPProcessorOn") = pHost->mPromptedForMXPProcessorOn ? "yes" : "no";
     host.append_attribute("forceNewEnvironNegotiationOff") = pHost->mForceNewEnvironNegotiationOff ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
@@ -480,6 +485,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
+    host.append_attribute("f3SearchEnabled") = pHost->mF3SearchEnabled ? "yes" : "no";
+    host.append_attribute("enableClosedCaption") = pHost->mEnableClosedCaption ? "yes" : "no";
     host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(
             static_cast<int>(pHost->mCaretShortcut));
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
@@ -564,7 +571,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
         host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
-        host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toUtf8().constData());
+        // We don't use this ourselves any more but still write it out for older versions:
+        host.append_child("mCommandLineFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
         host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());
@@ -853,7 +861,7 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpTrigger) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
@@ -936,7 +944,7 @@ void XMLexport::exportToClipboard(TAlias* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpAlias) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
@@ -989,7 +997,7 @@ void XMLexport::exportToClipboard(TAction* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpAction) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto actionPackage = mudletPackage.append_child("ActionPackage");
@@ -1058,7 +1066,7 @@ void XMLexport::exportToClipboard(TTimer* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpTimer) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto timerPackage = mudletPackage.append_child("TimerPackage");
@@ -1114,7 +1122,7 @@ void XMLexport::exportToClipboard(TScript* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpScript) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
@@ -1169,7 +1177,7 @@ void XMLexport::exportToClipboard(TKey* pT)
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpKey) and it
     // is only used here for its signature.
-    Q_UNUSED(pT);
+    Q_UNUSED(pT)
 
     auto mudletPackage = writeXmlHeader();
     auto keyPackage = mudletPackage.append_child("KeyPackage");

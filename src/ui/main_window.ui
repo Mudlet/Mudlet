@@ -147,6 +147,15 @@
     <addaction name="dactionChangelog"/>
     <addaction name="dactionReportIssue"/>
    </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <addaction name="dactionReattachDetachedWindows"/>
+    <addaction name="separator"/>
+    <addaction name="dactionToggleAlwaysOnTop"/>
+    <addaction name="dactionMinimize"/>
+   </widget>
    <widget class="QMenu" name="menuGames">
     <property name="title">
      <string>Games</string>
@@ -162,9 +171,40 @@
    <addaction name="menuGames"/>
    <addaction name="menuEditor"/>
    <addaction name="menuOptions"/>
+   <addaction name="menuWindow"/>
    <addaction name="menuHelp"/>
    <addaction name="menuAbout"/>
   </widget>
+  <action name="dactionReattachDetachedWindows">
+   <property name="text">
+    <string>Reattach detached windows</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionToggleAlwaysOnTop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Always on Top</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Keep the main Mudlet window always on top of other windows.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMinimize">
+   <property name="text">
+    <string>Minimize</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Minimize the main Mudlet window.&lt;/p&gt;</string>
+   </property>
+  </action>
   <action name="dactionConnect">
    <property name="text">
     <string>Play</string>

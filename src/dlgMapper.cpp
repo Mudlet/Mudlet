@@ -109,14 +109,14 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
-    QFont mapperFont = QFont(mpHost->getDisplayFont().family());
-    if (mpHost->mNoAntiAlias) {
-        mapperFont.setStyleStrategy(QFont::NoAntialias);
-    } else {
-        mapperFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
-    }
-    setFont(mapperFont);
-    mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
+    // Previous code set this to the main console one (before it was read from
+    // the game save file, apparently) so it was actually the initial value
+    // specified in the Host class. Revising the code to make it use the
+    // selected font for the main console meant that all the controls at the
+    // bottom took on that font which was glaringly inconsistant with the
+    // overall GUI appearance - instead now it adopts the "default" application
+    // font:
+    setFont(qApp->font());
     mpMap->restore16ColorSet();
     auto menu = new QMenu(this);
     pushButton_info->setMenu(menu);
@@ -407,4 +407,11 @@ bool dlgMapper::isFloatAndDockable() const
         return true;
     }
     return false;
+}
+
+void dlgMapper::setFont(const QFont& newFont)
+{
+    QWidget::setFont(newFont);
+    mp2dMap->setFont(newFont);
+    mp2dMap->mFontHeight = mp2dMap->fontMetrics().height();
 }

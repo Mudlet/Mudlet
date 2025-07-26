@@ -321,8 +321,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // option areas
     mpErrorConsole = new TConsole(mpHost, qsl("errors_%1").arg(hostName), TConsole::ErrorConsole, this);
     mpErrorConsole->setWrapAt(100);
-    mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
-    mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
+    mpErrorConsole->slot_toggleTimeStamps(true);
     mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
@@ -903,8 +902,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
-        connect(pItem->singleLineTextEdit_pattern, &QTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
-        connect(pItem->singleLineTextEdit_pattern, &QTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+        connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
+        connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
 
         mpWidget_triggerItems->layout()->addWidget(pItem);
 
@@ -4633,9 +4632,9 @@ void dlgTriggerEditor::saveTrigger()
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
-    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1);
     QStringList patterns;
     QList<int> patternKinds;
+    int  validItems = 0;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->toPlainText();
 
@@ -4647,6 +4646,7 @@ void dlgTriggerEditor::saveTrigger()
             continue;
         }
 
+        ++validItems;
         switch (patternType) {
         case 0:
             patternKinds << REGEX_SUBSTRING;
@@ -4676,13 +4676,12 @@ void dlgTriggerEditor::saveTrigger()
         }
         patterns << pattern;
     }
-
+    const bool isMultiline = (mpTriggersMainArea->spinBox_lineMargin->value() > -1) && (validItems > 1);
     const QString script = mpSourceEditorEdbeeDocument->text();
 
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
-        const QString old_name = pT->getName();
         pT->setName(name);
         pT->setCommand(command);
         pT->setRegexCodeList(patterns, patternKinds);
@@ -4779,7 +4778,7 @@ void dlgTriggerEditor::saveTrigger()
         if (pT->state()) {
             clearEditorNotification();
 
-            if (old_name == tr("New trigger") || old_name == tr("New trigger group")) {
+            if (pT->checkIfNew()) {
                 if (pT->isFolder()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descActiveFolder;
@@ -4790,6 +4789,7 @@ void dlgTriggerEditor::saveTrigger()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
+                pT->unmarkAsNew();
             } else {
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
@@ -4963,7 +4963,6 @@ void dlgTriggerEditor::saveAlias()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
-        const QString old_name = pT->getName();
         pT->setName(name);
         pT->setCommand(substitution);
         pT->setRegexCode(regex); // This could generate an error state if regex does not compile
@@ -5023,7 +5022,7 @@ void dlgTriggerEditor::saveAlias()
         if (pT->state()) {
             clearEditorNotification();
 
-            if (old_name == tr("New alias")) {
+            if (pT->checkIfNew()) {
                 if (pT->isFolder()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
@@ -5044,6 +5043,7 @@ void dlgTriggerEditor::saveAlias()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
                 pT->setIsActive(true);
+                pT->unmarkAsNew();
             } else {
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
@@ -5244,8 +5244,6 @@ void dlgTriggerEditor::saveScript()
         return;
     }
 
-    QString old_name;
-
     mpScriptsMainArea->trimName();
     const QString name = mpScriptsMainArea->lineEdit_script_name->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
@@ -5270,12 +5268,11 @@ void dlgTriggerEditor::saveScript()
         return;
     }
 
-    old_name = pT->getName();
     pT->setName(name);
     pT->setEventHandlerList(handlerList);
     pT->setScript(script);
 
-    pT->compile();
+    pT->compileAll();
     mpHost->getTriggerUnit()->doCleanup();
     QIcon icon;
     QString itemDescription;
@@ -5329,7 +5326,7 @@ void dlgTriggerEditor::saveScript()
             clearEditorNotification();
         }
 
-        if (old_name == tr("New script") || old_name == tr("New script group")) {
+        if (pT->checkIfNew()) {
             if (pT->isFolder()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
@@ -5351,6 +5348,7 @@ void dlgTriggerEditor::saveScript()
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
             pT->setIsActive(true);
+            pT->unmarkAsNew();
         } else {
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
@@ -5815,7 +5813,7 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             // So set it to the default (ignore both) - which will generate an
             // error if saved without setting a color for at least one element:
 
-            pPatternItem->singleLineTextEdit_pattern->setText(TTrigger::createColorPatternText(TTrigger::scmIgnored, TTrigger::scmIgnored));
+            pPatternItem->singleLineTextEdit_pattern->setPlainText(TTrigger::createColorPatternText(TTrigger::scmIgnored, TTrigger::scmIgnored));
         }
 
         // Only process the text if it looks like it should:
@@ -5936,7 +5934,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
                 pPatternItem->singleLineTextEdit_pattern->clear();
 
             } else if (pType == REGEX_COLOR_PATTERN) {
-                pPatternItem->singleLineTextEdit_pattern->setText(patternList.at(i));
+                pPatternItem->singleLineTextEdit_pattern->setPlainText(patternList.at(i));
                 if (pT->mColorPatternList.at(i)) {
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
@@ -5984,7 +5982,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
                 if (pType == REGEX_PERL) {
                     lineEditShouldMarkSpaces[pPatternItem->singleLineTextEdit_pattern] = true;
                 }
-                pPatternItem->singleLineTextEdit_pattern->setText(patternList.at(i));
+                pPatternItem->singleLineTextEdit_pattern->setPlainText(patternList.at(i));
             }
         }
 
@@ -7705,7 +7703,7 @@ void dlgTriggerEditor::saveOpenChanges()
 
 void dlgTriggerEditor::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (isActiveWindow()) {
         autoSave();
@@ -7783,7 +7781,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
-    Q_UNUSED(pE);
+    Q_UNUSED(pE)
 
     saveOpenChanges();
 }
@@ -9778,7 +9776,7 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     }
     pB->setStyleSheet(styleSheet);
 
-    pPatternItem->singleLineTextEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+    pPatternItem->singleLineTextEdit_pattern->setPlainText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
         //: Color trigger ignored foreground color button, ensure all three instances have the same text
@@ -9840,7 +9838,7 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     }
     pB->setStyleSheet(styleSheet);
 
-    pPatternItem->singleLineTextEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+    pPatternItem->singleLineTextEdit_pattern->setPlainText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
         //: Color trigger ignored background color button, ensure all three instances have the same text
@@ -10060,7 +10058,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
         connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
         // don't coalesce the format text action - not that it matters for us since we we only change
         // the text once during the undo group
-        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_None, false);
+        controller->endUndoGroup(edbee::CoalesceId_None, false);
     });
 
     menu->addAction(formatAction);
@@ -10502,4 +10500,16 @@ void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
     }
 
     mpTriggersMainArea->groupBox_multiLineTrigger->setEnabled(activeItems > 1);
+}
+
+void dlgTriggerEditor::setDisplayFont(const QFont& newFont)
+{
+    if (mpErrorConsole) {
+        mpErrorConsole->setFont(newFont);
+    }
+
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setFont(newFont);
+    config->endChanges();
 }

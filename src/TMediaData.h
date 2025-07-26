@@ -204,6 +204,9 @@ public:
     QString mediaAbsolutePathFileName() const { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
+    QString mediaCaption() const { return mMediaCaption; }
+    void setMediaCaption(QString mediaCaption) { mMediaCaption = mediaCaption; }
+
 private:
     int mMediaProtocol = MediaProtocolNotSet;
     int mMediaType = MediaTypeNotSet;
@@ -225,6 +228,7 @@ private:
     QString mMediaKey;
     QString mMediaWidget = MediaWidgetLabel;
     QString mMediaAbsolutePathFileName;
+    QString mMediaCaption;
 };
 
 #endif // MUDLET_TMEDIA_DATA_H

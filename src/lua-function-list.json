@@ -19,6 +19,7 @@
     "ansi2string": "ansi2string(text)",
     "appendBuffer": "appendBuffer(name)",
     "appendCmdLine": "appendCmdLine([name], text)",
+    "appendLog": "appendLog(text)",
     "appendScript": "appendScript(scriptName, luaCode, [occurrence])",
     "auditAreas": "auditAreas()",
     "bg": "bg([window, ]colorName)",

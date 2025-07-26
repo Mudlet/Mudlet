@@ -51,6 +51,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <QVector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -220,7 +221,9 @@ public:
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
+    bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
+    void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
@@ -324,6 +327,9 @@ private:
 
     static std::pair<bool, bool> testReadReplayFile();
 
+    void trackKaVirNegotiation(unsigned char option);
+    void autoEnableMXPProcessor();
+    void autoEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
@@ -397,6 +403,7 @@ private:
     bool enableMSSP = false;
     bool enableMSDP = false;
     bool enableMSP = false;
+    bool enableMXP = false;
     bool enableChannel102 = false;
     bool mDontReconnect = false;
     bool mAutoReconnect = false;
@@ -424,6 +431,9 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    // KaVir protocol negotiation tracking
+    QVector<unsigned char> mNegotiationOrder;
 };
 
 #endif // MUDLET_CTELNET_H

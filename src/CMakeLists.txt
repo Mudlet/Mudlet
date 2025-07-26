@@ -95,6 +95,7 @@ set(mudlet_SRCS
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
+    LlamaFileManager.cpp
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
@@ -126,6 +127,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
 
     TLuaInterpreter.cpp
+    TLuaInterpreterAI.cpp
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
@@ -173,6 +175,7 @@ set(mudlet_SRCS
     TSplitterHandle.cpp
     TStringUtils.cpp
     TTabBar.cpp
+    TDetachedWindow.cpp
     TTextCodec.cpp
     TTextEdit.cpp
     TTimer.cpp
@@ -279,6 +282,7 @@ set(mudlet_HDRS
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
+    LlamaFileManager.h
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
@@ -355,6 +359,7 @@ set(mudlet_HDRS
     TSplitterHandle.h
     TStringUtils.h
     TTabBar.h
+    TDetachedWindow.h
     TTextCodec.h
     TTextEdit.h
     TTimer.h

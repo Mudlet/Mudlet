@@ -496,7 +496,7 @@ QString Updater::getPreviousVersion() const
 
 #if defined(Q_OS_WINDOWS)
 // we are trying to detect machines running a 32-Bit build of Mudlet on a 64-Bit Intel/AMD processor
-bool Updater::is64BitCompatible() const 
+bool Updater::is64BitCompatible() const
 {
 #if defined(Q_OS_WIN64)
     return true;

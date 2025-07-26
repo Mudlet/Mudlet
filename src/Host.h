@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2020, 2022-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -129,7 +129,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
     const QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
                        .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
                             (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
@@ -339,14 +339,13 @@ public:
     QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
-    const QFont& getDisplayFont() const { return mDisplayFont; }
-    std::pair<bool, QString> setDisplayFont(const QFont& font);
-    std::pair<bool, QString> setDisplayFont(const QString& fontName);
-    void setDisplayFontFromString(const QString& fontData);
+    // Use this rather than accessng the TMainConsole::font() as the latter
+    // isn't always around during profile start-up:
+    QFont getDisplayFont();
+    QFont getAndClearTempDisplayFont();
+    std::pair<bool, QString> setDisplayFont(const QFont&);
+    void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
-    void setDisplayFontSpacing(const qreal spacing);
-    void setDisplayFontStyle(QFont::StyleStrategy s);
-    void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
@@ -427,15 +426,36 @@ public:
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled) { 
+    void setF3SearchEnabled(const bool enabled) {
         mF3SearchEnabled = enabled;
         if (mpConsole) {
             mpConsole->setF3SearchEnabled(enabled);
         }
     }
+    bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
+    void setForceMXPProcessorOn(bool value) {
+        if (mForceMXPProcessorOn != value) {
+            mForceMXPProcessorOn = value;
+            emit signal_forceMXPProcessorOnChanged(value);
+        }
+    }
+    void sendCmdLine(const QString& cmd);
+    bool fontsAntiAlias() const { return !mNoAntiAlias; }
 
-    cTelnet mTelnet;
+private:
+    bool mNoAntiAlias = false;
+    // These are used only during profile initiation to provide faked details
+    // for things looking to the main console font before it gets instantiated:
+    std::optional<TFontAttributes> mTempDisplayFontAttributes;
+    std::optional<QFont> mTempDisplayFont;
+
+public:
+    // Make this the first public member instantiated so we can use ITS font
+    // as the "reference" or "master" font for whole profile - and so we don't
+    // have to maintain a separate one here in this class which does not, as
+    // something derived from a QOject, have one:
     QPointer<TMainConsole> mpConsole;
+    cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
@@ -452,7 +472,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
@@ -460,8 +479,11 @@ public:
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
-    bool mServerMXPenabled = true;
+    bool mEnableMXP = true;
+    bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
+    bool mPromptedForVersionInTTYPE = false;
+
     int mMSSPTlsPort = 0;
     QString mMSSPHostName;
 
@@ -492,7 +514,6 @@ public:
     // pushed down:
     bool mIsProfileLoadingSequence;
 
-    bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
@@ -514,7 +535,11 @@ public:
      * hide them on our screen (and from logging!) - It should negate the effect
      * of the above mPrintCommand being true...
      */
-    bool mIsRemoteEchoingActive;
+    bool mIsRemoteEchoingActive = false;
+
+public:
+    void setRemoteEchoingActive(bool active);
+    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -670,9 +695,9 @@ public:
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
     bool mMapperShowRoomBorders;
-    bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     bool mForceNewEnvironNegotiationOff = false;
+    bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
@@ -702,6 +727,8 @@ public:
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
+    bool mEnableClosedCaption = false;
+
     enum class BlankLineBehaviour {
         Show,
         Hide,
@@ -737,6 +764,8 @@ signals:
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
     void signal_editorThemeChanged();
+    void signal_remoteEchoChanged(bool enabled);
+    void signal_forceMXPProcessorOnChanged(bool enabled);
 
 private slots:
     void slot_purgeTemps();
@@ -765,8 +794,6 @@ private:
     TCommandLine* activeCommandLine();
     void closeChildren();
 
-
-    QFont mDisplayFont;
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
 
@@ -931,6 +958,10 @@ private:
 
     // Whether F3 search functionality is enabled
     bool mF3SearchEnabled = false;
+
+    // Whether to force the MXP processor to be on, even if not negotiated with the
+    // MUD Server
+    bool mForceMXPProcessorOn = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:

@@ -36,6 +36,7 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFont>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
@@ -50,6 +51,91 @@
 #include <list>
 #include <map>
 
+// This contains the details of a font that we might want to maintain a record
+// of, independently of a QFont instance:
+struct TFontAttributes
+{
+    explicit TFontAttributes(const bool isAntiAliased = false)
+    : mStyleStrategy(isAntiAliased
+                             ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                             : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality))
+    {}
+
+    explicit TFontAttributes(const QFont& font) {
+        mName = font.family();
+        mPointSize = font.pointSize();
+        mStyleHint = font.styleHint();
+        mStyleStrategy = font.styleStrategy();
+        mFixedPitch = font.fixedPitch();
+        mKerning = font.kerning();
+        mWeight = font.weight();
+        mUnderline = font.underline();
+        mOverline = font.overline();
+        mStrikeout = font.strikeOut();
+        mItalic = font.italic();
+        // Although we had a setter for this we never used it:
+        // mLetterSpacing = font.letterSpacing();
+        // mSpacingType = font.SpacingType();
+    }
+
+    // Since C++20 the comparison operators can also be default coded by the
+    // compiler:
+    bool operator==(const TFontAttributes& other) const = default;
+    bool operator!=(const TFontAttributes& other) const = default;
+
+    TFontAttributes& operator=(const TFontAttributes& other) = default;
+
+    QFont makeFont() const {
+        QFont font = QFont(mName, mPointSize, mWeight, mItalic);
+        font.setFixedPitch(mFixedPitch);
+        font.setStyleHint(mStyleHint, mStyleStrategy);
+        font.setKerning(mKerning);
+        font.setUnderline(mUnderline);
+        font.setOverline(mOverline);
+        font.setStrikeOut(mStrikeout);
+
+        return font;
+    }
+
+    void setAntiAliasOption(const bool isAntiAliased) {
+        mStyleStrategy = isAntiAliased
+                                 ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                                 : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
+    }
+
+    // enums to consider:
+    // Not used: QFont::Capitalization mCapitalization; // { MixedCase, AllUppercase, AllLowercase, SmallCaps, Capitalize }
+    // Not used: QFont::HintingPreference mHintingPreference; // { PreferDefaultHinting, PreferNoHinting, PreferVerticalHinting, PreferFullHinting }
+    // Not used: QFont::SpacingType mSpacingType; // { PercentageSpacing, AbsoluteSpacing }
+    // Not used: QFont::Stretch mStretch; // { AnyStretch, UltraCondensed, ExtraCondensed, Condensed, SemiCondensed, …, UltraExpanded }
+    // Not used: QFont::Style mStyle; // { StyleNormal, StyleItalic, StyleOblique }
+    // Combined and used with next: QFont::StyleHint mStyleHint; // { AnyStyle, SansSerif, Helvetica, Serif, Times, …, System }
+    // Combined and used with prior: QFont::StyleStrategy mStyleStrategy; // { PreferDefault, PreferBitmap, PreferDevice, PreferOutline, ForceOutline, …, PreferQuality }
+    // Used: QFont::Weight mWeight; // { Thin, ExtraLight, Light, Normal, Medium, …, Black }
+
+    QString mName = qsl("Bitstream Vera Sans Mono");
+    int mPointSize = 14;
+    // Actually this is combined with the next one - but doesn't work on X11
+    // anyway - and since we don't specify it in the TConsole case this means
+    // the QFont::AnyStyle is used for other Desktop environments:
+    QFont::StyleHint mStyleHint = QFont::AnyStyle;
+    // We use either: (QFont::NoAntialias | QFont::PreferQuality) for all
+    // TConsoles but the main one can be set to (QFont::PreferAntialias |
+    // QFont::PreferQuality) instead - see constuctor:
+    QFont::StyleStrategy mStyleStrategy;
+    // qreal mLetterSpacing = 0.0;
+    // QFont::SpacingType mSpacingType = QFont::AbsoluteSpacing;
+    // We use but don't set "Line Spacing" - so don't worry about it.
+    QFont::Weight mWeight = QFont::Normal;
+    bool mFixedPitch = true; // We always set this
+    bool mKerning = false; // We haven't been resetting this but we ought to
+    // we don't set these on "base" fonts for TConsole's but we can set them for
+    // bits of text:
+    bool mUnderline = false;
+    bool mOverline = false;
+    bool mStrikeout = false;
+    bool mItalic = false;
+};
 
 enum class ControlCharacterMode {
     AsIs = 0x0,
@@ -145,6 +231,12 @@ public:
         buffer.setWrapIndent(count);
     }
 
+    void setHangingIndentCount(int count)
+    {
+        mHangingIndentCount = count;
+        buffer.setWrapHangingIndent(count);
+    }
+
     TLinkStore &getLinkStore() { return buffer.mLinkStore; }
     void echo(const QString&);
     bool moveCursor(int x, int y);
@@ -180,8 +272,8 @@ public:
     void refresh();
     void refreshView() const;
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
-    bool setFontSize(int);
-    bool setFont(const QString& font);
+    void setFontSize(int);
+    void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
@@ -191,7 +283,6 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
-
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
     std::list<int> getBgColor();
@@ -218,9 +309,22 @@ public:
     // non-scrolling window:
     void handleLinesOverflowEvent(const int lineCount);
     void clearSplit();
+    bool showTimeStamps() const { return mShowTimeStamps; }
+    void raiseMudletResizeEvent();
+    // This *should* be overridding the (void) QWidget::setFont(const QFont&)
+    // method but doesn't seem to be...!
+    // The forceChange option is required when using this method within
+    // setFontName(...) or setFontSize(...) so that the changes made
+    // on the TFontDetails class are forced into play, as otherwise
+    // it looks that they haven't inside this method:
+    void setFont(const QFont&, const bool forceChange = false);
 
 
     QPointer<Host> mpHost;
+
+    // Initialised in the constructor:
+    TFontAttributes mDisplayFontDetails;
+
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
@@ -247,9 +351,6 @@ public:
 
     QString mConsoleName;
     QString mCurrentLine;
-    QString mDisplayFontName = qsl("Bitstream Vera Sans Mono");
-    int mDisplayFontSize = 14;
-    QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
@@ -319,6 +420,7 @@ public slots:
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
     void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleTimeStamps(const bool);
 
 signals:
     void resized(QResizeEvent* event);
@@ -339,6 +441,7 @@ private slots:
 
 private:
     void createSearchOptionIcon();
+    void raiseFontChangeEvent();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
@@ -346,8 +449,14 @@ private:
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
-    QShortcut* searchNextShortcut = nullptr;
-    QShortcut* searchPrevShortcut = nullptr;
+    bool mF3SearchEnabled = false;
+    QPointer<QShortcut> mpSearchNextShortcut;
+    QPointer<QShortcut> mpSearchPrevShortcut;
+    // The size of the TConsole in (normal) "character" cells:
+    QSize mDimensions;
+    // Whether to show (a 13 character by default) timestamp to the left of
+    // each line of text:
+    bool mShowTimeStamps = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

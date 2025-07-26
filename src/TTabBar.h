@@ -27,6 +27,9 @@
 #include <QSet>
 #include <QString>
 #include <QTabBar>
+#include <QDrag>
+#include <QMimeData>
+#include <QApplication>
 #include "post_guard.h"
 
 #include "utils.h"
@@ -38,7 +41,9 @@ class TTabBar : public QTabBar
 public:
     explicit TTabBar(QWidget* parent)
     : QTabBar(parent)
-    {}
+    {
+        setAcceptDrops(true);
+    }
 
     ~TTabBar() = default;
     TTabBar() = delete;
@@ -63,6 +68,10 @@ public:
     void removeTab(int);
     QStringList tabNames() const;
 
+signals:
+    void tabDetachRequested(int index, const QPoint& globalPos);
+    void tabReattachRequested(const QString& tabName, int index);
+
 private:
     bool indexedTabState(int index, const QSet<QString>& effect) const;
     bool namedTabState(const QString& tabName, const QSet<QString>& effect) const;
@@ -78,8 +87,22 @@ private:
     QSet<QString> mItalicTabsSet;
     QSet<QString> mUnderlineTabsSet;
 
+    // Drag and drop functionality
+    QPoint mDragStartPos;
+    int mDragIndex = -1;
+    bool mDetachEnabled = true;
+    static const int DETACH_DISTANCE_THRESHOLD = 50;
+
+private slots:
+    void onDetachedTabReattach(const QString& tabName);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
 
 };
 
