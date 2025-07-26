@@ -189,6 +189,48 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
 echo ""
+echo "Copying critical runtime dependencies for Mudlet core functionality..."
+# These are essential DLLs that Mudlet requires to start up
+CRITICAL_RUNTIME_DEPS=(
+    "lua51.dll"
+    "libgcc_s_seh-1.dll"
+    "libpcre-1.dll"
+    "libpugixml.dll"
+    "libstdc++-6.dll"
+    "libwinpthread-1.dll"
+    "libzip.dll"
+    "libzstd.dll"
+    "libbz2-1.dll"
+    "liblzma-5.dll"
+    "libhunspell-1.7-0.dll"
+    "libboost_filesystem-mt.dll"
+    "libboost_system-mt.dll"
+)
+
+for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
+    if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${CRITICAL_DLL}" ]; then
+        if [ ! -f "./${CRITICAL_DLL}" ]; then
+            echo "  Copying critical runtime dependency: ${CRITICAL_DLL}"
+            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${CRITICAL_DLL}" .
+        else
+            echo "  Already present: ${CRITICAL_DLL}"
+        fi
+    else
+        echo "  WARNING: Critical dependency ${CRITICAL_DLL} not found in ${MINGW_INTERNAL_BASE_DIR}/bin/"
+        # Try to find with wildcards for version-specific libraries
+        BASE_NAME="${CRITICAL_DLL%%-*}"
+        BASE_NAME="${BASE_NAME%%.*}"
+        FOUND_DLL=$(find "${MINGW_INTERNAL_BASE_DIR}/bin" -name "${BASE_NAME}*.dll" | head -1)
+        if [ -n "$FOUND_DLL" ]; then
+            echo "    Found alternative: $(basename "${FOUND_DLL}")"
+            cp -v -p "${FOUND_DLL}" .
+        else
+            echo "    ERROR: No alternative found for ${CRITICAL_DLL} - Mudlet may fail to start!"
+        fi
+    fi
+done
+
+echo ""
 echo "Copying additional system dependencies identified from ntldd analysis..."
 # Copy all libraries that ntldd shows might be missing or loaded from system
 ADDITIONAL_DEPS=(
@@ -521,7 +563,35 @@ echo.
 echo Qt Plugin Path: %QT_PLUGIN_PATH%
 echo Media Backend: %QT_MEDIA_BACKEND%
 echo.
-echo Checking for critical multimedia files...
+echo Checking for critical runtime dependencies...
+echo === Core Runtime Libraries ===
+if exist "lua51.dll" (
+    echo [OK] lua51.dll found
+) else (
+    echo [ERROR] lua51.dll missing! - Mudlet will not start
+)
+if exist "libgcc_s_seh-1.dll" (
+    echo [OK] libgcc_s_seh-1.dll found
+) else (
+    echo [ERROR] libgcc_s_seh-1.dll missing! - Mudlet will not start
+)
+if exist "libpcre-1.dll" (
+    echo [OK] libpcre-1.dll found
+) else (
+    echo [ERROR] libpcre-1.dll missing! - Mudlet will not start
+)
+if exist "libpugixml.dll" (
+    echo [OK] libpugixml.dll found
+) else (
+    echo [ERROR] libpugixml.dll missing! - Mudlet will not start
+)
+if exist "libstdc++-6.dll" (
+    echo [OK] libstdc++-6.dll found
+) else (
+    echo [ERROR] libstdc++-6.dll missing! - Mudlet will not start
+)
+echo.
+echo === Multimedia Libraries ===
 if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
     echo [OK] ffmpegmediaplugin.dll found
 ) else (
@@ -613,6 +683,25 @@ echo "Codec libraries present:"
 ls -la ./*opus* ./*ogg* ./*vorbis* ./*mp3lame* ./*aom* ./*dav1d* 2>/dev/null || echo "No codec libraries found"
 
 echo ""
+echo "Critical runtime dependencies check:"
+CRITICAL_RUNTIME_CHECK=("lua51.dll" "libgcc_s_seh-1.dll" "libpcre-1.dll" "libpugixml.dll" "libstdc++-6.dll")
+ALL_CRITICAL_PRESENT=true
+for CRITICAL in "${CRITICAL_RUNTIME_CHECK[@]}"; do
+    if [ -f "$CRITICAL" ]; then
+        echo "  ✓ $CRITICAL found"
+    else
+        echo "  ✗ $CRITICAL missing (CRITICAL - Mudlet will not start!)"
+        ALL_CRITICAL_PRESENT=false
+    fi
+done
+
+if [ "$ALL_CRITICAL_PRESENT" = true ]; then
+    echo "  ✓ All critical runtime dependencies present - Mudlet should start"
+else
+    echo "  ✗ Missing critical dependencies - Mudlet will fail to start!"
+fi
+
+echo ""
 echo "Critical multimedia files check:"
 if [ -f "plugins/multimedia/ffmpegmediaplugin.dll" ]; then
     echo "  ✓ ffmpegmediaplugin.dll found - OGG/Opus support should work"
@@ -636,6 +725,20 @@ else
     echo "  ✗ ffmpegmediaplugin.dll MISSING - OGG/Opus support will NOT work"
 fi
 
+echo ""
+echo "Running final dependency check on mudlet.exe:"
+if command -v "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" >/dev/null 2>&1; then
+    MUDLET_MISSING=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "mudlet.exe" 2>/dev/null | grep "not found" | wc -l)
+    if [ "$MUDLET_MISSING" -eq 0 ]; then
+        echo "  ✓ All dependencies satisfied for mudlet.exe"
+    else
+        echo "  ✗ $MUDLET_MISSING dependencies still missing for mudlet.exe:"
+        "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" "mudlet.exe" 2>/dev/null | grep "not found"
+    fi
+else
+    echo "  ? ntldd not available for final verification"
+fi
+
 # Check for specific version-numbered libraries
 if [ -f "avcodec-61.dll" ] && [ -f "avformat-61.dll" ] && [ -f "avutil-59.dll" ]; then
     echo "  ✓ Core FFmpeg libraries found (matching Qt6 requirements)"
@@ -657,12 +760,19 @@ for CODEC in "${CRITICAL_CODECS[@]}"; do
 done
 
 echo ""
-echo "Package verification complete. For OGG/Opus troubleshooting:"
-echo "1. Run mudlet-debug.bat to see plugin loading details"
+echo "Package verification complete. Troubleshooting guides:"
+echo ""
+echo "If Mudlet fails to start with missing DLL errors:"
+echo "1. Run mudlet-debug.bat to check critical runtime dependencies"
+echo "2. Verify lua51.dll, libgcc_s_seh-1.dll, libpcre-1.dll, libpugixml.dll are present"
+echo "3. Check Windows Event Viewer for detailed DLL loading errors"
+echo ""
+echo "For OGG/Opus audio troubleshooting:"
+echo "1. Run mudlet-debug.bat to see plugin loading details"  
 echo "2. Check that ffmpegmediaplugin.dll is in plugins/multimedia/"
 echo "3. Verify all FFmpeg libraries are in the main directory"
 echo "4. Set QT_MEDIA_BACKEND=ffmpeg if needed"
-echo "5. Check Windows Event Viewer for detailed DLL loading errors"
+echo "5. Run ffmpeg-test.bat for standalone dependency testing"
 
 FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
 echo ""
