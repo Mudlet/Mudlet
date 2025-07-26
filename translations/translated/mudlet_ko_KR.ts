@@ -1117,7 +1117,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="68"/>
       <location filename="../src/TCommandLine.cpp" line="1784"/>
       <source>Show password</source>
-      <translation type="unfinished"/>
+      <translation>비밀번호 표시</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
@@ -1222,7 +1222,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TCommandLine.cpp" line="1780"/>
       <source>Hide password</source>
-      <translation type="unfinished"/>
+      <translation>비밀번호 숨기기</translation>
     </message>
   </context>
   <context>
@@ -1580,107 +1580,107 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="66"/>
       <location filename="../src/TDetachedWindow.cpp" line="741"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (분리됨)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="149"/>
       <source>&amp;Profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필(&amp;P)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="151"/>
       <source>&amp;Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필 저장(&amp;S)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="153"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>현재 프로필 저장</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="159"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필 내보내기(&amp;E)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="160"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>프로필을 패키지로 내보내기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="164"/>
       <source>Profile &amp;Settings</source>
-      <translation type="unfinished"/>
+      <translation>프로필 및 설정</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="166"/>
       <source>Open profile settings</source>
-      <translation type="unfinished"/>
+      <translation>프로필 설정 열기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="172"/>
       <source>&amp;Close Profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필 닫기(&amp;C)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="174"/>
       <source>Close the current profile</source>
-      <translation type="unfinished"/>
+      <translation>현재 프로필 닫기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="178"/>
       <source>&amp;Window</source>
-      <translation type="unfinished"/>
+      <translation>창(&amp;W)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="180"/>
       <source>&amp;Reattach to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>메인 창에 다시 연결(&amp;R)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="182"/>
       <source>Reattach this profile window to the main Mudlet window</source>
-      <translation type="unfinished"/>
+      <translation>이 프로필 창을 메인 Mudlet 창에 다시 연결</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="188"/>
       <source>&amp;Close</source>
-      <translation type="unfinished"/>
+      <translation>닫기(&amp;C)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="196"/>
       <source>Always on &amp;Top</source>
-      <translation type="unfinished"/>
+      <translation>항상 최상위에 창 표시(&amp;T)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="199"/>
       <source>Keep this window always on top of other windows</source>
-      <translation type="unfinished"/>
+      <translation>이 창을 항상 다른 창들 위에 유지</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="204"/>
       <source>&amp;Minimize</source>
-      <translation type="unfinished"/>
+      <translation>최소화(&amp;M)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="357"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>메인 창에 &apos;%1&apos; 다시 연결(&amp;R)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="367"/>
       <source>Close Profile &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;%1&apos; 프로필 닫기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="376"/>
       <source>Close Window (All Profiles)</source>
-      <translation type="unfinished"/>
+      <translation>창 닫기 (모든 프로필)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="426"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>프로필 도구 모음</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="433"/>
@@ -1697,23 +1697,23 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="449"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>다시 연결</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="453"/>
       <location filename="../src/TDetachedWindow.cpp" line="455"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필 닫기(&amp;C)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="465"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>트리거</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="466"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>트리거 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="470"/>
@@ -1723,7 +1723,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="471"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>줄임말 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="475"/>
@@ -1733,7 +1733,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="476"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>타이머 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="480"/>
@@ -1743,7 +1743,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="481"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>간편 버튼 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="485"/>
@@ -1753,7 +1753,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="486"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>스크립트 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="490"/>
@@ -1763,7 +1763,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="491"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>키 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="495"/>
@@ -1773,12 +1773,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="496"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Lua 변수 표시 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="502"/>
       <source>Mute</source>
-      <translation type="unfinished"/>
+      <translation>음소거</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="510"/>
@@ -1801,63 +1801,63 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="534"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>지도</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="535"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>지도 표시/숨기기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="539"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>수동</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="540"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>참고 자료 및 문서 찾아보기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="544"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>설정</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="545"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>프로필 기본 설정 보기 및 편집</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="549"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>메모장</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="550"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>메모를 저장할 수 있는 메모장을 엽니다</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="556"/>
       <location filename="../src/TDetachedWindow.cpp" line="566"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>패키지</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>패키지 관리자</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="569"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>모듈 관리자</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="573"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>패키지 내보내기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="582"/>
@@ -1872,40 +1872,40 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="591"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>전체 화면 보기 전환</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="646"/>
       <source>Ready</source>
-      <translation type="unfinished"/>
+      <translation>준비됨</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="649"/>
       <location filename="../src/TDetachedWindow.cpp" line="779"/>
       <source>Profile: %1</source>
-      <translation type="unfinished"/>
+      <translation>프로필: %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="649"/>
       <location filename="../src/TDetachedWindow.cpp" line="765"/>
       <location filename="../src/TDetachedWindow.cpp" line="783"/>
       <source>None</source>
-      <translation type="unfinished"/>
+      <translation>없음</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="657"/>
       <source>Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>연결 해제됨</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="743"/>
       <source>Mudlet (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet -  (분리됨)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="751"/>
       <source> - Connected</source>
-      <translation type="unfinished"/>
+      <translation> - 연결됨</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="753"/>
@@ -1915,12 +1915,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
       <source> - Connecting...</source>
-      <translation type="unfinished"/>
+      <translation> - 연결 중...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="758"/>
       <source> - Disconnected</source>
-      <translation type="unfinished"/>
+      <translation> - 연결 해제됨</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="763"/>
@@ -1930,32 +1930,32 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="781"/>
       <source>Profiles: %1 | Active: %2</source>
-      <translation type="unfinished"/>
+      <translation>프로필: %1 | 활성: %2</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="789"/>
       <source>Connected to %1</source>
-      <translation type="unfinished"/>
+      <translation>%1에 연결됨</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="792"/>
       <source>Connecting to %1...</source>
-      <translation type="unfinished"/>
+      <translation>%1에 연결 중...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="795"/>
       <source>Disconnected from %1</source>
-      <translation type="unfinished"/>
+      <translation>%1에서 연결 해제됨</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="799"/>
       <source>No Profile</source>
-      <translation type="unfinished"/>
+      <translation>프로필 없음</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="889"/>
       <source>Profile &apos;%1&apos; saved</source>
-      <translation type="unfinished"/>
+      <translation> &apos;%1&apos; 프로필이 저장되었습니다</translation>
     </message>
   </context>
   <context>
@@ -4495,12 +4495,12 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
       <source>User Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>사용자 연결 해제됨</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>Connection/login attempt rejected by server</source>
-      <translation type="unfinished"/>
+      <translation>서버에서 연결/로그인 시도가 거부됨</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="592"/>
@@ -9808,7 +9808,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="152"/>
       <source>Window</source>
-      <translation type="unfinished"/>
+      <translation>창</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -9828,7 +9828,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="194"/>
       <source>Always on Top</source>
-      <translation type="unfinished"/>
+      <translation>항상 최상위에 창 표시</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
@@ -9838,7 +9838,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="202"/>
       <source>Minimize</source>
-      <translation type="unfinished"/>
+      <translation>최소화</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
@@ -12760,7 +12760,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="768"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>크기:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="797"/>
