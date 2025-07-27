@@ -5782,6 +5782,36 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Update multi-view controls
     updateMultiViewControls();
 
+    // When a tab is detached, the remaining tabs might temporarily be in MultiView
+    // even if MultiView is disabled. Force the correct state based on mMultiView setting.
+    if (!mMultiView && mpTabBar->count() > 0) {
+        // Get the currently active profile after the detach operation
+        const int currentTabIndex = mpTabBar->currentIndex();
+        if (currentTabIndex >= 0) {
+            const QString currentProfileName = mpTabBar->tabData(currentTabIndex).toString();
+            Host* currentHost = mHostManager.getHost(currentProfileName);
+            
+            if (currentHost) {
+                // Hide all other consoles in the main window (not detached)
+                for (const auto& host : mHostManager) {
+                    if (host && host->mpConsole && host.data() != currentHost) {
+                        const QString otherProfileName = host->getName();
+                        // Only hide consoles that are in the main window (not detached)
+                        if (!mDetachedWindows.contains(otherProfileName)) {
+                            host->mpConsole->hide();
+                        }
+                    }
+                }
+                // Ensure the current console is visible
+                if (currentHost->mpConsole) {
+                    currentHost->mpConsole->show();
+                    currentHost->mpConsole->update();
+                    currentHost->mpConsole->repaint();
+                }
+            }
+        }
+    }
+
     // Update tab bar auto-hide behavior since we now have detached windows
     updateMainWindowTabBarAutoHide();
 
@@ -5917,6 +5947,26 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
 
     // Update controls and window title
     updateMultiViewControls();
+
+    // We need to ensure the correct view state is applied based on current MultiView setting
+    if (!mMultiView && pHost) {
+        // If MultiView is disabled, ensure only the active console is visible
+        for (const auto& host : mHostManager) {
+            if (host && host->mpConsole && host.data() != pHost) {
+                const QString otherProfileName = host->getName();
+                // Only hide consoles that are in the main window (not detached)
+                if (!mDetachedWindows.contains(otherProfileName)) {
+                    host->mpConsole->hide();
+                }
+            }
+        }
+        // Ensure the current console is visible
+        if (pHost->mpConsole) {
+            pHost->mpConsole->show();
+            pHost->mpConsole->update();
+            pHost->mpConsole->repaint();
+        }
+    }
 
     // Update tab bar auto-hide behavior since detached windows may have changed
     updateMainWindowTabBarAutoHide();
