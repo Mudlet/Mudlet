@@ -230,6 +230,9 @@ CRITICAL_RUNTIME_DEPS=(
     "libvorbisfile-3.dll"
     "libopencore-amrnb-0.dll"
     "libopencore-amrwb-0.dll"
+    "libvorbisenc-2.dll"
+    "libtheoradec-2.dll"
+    "libtheoraenc-2.dll"
 )
 
 for CRITICAL_DLL in "${CRITICAL_RUNTIME_DEPS[@]}"; do
@@ -324,6 +327,7 @@ FFmpeg_DLLS=(
     "swscale-8.dll"
     "avfilter-10.dll"
     "postproc-58.dll"
+    "avdevice-61.dll"
 )
 
 echo "Copying core FFmpeg libraries..."
@@ -609,7 +613,7 @@ cat > mudlet-debug.bat << 'EOF'
 echo Setting debug environment variables for Qt multimedia troubleshooting...
 set QT_MEDIA_PLUGINS=1
 set QT_DEBUG_PLUGINS=1
-set QT_LOGGING_RULES=qt.multimedia*=true;qt.core.plugin*=true;qt.core.library*=true
+set QT_LOGGING_RULES=qt.multimedia*=true;qt.core.plugin*=true;qt.core.library*=true;*.ffmpeg*=true;qt.multimedia.ffmpeg*=true
 set QT_PLUGIN_PATH=%~dp0plugins
 set QT_MEDIA_BACKEND=ffmpeg
 echo.
@@ -739,6 +743,64 @@ echo 6. Try alternative backends: mudlet.exe --multimedia-backend windows
 echo 7. Test with: mudlet.exe --debug-audio --debug-plugins
 echo.
 echo === FFmpeg Backend Specific Checks ===
+echo Verifying FFmpeg backend is properly configured...
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
+    if exist "avcodec-61.dll" (
+        if exist "avformat-61.dll" (
+            if exist "avutil-59.dll" (
+                if exist "avdevice-61.dll" (
+                    if exist "swresample-5.dll" (
+                        echo [OK] FFmpeg backend should be functional
+                    ) else (
+                        echo [ERROR] Missing swresample-5.dll - FFmpeg audio resampling will fail
+                    )
+                ) else (
+                    echo [ERROR] Missing avdevice-61.dll - FFmpeg device access will fail
+                )
+            ) else (
+                echo [ERROR] Missing avutil-59.dll - FFmpeg backend will fail
+            )
+        ) else (
+            echo [ERROR] Missing avformat-61.dll - FFmpeg backend will fail
+        )
+    ) else (
+        echo [ERROR] Missing avcodec-61.dll - FFmpeg backend will fail
+    )
+) else (
+    echo [ERROR] Missing ffmpegmediaplugin.dll - FFmpeg backend unavailable
+)
+echo.
+echo === OGG/Opus Specific Checks ===
+if exist "libogg-0.dll" (
+    if exist "libvorbis-0.dll" (
+        if exist "libopus-0.dll" (
+            echo [OK] OGG/Opus support libraries present
+        ) else (
+            echo [ERROR] Missing libopus-0.dll - Opus audio will not work
+        )
+    ) else (
+        echo [ERROR] Missing libvorbis-0.dll - OGG Vorbis will not work
+    )
+) else (
+    echo [ERROR] Missing libogg-0.dll - OGG container support missing
+)
+echo.
+echo === Qt Audio Backend Debug Info ===
+echo Displaying Qt audio backend information on startup...
+echo Look for lines containing:
+echo   - "Available audio backends"
+echo   - "Default audio backend"
+echo   - "FFmpeg" initialization messages
+echo   - Plugin loading success/failure messages
+echo.
+echo === Environment Variables Summary ===
+echo Current multimedia environment:
+echo   QT_MEDIA_BACKEND=%QT_MEDIA_BACKEND%
+echo   QT_MEDIA_PLUGINS=%QT_MEDIA_PLUGINS%
+echo   QT_DEBUG_PLUGINS=%QT_DEBUG_PLUGINS%
+echo   QT_PLUGIN_PATH=%QT_PLUGIN_PATH%
+echo   QT_LOGGING_RULES=%QT_LOGGING_RULES%
+echo.
 echo Verifying FFmpeg backend is properly configured...
 if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
     if exist "avcodec-61.dll" (
@@ -990,6 +1052,276 @@ EOF
 
 echo "Created ogg-opus-test.bat for OGG/Opus specific testing"
 
+cat > qt-backend-test.bat << 'EOF'
+@echo off
+echo Qt Multimedia Backend Diagnostic Tool
+echo =====================================
+echo.
+echo This tool will help diagnose why FFmpeg backend may not be loading.
+echo.
+echo === Step 1: Verify All Required FFmpeg Libraries ===
+echo Checking critical FFmpeg libraries:
+set FFMPEG_OK=true
+
+if exist "avcodec-61.dll" (
+    echo [OK] avcodec-61.dll
+) else (
+    echo [CRITICAL] avcodec-61.dll MISSING
+    set FFMPEG_OK=false
+)
+
+if exist "avformat-61.dll" (
+    echo [OK] avformat-61.dll  
+) else (
+    echo [CRITICAL] avformat-61.dll MISSING
+    set FFMPEG_OK=false
+)
+
+if exist "avutil-59.dll" (
+    echo [OK] avutil-59.dll
+) else (
+    echo [CRITICAL] avutil-59.dll MISSING
+    set FFMPEG_OK=false
+)
+
+if exist "avdevice-61.dll" (
+    echo [OK] avdevice-61.dll
+) else (
+    echo [CRITICAL] avdevice-61.dll MISSING  
+    set FFMPEG_OK=false
+)
+
+if exist "swresample-5.dll" (
+    echo [OK] swresample-5.dll
+) else (
+    echo [CRITICAL] swresample-5.dll MISSING
+    set FFMPEG_OK=false
+)
+
+if exist "swscale-8.dll" (
+    echo [OK] swscale-8.dll
+) else (
+    echo [WARNING] swscale-8.dll missing - may affect video scaling
+)
+
+echo.
+echo === Step 2: Verify FFmpeg Plugin Exists ===
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
+    echo [OK] ffmpegmediaplugin.dll found
+) else (
+    echo [CRITICAL] ffmpegmediaplugin.dll MISSING - FFmpeg backend impossible!
+    set FFMPEG_OK=false
+)
+
+echo.
+echo === Step 3: Check Plugin Dependencies ===
+echo Verifying that ffmpegmediaplugin.dll can load its dependencies...
+if exist "plugins\multimedia\ffmpegmediaplugin.dll" (
+    echo Testing ffmpegmediaplugin.dll dependencies...
+    REM We'll use a simple method to test if the DLL can be loaded
+    echo This may show error dialogs if dependencies are missing - that's expected for diagnosis.
+    echo.
+    echo Attempting to test-load ffmpegmediaplugin.dll...
+    REM rundll32 would try to load the DLL and show errors if dependencies missing
+    rundll32.exe "plugins\multimedia\ffmpegmediaplugin.dll",DllCanUnloadNow 2>nul
+    if %ERRORLEVEL% EQU 0 (
+        echo [OK] Plugin DLL can be loaded successfully
+    ) else (
+        echo [ERROR] Plugin DLL failed to load - likely missing dependencies
+        echo This usually means FFmpeg core libraries are missing or wrong version
+    )
+) else (
+    echo Cannot test plugin - ffmpegmediaplugin.dll not found
+)
+
+echo.
+echo === Step 4: Environment Configuration Test ===
+echo Testing different backend configurations...
+echo.
+echo --- Test 1: Default Backend ---
+echo Starting Mudlet with default multimedia backend...
+echo Look for plugin loading messages in the console output.
+echo.
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=qt.multimedia*=true;qt.core.plugin*=true
+mudlet.exe --help >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [OK] Mudlet executable responds to --help
+) else (
+    echo [ERROR] Mudlet executable may be corrupted or missing dependencies
+)
+
+echo.
+echo --- Test 2: Force FFmpeg Backend ---
+echo Forcing FFmpeg backend specifically...
+set QT_MEDIA_BACKEND=ffmpeg
+set QT_MEDIA_PLUGINS=1  
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=qt.multimedia*=true;*.ffmpeg*=true;qt.core.plugin*=true
+
+echo Environment:
+echo   QT_MEDIA_BACKEND=%QT_MEDIA_BACKEND%
+echo   QT_MEDIA_PLUGINS=%QT_MEDIA_PLUGINS%
+echo   QT_DEBUG_PLUGINS=%QT_DEBUG_PLUGINS%
+echo.
+echo When Mudlet starts, watch for these messages:
+echo   - "QFactoryLoader::QFactoryLoader() checking directory path"
+echo   - "loaded library" or "Cannot load library"  
+echo   - "FFmpeg" initialization messages
+echo   - Backend selection messages
+echo.
+echo Press Enter to start Mudlet with FFmpeg backend forced...
+pause >nul
+mudlet.exe
+echo.
+
+echo === Step 5: Analysis and Recommendations ===
+if "%FFMPEG_OK%"=="false" (
+    echo.
+    echo DIAGNOSIS: FFmpeg backend cannot load due to missing core libraries.
+    echo.
+    echo REQUIRED ACTIONS:
+    echo 1. Ensure ALL of these FFmpeg DLLs are in the main directory:
+    echo    - avcodec-61.dll
+    echo    - avformat-61.dll  
+    echo    - avutil-59.dll
+    echo    - avdevice-61.dll
+    echo    - swresample-5.dll
+    echo.
+    echo 2. Verify ffmpegmediaplugin.dll is in plugins\multimedia\
+    echo.
+    echo 3. These files must be from compatible FFmpeg build (usually same version^)
+    echo.
+    echo 4. Run this test again after adding missing libraries
+) else (
+    echo.
+    echo DIAGNOSIS: All required FFmpeg libraries appear to be present.
+    echo.
+    echo If FFmpeg backend still not working:
+    echo 1. Check Windows Event Viewer for detailed DLL loading errors
+    echo 2. Verify FFmpeg libraries are from compatible build
+    echo 3. Try setting QT_MEDIA_BACKEND=ffmpeg in system environment  
+    echo 4. Check if antivirus is blocking DLL loading
+    echo 5. Ensure Windows Audio service is running
+    echo.
+    echo Alternative backends to try:
+    echo - Windows Media: QT_MEDIA_BACKEND=windows ^(no OGG/Opus support^)
+    echo - DirectShow: Available through dsengine.dll plugin
+)
+
+echo.
+echo === Interactive Backend Test ===
+echo.
+set /p TEST_AGAIN="Do you want to test a specific backend? [F=FFmpeg, W=Windows, N=No]: "
+if /i "%TEST_AGAIN%"=="F" (
+    echo Testing FFmpeg backend...
+    set QT_MEDIA_BACKEND=ffmpeg
+    mudlet.exe
+) else if /i "%TEST_AGAIN%"=="W" (
+    echo Testing Windows Media backend...
+    set QT_MEDIA_BACKEND=windows  
+    mudlet.exe
+) else (
+    echo Test complete.
+)
+
+echo.
+pause
+EOF
+
+echo "Created qt-backend-test.bat for comprehensive FFmpeg backend diagnostics"
+
+cat > qt-backend-test.bat << 'EOF'
+@echo off
+echo Qt Multimedia Backend Diagnostic
+echo =================================
+echo.
+echo This script tests Qt multimedia backend configuration specifically
+echo for identifying issues with audio playback in Mudlet.
+echo.
+echo === Qt Multimedia Environment Test ===
+echo Testing different backend configurations...
+echo.
+
+echo [TEST 1] Testing with FFmpeg backend (required for OGG/Opus)
+set QT_MEDIA_BACKEND=ffmpeg
+set QT_MEDIA_PLUGINS=1
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=qt.multimedia*=true;*.ffmpeg*=true;qt.core.plugin*=true
+set QT_PLUGIN_PATH=%~dp0plugins
+
+echo Environment:
+echo   Backend: %QT_MEDIA_BACKEND%
+echo   Plugin path: %QT_PLUGIN_PATH%
+echo   Debug enabled: %QT_DEBUG_PLUGINS%
+echo.
+echo Starting Mudlet with FFmpeg backend...
+echo WATCH FOR: FFmpeg plugin loading messages in console output
+echo If you see "Cannot load library" errors for FFmpeg, that's the problem.
+echo.
+start /wait mudlet.exe
+echo.
+echo Did FFmpeg backend work? [Y/N]
+set /p FFMPEG_WORKED="Enter Y if you saw FFmpeg loading messages, N if not: "
+
+echo.
+echo [TEST 2] Testing with Windows Media backend (fallback)
+set QT_MEDIA_BACKEND=windows
+echo.
+echo Environment:
+echo   Backend: %QT_MEDIA_BACKEND%
+echo.
+echo Starting Mudlet with Windows Media backend...
+echo NOTE: This backend cannot play OGG/Opus files, but should work for other audio.
+echo.
+start /wait mudlet.exe
+echo.
+echo Did Windows Media backend work for non-OGG audio? [Y/N]
+set /p WINDOWS_WORKED="Enter Y if other audio worked, N if not: "
+
+echo.
+echo === DIAGNOSTIC RESULTS ===
+if /i "%FFMPEG_WORKED%"=="Y" (
+    echo SUCCESS: FFmpeg backend is working - OGG/Opus should be supported
+) else (
+    echo PROBLEM: FFmpeg backend is not working
+    echo.
+    echo Common causes:
+    echo 1. Missing FFmpeg DLLs (avcodec-61.dll, avformat-61.dll, avutil-59.dll)
+    echo 2. Missing ffmpegmediaplugin.dll in plugins/multimedia/
+    echo 3. Incompatible FFmpeg library versions
+    echo 4. Missing codec libraries (libogg-0.dll, libvorbis-0.dll, libopus-0.dll)
+)
+
+echo.
+if /i "%WINDOWS_WORKED%"=="Y" (
+    echo INFO: Windows Media backend works - basic audio system is functional
+) else (
+    echo PROBLEM: Windows Media backend also failed - system audio issue
+    echo.
+    echo This suggests a deeper audio system problem:
+    echo 1. Check Windows audio drivers
+    echo 2. Verify default audio device is working
+    echo 3. Check Windows Audio service is running
+    echo 4. Test audio with other applications
+)
+
+echo.
+echo === NEXT STEPS ===
+if /i "%FFMPEG_WORKED%"=="N" (
+    echo To fix FFmpeg backend:
+    echo 1. Run mudlet-debug.bat to check for missing DLLs
+    echo 2. Verify all FFmpeg and codec DLLs are present
+    echo 3. Check Windows Event Viewer for detailed error messages
+    echo 4. Try re-running the packaging script to ensure all dependencies
+)
+
+echo.
+pause
+EOF
+
+echo "Created qt-backend-test.bat for Qt multimedia backend diagnostics"
+
 echo ""
 
 # For debugging purposes:
@@ -1068,13 +1400,13 @@ else
 fi
 
 # Check for specific version-numbered libraries
-if [ -f "avcodec-61.dll" ] && [ -f "avformat-61.dll" ] && [ -f "avutil-59.dll" ]; then
+if [ -f "avcodec-61.dll" ] && [ -f "avformat-61.dll" ] && [ -f "avutil-59.dll" ] && [ -f "avdevice-61.dll" ] && [ -f "swresample-5.dll" ]; then
     echo "  ✓ Core FFmpeg libraries found (matching Qt6 requirements)"
 else
     echo "  ✗ Some core FFmpeg libraries missing or wrong version"
-    echo "    Expected: avcodec-61.dll, avformat-61.dll, avutil-59.dll"
+    echo "    Expected: avcodec-61.dll, avformat-61.dll, avutil-59.dll, avdevice-61.dll, swresample-5.dll"
     echo "    Found:"
-    ls -la ./avcodec-*.dll ./avformat-*.dll ./avutil-*.dll 2>/dev/null || echo "    None found"
+    ls -la ./avcodec-*.dll ./avformat-*.dll ./avutil-*.dll ./avdevice-*.dll ./swresample-*.dll 2>/dev/null || echo "    None found"
 fi
 
 # Check for critical codec libraries
@@ -1099,19 +1431,22 @@ echo "   - libstdc++-6.dll, libfreetype-6.dll"
 echo "3. Check Windows Event Viewer for detailed DLL loading errors"
 echo ""
 echo "For OGG/Opus audio troubleshooting:"
-echo "1. Run mudlet-debug.bat to see plugin loading details"  
-echo "2. Check that ffmpegmediaplugin.dll is in plugins/multimedia/"
-echo "3. Verify all FFmpeg libraries are in the main directory"
-echo "4. Set QT_MEDIA_BACKEND=ffmpeg if needed"
-echo "5. Run ffmpeg-test.bat for standalone dependency testing"
-echo "6. Run ogg-opus-test.bat for OGG/Opus specific diagnostics"
-echo "7. Run audio-test.bat for comprehensive audio system diagnostics"
+echo "1. Run qt-backend-test.bat to diagnose FFmpeg backend loading issues"  
+echo "2. Run mudlet-debug.bat to see plugin loading details"  
+echo "3. Check that ffmpegmediaplugin.dll is in plugins/multimedia/"
+echo "4. Verify all FFmpeg libraries are in the main directory"
+echo "5. Set QT_MEDIA_BACKEND=ffmpeg if needed"
+echo "6. Run ffmpeg-test.bat for standalone dependency testing"
+echo "7. Run ogg-opus-test.bat for OGG/Opus specific diagnostics"
+echo "8. Run audio-test.bat for comprehensive audio system diagnostics"
+echo "8. Run qt-backend-test.bat for Qt multimedia backend testing"
 echo ""
 echo "CRITICAL for OGG/Opus support:"
 echo "- FFmpeg backend MUST be working (Windows Media backend cannot play OGG/Opus)"
 echo "- Required: libogg-0.dll, libvorbis-0.dll, libopus-0.dll"
 echo "- Required: avcodec-61.dll, avformat-61.dll, avutil-59.dll"
 echo "- Required: ffmpegmediaplugin.dll in plugins/multimedia/"
+echo "- Required: libvorbisenc-2.dll, libtheoradec-2.dll for full OGG support"
 
 FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
 echo ""
