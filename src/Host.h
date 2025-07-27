@@ -709,7 +709,7 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
-    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
+    std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;
