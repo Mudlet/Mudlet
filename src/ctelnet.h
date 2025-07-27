@@ -344,7 +344,7 @@ private:
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder = nullptr;
     QString mHostName;
-    int hostPort = 0;
+    int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
 
