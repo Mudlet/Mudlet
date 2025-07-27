@@ -2,200 +2,10 @@
 --- Mudlet DB
 ----------------------------------------------------------------------------------
 
-
--- TODO will be already loaded in LuaGlobal
------------------------------------------------------------------------------
--- General-purpose useful tools that were needed during development:
------------------------------------------------------------------------------
-if package.loaded["rex_pcre"] then
-  rex = require "rex_pcre"
-end
-
-if not display then
-  require "DebugTools"
-end
-if not table.contains then
-  require "TableUtils"
-end
-if not string.trim then
-  require "StringUtils"
-end
-
--- TODO those functions are already definde elsewhere
-function string.starts(String, Start)
-  return string.sub(String, 1, string.len(Start)) == Start
-end
-
-function string.ends(String, End)
-  return End == '' or string.sub(String, -string.len(End)) == End
-end
-
-
-
-
--- TODO move to StringUtils?
------------------------------------------------------------------------------
--- Some Date / Time parsing functions.
------------------------------------------------------------------------------
-datetime = {
-  _directives = {
-    ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-    ["%B"] = "(?P<month_name>january|february|march|april|may|june|july|august|september|october|november|december)",
-    ["%d"] = "(?P<day_of_month>\\d{2})",
-    ["%H"] = "(?P<hour_24>\\d{2})",
-    ["%I"] = "(?P<hour_12>\\d{2})",
-    ["%m"] = "(?P<month>\\d{2})",
-    ["%M"] = "(?P<minute>\\d{2})",
-    ["%p"] = "(?P<ampm>am|pm)",
-    ["%S"] = "(?P<second>\\d{2})",
-    ["%y"] = "(?P<year_half>\\d{2})",
-    ["%Y"] = "(?P<year_full>\\d{4})"
-  },
-  _pattern_cache = {},
-  _month_names = {
-    ["january"] = 1,
-    ["february"] = 2,
-    ["march"] = 3,
-    ["april"] = 4,
-    ["may"] = 5,
-    ["june"] = 6,
-    ["july"] = 7,
-    ["august"] = 8,
-    ["september"] = 9,
-    ["october"] = 10,
-    ["november"] = 11,
-    ["december"] = 12
-  },
-  _abbrev_month_names = {
-    ["jan"] = 1,
-    ["feb"] = 2,
-    ["mar"] = 3,
-    ["apr"] = 4,
-    ["may"] = 5,
-    ["jun"] = 6,
-    ["jul"] = 7,
-    ["aug"] = 8,
-    ["sep"] = 9,
-    ["oct"] = 10,
-    ["nov"] = 11,
-    ["dec"] = 12
-  }
-}
-
--- the timestamp is stored in UTC time, so work out the difference in seconds
--- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
-function datetime:calculate_UTCdiff(ts)
-  local date, time = os.date, os.time
-  local utc = date('!*t', ts)
-  local lcl = date('*t', ts)
-  lcl.isdst = os.date("*t")["isdst"]
-  return os.difftime(time(lcl), time(utc))
-end
-
--- NOT LUADOC
--- The rex.match function does not return named patterns even if you use named capture
--- groups, but the r:tfind does -- but this only operates on compiled patterns. So,
--- we are caching the conversion of 'simple format' date patterns into a regex, and
--- then compiling them.
-function datetime:_get_pattern(format)
-  if not datetime._pattern_cache[format] then
-    local fmt = rex.gsub(format, "(%[A-Za-z])",
-    function(m)
-      return datetime._directives[m] or m
-    end
-    )
-
-    datetime._pattern_cache[format] = rex.new(fmt, rex.flags().CASELESS)
-  end
-
-  return datetime._pattern_cache[format]
-end
-
-
-
---- Parses the specified source string, according to the format if given, to return a representation of
---- the date/time. The default format if not specified is: "^%Y-%m-%d %H:%M:%S$" <br/><br/>
----
---- If as_epoch is provided and true, the return value will be a Unix epoch -- the number
---- of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch
---- is false, then a Lua time table will be returned. Details of the time tables are provided
---- in the http://www.lua.org/pil/22.1.html. <br/><br/>
----
---- Supported Format Codes
----   </pre>
----   %b   Abbreviated Month Name
----   %B   Full Month Name
----   %d   Day of Month
----   %H   Hour (24-hour format)
----   %I   Hour (12-hour format, requires %p as well)
----   %p   AM or PM
----   %m   2-digit month (01-12)
----   %M   2-digit minutes (00-59)
----   %S   2-digit seconds (00-59)
----   %y   2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
----   %Y   4-digit year.
----   </pre>
-function datetime:parse(source, format, as_epoch)
-  if not format then
-    format = "^%Y-%m-%d %H:%M:%S$"
-  end
-
-  local fmt = datetime:_get_pattern(format)
-  local m = { fmt:tfind(source) }
-
-  if m and m[3] then
-    m = m[3]
-    dt = {}
-
-    if m.year_half then
-      dt.year = tonumber("20" .. m.year_half)
-    elseif m.year_full then
-      dt.year = tonumber(m.year_full)
-    end
-
-    if m.month then
-      dt.month = tonumber(m.month)
-    elseif m.month_name then
-      dt.month = datetime._month_names[m.month_name:lower()]
-    elseif m.abbrev_month_name then
-      dt.month = datetime._abbrev_month_names[m.abbrev_month_name:lower()]
-    end
-
-    dt.day = m.day_of_month
-
-    if m.hour_12 then
-      assert(m.ampm, "You must use %p (AM|PM) with %I (12-hour time)")
-      if m.ampm == "PM" then
-        dt.hour = 12 + tonumber(m.hour_12)
-      else
-        dt.hour = tonumber(m.hour_12)
-      end
-    else
-      dt.hour = tonumber(m.hour_24)
-    end
-
-    dt.min = tonumber(m.minute)
-    dt.sec = tonumber(m.second)
-    dt.isdst = os.date("*t")["isdst"]
-
-    if as_epoch then
-      return os.time(dt)
-    else
-      return dt
-    end
-  else
-    return nil
-  end
-end
-
-
-
------------------------------------------------------------------------------
--- The database wrapper library
------------------------------------------------------------------------------
 if package.loaded["luasql.sqlite3"] then
   luasql = require "luasql.sqlite3"
 end
+
 
 db = {}
 db.__autocommit = {}
@@ -301,11 +111,11 @@ end
 -- The column_spec is either a string or an indexed table. This function returns either "column" or
 -- "column1", "column2" for use in the column specification of INSERT.
 function db:_sql_columns(value)
+  local col_chunks = {}
   local colstr = ''
   local t = type(value)
 
   if t == "table" then
-    col_chunks = {}
     for _, v in ipairs(value) do
       -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
       if v:lower() == "desc" or v:lower() == "asc" then
@@ -359,6 +169,8 @@ function db:_sql_values(values)
     elseif t == "table" and v._timestamp ~= nil then
       if not v._timestamp then
         s = "NULL"
+      elseif v._timestamp == "CURRENT_TIMESTAMP" then
+        s = "datetime('now')"
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
@@ -386,6 +198,82 @@ function db:safe_name(name)
   return name
 end
 
+
+function db:_isActiveDBName(db_name)
+  db_name = db:safe_name(db_name)
+
+  return (
+    db.__conn[db_name]
+    and db.__conn[db_name] ~= 'SQLite3 connection (closed)'
+    and io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+  )
+end
+
+
+local VALIDATION_OPTIONS = {
+  "ABORT",
+  "FAIL",
+  "IGNORE",
+  "REPLACE",
+  "ROLLBACK"
+}
+
+---@param validations string
+---@return boolean is_valid
+---@return string msg
+function db:_validate_validations(validations)
+  if type(validations) ~= "string" then
+    return false, "_validations must be a string. Received "..type(validations)
+  elseif table.contains(VALIDATION_OPTIONS, validations) then
+    return true, ""
+  end
+
+  return false, '_validations must be one of: {"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}.  Received: '..validations
+end
+
+
+---@param unique_constraints string|table
+---@return boolean is_valid
+---@return string msg
+function db:_validate_unique_contraints(unique_constraints)
+  local is_valid, msg = true, ""
+
+  local type_of = type(unique_constraints)
+  local is_string = type_of == "string"
+  local is_table = type_of == "table"
+
+  if is_string then
+    -- pass
+  elseif is_table then
+    local msgs = {}
+    for _, unique_constraint in ipairs(unique_constraints) do
+      type_of = type(unique_constraint)
+      is_string = type_of == "string"
+      is_table = type_of == "table"
+      if is_string then
+        -- pass
+      elseif is_table then
+        for _, value in ipairs(unique_constraint) do
+          type_of = type(value)
+          if type_of ~= "string" then
+            is_valid = false
+            table.insert(msgs, "Multi-column definitions for _unique must be a list of strings, for example: _unique = { {'foo', 'bar'} }.  Received "..type_of..".")
+          end
+        end
+      else
+        is_valid = false
+        table.insert(msgs, "Members of _unique must be a string or table. Received ".. type_of..".")
+      end
+    end
+
+    msg = table.concat(msgs, "\n")
+  else
+    is_valid = false
+    msg = "_unique must be a string or a table.  Received "..type_of.."."
+  end
+
+  return is_valid, msg
+end
 
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
@@ -441,46 +329,72 @@ function db:create(db_name, sheets, force)
     db.__env = luasql.sqlite3()
   end
 
+  local is_valid, msgs = true, {}
+  local schema = {}
   db_name = db:safe_name(db_name)
 
-  if not db.__conn[db_name] or db.__conn[db_name] == 'SQLite3 connection (closed)' or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
-    db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
-    db.__conn[db_name]:setautocommit(false)
-    db.__autocommit[db_name] = true
-  end
-
-  db.__schema[db_name] = {}
 
   -- We need to separate the actual column configuration from the meta-configuration of the desired
   -- sheet. {sheet={"column"}} verses {sheet={"column"}, _index={"column"}}. In the former we are
   -- creating a database with a single field; in the latter we are also adding an index on that
   -- field. The db package reserves any key that begins with an underscore to be special and syntax
   -- for its own use.
-  for s_name, sht in pairs(sheets) do
+  for sheet_name, sheet in pairs(sheets) do
+    local columns = {}
     local options = {}
 
-    if sht[1] ~= nil then
-      -- in case the sheet was provided in the sheet = {"column1", "column2"} format:
-      local t = {}               --   assume field types are text, and should default to ""
-      for k, v in pairs(sht) do
-        t[v] = ""
+    -- the sheet was provided in {"column1", "column2"} format
+    if sheet[1] ~= nil then
+      -- assume field types are text, and should default to ""
+      for _, col_name in pairs(sheet) do
+        columns[col_name] = ""
       end
-      sht = t
-    else -- sheet provided in the sheet = {"column1" = default} format
-      for k, v in pairs(sht) do
-        if string.starts(k, "_") then
-          options[k] = v
-          sht[k] = nil
+
+    -- sheet provided in {"column1" = default} format
+    else
+      for key, value in pairs(sheet) do
+
+        if string.starts(key, "_") then
+          options[key] = value
+        else
+          columns[key] = value
         end
       end
     end
 
-    if not options._violations then
+    if options._violations then
+      local is_validations_valid, msg = db:_validate_validations(options._violations)
+      if is_validations_valid == false then
+        is_valid = false
+        table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+    else
       options._violations = "FAIL"
     end
 
-    db.__schema[db_name][s_name] = { columns = sht, options = options }
-    db:_migrate(db_name, s_name, force)
+    if options._unique then
+      local is_unique_valid, msg = db:_validate_unique_contraints(options._unique)
+      if is_unique_valid == false then
+        is_valid = false
+        table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+    end
+
+    schema[sheet_name] = { columns = columns, options = options }
+  end
+
+  assert(is_valid, table.concat(msgs, "\n"))
+
+  if not db:_isActiveDBName(db_name) then
+    db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+    db.__conn[db_name]:setautocommit(false)
+    db.__autocommit[db_name] = true
+  end
+
+  db.__schema[db_name] = schema
+
+  for sheet_name, _ in pairs(sheets) do
+    db:_migrate(db_name, sheet_name, force)
   end
   return db:get_database(db_name)
 end
@@ -665,62 +579,85 @@ function db:_migrate(db_name, s_name, force)
 end
 
 function db:_build_create_table_sql(schema, s_name)
-
-  local sql_column = ', "%s" %s NULL'
+  local sql_column = '"%s" %s NULL'
   local sql_column_default = sql_column .. ' DEFAULT %s'
 
+  local on_conflict = "ON CONFLICT "..schema.options._violations
 
-  local sql_chunks = { "CREATE TABLE ", s_name, '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
+  local sql_chunks = { '"_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
+
+  local unique_column_constraints = {}
+  local unique_table_constraints = {}
+
+  -- Validations were already performed in db:create, so the only thing
+  -- we need to do here is filter our unique constraints to the appropirate
+  -- tables.
+  --
+  -- Into unique_column_constraints when the a column is unique on its own
+  -- and into unique_table_constraints when columns are grouped together.
+  if type(schema.options._unique) == "string" then
+    table.insert(unique_column_constraints, schema.options._unique)
+  elseif type(schema.options._unique) == "table" then
+    for _, unique_constraint in ipairs(schema.options._unique) do
+      if type(unique_constraint) == "string" then
+        table.insert(unique_column_constraints, unique_constraint)
+      elseif type(unique_constraint) == "table" then
+        table.insert(
+          unique_table_constraints,
+          'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
+        )
+      end
+    end
+  end
 
   -- We iterate over every defined column, and add a line which creates it.
-  for key, value in pairs(schema.columns) do
+  for col_name, col_schema in pairs(schema.columns) do
     local sql = ""
-    if value == nil then
-      sql = sql_column:format(key, db:_sql_type(value))
+    if col_schema == nil then
+      sql = sql_column:format(col_name, db:_sql_type(col_schema))
     else
-      sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
+      sql = sql_column_default:format(col_name, db:_sql_type(col_schema), db:_sql_convert(col_schema))
     end
-    if (type(schema.options._unique) == "table" and table.contains(schema.options._unique, key))
-    or (type(schema.options._unique) == "string" and schema.options._unique == key) then
-      sql = sql .. " UNIQUE"
+    if table.contains(unique_column_constraints, col_name) then
+      sql = sql .. " UNIQUE "..on_conflict
     end
     sql_chunks[#sql_chunks + 1] = sql
   end
 
-  sql_chunks[#sql_chunks + 1] = ")"
+  -- Add in the unique constraints
+  for _, unique_table_constraint in ipairs(unique_table_constraints) do
+    sql_chunks[#sql_chunks + 1] = "UNIQUE("..table.concat(unique_table_constraint, ", ")..")"
+  end
 
-  return table.concat(sql_chunks, "")
+  return "CREATE TABLE " .. s_name.. " ("..table.concat(sql_chunks, ", ")..")"
 end
 
 
 -- NOT LUADOC
 -- Creates any indexes which do not yet exist in the given database.
 function db:_migrate_indexes(conn, s_name, schema, current_columns)
-  local sql_create_index = "CREATE %s IF NOT EXISTS %s ON %s (%s);"
-  local opt = { _unique = "UNIQUE INDEX", _index = "INDEX" } -- , _check = "CHECK"}
+  local sql_create_index = "CREATE INDEX IF NOT EXISTS %s ON %s (%s);"
+  local sql = ""
 
-  for option_type, options in pairs(schema.options) do
-    if option_type == "_unique" or option_type == "_index" then
-      for _, value in pairs(options) do
-
-        -- If an index references a column which does not presently exist within the schema
-        -- this will fail.
-
-        if db:_index_valid(current_columns, value) then
-          --assert(db:_index_valid(current_columns, value),
-          --      "In sheet "..s_name.." an index field is specified that does not exist.")
-
-          local sql = sql_create_index:format(
-          opt[option_type], db:_index_name(s_name, value), s_name, db:_sql_columns(value)
-          )
-          db:echo_sql(sql)
-          conn:execute(sql)
-        end
+  if (type(schema.options._index) == "table") then
+    for _, value in pairs(schema.options._index) do
+      -- If an index references a column which does not presently exist within the schema
+      -- this will fail.
+      if db:_index_valid(current_columns, value) then
+        --assert(db:_index_valid(current_columns, value),
+        --      "In sheet "..s_name.." an index field is specified that does not exist.")
+        sql = sql_create_index:format(
+          db:_index_name(s_name, value),
+          s_name,
+          db:_sql_columns(value)
+        )
+        db:echo_sql(sql)
+        conn:execute(sql)
       end
+
     end
   end
 end
-
 
 
 --- Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index,
@@ -748,7 +685,7 @@ function db:add(sheet, ...)
   assert(s_name, "First argument to db:add must be a proper Sheet object.")
 
   local conn = db.__conn[db_name]
-  local sql_insert = "INSERT OR %s INTO %s %s VALUES %s"
+  local sql_insert = "INSERT INTO %s %s VALUES %s"
 
   for _, t in ipairs({ ... }) do
     if t._row_id then
@@ -756,11 +693,16 @@ function db:add(sheet, ...)
       t._row_id = nil
     end
 
-    local sql = sql_insert:format(db.__schema[db_name][s_name].options._violations, s_name, db:_sql_fields(t), db:_sql_values(t))
+    local sql = sql_insert:format(
+      s_name,
+      db:_sql_fields(t),
+      db:_sql_values(t)
+    )
     db:echo_sql(sql)
 
     local result, msg = conn:execute(sql)
-    if not result then
+    if result == nil then
+      printError(msg, true, false)
       return nil, msg
     end
   end
@@ -793,10 +735,11 @@ function db:fetch_sql(sheet, sql)
   -- if we had a syntax error in our SQL, cur will be nil
   if cur and cur ~= 0 then
     local results = {}
+    local columns = cur:getcolnames()
     local row = cur:fetch({}, "a")
 
     while row do
-      results[#results + 1] = db:_coerce_sheet(sheet, row)
+      results[#results + 1] = db:_coerce_sheet(columns, sheet, row)
       row = cur:fetch({}, "a")
     end
     cur:close()
@@ -930,11 +873,9 @@ function db:aggregate(field, fn, query, distinct)
       return count
     end
     -- Only datetime left
-    -- the value, count, is currently in a UTC timestamp
-    local localtime = datetime:parse(count, nil, true)
-    -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-    count = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
-    return count
+    local utc_epoch = datetime:parse(count, nil, true)
+    local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+    return db:Timestamp(utc_epoch + locale_diff)
   else
     return 0
   end
@@ -1122,7 +1063,7 @@ function db:update(sheet, tbl)
 
   local conn = db.__conn[db_name]
 
-  local sql_chunks = { "UPDATE OR", db.__schema[db_name][s_name].options._violations, s_name, "SET" }
+  local sql_chunks = { "UPDATE", s_name, "SET" }
 
   local set_chunks = {}
   local set_block = [["%s" = %s]]
@@ -1195,12 +1136,17 @@ function db:set(field, value, query)
 
   local conn = db.__conn[db_name]
 
-  local sql_update = [[UPDATE OR %s %s SET "%s" = %s]]
+  local sql_update = [[UPDATE %s SET "%s" = %s]]
   if query then
     sql_update = sql_update .. [[ WHERE %s]]
   end
 
-  local sql = sql_update:format(db.__schema[db_name][s_name].options._violations, s_name, field.name, db:_coerce(field, value), query)
+  local sql = sql_update:format(
+    s_name,
+    field.name,
+    db:_coerce(field, value),
+    query
+  )
 
   db:echo_sql(sql)
   assert(conn:execute(sql))
@@ -1230,20 +1176,24 @@ end
 -- After a table so retrieved from the database, this function coerces values to
 -- their proper types. Specifically, numbers and datetimes become the proper
 -- types.
-function db:_coerce_sheet(sheet, tbl)
+function db:_coerce_sheet(columns, sheet, tbl)
   if tbl then
     tbl._row_id = tonumber(tbl._row_id)
 
-    for k, v in pairs(tbl) do
+    for _, k in pairs(columns) do
       if k ~= "_row_id" then
         local field = sheet[k]
         if field.type == "number" then
           tbl[k] = tonumber(tbl[k]) or tbl[k]
         elseif field.type == "datetime" then
-          -- the value, tbl[k], is currently in a UTC timestamp
-          local localtime = datetime:parse(tbl[k], nil, true)
-          -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-          tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
+          if (tbl[k] == nil) then
+            tbl[k] = db:Timestamp(nil)
+          else
+            -- the value, tbl[k], is a UTC timestamp
+            local utc_epoch = datetime:parse(tbl[k], nil, true)
+            local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+            tbl[k] = db:Timestamp(utc_epoch + locale_diff)
+          end
         end
       end
     end
@@ -1261,10 +1211,12 @@ function db:_coerce(field, value)
   if type(value) == "table" and value._isNull then
     return "NULL"
   elseif field.type == "number" then
-    return tonumber(value) or "'" .. value .. "'"
+    return tonumber(value) or ("'" .. value .. "'")
   elseif field.type == "datetime" then
     if value._timestamp == false then
       return "NULL"
+    elseif value._timestamp == "CURRENT_TIMESTAMP" then
+      return "datetime('now')"
     else
       return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
     end
@@ -1532,15 +1484,63 @@ function db:OR(left, right)
 end
 
 
-
---- <b><u>TODO</u></b>
-function db:close()
-  for _, c in pairs(db.__conn) do
-    c:close()
+--- Closes all databases.
+--- @return boolean result Returns true if all databases closed successfully and false otherwise 
+--- @return string message
+function db:_closeAll()
+  if db.__env == nil then
+    return false, "database environment is nil, did you forget to call db:create?"
   end
+
+  local result, msgs = true, {}
+  for db_name, conn in pairs(db.__conn) do
+    if not conn:close() then
+      result = false
+      table.insert(msgs, "database object for "..db_name.." is already closed.")
+    end
+  end
+
   db.__conn = {}
   db.__env:close()
   db.__env = nil
+
+  return result, table.concat(msgs, "\n")
+end
+
+
+--- Closes the named database or all databases if no name is provided.
+--- @param db_name string|nil The name of the database to close.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the database failed to close.
+function db:close(db_name)
+  if db.__env == nil then
+    return false, "database environment is nil, did you forget to call db:create?"
+  end
+
+  if db_name == nil then
+    return db:_closeAll()
+  end
+
+  assert(
+    type(db_name) == "string",
+    "expected db_name to be string or nil but recieved "..type(db_name).."."
+  )
+
+  db_name = db:safe_name(db_name)
+  if not db:_isActiveDBName(db_name) then
+    return false, "can not close "..db_name.." because it does not exist.  Did you forget to call db:create?"
+  end
+
+  if db.__conn[db_name]:close() then
+    db.__conn[db_name] = nil
+    
+    return true, ""
+  else
+    
+    return false, "database object is already closed."
+  end
+
+  
 end
 
 
@@ -1594,17 +1594,22 @@ end
 --- <b><u>TODO</u></b>
 function db:Timestamp(ts, fmt)
   local dt = {}
-  if type(ts) == "table" then
-    dt._timestamp = os.time(ts)
-  elseif type(ts) == "number" then
-    dt._timestamp = ts
-  elseif type(ts) == "string" and
-  assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
-    dt._timestamp = "CURRENT_TIMESTAMP"
-  elseif ts == nil then
-    dt._timestamp = false
+
+  if ts == nil then
+      dt._timestamp = false
+  elseif ts == "CURRENT_TIMESTAMP" then
+      dt._timestamp = "CURRENT_TIMESTAMP"
   else
-    assert(nil, "Invalid value passed to db.Timestamp()")
+    local t = type(ts)
+    if t == "table" then
+      dt._timestamp = os.time(ts)
+    elseif t == "number" then
+      dt._timestamp = ts
+    elseif t == "string" then
+      dt._timestamp = datetime:parse(ts, fmt, true)
+    else
+      error("Invalid value passed to db.Timestamp()")
+    end
   end
   return setmetatable(dt, db.__TimestampMT)
 end
@@ -1636,13 +1641,15 @@ db.__SheetMT = {
     local errormsg = "Attempt to access field '%s' which does not exist (in sheet '%s' within database '%s')"
 
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
-    if assert(field, errormsg:format(k, sht_name, db_name)) then
-      type_ = type(field)
-      if type_ == "table" and field._timestamp then
-        type_ = "datetime"
+    local field_type = ""
+    local rt
+    if assert(field ~= nil, errormsg:format(k, sht_name, db_name)) then
+      field_type = type(field)
+      if field_type == "table" and field._timestamp ~= nil then
+        field_type = "datetime"
       end
 
-      rt = setmetatable({ database = db_name, sheet = sht_name, type = type_, name = f_name }, db.__FieldMT)
+      rt = setmetatable({ database = db_name, sheet = sht_name, type = field_type, name = f_name }, db.__FieldMT)
       rawset(t, k, rt)
       return rt
     end
@@ -1660,12 +1667,13 @@ db.__DatabaseMT = {
       return v
     end
 
-    local v = rawget(db.Database, k)
+    v = rawget(db.Database, k)
     if v then
       return v
     end
 
     local db_name = rawget(t, "_db_name")
+    local rt
     if assert(db.__schema[db_name][k], "Attempt to access sheet '" .. k .. "'in db '" .. db_name .. "' that does not exist.") then
       rt = setmetatable({ _db_name = db_name, _sht_name = k }, db.__SheetMT)
       rawset(t, k, rt)
@@ -1740,7 +1748,7 @@ function db:get_database(db_name)
   db_name = db:safe_name(db_name)
   assert(db.__schema[db_name], "Attempt to access database that does not exist.")
 
-  db_inst = { _db_name = db_name }
+  local db_inst = { _db_name = db_name }
   return setmetatable(db_inst, db.__DatabaseMT)
 end
 

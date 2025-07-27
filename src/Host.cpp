@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -80,7 +80,11 @@ stopWatch::stopWatch()
 , mEffectiveStartDateTime()
 , mElapsedTime()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    mEffectiveStartDateTime.setTimeZone(QTimeZone::UTC);
+#else
     mEffectiveStartDateTime.setTimeSpec(Qt::UTC);
+#endif
 }
 
 bool stopWatch::start()
@@ -212,7 +216,6 @@ QString stopWatch::getElapsedDayTimeString() const
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
-, mpConsole(nullptr)
 , mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
@@ -222,7 +225,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBlockScriptCompile(true)
 , mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
-, mCommandLineFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(qsl(";;"))
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
@@ -236,15 +238,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsProfileLoadingSequence(false)
-, mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
-, mF3SearchEnabled(false)
-, mIsRemoteEchoingActive(false)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
@@ -282,7 +281,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mMapperShowRoomBorders(true)
-, mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
@@ -292,7 +290,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDlgIRC(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mTutorialForCompactLineAlreadyShown(false)
-, mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
@@ -325,6 +322,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCompactInputLine(false)
 {
     TDebug::addHost(this, mHostName);
+    setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -410,9 +408,33 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         });
     }
 
-    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
-    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){
+        purgeTimer.start(1min);
+
+        if (getForceMXPProcessorOn()) {
+            mMxpProcessor.disable();
+        }
+    });
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){
+        purgeTimer.stop();
+
+        if (getForceMXPProcessorOn()) {
+            mMxpProcessor.enable();
+            qDebug() << "MXP enabled (forced)";
+        }
+    });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
+    connect(this, &Host::signal_forceMXPProcessorOnChanged, this, [this](bool enabled) {
+        if (enabled) {
+            if (!mMxpProcessor.isEnabled()) {
+                mMxpProcessor.enable();
+                qDebug() << "MXP enabled (forced)";
+            }
+        } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
+            mMxpProcessor.disable();
+            qDebug() << "MXP disabled (forced)";
+        }
+    });
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
@@ -566,7 +588,7 @@ void Host::startMapAutosave(const int interval)
 
 void Host::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     autoSaveMap();
 }
@@ -1025,28 +1047,34 @@ QString Host::getMmpMapLocation() const
 // error and debug consoles inherit font of the main console
 void Host::updateConsolesFont()
 {
-    if (mpConsole) {
-        mpConsole->refreshView();
-
-        TEvent event{};
-        event.mArgumentList.append(qsl("sysSettingChanged"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(qsl("main window font"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(mDisplayFont.family());
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(QString::number(mDisplayFont.pointSize()));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        raiseEvent(event);
+    if (!mpConsole) {
+        qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font releated operations.";
+        return;
     }
 
-    if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
-        mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
-        mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
+    mpConsole->refreshView();
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysSettingChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(qsl("main window font"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(mpConsole->font().family());
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(mpConsole->font().pointSize()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    raiseEvent(event);
+
+    if (mpEditorDialog) {
+        mpEditorDialog->setDisplayFont(mpConsole->font());
     }
+
     if (mudlet::self()->smpDebugArea) {
-        mudlet::self()->smpDebugConsole->setFont(mDisplayFont.family());
-        mudlet::self()->smpDebugConsole->setFontSize(mDisplayFont.pointSize());
+        mudlet::self()->smpDebugConsole->setFont(mpConsole->font());
+    }
+
+    if (mpNotePad) {
+        mpNotePad->setFont(mpConsole->font());
     }
 }
 
@@ -1091,6 +1119,7 @@ QString Host::mediaLocationMSP() const
     return mMediaLocationMSP;
 }
 
+// Completely specifies the font for use in the main console and elsewhere:
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
     const QFontMetrics metrics(font);
@@ -1098,28 +1127,49 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
     }
 
-    mDisplayFont = font;
-    updateConsolesFont();
+    if (mpConsole) {
+        if (mpConsole->font() != font) {
+            mpConsole->setFont(font);
+
+            updateConsolesFont();
+        }
+        return {true, QString()};
+    }
+
+    qDebug().noquote().nospace() << "Host::setDisplayFont(...) INFO - No TMainConsole to set font for - faking it";
+
+    mTempDisplayFontAttributes = TFontAttributes(font);
+    mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+
     return {true, QString()};
 }
 
-std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
-{
-    const auto result = setDisplayFont(QFont(fontName));
-    updateConsolesFont();
-    return result;
-}
-
+// Also completely specifies the font for use in the main console and elsewhere:
 void Host::setDisplayFontFromString(const QString& fontData)
 {
-    mDisplayFont.fromString(fontData);
-    updateConsolesFont();
+    QFont font;
+    font.fromString(fontData);
+    setDisplayFont(font);
 }
 
 void Host::setDisplayFontSize(int size)
 {
-    mDisplayFont.setPointSize(size);
-    updateConsolesFont();
+    if (mpConsole) {
+        if (mpConsole->font().pointSize() != size) {
+            mpConsole->setFontSize(size);
+            updateConsolesFont();
+        }
+
+        return;
+    }
+
+    qDebug().noquote().nospace() << "Host::setDisplayFontSize(...) INFO - No TMainConsole to set font for - faking it";
+    if (!mTempDisplayFontAttributes.has_value()) {
+        mTempDisplayFontAttributes = TFontAttributes(!mNoAntiAlias);
+    }
+
+    mTempDisplayFontAttributes.value().mPointSize = size;
+    mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
 }
 
 // Now returns the total weight of the path
@@ -1189,7 +1239,7 @@ bool Host::checkForCustomSpeedwalk()
 void Host::startSpeedWalk()
 {
     const int totalWeight = assemblePath();
-    Q_UNUSED(totalWeight);
+    Q_UNUSED(totalWeight)
     const QString f = qsl("doSpeedWalk");
     const QString n = QString();
     mLuaInterpreter.call(f, n);
@@ -1265,7 +1315,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
         // allow sending blank commands
 
-    if (!dontExpandAliases && commandList.empty()) {
+    if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
         return;
@@ -1996,7 +2046,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 }
 
 
-QString Host::sanitizePackageName(const QString packageName) const {
+QString Host::sanitizePackageName(const QString packageName) const
+{
     auto tempName = packageName.section(qsl("/"), -1);
     tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
     tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
@@ -2030,7 +2081,8 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+void Host::removePackageInfo(const QString &packageName, const bool isModule)
+{
     if (isModule) {
         mModuleInfo.remove(packageName);
     } else {
@@ -2829,7 +2881,7 @@ void Host::setSpellDic(const QString& newDict)
 // DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
 void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
 {
-    Q_UNUSED(_useDictionary);
+    Q_UNUSED(_useDictionary)
     const bool useDictionary = true;
     bool dictionaryChanged {};
     // Copy the value while we have the lock:
@@ -2930,10 +2982,10 @@ void Host::updateProxySettings(QNetworkAccessManager* manager)
 
 std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 {
-    if (!mpDownloaderProxy) {
-        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    if (!mpConnectionProxy) {
+        mpConnectionProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
     }
-    auto& proxy = mpDownloaderProxy;
+    auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
     if (!mProxyUsername.isEmpty()) {
@@ -2943,22 +2995,7 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
         proxy->setPassword(mProxyPassword);
     }
 
-    return mpDownloaderProxy;
-}
-
-void Host::setDisplayFontSpacing(const qreal spacing)
-{
-    mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, spacing);
-}
-
-void Host::setDisplayFontStyle(QFont::StyleStrategy s)
-{
-    mDisplayFont.setStyleStrategy(s);
-}
-
-void Host::setDisplayFontFixedPitch(bool enable)
-{
-    mDisplayFont.setFixedPitch(enable);
+    return mpConnectionProxy;
 }
 
 void Host::loadSecuredPassword()
@@ -3865,20 +3902,18 @@ QSize Host::calcFontSize(const QString& windowName)
         return QSize(-1, -1);
     }
 
-    QFont font;
     if (windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        font = mDisplayFont;
-    } else {
-        auto pC = mpConsole->mSubConsoleMap.value(windowName);
-        if (pC) {
-            Q_ASSERT_X(pC->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
-            font = pC->mUpperPane->mDisplayFont;
-        } else {
-            return QSize(-1, -1);
-        }
+        QFontMetrics fontMetrics(mpConsole->mUpperPane->fontMetrics());
+        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
     }
 
-    auto fontMetrics = QFontMetrics(font);
+    auto pC = mpConsole->mSubConsoleMap.value(windowName);
+    if (!pC) {
+        return QSize(-1, -1);
+    }
+
+    Q_ASSERT_X(pC->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
+    QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
     return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
 }
 
@@ -4276,11 +4311,13 @@ void Host::setEditorShowBidi(const bool state)
     }
 }
 
-bool Host::caretEnabled() const {
+bool Host::caretEnabled() const
+{
     return mCaretEnabled;
 }
 
-void Host::setCaretEnabled(bool enabled) {
+void Host::setCaretEnabled(bool enabled)
+{
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
 }
@@ -4389,4 +4426,48 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();
+}
+
+void Host::sendCmdLine(const QString& cmd)
+{
+    if (!mpConsole || !mpConsole->mpCommandLine) {
+        qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
+        return;
+    }
+
+    // Set the command in the active command line
+    mpConsole->mpCommandLine->setPlainText(cmd);
+    mpConsole->mpCommandLine->selectAll();
+}
+
+void Host::setRemoteEchoingActive(bool active)
+{
+    if (mIsRemoteEchoingActive != active) {
+        mIsRemoteEchoingActive = active;
+        emit signal_remoteEchoChanged(active);
+    }
+}
+
+QFont Host::getDisplayFont()
+{
+    if (mpConsole) {
+        return mpConsole->font();
+    }
+
+    qDebug().noquote().nospace() << "Host::getDisplayFont() INFO - No TMainConsole to get font from - faking it";
+
+    if (!mTempDisplayFontAttributes.has_value() || !mTempDisplayFont.has_value()) {
+        mTempDisplayFontAttributes = TFontAttributes(!mNoAntiAlias);
+        mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    }
+
+    return mTempDisplayFont.value();
+}
+
+QFont Host::getAndClearTempDisplayFont()
+{
+    QFont tempFont = mTempDisplayFont.value();
+    mTempDisplayFont.reset();
+    mTempDisplayFontAttributes.reset();
+    return tempFont;
 }

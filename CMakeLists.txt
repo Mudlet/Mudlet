@@ -146,6 +146,8 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
 
 find_package(Qt6 6.4.0 REQUIRED)
 
+find_package(Lua 5.1 EXACT)
+
 # Set Qt version for edbee-lib and dblsqd
 option(BUILD_WITH_QT5 "" OFF)
 # Set Qt version for qtkeychain

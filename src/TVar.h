@@ -30,7 +30,11 @@
 #include "post_guard.h"
 
 extern "C" {
-    #include <lua.h>
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
 }
 
 class TVar
@@ -82,7 +86,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TVar* var)
 {
   QDebugStateSaver saver(debug);
-  Q_UNUSED(saver);
+  Q_UNUSED(saver)
   debug.nospace() << "TVar(" << var->getName() << ")";
 
   switch (var->getKeyType()) {
@@ -102,7 +106,7 @@ inline QDebug& operator<<(QDebug& debug, const TVar* var)
     case LUA_TNONE: debug.nospace() << ", valueType=none"; break;
     case LUA_TNIL: debug.nospace() << ", valueType=nil"; break;
     case LUA_TBOOLEAN: debug.nospace() << ", valueType=boolean"; break;
-    case LUA_TLIGHTUSERDATA: debug.nospace() << ", valueType=lightuserdata"; break;  
+    case LUA_TLIGHTUSERDATA: debug.nospace() << ", valueType=lightuserdata"; break;
     case LUA_TNUMBER: debug.nospace() << ", valueType=number"; break;
     case LUA_TSTRING: debug.nospace() << ", valueType=string"; break;
     case LUA_TTABLE: debug.nospace() << ", valueType=table"; break;

@@ -50,6 +50,7 @@ public:
     TMXPMode mode() const;
 
     void enable();
+    void disable();
     bool isEnabled() const;
     void resetToDefaultMode();
 

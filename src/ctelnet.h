@@ -51,6 +51,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <QVector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -220,10 +221,12 @@ public:
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
+    bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
+    void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
-    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+    QAbstractSocket::SocketState getConnectionState() const { return mpSocket.state(); }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
@@ -324,12 +327,15 @@ private:
 
     static std::pair<bool, bool> testReadReplayFile();
 
+    void trackKaVirNegotiation(unsigned char option);
+    void autoEnableMXPProcessor();
+    void autoEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
-    QTcpSocket socket;
+    QTcpSocket mpSocket;
 #else
-    QSslSocket socket;
+    QSslSocket mpSocket;
 #endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
@@ -337,8 +343,8 @@ private:
     QTextCodec* outgoingDataCodec = nullptr;
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder = nullptr;
-    QString hostName;
-    int hostPort = 0;
+    QString mHostName;
+    int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
 
@@ -397,6 +403,7 @@ private:
     bool enableMSSP = false;
     bool enableMSDP = false;
     bool enableMSP = false;
+    bool enableMXP = false;
     bool enableChannel102 = false;
     bool mDontReconnect = false;
     bool mAutoReconnect = false;
@@ -424,6 +431,9 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    // KaVir protocol negotiation tracking
+    QVector<unsigned char> mNegotiationOrder;
 };
 
 #endif // MUDLET_CTELNET_H

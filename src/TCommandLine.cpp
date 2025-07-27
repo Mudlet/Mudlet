@@ -37,6 +37,8 @@
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
+#include <QToolButton>
+#include <QIcon>
 #include "post_guard.h"
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -52,8 +54,21 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    setFont(mpHost->getDisplayFont());
+    setFont(mpConsole->font());
     document()->setDocumentMargin(2);
+
+    // Create password toggle button for MainCommandLine only
+    if (mType == MainCommandLine) {
+        mpPasswordToggleButton = new QToolButton(this);
+        mpPasswordToggleButton->setMinimumSize(QSize(20, 20));
+        mpPasswordToggleButton->setMaximumSize(QSize(20, 20));
+        mpPasswordToggleButton->setFocusPolicy(Qt::NoFocus);
+        mpPasswordToggleButton->setCursor(Qt::PointingHandCursor);
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
+        mpPasswordToggleButton->setToolTip(tr("Show password"));
+        mpPasswordToggleButton->setVisible(false); // Hidden by default
+        connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
+    }
 
     if (mType & (MainCommandLine|ConsoleCommandLine)) {
         // put an outline around the command line when it is integrated into
@@ -97,6 +112,12 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     restoreHistory();
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
+
+    if (mType == MainCommandLine) { // Limit to the main command line only
+        connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
+            this->setEchoSuppression(isRemoteEcho);
+        });
+    }
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -618,11 +639,8 @@ void TCommandLine::adjustHeight()
     }
     const int fontH = QFontMetrics(font()).height();
     // Adjust height margin based on font size and if it is more than one row
-    int marginH = lines > 1 ? 2+fontH/3 : 5;
-    if (lines > 1 && marginH < 8) {
-        marginH = 8; // needed for very small fonts
-    }
-    int _height = fontH * lines + marginH;
+    int marginH = lines > 1 ? 10 : 5;
+    int _height = (fontH + 1) * lines + marginH;
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
@@ -880,6 +898,13 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
+    // Prevent selection, drag/drop of text in the command line when echo suppression is on
+    // Allow right-click to show the context menu (enables Paste)
+    if (mIsEchoSuppressed && mType == MainCommandLine && event->button() != Qt::RightButton) {
+        event->ignore();
+        return;
+    }
+
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
         if (mpHost->mEnableSpellCheck) {
@@ -947,7 +972,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty()) {
+    if (!toPlainText().isEmpty() && !mpHost->isRemoteEchoingActive()) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
@@ -1240,11 +1265,13 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 {
-    const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+    const Qt::KeyboardModifiers allExceptShiftModifiers = Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
 
-    if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
-        // let user-defined Ctrl+# keys match first - and only if the user hasn't created
-        // then we fallback to tab switching
+    if ((ke->modifiers() & allExceptShiftModifiers) == Qt::ControlModifier) {
+        // let user-defined Ctrl+# keys match first - and only if the user
+        // hasn't created one then we fallback to tab switching - however
+        // since some locales need the SHIFT modifier to enter numbers from the
+        // top keyboard row (e.g. French AZERTY) we must ignore that one!
         if (keybindingMatched(ke)) {
             // Ah the user HAS created a matching binding:
             return true;
@@ -1551,5 +1578,238 @@ void TCommandLine::slot_saveHistory()
             qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
                                          << " of type: " << mType << " reason: " << historyFile.errorString();
         }
+    }
+}
+
+/*
+ * setEchoSuppression - Handle password input mode for the main command line
+ * 
+ * This function manages the transition between normal command input and secure password entry.
+ * When a MUD server requests password input, it signals echo suppression which hides user typing.
+ * 
+ * Key challenges handled:
+ * - Preserving user's command text during password prompts for restoration afterward
+ * - Distinguishing between commands and partial password input when suppression activates
+ * - Maintaining correct selection state (important for auto-clear OFF workflow)
+ * - Supporting users who type password characters before echo suppression kicks in
+ * 
+ * Common workflows:
+ * 1. Auto-clear ON: user types command -> sends -> password prompt -> restore command
+ * 2. Auto-clear OFF: user types command -> sends -> command selected -> password prompt -> restore selected command  
+ * 3. Rapid login: user types 'password' -> server enables echo suppression mid-typing -> continue hidden
+ * 4. Empty command line: straightforward password entry with no restoration needed
+ * 
+ * @param suppress true to start password mode (hide input), false to end it (restore normal input)
+ */
+void TCommandLine::setEchoSuppression(bool suppress)
+{
+    // Echo suppression (password masking) only applies to the main command line
+    // SubCommandLines and ConsoleCommandLines are not affected by server password prompts
+    if (mType != MainCommandLine) {
+        return;
+    }
+
+    // Early exit if suppression state hasn't changed - avoids unnecessary processing
+    if (mIsEchoSuppressed == suppress) {
+        return;
+    }
+
+    mIsEchoSuppressed = suppress;
+
+    if (suppress) {
+        // === STARTING PASSWORD INPUT MODE ===
+        // When password prompting begins, we need to handle different scenarios:
+        // 1. User has command typed and selected (auto-clear OFF) - preserve for restoration
+        // 2. User has unselected command (auto-clear ON) - check if it's a command vs. partial password
+        // 3. User was already typing password characters before echo suppression activated
+        // 4. Command line is empty - simple case, just start password mode
+        
+        const QString currentText = toPlainText();
+        QString textToRestoreAfterPassword;  // Command text to restore after password entry
+        QString partialPasswordToKeep;       // Password chars user typed before suppression activated
+        
+        // Analyze what the user currently has in the command line
+        if (!currentText.isEmpty()) {
+            QTextCursor cursor = textCursor();
+
+            if (cursor.hasSelection()) {
+                // SCENARIO 1: Auto-clear is OFF, previous command is selected
+                // User workflow: sent command -> server shows password prompt -> command gets selected
+                // Action: Save selected text for restoration after password, remember it was selected
+                textToRestoreAfterPassword = cursor.selectedText();
+                mRestoredTextShouldBeSelected = true;
+            } else {
+                // SCENARIO 2 & 3: Text exists but isn't selected - determine what it is
+                mRestoredTextShouldBeSelected = false;
+                
+                // Check if current text matches recent command history to distinguish between:
+                // - A command that was just sent (preserve it)
+                // - Password characters already being typed (continue with them)
+                bool isExistingCommand = false;
+                const int maxHistoryEntriesToCheck = qMin(500, mHistoryList.size());
+
+                for (int i = 0; i < maxHistoryEntriesToCheck; ++i) {
+                    const QString& historyEntry = mHistoryList[i];
+
+                    if (!historyEntry.isEmpty()) {
+                        if (currentText == historyEntry) {
+                            isExistingCommand = true;
+                        }
+                        break;
+                    }
+                }
+                
+                if (!isExistingCommand && !mHistoryList.isEmpty()) {
+                    // SCENARIO 3: Text doesn't match history - likely password chars already typed
+                    // User workflow: types 'password' -> server enables echo suppression mid-typing
+                    // Action: Continue with these characters as hidden password input
+                    partialPasswordToKeep = currentText;
+                } else {
+                    // SCENARIO 2: Text matches history - it's a recently sent command
+                    // User workflow: types command -> sends it -> server prompts for password
+                    // Action: Preserve command for restoration after password entry
+                    textToRestoreAfterPassword = currentText;
+                }
+            }
+        } else {
+            // SCENARIO 4: Command line is empty - straightforward password entry
+            mRestoredTextShouldBeSelected = false;
+        }
+        
+        // Store the command text for later restoration (empty if none to restore)
+        mTextToRestoreAfterEchoSuppression = textToRestoreAfterPassword;
+        clear();  // Clear command line for password input
+        
+        // Show password toggle button and reset visibility state
+        if (mpPasswordToggleButton) {
+            mPasswordVisible = false; // Start with password hidden
+            updatePasswordToggleButton();
+            mpPasswordToggleButton->setVisible(true);
+            positionPasswordToggleButton();
+        }
+        
+        // If user was already typing password characters, restore them and continue
+        if (!partialPasswordToKeep.isEmpty()) {
+            setPlainText(partialPasswordToKeep);
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::End);  // Position cursor for continued typing
+            setTextCursor(cursor);
+        }
+    } else {
+        // === ENDING PASSWORD INPUT MODE ===
+        // Password entry is complete, restore the command line to its previous state
+        // This handles the transition from hidden password input back to normal command entry
+        
+        clear();  // Clear the password field first for security
+        
+        // Hide password toggle button
+        if (mpPasswordToggleButton) {
+            mpPasswordToggleButton->setVisible(false);
+        }
+        
+        // Restore any command text that was preserved when password mode started
+        if (!mTextToRestoreAfterEchoSuppression.isEmpty()) {
+            setPlainText(mTextToRestoreAfterEchoSuppression);
+            
+            // Restore the original selection state to maintain user workflow consistency
+            QTextCursor cursor = textCursor();
+
+            if (mRestoredTextShouldBeSelected) {
+                // Original text was selected (auto-clear OFF) - restore selection
+                // User workflow: command selected -> password entered -> command re-selected for editing/resending
+                cursor.movePosition(QTextCursor::Start);
+                cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+            } else {
+                // Original text was not selected - position cursor at end for continued typing
+                cursor.movePosition(QTextCursor::End);
+            }
+
+            setTextCursor(cursor);
+            
+            // Clear saved state - restoration is complete
+            mTextToRestoreAfterEchoSuppression.clear();
+            mRestoredTextShouldBeSelected = false;
+        }
+    }
+
+    viewport()->update(); // Force repaint to apply/remove password masking visual effect
+}
+
+void TCommandLine::paintEvent(QPaintEvent* event)
+{
+    // Only mask text for the main command line when echo is suppressed and password is not visible
+    if (mIsEchoSuppressed && mType == MainCommandLine && !mPasswordVisible) {
+        QPainter painter(viewport());
+        QTextCursor cursor = textCursor();
+        QTextBlock block = document()->firstBlock();
+        QFontMetrics fm(font());
+
+        // Paint each line with asterisks instead of actual text
+        for (QTextBlock b = block; b.isValid(); b = b.next()) {
+            QString text = b.text();
+            QString mask = QString('*').repeated(text.length());
+            QRect r = blockBoundingGeometry(b).translated(contentOffset()).toRect();
+            painter.drawText(r.topLeft() + QPoint(0, fm.ascent()), mask);
+        }
+        return;
+    }
+
+    QPlainTextEdit::paintEvent(event);
+}
+
+void TCommandLine::slot_togglePasswordVisibility()
+{
+    if (!mIsEchoSuppressed || mType != MainCommandLine) {
+        return;
+    }
+
+    mPasswordVisible = !mPasswordVisible;
+    updatePasswordToggleButton();
+    viewport()->update(); // triggers paintEvent to mask/unmask
+}
+
+void TCommandLine::updatePasswordToggleButton()
+{
+    if (!mpPasswordToggleButton) {
+        return;
+    }
+
+    if (mPasswordVisible) {
+        // Password is visible, show "hide" icon (eye with slash)
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-off.png")));
+        mpPasswordToggleButton->setToolTip(tr("Hide password"));
+    } else {
+        // Password is hidden, show "show" icon (eye)
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
+        mpPasswordToggleButton->setToolTip(tr("Show password"));
+    }
+}
+
+void TCommandLine::positionPasswordToggleButton()
+{
+    if (!mpPasswordToggleButton) {
+        return;
+    }
+
+    // Position the button at the right side of the text edit
+    const QRect viewportRect = viewport()->geometry();
+    const int buttonWidth = mpPasswordToggleButton->width();
+    const int buttonHeight = mpPasswordToggleButton->height();
+    const int margin = 5;
+
+    // Position at the right edge, vertically centered
+    const int x = viewportRect.width() - buttonWidth - margin;
+    const int y = (viewportRect.height() - buttonHeight) / 2;
+
+    mpPasswordToggleButton->move(x, y);
+}
+
+void TCommandLine::resizeEvent(QResizeEvent* event)
+{
+    QPlainTextEdit::resizeEvent(event);
+
+    // Reposition the password toggle button when the widget is resized
+    if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
+        positionPasswordToggleButton();
     }
 }

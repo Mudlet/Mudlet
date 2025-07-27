@@ -62,9 +62,12 @@ public:
     void clearLoadingError();
     QString packageName(TScript* pScript);
     QString moduleName(TScript* pScript);
+    bool checkIfNew();
+    void unmarkAsNew();
 
     bool exportItem;
     bool mModuleMasterFolder;
+    bool isNew;
 
 private:
     TScript() = default;
@@ -83,7 +86,7 @@ private:
 inline QDebug& operator<<(QDebug& debug, const TScript* script)
 {
     QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    Q_UNUSED(saver)
     debug.nospace() << "TScript(" << script->getName() << ")";
     debug.nospace() << ", script=" << script->getScript();
     debug.nospace() << ", event handlers=" << script->getEventHandlerList();

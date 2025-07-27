@@ -40,6 +40,7 @@
 
 #include <string>
 
+
 class Host;
 class TConsole;
 class TChar;
@@ -60,7 +61,6 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
     void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
@@ -91,8 +91,9 @@ public:
     void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
     int getScreenHeight() const { return mScreenHeight; }
     void searchSelectionOnline();
-    int getColumnCount();
-    int getRowCount();
+    int getColumnCount() const;
+    int getRowCount() const;
+    void toggleTimeStamps(const bool);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     void reportCodepointErrors();
@@ -115,10 +116,7 @@ public:
     // long enough again.
     int mOldCaretColumn;
 
-    QFont mDisplayFont;
     QColor mFgColor;
-    int mFontAscent;
-    int mFontDescent;
     bool mIsCommandPopup;
     // If true, this TTextEdit is to display the last lines in
     // mpConsole.mpBuffer. This is always true for the lower main window panel
@@ -135,10 +133,8 @@ public:
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
-    bool mShowTimeStamps;
 
 public slots:
-    void slot_toggleTimeStamps(const bool);
     void slot_copySelectionToClipboard();
     void slot_selectAll();
     void slot_scrollBarMoved(int);
@@ -224,10 +220,6 @@ private:
     // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
     // in the past it was typically 8 and this is what we'll use at present:
     int mTabStopwidth;
-    // How many normal width characters that are used for the time stamps; it
-    // would only be valid to change this by clearing the buffer first - so
-    // making this a const value for the moment:
-    const int mTimeStampWidth;
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     bool mShowAllCodepointIssues = false;

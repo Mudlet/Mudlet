@@ -54,6 +54,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
 , mClipboard(pH)
 {
+    setFont(pH->getAndClearTempDisplayFont());
+
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
     // non-null mudlet::self() - the connect(...) will produce a debug
@@ -350,13 +352,12 @@ void TMainConsole::selectCurrentLine(std::string& buf)
     }
 }
 
-std::list<int> TMainConsole::getFgColor(std::string& buf)
+std::list<int> TMainConsole::getFgColor(QString& buf)
 {
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
+    if (buf.isEmpty() || buf == QLatin1String("main")) {
         return TConsole::getFgColor();
     }
-    auto pC = mSubConsoleMap.value(key);
+    auto pC = mSubConsoleMap.value(buf);
     if (pC) {
         return pC->getFgColor();
     }
@@ -364,13 +365,12 @@ std::list<int> TMainConsole::getFgColor(std::string& buf)
     return {};
 }
 
-std::list<int> TMainConsole::getBgColor(std::string& buf)
+std::list<int> TMainConsole::getBgColor(QString& buf)
 {
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
+    if (buf.isEmpty() || buf == QLatin1String("main")) {
         return TConsole::getBgColor();
     }
-    auto pC = mSubConsoleMap.value(key);
+    auto pC = mSubConsoleMap.value(buf);
     if (pC) {
         return pC->getBgColor();
     }
@@ -392,14 +392,13 @@ QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
     return qMakePair(1, TChar());
 }
 
-void TMainConsole::luaWrapLine(std::string& buf, int line)
+void TMainConsole::luaWrapLine(QString& buf, int line)
 {
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
+    if (buf.isEmpty() || buf == QLatin1String("main")) {
         TConsole::luaWrapLine(line);
         return;
     }
-    auto pC = mSubConsoleMap.value(key);
+    auto pC = mSubConsoleMap.value(buf);
     if (pC) {
         pC->luaWrapLine(line);
     }
@@ -1215,8 +1214,12 @@ void TMainConsole::runTriggers(int line)
 
 void TMainConsole::finalize()
 {
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
+    if (mUpperPane) {
+        mUpperPane->showNewLines();
+    }
+    if (mLowerPane) {
+        mLowerPane->showNewLines();
+    }
 }
 
 // TODO: It may be worth considering moving the (now) three following methods
@@ -1476,6 +1479,11 @@ void TMainConsole::showStatistics()
         //: Heading for the system's statistics information displayed in the console
         subjects << tr("Channel102 events:");
         tables << QLatin1String("channel102");
+    }
+    if (pHost->mTelnet.isMXPEnabled()) {
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("MXP events:");
+        tables << QLatin1String("mxp");
     }
     if (pHost->mTelnet.isMSSPEnabled()) {
         //: Heading for the system's statistics information displayed in the console

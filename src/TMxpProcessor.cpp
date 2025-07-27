@@ -145,6 +145,11 @@ void TMxpProcessor::enable()
     mMXP = true;
 }
 
+void TMxpProcessor::disable()
+{
+    mMXP = false;
+}
+
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {

@@ -715,6 +715,19 @@ void XMLimport::readHostPackage()
 
 void XMLimport::readHost(Host* pHost)
 {
+    // This is an inline helper function to get a boolean value from a legacy attribute
+    // or return a default value. It also allows for inverting the result which is useful
+    // for attributes that have been negated in the past (e.g., mFORCE_MXP_NEGOTIATION_OFF
+    // which is now mEnableMXP).
+    auto getBoolValueFromLegacyAttributeOrDefault = [&](const QString& legacyAttribute, const bool defaultsTo, bool invert = false) -> bool {
+        if (attributes().hasAttribute(legacyAttribute)) {
+            bool value = attributes().value(legacyAttribute) == YES;
+            return invert ? !value : value;
+        } else {
+            return defaultsTo;
+        }
+    };
+
     auto setBoolAttributeWithDefault = [&](const QString& attribute, bool& target, const bool defaultsTo) {
         target = attributes().hasAttribute(attribute) ? attributes().value(attribute) == YES : defaultsTo;
     };
@@ -725,8 +738,10 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
+    setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
@@ -751,8 +766,10 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
-    setBoolAttribute(qsl("mFORCE_MXP_NEGOTIATION_OFF"), pHost->mFORCE_MXP_NEGOTIATION_OFF);
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
+    setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
+    setBoolAttribute(qsl("mPromptedForMXPProcessorOn"), pHost->mPromptedForMXPProcessorOn);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);
@@ -765,7 +782,9 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mSslIgnoreAll"), pHost->mSslIgnoreAll);
     setBoolAttribute(qsl("mAskTlsAvailable"), pHost->mAskTlsAvailable);
     setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
+    setBoolAttribute(qsl("f3SearchEnabled"), pHost->mF3SearchEnabled);
 
+    pHost->setForceMXPProcessorOn(attributes().value(qsl("mForceMXPProcessorOn")) == YES);
     pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
 
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
@@ -1164,11 +1183,12 @@ void XMLimport::readHost(Host* pHost)
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
                 // On GNU/Linux and FreeBSD ensure that emojis are displayed in
                 // colour even if this font doesn't support it:
-                QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+                QFont::insertSubstitution(pHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
 #endif
-                pHost->setDisplayFontFixedPitch(true);
             } else if (name() == qsl("mCommandLineFont")) {
-                pHost->mCommandLineFont.fromString(readElementText());
+                // We use the same font as the main console now so discard this
+                // one silently:
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("commandSeperator")) {
                 // Ignore this misspelled duplicate, it has been removed from
                 // the Xml format but will appear in older files and trip the
@@ -1228,6 +1248,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mFgColor_2 = QColor::fromString(readElementText());
             } else if (name() == qsl("mBgColor2")) {
                 pHost->mBgColor_2 = QColor::fromString(readElementText());
+            } else if (name() == qsl("mLowerLevelColor")) {
+                pHost->mLowerLevelColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mUpperLevelColor")) {
+                pHost->mUpperLevelColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomBorderColor")) {
                 pHost->mRoomBorderColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
@@ -1281,7 +1305,7 @@ void XMLimport::readHost(Host* pHost)
                 // We still check for them so that we avoid falling into the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText());
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("mMapInfoContributors")) {
                 readLegacyMapInfoContributors();
             } else if (name() == qsl("mapInfoContributor")) {
@@ -1300,7 +1324,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
 }
 
-bool XMLimport::readDefaultTrueBool(QString name) {
+bool XMLimport::readDefaultTrueBool(QString name)
+{
     return attributes().value(name) == YES || !attributes().hasAttribute(name);
 }
 

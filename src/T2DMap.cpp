@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
@@ -2429,6 +2429,10 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         // Can't call pRoom->getArea() further down without a valid pRoom!
         return;
     }
+
+    painter.save();
+    painter.setFont(mpHost->getDisplayFont());
+
     int yOffset = 20;
     const int initialYOffset = yOffset;
     // Left margin for info widget:
@@ -2471,6 +2475,8 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     if (yOffset > initialYOffset) {
         painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
     }
+
+    painter.restore();
 }
 
 int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
@@ -3178,7 +3184,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             setMouseTracking(false);
             mRoomBeingMoved = false;
-        } else if (!mPopupMenu) {
+        } else {
+            mPopupMenu = false;
             // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
             mMultiSelection = !mMapViewOnly;
             mMultiRect = QRect(event->pos(), event->pos());
@@ -3282,11 +3289,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 mMultiSelection = false;
                 mHelpMsg.clear();
             }
-
-        } else { // In popup menu, so end that
-            mPopupMenu = false;
         }
-
     }
 
     TEvent sysMapWindowMousePressEvent{};
@@ -3948,7 +3951,7 @@ void T2DMap::slot_setRoomProperties(
     bool changeSymbol, QString newSymbol,
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
-    bool changeLockStatus, bool newLockStatus,
+    bool changeLockStatus, std::optional<bool> newLockStatus,
     QSet<TRoom*> rooms)
 {
     if (newName.isEmpty()) {
@@ -3992,8 +3995,8 @@ void T2DMap::slot_setRoomProperties(
         if (changeWeight) {
             room->setWeight(newWeight);
         }
-        if (changeLockStatus) {
-            room->isLocked = newLockStatus;
+        if (changeLockStatus && newLockStatus.has_value()) {
+            room->isLocked = newLockStatus.value();
         }
     }
     if (changeWeight || changeLockStatus) {
@@ -4182,7 +4185,8 @@ void T2DMap::slot_setUserData()
 {
 }
 
-void T2DMap::slot_loadMap() {
+void T2DMap::slot_loadMap()
+{
     if (!mpHost) {
         return;
     }
@@ -4365,7 +4369,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         mpMap->mLeftDown = false;
     }
     if (mpMap->m2DPanMode) {
-        const QPointF panNewPosition = event->localPos();
+        const QPointF panNewPosition = event->position();
         mShiftMode = true;
         const QPointF movement = mpMap->m2DPanStart - panNewPosition;
         mMapCenterX += movement.x() / mRoomWidth;
@@ -5154,7 +5158,7 @@ void T2DMap::slot_setCustomLine2()
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
 {
-    Q_UNUSED(column);
+    Q_UNUSED(column)
     if (!special_exit) {
         return;
     }

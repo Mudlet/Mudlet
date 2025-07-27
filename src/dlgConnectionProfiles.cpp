@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1200,7 +1200,7 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 
     job->setKey(profile);
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
         if (task->error()) {
             const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
@@ -1566,6 +1566,16 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
+
+        Host* pActiveHost = mudlet::self()->getActiveHost();
+        if (pActiveHost && pActiveHost->getName() == profile_name) {
+            // The intention here is to do as little as possible if the same profile is chosen again
+            // this replicates function of mudlet::slot_reconnect to avoid #7395
+            pActiveHost->mTelnet.reconnect();
+            QDialog::accept();
+            return;
+        }
+
         pHost->setName(profile_name);
 
         if (!host_name_entry->text().trimmed().isEmpty()) {

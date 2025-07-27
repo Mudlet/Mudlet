@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -487,6 +487,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_enableClosedCaption->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -598,6 +599,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_enableClosedCaption->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -617,6 +619,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
 
+    fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    // Accomodate an initial font size being larger than expected - and ensure
+    // it is a positive value:
+    spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
+    spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
+    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
+
+    connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged);
+    connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged);
+    connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged);
+
     // search engine load
     search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
 
@@ -624,8 +637,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
-    mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
+    checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
     mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
@@ -640,7 +654,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     comboBox_dictionary->clear();
-    comboBox_dictionary->setInsertPolicy(QComboBox::InsertAlphabetically);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
@@ -663,7 +676,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
     const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
-    checkBox_spellCheck->setText(tr("Enable spell check using dictionary:"));
+    // Tweak the label for the provided spelling dictionaries depending on where
+    // they come from:
+    if (mudlet::self()->mUsingMudletDictionaries) {
+        //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
+        checkBox_spellCheck->setText(tr("Enable spell check using Mudlet dictionary:"));
+    } else {
+        //: On *nix systems where we find the system ones we use them
+        checkBox_spellCheck->setText(tr("Enable spell check using System dictionary:"));
+    }
 
     const QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
@@ -677,6 +698,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_dictionary->blockSignals(true);
     if (!entries.isEmpty()) {
         int currentIndex = -1;
+        // Because the list needs to be sorted by translated "display" name
+        // which will not follow the order of files seen we need to build a
+        // sorted map and then insert items into the QComboBox in that order:
+        QMap<QString, int> translatedNameToEntriesMap;
         for (int i = 0, total = entries.size(); i < total; ++i) {
             entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
@@ -687,16 +712,24 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             auto key = entries.at(i).toLower();
             key.replace(QLatin1String("-"), QLatin1String("_"));
 
-            QString displayText;
-            QString toolTip;
-            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
-                displayText = mudlet::self()->mDictionaryLanguageCodeMap.value(key);
-                toolTip = utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i))));
-            } else {
-                displayText = tr("%1 - not recognised").arg(entries.at(i));
-                toolTip = tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
-                            "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i)));
-            }
+            QString displayText = mudlet::self()->mDictionaryLanguageCodeMap.contains(key)
+                    ? mudlet::self()->mDictionaryLanguageCodeMap.value(key)
+                    : tr("%1 - not recognised").arg(entries.at(i));
+            translatedNameToEntriesMap.insert(displayText, i);
+        }
+
+        QMapIterator<QString, int> itTranslatedName(translatedNameToEntriesMap);
+        while (itTranslatedName.hasNext()) {
+            itTranslatedName.next();
+            const auto displayText = itTranslatedName.key();
+            const auto i = itTranslatedName.value();
+            auto key = entries.at(i).toLower();
+            key.replace(QLatin1String("-"), QLatin1String("_"));
+
+            QString toolTip = mudlet::self()->mDictionaryLanguageCodeMap.contains(key)
+                    ? utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i))))
+                    : tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
+                         "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i)));
 
             comboBox_dictionary->addItem(displayText, entries.at(i));
             comboBox_dictionary->setItemData(comboBox_dictionary->count() - 1, toolTip, Qt::ToolTipRole);
@@ -723,13 +756,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     setColors();
-
-    QStringList sizeList;
-    for (int i = 1; i < 40; i++) {
-        sizeList << QString::number(i);
-    }
-    fontSize->insertItems(1, sizeList);
-
     setColors2();
 
 
@@ -745,6 +771,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
+    checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
+    connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption);
+
     // Block signals before setting initial state to prevent toggled signal
     checkBox_f3SearchEnabled->blockSignals(true);
     checkBox_f3SearchEnabled->setChecked(pHost->getF3SearchEnabled());
@@ -754,23 +783,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
-
-    fontComboBox->setCurrentFont(pHost->getDisplayFont());
-    mFontSize = pHost->getDisplayFont().pointSize();
-    if (mFontSize < 0) {
-        mFontSize = 10;
-    }
-    if (mFontSize < 40 && mFontSize > 0) {
-        fontSize->setCurrentIndex((mFontSize - 1));
-    } else {
-        // if the font size set for the main console is outside the pre-set range
-        // this will unfortunately reset the font to default size.
-        // without this the first entry (font-size 1) is selected and on-save
-        // will make the console font far too tiny to read.
-        // Maybe our font-size range should be generated differently if the console
-        // has a font size larger than the preset range offers?
-        fontSize->setCurrentIndex(9); // default font is size 10, index 9.
-    }
 
     wrap_at_spinBox->setValue(pHost->mWrapAt);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
@@ -857,7 +869,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
-    mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
@@ -888,6 +899,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
+
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP->setCheckable(true);
+    mEnableMXP->setChecked(pHost->mEnableMXP);
+    protocolMenu->addAction(mEnableMXP);
 
     mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
     mEnableMTTS->setCheckable(true);
@@ -1013,8 +1029,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
         // Adjustable inner diameter not available for style '0' (original):
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
-        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
-        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
 
         connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
@@ -1192,10 +1208,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_resetColors, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetColors);
     connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetMapColors);
-
-    connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setDisplayFont);
-    connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setFontSize);
-
     connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorBlack);
     connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightBlack);
     connect(pushButton_green_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorGreen);
@@ -1225,6 +1237,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
@@ -1256,7 +1269,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
-        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=, this]() {
+        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence* newSequence = nullptr;
             if (sequenceEdit->keySequence().isEmpty()
                     || sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
@@ -1268,7 +1281,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             sequence->swap(*newSequence);
             delete newSequence;
         });
-        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=, this]() {
+        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
             sequenceEdit->setKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
             QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
             sequence->swap(*newSequence);
@@ -1283,6 +1296,10 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // The "new" style connect(...) does not have the same range of overloaded
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
+
+    disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
 
     disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
@@ -1313,9 +1330,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_resetColors, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(fontComboBox, qOverload<const QFont&>(&QFontComboBox::currentFontChanged), nullptr, nullptr);
-    disconnect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
-
     disconnect(pushButton_black_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_Lblack_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_green_2, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1345,6 +1359,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSP, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
 
@@ -1377,8 +1392,9 @@ void dlgProfilePreferences::clearHostDetails()
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
 
-    mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
+    checkBox_mVersionInTTYPE->setChecked(false);
+    checkBox_mForceMXPProcessorOn->setChecked(false);
     mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
@@ -1399,15 +1415,9 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_downloadMapOptions->setVisible(false);
 
-    fontSize->clear();
-
     need_reconnect_for_data_protocol->hide();
 
     need_reconnect_for_specialoption->hide();
-
-    fontComboBox->clear();
-
-    fontSize->clear();
 
     setColors();
     setColors2();
@@ -1430,7 +1440,9 @@ void dlgProfilePreferences::clearHostDetails()
     mIsToLogInHtml->setChecked(false);
     mIsLoggingTimestamps->setChecked(false);
     commandLineMinimumHeight->clear();
-    mNoAntiAlias->setChecked(false);
+    fontComboBox_displayFont->clear();
+    spinBox_displayFontSize->setValue(14);
+    checkBox_antiAlias->setChecked(false);
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -1442,8 +1454,6 @@ void dlgProfilePreferences::clearHostDetails()
         mpMenu->deleteLater();
         mpMenu = nullptr;
     }
-
-    pushButton_chooseProfiles->setEnabled(false);
 
     label_mapFileActionResult->hide();
 
@@ -1475,6 +1485,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_enableClosedCaption->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -1613,55 +1624,56 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_black_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBlack_2.name()));
-        pushButton_Lblack_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightBlack_2.name()));
-        pushButton_green_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mGreen_2.name()));
-        pushButton_Lgreen_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightGreen_2.name()));
-        pushButton_red_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRed_2.name()));
-        pushButton_Lred_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightRed_2.name()));
-        pushButton_blue_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBlue_2.name()));
-        pushButton_Lblue_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightBlue_2.name()));
-        pushButton_yellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mYellow_2.name()));
-        pushButton_Lyellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightYellow_2.name()));
-        pushButton_cyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mCyan_2.name()));
-        pushButton_Lcyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightCyan_2.name()));
-        pushButton_magenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMagenta_2.name()));
-        pushButton_Lmagenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightMagenta_2.name()));
-        pushButton_white_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mWhite_2.name()));
-        pushButton_Lwhite_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightWhite_2.name()));
+        setButtonColor(pushButton_black_2, pHost->mBlack_2, true);
+        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
+        setButtonColor(pushButton_green_2, pHost->mGreen_2, true);
+        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
+        setButtonColor(pushButton_red_2, pHost->mRed_2, true);
+        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2, true);
+        setButtonColor(pushButton_blue_2, pHost->mBlue_2, true);
+        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
+        setButtonColor(pushButton_yellow_2, pHost->mYellow_2, true);
+        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
+        setButtonColor(pushButton_cyan_2, pHost->mCyan_2, true);
+        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
+        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2, true);
+        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
+        setButtonColor(pushButton_white_2, pHost->mWhite_2, true);
+        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
 
-        pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mFgColor_2.name()));
-        pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
-        pushButton_lowerLevelColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLowerLevelColor.name()));
-        pushButton_upperLevelColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mUpperLevelColor.name()));
-        pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
-        pushButton_mapInfoBg->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMapInfoBg.name()));
-        pushButton_roomCollisionBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomCollisionBorderColor.name()));
+        setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
+        setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
+        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
+        setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
+        setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
     } else {
-        pushButton_black_2->setStyleSheet(QString());
-        pushButton_Lblack_2->setStyleSheet(QString());
-        pushButton_green_2->setStyleSheet(QString());
-        pushButton_Lgreen_2->setStyleSheet(QString());
-        pushButton_red_2->setStyleSheet(QString());
-        pushButton_Lred_2->setStyleSheet(QString());
-        pushButton_blue_2->setStyleSheet(QString());
-        pushButton_Lblue_2->setStyleSheet(QString());
-        pushButton_yellow_2->setStyleSheet(QString());
-        pushButton_Lyellow_2->setStyleSheet(QString());
-        pushButton_cyan_2->setStyleSheet(QString());
-        pushButton_Lcyan_2->setStyleSheet(QString());
-        pushButton_magenta_2->setStyleSheet(QString());
-        pushButton_Lmagenta_2->setStyleSheet(QString());
-        pushButton_white_2->setStyleSheet(QString());
-        pushButton_Lwhite_2->setStyleSheet(QString());
+        // Using QColor() gives an "invalid" color:
+        setButtonColor(pushButton_black_2, QColor());
+        setButtonColor(pushButton_Lblack_2, QColor());
+        setButtonColor(pushButton_green_2, QColor());
+        setButtonColor(pushButton_Lgreen_2, QColor());
+        setButtonColor(pushButton_red_2, QColor());
+        setButtonColor(pushButton_Lred_2, QColor());
+        setButtonColor(pushButton_blue_2, QColor());
+        setButtonColor(pushButton_Lblue_2, QColor());
+        setButtonColor(pushButton_yellow_2, QColor());
+        setButtonColor(pushButton_Lyellow_2, QColor());
+        setButtonColor(pushButton_cyan_2, QColor());
+        setButtonColor(pushButton_Lcyan_2, QColor());
+        setButtonColor(pushButton_magenta_2, QColor());
+        setButtonColor(pushButton_Lmagenta_2, QColor());
+        setButtonColor(pushButton_white_2, QColor());
+        setButtonColor(pushButton_Lwhite_2, QColor());
 
-        pushButton_foreground_color_2->setStyleSheet(QString());
-        pushButton_background_color_2->setStyleSheet(QString());
-        pushButton_lowerLevelColor->setStyleSheet(QString());
-        pushButton_upperLevelColor->setStyleSheet(QString());
-        pushButton_roomBorderColor->setStyleSheet(QString());
-        pushButton_mapInfoBg->setStyleSheet(QString());
-        pushButton_roomCollisionBorderColor->setStyleSheet(QString());
+        setButtonColor(pushButton_foreground_color_2, QColor());
+        setButtonColor(pushButton_background_color_2, QColor());
+        setButtonColor(pushButton_lowerLevelColor, QColor());
+        setButtonColor(pushButton_upperLevelColor, QColor());
+        setButtonColor(pushButton_roomBorderColor, QColor());
+        setButtonColor(pushButton_mapInfoBg, QColor());
+        setButtonColor(pushButton_roomCollisionBorderColor, QColor());
     }
 }
 
@@ -1734,31 +1746,37 @@ void dlgProfilePreferences::slot_resetMapColors()
         return;
     }
 
-    pHost->mFgColor_2 = Qt::lightGray;
-    pHost->mBgColor_2 = Qt::black;
-    pHost->mLowerLevelColor = Qt::darkGray;
-    pHost->mUpperLevelColor = Qt::white;
-    pHost->mRoomBorderColor = Qt::lightGray;
-    pHost->mRoomCollisionBorderColor = Qt::yellow;
-    pHost->mBlack_2 = Qt::black;
-    pHost->mLightBlack_2 = Qt::darkGray;
-    pHost->mRed_2 = Qt::darkRed;
-    pHost->mLightRed_2 = Qt::red;
-    pHost->mGreen_2 = Qt::darkGreen;
-    pHost->mLightGreen_2 = Qt::green;
-    pHost->mBlue_2 = Qt::darkBlue;
-    pHost->mLightBlue_2 = Qt::blue;
-    pHost->mYellow_2 = Qt::darkYellow;
-    pHost->mLightYellow_2 = Qt::yellow;
-    pHost->mCyan_2 = Qt::darkCyan;
-    pHost->mLightCyan_2 = Qt::cyan;
-    pHost->mMagenta_2 = Qt::darkMagenta;
-    pHost->mLightMagenta_2 = Qt::magenta;
-    pHost->mWhite_2 = Qt::lightGray;
-    pHost->mLightWhite_2 = Qt::white;
+    // As per values in Host.h:
+    pHost->mFgColor_2 = QColorConstants::LightGray;
+    pHost->mBgColor_2 = QColorConstants::Black;
+    pHost->mLowerLevelColor = QColorConstants::DarkGray;
+    pHost->mUpperLevelColor = QColorConstants::White;
+    pHost->mRoomBorderColor = QColorConstants::LightGray;
+    pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
+    pHost->mBlack_2 = QColorConstants::Black;
+    pHost->mLightBlack_2 = QColorConstants::DarkGray;
+    pHost->mRed_2 = QColorConstants::DarkRed;
+    pHost->mLightRed_2 = QColorConstants::Red;
+    pHost->mGreen_2 = QColorConstants::DarkGreen;
+    pHost->mLightGreen_2 = QColorConstants::Green;
+    pHost->mBlue_2 = QColorConstants::DarkBlue;
+    pHost->mLightBlue_2 = QColorConstants::Blue;
+    pHost->mYellow_2 = QColorConstants::DarkYellow;
+    pHost->mLightYellow_2 = QColorConstants::Yellow;
+    pHost->mCyan_2 = QColorConstants::DarkCyan;
+    pHost->mLightCyan_2 = QColorConstants::Cyan;
+    pHost->mMagenta_2 = QColorConstants::DarkMagenta;
+    pHost->mLightMagenta_2 = QColorConstants::Magenta;
+    pHost->mWhite_2 = QColorConstants::LightGray;
+    pHost->mLightWhite_2 = QColorConstants::White;
     pHost->mMapInfoBg = QColor(150, 150, 150, 120);
 
+    // This aplies the above colors to the buttons on display:
     setColors2();
+
+    if (pHost->mpMap) {
+        pHost->mpMap->update();
+    }
 }
 
 void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
@@ -1799,10 +1817,37 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
             pHost->updateAnsi16ColorsInTable();
         }
 
+        const bool isAMapEnvColor = (button == pushButton_black_2 || button == pushButton_Lblack_2
+                                     || button == pushButton_red_2 || button == pushButton_Lred_2
+                                     || button == pushButton_green_2 || button == pushButton_Lgreen_2
+                                     || button == pushButton_yellow_2 || button == pushButton_Lyellow_2
+                                     || button == pushButton_blue_2 || button == pushButton_Lblue_2
+                                     || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2
+                                     || button == pushButton_cyan_2 || button == pushButton_Lcyan_2
+                                     || button == pushButton_white_2 || button == pushButton_Lwhite_2);
+
+        if (isAMapEnvColor
+                || button == pushButton_foreground_color_2
+                || button == pushButton_background_color_2
+                || button == pushButton_lowerLevelColor
+                || button == pushButton_upperLevelColor
+                || button == pushButton_mapInfoBg
+                || button == pushButton_roomBorderColor
+                || button == pushButton_roomCollisionBorderColor) {
+
+            if (pHost->mpMap) {
+                // Update the custom environment (room colors)
+                if (isAMapEnvColor) {
+                    pHost->mpMap->restore16ColorSet();
+                }
+                // Redraw the map with the modified color:
+                pHost->mpMap->update();
+            }
+        }
+
         // Also set a contrasting foreground color so text will always be
-        // visible - if the button is disabled the colors will be somewhat
-        // "greyed-out":
-        setButtonColor(button, color);
+        // visible:
+        setButtonColor(button, color, allowAlpha);
     }
 }
 
@@ -1853,84 +1898,6 @@ void dlgProfilePreferences::slot_setCommandBgColor()
         setButtonAndProfileColor(pushButton_command_background_color, pHost->mCommandBgColor);
     }
 }
-
-void dlgProfilePreferences::slot_setFontSize()
-{
-    mFontSize = fontSize->currentIndex() + 1;
-    slot_setDisplayFont();
-
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
-}
-
-void dlgProfilePreferences::slot_setDisplayFont()
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
-    QFont newFont = fontComboBox->currentFont();
-    newFont.setPointSize(mFontSize);
-
-    if (pHost->getDisplayFont() == newFont) {
-        return;
-    }
-
-    label_invalidFontError->hide();
-    label_variableWidthFontWarning->hide();
-    if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
-        label_invalidFontError->show();
-        return;
-    } else if (!QFontInfo(newFont).fixedPitch()) {
-        label_variableWidthFontWarning->show();
-    }
-
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
-    // if this font doesn't support it:
-    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
-#endif
-
-    auto mainConsole = pHost->mpConsole;
-    if (!mainConsole) {
-        return;
-    }
-
-    // update the display properly when font or size selections change.
-    mainConsole->changeColors();
-    mainConsole->mUpperPane->updateScreenView();
-    mainConsole->mUpperPane->forceUpdate();
-    mainConsole->mLowerPane->updateScreenView();
-    mainConsole->mLowerPane->forceUpdate();
-    mainConsole->refresh();
-
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setFont(newFont);
-    config->endChanges();
-
-    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
-}
-
-// Currently UNUSED!
-//void dlgProfilePreferences::slot_setCommandLineFont()
-//{
-//    Host* pHost = mpHost;
-//    if (!pHost) {
-//        return;
-//    }
-//    bool ok;
-//    QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
-//    pHost->mCommandLineFont = font;
-//    if (pHost->mpConsole) {
-//        pHost->mpConsole->changeColors();
-//    }
-//}
 
 void dlgProfilePreferences::slot_setColorBlack()
 {
@@ -2123,7 +2090,7 @@ void dlgProfilePreferences::slot_setMapColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2);
+        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2, true);
     }
 }
 
@@ -2131,7 +2098,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2);
+        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
     }
 }
 
@@ -2139,7 +2106,7 @@ void dlgProfilePreferences::slot_setMapColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2);
+        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2, true);
     }
 }
 
@@ -2147,7 +2114,7 @@ void dlgProfilePreferences::slot_setMapColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2);
+        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2, true);
     }
 }
 
@@ -2155,7 +2122,7 @@ void dlgProfilePreferences::slot_setMapColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2);
+        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2, true);
     }
 }
 
@@ -2163,7 +2130,7 @@ void dlgProfilePreferences::slot_setMapColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
+        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
     }
 }
 
@@ -2171,7 +2138,7 @@ void dlgProfilePreferences::slot_setMapColorBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2);
+        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2, true);
     }
 }
 
@@ -2179,7 +2146,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2);
+        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
     }
 }
 
@@ -2187,7 +2154,7 @@ void dlgProfilePreferences::slot_setMapColorYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2);
+        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2, true);
     }
 }
 
@@ -2195,7 +2162,7 @@ void dlgProfilePreferences::slot_setMapColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
+        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
     }
 }
 
@@ -2203,7 +2170,7 @@ void dlgProfilePreferences::slot_setMapColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2);
+        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2, true);
     }
 }
 
@@ -2211,7 +2178,7 @@ void dlgProfilePreferences::slot_setMapColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
+        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
     }
 }
 
@@ -2219,7 +2186,7 @@ void dlgProfilePreferences::slot_setMapColorMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2);
+        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2, true);
     }
 }
 
@@ -2227,7 +2194,7 @@ void dlgProfilePreferences::slot_setMapColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
+        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
     }
 }
 
@@ -2235,7 +2202,7 @@ void dlgProfilePreferences::slot_setMapColorWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2);
+        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2, true);
     }
 }
 
@@ -2243,7 +2210,7 @@ void dlgProfilePreferences::slot_setMapColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
+        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
     }
 }
 
@@ -2463,7 +2430,7 @@ void dlgProfilePreferences::slot_saveMap()
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
     dialog->setAcceptMode(QFileDialog::AcceptSave);
     dialog->setDefaultSuffix(qsl("dat"));
-    connect(dialog,  &QFileDialog::filterSelected, this, [=, this](const QString& filter) {
+    connect(dialog,  &QFileDialog::filterSelected, this, [=](const QString& filter) {
         if (filter == datFilter) {
             dialog->setDefaultSuffix(qsl("dat"));
         }
@@ -2818,7 +2785,7 @@ void dlgProfilePreferences::slot_resetLogDir()
 
 void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
 {
-    Q_UNUSED(index);
+    Q_UNUSED(index)
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2881,6 +2848,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mEnableMSP = mEnableMSP->isChecked();
+        pHost->mEnableMXP = mEnableMXP->isChecked();
         pHost->mEnableMTTS = mEnableMTTS->isChecked();
         pHost->mEnableMNES = mEnableMNES->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
@@ -2912,15 +2880,16 @@ void dlgProfilePreferences::slot_saveAndClose()
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-        pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
+        pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
+        pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
         pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
-        pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
+        pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
         pHost->mUseProxy = groupBox_proxy->isChecked();
@@ -3034,8 +3003,6 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mpDlgIRC->ircRestart();
         }
 
-        slot_setDisplayFont();
-
         if (console) {
             const int x = console->width();
             const int y = console->height();
@@ -3110,6 +3077,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
+        pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
@@ -3183,7 +3151,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
 void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
 {
-    Q_UNUSED(_action);
+    Q_UNUSED(_action)
 
     QMenu* _menu = pushButton_chooseProfiles->menu();
     QListIterator<QAction*> itAction(_menu->actions());
@@ -3849,7 +3817,7 @@ void dlgProfilePreferences::generateDiscordTooltips()
         state = qsl("<br/>(\"%1\")").arg(state);
     }
 
-    auto setToolTip = [=, this](QWidget* widget, const QString& highlight) {
+    auto setToolTip = [=](QWidget* widget, const QString& highlight) {
         const QString tooltip = qsl(R"(
   <style type="text/css">
     .tg  {border-collapse:collapse;border-spacing:0;}
@@ -4039,17 +4007,17 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
     }
 }
 
-void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
+void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color, const bool hasAlpha)
 {
     if (color.isValid()) {
         if (button->isEnabled()) {
-            if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+            if (hasAlpha) {
 
-                // These two buttons show a color that may have transparency; so,
-                // instead of colouring the background, we include a generated
-                // black/white checkerboard pattern overlaid with the colour which
-                // when its alpha is not a 100% opaque will (partly) show the
-                // checkerboard.
+                // This is for buttons that show a color that may have
+                // transparency; so,instead of colouring the background, we
+                // include a generated black/white checkerboard pattern overlaid
+                // with the colour which, when its alpha is not 100% opaque,
+                // will (partly) show the checkerboard.
 
                 // Ensure the icon has a 3:1 aspect ratio:
                 if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
@@ -4075,15 +4043,8 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
         }
 
         const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
-        if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
-
-            // These two buttons show a color that may have transparency; so,
-            // instead of colouring the background, we include a generated
-            // black/white checkerboard pattern overlaid with the colour which
-            // when its alpha is not a 100% opaque will (partly) show the
-            // checkerboard.
-
-            // Ensure the icon has a 3:1 aspect ratio:
+        if (hasAlpha) {
+            // As above for buttons showing a potentially transparent color:
             if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
                 button->setIconSize(QSize(iconHeight * 3, iconHeight));
             }
@@ -4218,7 +4179,7 @@ void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState sta
 // is changed by the user.
 void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
 {
-    Q_UNUSED(languageIndex);
+    Q_UNUSED(languageIndex)
 
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);
@@ -4319,8 +4280,8 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
         pushButton_playerRoomSecondaryColor->setEnabled(false);
         spinBox_playerRoomInnerDiameter->setEnabled(false);
     }
-    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
-    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
@@ -4483,6 +4444,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     }
 }
 
+void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
+{
+    if (mpHost && mpHost->mEnableClosedCaption != state) {
+        mpHost->mEnableClosedCaption = state;
+    }
+}
+
 void dlgProfilePreferences::slot_changeWrapAt()
 {
     Host* pHost = mpHost;
@@ -4534,4 +4502,71 @@ void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
     }
 
     pHost->setLargeAreaExitArrows(state);
+}
+
+bool dlgProfilePreferences::updateDisplayFont()
+{
+    if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
+        return false;
+    }
+
+    QFont displayFont = fontComboBox_displayFont->currentFont();
+    displayFont.setPointSize(spinBox_displayFontSize->value());
+    displayFont.setStyleHint(QFont::AnyStyle, checkBox_antiAlias->isChecked()
+                              ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
+
+    if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
+        // No change!
+        return false;
+    }
+
+    const QFontMetrics metrics(displayFont);
+    if (metrics.averageCharWidth() == 0) {
+        label_invalidFontError->show();
+        return false;
+    }
+    label_invalidFontError->hide();
+
+    if (!QFontInfo(displayFont).fixedPitch()) {
+        label_variableWidthFontWarning->show();
+    } else {
+        label_variableWidthFontWarning->hide();
+    }
+
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
+    // if this font doesn't support it:
+    QFont::insertSubstitution(mpHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
+#endif
+
+    // update the display properly when font or size or antiAliasing selections
+    // change.
+    mpHost->setDisplayFont(displayFont);
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(displayFont);
+    config->endChanges();
+
+    return true;
+}
+
+void dlgProfilePreferences::slot_displayFontChanged()
+{
+    if (!mpHost.isNull() && updateDisplayFont()) {
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
+    }
+}
+
+void dlgProfilePreferences::slot_displayFontSizeChanged()
+{
+    if (!mpHost.isNull() && updateDisplayFont()) {
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    }
+}
+
+void dlgProfilePreferences::slot_displayFontAliasingChanged()
+{
+    updateDisplayFont();
 }

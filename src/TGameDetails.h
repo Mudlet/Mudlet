@@ -141,7 +141,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
 
             {qsl("Lusternia"),
              qsl("lusternia.com"),
-             23,
+             5000,
              false,
              qsl("<a href='http://www.lusternia.com/'>http://www.lusternia.com</a>"),
              qsl(":/icons/lusternia_120_30.png"),
@@ -262,7 +262,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
 
             {qsl("Imperian"),
              qsl("imperian.com"),
-             23,
+             4000,
              false,
              qsl("<a href='http://www.imperian.com/'>http://www.imperian.com</a>"),
              qsl(":/icons/imperian_120_30.png"),
@@ -647,7 +647,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "venue of original ideas, mind boggling quests, and bloodcurdling "
                  "beasts, spinning into realms of power, magic, and technology, "
                  "and many players with which to share your adventures.")},
-                 
+
             {qsl("Medievia"),
              qsl("medievia.com"),
              4000,
