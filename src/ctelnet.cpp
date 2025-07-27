@@ -109,16 +109,16 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     QTimer::singleShot(0, this, [this]() {
 #if !defined(QT_NO_SSL)
         if (mpHost->mSslTsl) {
-            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
+            connect(&mpSocket, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
         } else {
-            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
+            connect(&mpSocket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
         }
-        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
+        connect(&mpSocket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
 #else
-        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
+        connect(&mpSocket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
 #endif
-        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
-        connect(&socket, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
+        connect(&mpSocket, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
+        connect(&mpSocket, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
     });
 
 
@@ -177,12 +177,12 @@ cTelnet::~cTelnet()
     }
 
     // Aggressively disconnect the socket to prevent signals during destruction
-    if (socket.state() != QAbstractSocket::UnconnectedState) {
+    if (mpSocket.state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
-        socket.blockSignals(true);
-        socket.disconnectFromHost();
+        mpSocket.blockSignals(true);
+        mpSocket.disconnectFromHost();
         // Force immediate closure without waiting
-        socket.abort();
+        mpSocket.abort();
     }
 
     // Disconnect all signal connections to prevent callbacks during destruction
@@ -219,7 +219,7 @@ cTelnet::~cTelnet()
     if (mpComposer) {
         mpComposer->deleteLater();
     }
-    socket.deleteLater();
+    mpSocket.deleteLater();
 }
 
 void cTelnet::cancelLoginTimers()
@@ -299,23 +299,23 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 #if !defined(QT_NO_SSL)
 QSslCertificate cTelnet::getPeerCertificate()
 {
-    return socket.peerCertificate();
+    return mpSocket.peerCertificate();
 }
 
 QList<QSslError> cTelnet::getSslErrors()
 {
-    return socket.sslHandshakeErrors();
+    return mpSocket.sslHandshakeErrors();
 }
 #endif
 
 QAbstractSocket::SocketError cTelnet::error()
 {
-    return socket.error();
+    return mpSocket.error();
 }
 
 QString cTelnet::errorString()
 {
-    return socket.errorString();
+    return mpSocket.errorString();
 }
 
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
@@ -414,24 +414,24 @@ void cTelnet::connectIt(const QString& address, int port)
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
-            socket.setProxy(*proxy);
+            mpSocket.setProxy(*proxy);
             mConnectViaProxy = true;
         } else {
-            socket.setProxy(QNetworkProxy::DefaultProxy);
+            mpSocket.setProxy(QNetworkProxy::DefaultProxy);
             mConnectViaProxy = false;
         }
     }
 
-    if (socket.state() != QAbstractSocket::UnconnectedState) {
-        socket.abort();
+    if (mpSocket.state() != QAbstractSocket::UnconnectedState) {
+        mpSocket.abort();
         connectIt(address, port);
         return;
     }
 
     emit signal_connecting(mpHost);
 
-    hostName = address;
-    hostPort = port;
+    mHostName = address;
+    mHostPort = port;
     postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
@@ -441,30 +441,30 @@ void cTelnet::reconnect()
 {
     // if we've connected offline and wish to reconnect, the last
     // connection parameters aren't yet set
-    if (hostName.isEmpty() && hostPort == 0) {
+    if (mHostName.isEmpty() && mHostPort == 0) {
         connectIt(mpHost->getUrl(), mpHost->getPort());
     } else {
-        connectIt(hostName, hostPort);
+        connectIt(mHostName, mHostPort);
     }
 }
 
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
-    socket.disconnectFromHost();
+    mpSocket.disconnectFromHost();
 
 }
 
 void cTelnet::abortConnection()
 {
     mDontReconnect = true;
-    socket.abort();
+    mpSocket.abort();
 }
 
 // Not used:
 //void cTelnet::slot_socketError()
 //{
-//    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
+//    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % mpSocket.errorString();
 //    postMessage(err);
 //}
 
@@ -493,7 +493,7 @@ void cTelnet::slot_socketConnected()
     QString msg;
 
     reset();
-    setKeepAlive(socket.socketDescriptor());
+    setKeepAlive(mpSocket.socketDescriptor());
 
     if (mpHost->mSslTsl)
     {
@@ -560,7 +560,7 @@ void cTelnet::slot_socketDisconnected()
 
 #if !defined(QT_NO_SSL)
         QList<QSslError> sslErrors = getSslErrors();
-        QSslCertificate cert = socket.peerCertificate();
+        QSslCertificate cert = mpSocket.peerCertificate();
 
         if (mpHost->mSslIgnoreExpired) {
             sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
@@ -588,10 +588,10 @@ void cTelnet::slot_socketDisconnected()
             } else if (mConnectionTimer.elapsed() > 0 && mConnectionTimer.elapsed() < 5000) {
                 reason = tr("Connection/login attempt rejected by server");
             // SocketError(13) == SslHandshakeFailedError (https://doc.qt.io/qt-6/qabstractsocket.html#SocketError-enum)
-            } else if (socket.error() == QAbstractSocket::SocketError(13)) {
+            } else if (mpSocket.error() == QAbstractSocket::SocketError(13)) {
                 reason = tr("Secure connections aren't supported by this game on this port - try turning the option off");
             } else {
-                reason = socket.errorString();
+                reason = mpSocket.errorString();
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: %1.").arg(reason);
             postMessage(err);
@@ -606,7 +606,7 @@ void cTelnet::slot_socketDisconnected()
 #endif
 
     if (mAutoReconnect && !mDontReconnect && mConnectionTimer.elapsed() >= 5000) {
-        connectIt(hostName, hostPort);
+        connectIt(mHostName, mHostPort);
     }
     mDontReconnect = false;
 }
@@ -619,7 +619,7 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
         return;
     }
 
-    QSslCertificate cert = socket.peerCertificate();
+    QSslCertificate cert = mpSocket.peerCertificate();
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
@@ -630,9 +630,9 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
     }
 
     if (mpHost->mSslIgnoreAll) {
-        socket.ignoreSslErrors(errors);
+        mpSocket.ignoreSslErrors(errors);
     } else {
-        socket.ignoreSslErrors(ignoreErrorList);
+        mpSocket.ignoreSslErrors(ignoreErrorList);
     }
 }
 #endif
@@ -641,22 +641,22 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 {
 #if !defined(QT_NO_SSL)
     if (mpHost->mSslTsl) {
-        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(hostPort))));
-        socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
+        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(mHostPort))));
+        mpSocket.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite);
 
     } else {
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
+            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(mHostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
-                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(hostPort))));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(mHostPort))));
             } else {
-                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(hostPort))));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(mHostPort))));
             }
-            socket.connectToHost(mHostAddress, hostPort);
+            mpSocket.connectToHost(mHostAddress, mHostPort);
         } else {
-            socket.connectToHost(hostInfo.hostName(), hostPort);
+            mpSocket.connectToHost(hostInfo.hostName(), mHostPort);
             postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
                            "Connection cannot be established.\n"
                            "The server name is not correct, not working properly,\n"
@@ -748,10 +748,10 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 // as we do NOT handle the weirdly different EBDIC!!!
 bool cTelnet::socketOutRaw(std::string& data)
 {
-    // We were using socket.iswritable() but it was not clear that that was a
+    // We were using mpSocket.iswritable() but it was not clear that that was a
     // suitable way to check for an open, usable connection - whereas isvalid()
     // is true if the socket is valid and ready for use:
-    if (!socket.isValid()) {
+    if (!mpSocket.isValid()) {
         return false;
     }
     std::size_t dataLength = data.length();
@@ -762,7 +762,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         // may be ASCII NUL characters in data and the first of those will
         // terminate the writing of the bytes following it in the single
         // argument method call:
-        qint64 chunkWritten = socket.write(data.substr(written).data(), (dataLength - written));
+        qint64 chunkWritten = mpSocket.write(data.substr(written).data(), (dataLength - written));
 
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
@@ -1000,12 +1000,12 @@ QString cTelnet::decodeOption(const unsigned char ch) const
 std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
 {
     // intentionally simplify connection state to a boolean
-    const bool connected = socket.state() == QAbstractSocket::ConnectedState;
+    const bool connected = mpSocket.state() == QAbstractSocket::ConnectedState;
 
-    if (hostName.isEmpty() && hostPort == 0) {
+    if (mHostName.isEmpty() && mHostPort == 0) {
         return {mpHost->getUrl(), mpHost->getPort(), connected};
     } else {
-        return {hostName, hostPort, connected};
+        return {mHostName, mHostPort, connected};
     }
 }
 
@@ -3239,8 +3239,8 @@ bool cTelnet::isIPAddress(QString& arg)
 void cTelnet::promptTlsConnectionAvailable()
 {
     // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
-    if (mpHost->mMSSPTlsPort && socket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(hostName)
-        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
+    if (mpHost->mMSSPTlsPort && mpSocket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(mHostName)
+        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(mHostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
         auto msgBox = new QMessageBox();
@@ -3257,12 +3257,12 @@ void cTelnet::promptTlsConnectionAvailable()
         switch (ret) {
         case QMessageBox::Yes:
             cTelnet::disconnectIt();
-            hostPort = mpHost->mMSSPTlsPort;
-            mpHost->setPort(hostPort);
+            mHostPort = mpHost->mMSSPTlsPort;
+            mpHost->setPort(mHostPort);
             mpHost->mSslTsl = true;
-            mpHost->writeProfileData(QLatin1String("port"), QString::number(hostPort));
+            mpHost->writeProfileData(QLatin1String("port"), QString::number(mHostPort));
             mpHost->writeProfileData(QLatin1String("ssl_tsl"), QString::number(Qt::Checked));
-            cTelnet::connectIt(mpHost->getUrl(), hostPort);
+            cTelnet::connectIt(mpHost->getUrl(), mHostPort);
             break;
         case QMessageBox::No:
             cTelnet::disconnectIt();
@@ -3913,7 +3913,7 @@ void cTelnet::slot_socketReadyToBeRead()
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char in_buffer[BUFFER_SIZE + 10];
 
-    int amount = socket.read(in_buffer, BUFFER_SIZE);
+    int amount = mpSocket.read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 }
 
