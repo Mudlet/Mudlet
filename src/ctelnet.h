@@ -343,7 +343,7 @@ private:
     QTextCodec* outgoingDataCodec = nullptr;
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder = nullptr;
-    QString hostName;
+    QString mHostName;
     int hostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;

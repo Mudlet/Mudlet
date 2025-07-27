@@ -430,7 +430,7 @@ void cTelnet::connectIt(const QString& address, int port)
 
     emit signal_connecting(mpHost);
 
-    hostName = address;
+    mHostName = address;
     hostPort = port;
     postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
@@ -441,10 +441,10 @@ void cTelnet::reconnect()
 {
     // if we've connected offline and wish to reconnect, the last
     // connection parameters aren't yet set
-    if (hostName.isEmpty() && hostPort == 0) {
+    if (mHostName.isEmpty() && hostPort == 0) {
         connectIt(mpHost->getUrl(), mpHost->getPort());
     } else {
-        connectIt(hostName, hostPort);
+        connectIt(mHostName, hostPort);
     }
 }
 
@@ -606,7 +606,7 @@ void cTelnet::slot_socketDisconnected()
 #endif
 
     if (mAutoReconnect && !mDontReconnect && mConnectionTimer.elapsed() >= 5000) {
-        connectIt(hostName, hostPort);
+        connectIt(mHostName, hostPort);
     }
     mDontReconnect = false;
 }
@@ -648,7 +648,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
+            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(mHostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
                 postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(hostPort))));
             } else {
@@ -1002,10 +1002,10 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     // intentionally simplify connection state to a boolean
     const bool connected = mpSocket.state() == QAbstractSocket::ConnectedState;
 
-    if (hostName.isEmpty() && hostPort == 0) {
+    if (mHostName.isEmpty() && hostPort == 0) {
         return {mpHost->getUrl(), mpHost->getPort(), connected};
     } else {
-        return {hostName, hostPort, connected};
+        return {mHostName, hostPort, connected};
     }
 }
 
@@ -3239,8 +3239,8 @@ bool cTelnet::isIPAddress(QString& arg)
 void cTelnet::promptTlsConnectionAvailable()
 {
     // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
-    if (mpHost->mMSSPTlsPort && mpSocket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(hostName)
-        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
+    if (mpHost->mMSSPTlsPort && mpSocket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(mHostName)
+        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(mHostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
         auto msgBox = new QMessageBox();
