@@ -5979,6 +5979,9 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // Update tab bar auto-hide behavior since detached windows may have changed
     updateMainWindowTabBarAutoHide();
 
+    // Refresh tab bar to ensure CDC identifiers are displayed after reattachment
+    refreshTabBar();
+
     enableToolbarButtons();
 
     if (pHost) {
@@ -6606,4 +6609,7 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update tab bar auto-hide behavior since detached windows may have changed
     updateMainWindowTabBarAutoHide();
+    
+    // Refresh tab bar to ensure CDC identifiers are displayed after reattachment
+    refreshTabBar();
 }
