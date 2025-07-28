@@ -22,6 +22,7 @@
 #include "utils.h"
 
 #include "pre_guard.h"
+#include <atomic>
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDataStream>
@@ -43,6 +44,9 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/kdf.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <openssl/opensslv.h>
 #endif
 // Qt includes for fallback encryption and SSL availability check
 #include <QCryptographicHash>
@@ -53,15 +57,141 @@
 #endif
 #include "post_guard.h"
 
+#ifdef MUDLET_USE_OPENSSL_CRYPTO
+// Static initialization flag to ensure OpenSSL is initialized only once
+static std::atomic<bool> openssl_initialized{false};
+
+// Initialize OpenSSL for use in this module
+static void initializeOpenSSL()
+{
+    if (!openssl_initialized.exchange(true)) {
+        // Initialize OpenSSL crypto library
+        OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, nullptr);
+        
+        // Ensure random number generator is seeded
+        if (RAND_status() != 1) {
+            // If system random is not available, seed manually
+            unsigned char seed[32];
+            QRandomGenerator* rng = QRandomGenerator::system();
+            for (int i = 0; i < 32; ++i) {
+                seed[i] = static_cast<unsigned char>(rng->bounded(256));
+            }
+            RAND_seed(seed, sizeof(seed));
+            
+            // Clear seed from memory
+            OPENSSL_cleanse(seed, sizeof(seed));
+        }
+    }
+}
+
+// Helper function to get and clear OpenSSL errors
+static QString getOpenSSLError()
+{
+    unsigned long err = ERR_get_error();
+    if (err == 0) {
+        return QString();
+    }
+    
+    char buffer[256];
+    ERR_error_string_n(err, buffer, sizeof(buffer));
+    
+    // Clear all remaining errors from the error queue
+    ERR_clear_error();
+    
+    return QString::fromUtf8(buffer);
+}
+#endif
+
 bool SecureStringUtils::isOpenSSLAvailable()
 {
 #ifdef MUDLET_USE_OPENSSL_CRYPTO
-    // We have OpenSSL compiled in, so we can use its crypto functions
-    // This is independent of Qt's SSL socket backend choice
-    return true;
+    // Initialize OpenSSL if not already done
+    initializeOpenSSL();
+    
+    // Perform a simple test to ensure OpenSSL is working properly
+    // This helps catch configuration issues early
+    static bool tested = false;
+    static bool working = false;
+    
+    if (!tested) {
+        tested = true;
+        
+        // Test basic EVP functionality
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        if (ctx) {
+            // Test if we can initialize AES-256-GCM
+            if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) == 1) {
+                working = true;
+            }
+            EVP_CIPHER_CTX_free(ctx);
+        }
+        
+        if (!working) {
+            QString error = getOpenSSLError();
+            qWarning() << "OpenSSL availability test failed:" << (error.isEmpty() ? "Unknown error" : error);
+        }
+    }
+    
+    return working;
 #else
     return false; // OpenSSL not compiled in
 #endif
+}
+
+QString SecureStringUtils::getSSLBackendInfo()
+{
+    QStringList info;
+    
+    info << QString("OpenSSL crypto available: %1").arg(isOpenSSLAvailable() ? "Yes" : "No");
+    
+#ifndef QT_NO_SSL
+    // Check Qt's SSL backend
+    if (QSslSocket::isProtocolSupported(QSsl::TlsV1_2)) {
+        info << "Qt SSL support: Available";
+        info << QString("SSL backend library: %1").arg(QSslSocket::sslLibraryBuildVersionString());
+        info << QString("Active backend: %1").arg(QSslSocket::activeBackend());
+        
+        // Check if OpenSSL backend is active
+        QString backend = QSslSocket::activeBackend();
+        if (backend.contains("openssl", Qt::CaseInsensitive)) {
+            info << "SSL backend type: OpenSSL";
+        } else {
+            info << QString("SSL backend type: %1 (not OpenSSL)").arg(backend);
+        }
+        
+        // Check supported protocols
+        QStringList protocols;
+        if (QSslSocket::isProtocolSupported(QSsl::TlsV1_2)) protocols << "TLS 1.2";
+        if (QSslSocket::isProtocolSupported(QSsl::TlsV1_3)) protocols << "TLS 1.3";
+        info << QString("Supported protocols: %1").arg(protocols.join(", "));
+        
+    } else {
+        info << "Qt SSL support: Not available";
+    }
+#else
+    info << "Qt SSL support: Compiled without SSL";
+#endif
+
+#ifdef MUDLET_USE_OPENSSL_CRYPTO
+    info << "OpenSSL crypto: Compiled in";
+    
+    // Check OpenSSL version at runtime
+    const char* version = OpenSSL_version(OPENSSL_VERSION);
+    if (version) {
+        info << QString("OpenSSL version: %1").arg(QString::fromUtf8(version));
+    }
+    
+    // Check if RAND is working
+    if (RAND_status() == 1) {
+        info << "OpenSSL random: Working";
+    } else {
+        info << "OpenSSL random: Not properly seeded";
+    }
+#else
+    info << "OpenSSL crypto: Not compiled in";
+#endif
+
+    return info.join("\n");
 }
 
 bool SecureStringUtils::isEncryptedFormat(const QString& text)
@@ -166,6 +296,9 @@ QByteArray SecureStringUtils::generateIV()
     iv.resize(IV_SIZE);
     
 #ifdef MUDLET_USE_OPENSSL_CRYPTO
+    // Ensure OpenSSL is initialized
+    initializeOpenSSL();
+    
     if (RAND_bytes(reinterpret_cast<unsigned char*>(iv.data()), IV_SIZE) != 1) {
         // Fallback to Qt's random generator if OpenSSL fails
         QRandomGenerator* rng = QRandomGenerator::system();
@@ -192,6 +325,9 @@ QByteArray SecureStringUtils::encryptAES(const QByteArray& plaintext, const QByt
         return QByteArray();
     }
     
+    // Ensure OpenSSL is initialized
+    initializeOpenSSL();
+    
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         return QByteArray();
@@ -204,12 +340,16 @@ QByteArray SecureStringUtils::encryptAES(const QByteArray& plaintext, const QByt
     try {
         // Initialize encryption
         if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1) {
+            QString error = getOpenSSLError();
+            qWarning() << "OpenSSL AES-GCM initialization failed:" << (error.isEmpty() ? "Unknown error" : error);
             EVP_CIPHER_CTX_free(ctx);
             return QByteArray();
         }
         
         // Set IV length
         if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, nullptr) != 1) {
+            QString error = getOpenSSLError();
+            qWarning() << "OpenSSL AES-GCM IV length setting failed:" << (error.isEmpty() ? "Unknown error" : error);
             EVP_CIPHER_CTX_free(ctx);
             return QByteArray();
         }
@@ -271,6 +411,9 @@ QByteArray SecureStringUtils::decryptAES(const QByteArray& ciphertext, const QBy
     if (ciphertext.isEmpty() || key.size() != KEY_SIZE || iv.size() != IV_SIZE || tag.size() != TAG_SIZE) {
         return QByteArray();
     }
+    
+    // Ensure OpenSSL is initialized
+    initializeOpenSSL();
     
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
@@ -360,12 +503,14 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
         
         // Get profile-specific encryption key
         QByteArray profileKey = getProfileEncryptionKey(profileName);
+
         if (profileKey.isEmpty()) {
             return QString();
         }
         
         // Derive encryption key using PBKDF2
         QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
+
         if (derivedKey.isEmpty()) {
             return QString();
         }
@@ -380,19 +525,35 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
             QByteArray encryptedData = encryptAES(plaintextBytes, derivedKey, iv, tag);
 
             if (encryptedData.isEmpty()) {
-                // Securely clear sensitive data before returning
-                secureByteArrayClear(plaintextBytes);
-                secureByteArrayClear(derivedKey);
-                secureByteArrayClear(profileKey);
-                return QString();
+                qWarning() << "OpenSSL AES-256-GCM encryption failed, falling back to Qt encryption";
+                
+                // Fall back to Qt encryption if OpenSSL fails
+                QByteArray nonce = generateNonce();
+                QByteArray hmac;
+                encryptedData = encryptQtFallback(plaintextBytes, derivedKey, salt, nonce, hmac);
+                
+                if (encryptedData.isEmpty()) {
+                    // Securely clear sensitive data before returning
+                    secureByteArrayClear(plaintextBytes);
+                    secureByteArrayClear(derivedKey);
+                    secureByteArrayClear(profileKey);
+                    return QString();
+                }
+                
+                // Build Qt fallback format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
+                result.append(static_cast<char>(ENCRYPTION_VERSION_QT_FALLBACK));
+                result.append(salt);
+                result.append(nonce);
+                result.append(hmac);
+                result.append(encryptedData);
+            } else {
+                // Build OpenSSL format: [VERSION:1][SALT:16][IV:12][TAG:16][ENCRYPTED_DATA]
+                result.append(static_cast<char>(ENCRYPTION_VERSION_OPENSSL));
+                result.append(salt);
+                result.append(iv);
+                result.append(tag);
+                result.append(encryptedData);
             }
-            
-            // Build OpenSSL format: [VERSION:1][SALT:16][IV:12][TAG:16][ENCRYPTED_DATA]
-            result.append(static_cast<char>(ENCRYPTION_VERSION_OPENSSL));
-            result.append(salt);
-            result.append(iv);
-            result.append(tag);
-            result.append(encryptedData);
         } else {
             // Use Qt fallback encryption
             QByteArray nonce = generateNonce();
@@ -490,6 +651,12 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
             
             // Decrypt using AES-256-GCM
             decrypted = decryptAES(encryptedData, derivedKey, iv, tag);
+            
+            if (decrypted.isEmpty()) {
+                qWarning() << "OpenSSL AES-256-GCM decryption failed for profile:" << profileName;
+                // Note: We cannot fall back to Qt encryption here because the data was encrypted with OpenSSL
+                // The only proper fallback would be to re-encrypt the original plaintext with Qt if we had it
+            }
         } else if (version == ENCRYPTION_VERSION_QT_FALLBACK) {
             // Qt fallback format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
             if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {

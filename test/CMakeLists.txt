@@ -25,6 +25,11 @@ find_package(Qt6 6.4.0 REQUIRED
 # Find OpenSSL for cryptographic operations
 find_package(OpenSSL REQUIRED)
 
+# Define the macro so SecureStringUtils knows to use OpenSSL in tests
+if(OpenSSL_FOUND)
+    add_compile_definitions(MUDLET_USE_OPENSSL_CRYPTO)
+endif()
+
 link_libraries(
     Qt6::Test
     Qt6::Concurrent

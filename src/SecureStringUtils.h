@@ -90,6 +90,12 @@ public:
     static bool isOpenSSLAvailable();
 
     /**
+     * @brief Check SSL backend configuration and report potential issues
+     * @return QString with diagnostic information about SSL backend status
+     */
+    static QString getSSLBackendInfo();
+
+    /**
      * @brief Check if running in test environment (to avoid keychain prompts)
      * @return true if in test environment, false otherwise
      */
