@@ -740,6 +740,12 @@ void mudlet::init()
 
     initializeAI();
 
+    // Initialize the window menu on startup
+    updateWindowMenu();
+
+    // Connect the Window menu's aboutToShow signal to update the window list
+    connect(menuWindow, &QMenu::aboutToShow, this, &mudlet::updateWindowMenu);
+
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
     // full docs at https://nanobench.ankerl.com
@@ -1631,6 +1637,9 @@ void mudlet::slot_reattachAllDetachedWindows()
         qWarning() << "slot_reattachAllDetachedWindows: Still have orphaned profiles after reattachment:" << remainingOrphans;
         reattachOrphanedProfiles();
     }
+
+    // Update the window menu to reflect all windows being reattached
+    updateWindowMenu();
 }
 
 void mudlet::slot_toggleAlwaysOnTop()
@@ -1651,6 +1660,184 @@ void mudlet::slot_toggleAlwaysOnTop()
 void mudlet::slot_minimize()
 {
     showMinimized();
+}
+
+void mudlet::updateWindowMenu()
+{
+    // Clean up existing window list actions
+    for (QAction* action : mWindowListActions) {
+        menuWindow->removeAction(action);
+        action->deleteLater();
+    }
+    mWindowListActions.clear();
+
+    // Remove separator if it exists
+    if (mWindowListSeparator) {
+        menuWindow->removeAction(mWindowListSeparator);
+        mWindowListSeparator->deleteLater();
+        mWindowListSeparator = nullptr;
+    }
+
+    // Count total windows (main + detached)
+    int totalWindows = 1; // Main window
+    totalWindows += mDetachedWindows.size();
+
+    // Only show window list if there are multiple windows OR if there are multiple profiles
+    bool hasMultipleProfiles = mHostManager.getHostCount() > 1;
+    if (totalWindows > 1 || hasMultipleProfiles) {
+        // Add separator before window list
+        mWindowListSeparator = menuWindow->addSeparator();
+
+        // Add main window profiles
+        QStringList mainWindowProfiles;
+        for (const auto& host : mHostManager) {
+            if (host && host->mpConsole) {
+                const QString profileName = host->getName();
+                // Only include profiles that are in the main window (not detached)
+                if (!mDetachedWindows.contains(profileName)) {
+                    mainWindowProfiles.append(profileName);
+                }
+            }
+        }
+
+        // Add main window header if it has profiles
+        if (!mainWindowProfiles.isEmpty()) {
+            // Add main window section
+            for (const QString& profileName : mainWindowProfiles) {
+                Host* host = mHostManager.getHost(profileName);
+                QString actionText = tr("%1 (Main Window)").arg(profileName);
+                QAction* profileAction = new QAction(actionText, this);
+                profileAction->setCheckable(true);
+                profileAction->setChecked(isActiveWindow() && mpCurrentActiveHost && mpCurrentActiveHost->getName() == profileName);
+                profileAction->setData(profileName); // Store profile name for identification
+                connect(profileAction, &QAction::triggered, this, &mudlet::slot_activateMainWindowProfile);
+                menuWindow->addAction(profileAction);
+                mWindowListActions.append(profileAction);
+            }
+        }
+
+        // Add detached window profiles
+        // Collect unique detached windows to avoid duplicates
+        QSet<TDetachedWindow*> uniqueDetachedWindows;
+        for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+            TDetachedWindow* detachedWindow = it.value();
+            if (detachedWindow) {
+                uniqueDetachedWindows.insert(detachedWindow);
+            }
+        }
+        
+        // Process each unique detached window
+        for (TDetachedWindow* detachedWindow : uniqueDetachedWindows) {
+            // Get all profiles in this detached window
+            QStringList profilesInWindow = detachedWindow->getProfileNames();
+            for (const QString& windowProfileName : profilesInWindow) {
+                QString actionText = tr("%1 (Detached)").arg(windowProfileName);
+                QAction* profileAction = new QAction(actionText, this);
+                profileAction->setCheckable(true);
+                profileAction->setChecked(detachedWindow->isActiveWindow() && detachedWindow->getCurrentProfileName() == windowProfileName);
+                profileAction->setData(windowProfileName); // Store profile name for identification
+                connect(profileAction, &QAction::triggered, this, &mudlet::slot_activateDetachedWindowProfile);
+                menuWindow->addAction(profileAction);
+                mWindowListActions.append(profileAction);
+            }
+        }
+    }
+
+    // Also update window menus on all detached windows
+    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow) {
+            detachedWindow->updateWindowMenu();
+        }
+    }
+}
+
+void mudlet::slot_activateMainWindow()
+{
+    raise();
+    activateWindow();
+    show(); // Ensure it's not minimized
+    updateWindowMenu(); // Refresh checkmarks
+}
+
+void mudlet::slot_activateDetachedWindow()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (!action) {
+        return;
+    }
+
+    QString profileName = action->data().toString();
+    if (mDetachedWindows.contains(profileName)) {
+        TDetachedWindow* detachedWindow = mDetachedWindows[profileName];
+        if (detachedWindow) {
+            detachedWindow->raise();
+            detachedWindow->activateWindow();
+            detachedWindow->show(); // Ensure it's not minimized
+            updateWindowMenu(); // Refresh checkmarks
+        }
+    }
+}
+
+void mudlet::slot_activateMainWindowProfile()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (!action) {
+        return;
+    }
+
+    QString profileName = action->data().toString();
+    
+    // Find the tab index for this profile in the main window
+    int tabIndex = -1;
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        if (mpTabBar->tabData(i).toString() == profileName) {
+            tabIndex = i;
+            break;
+        }
+    }
+
+    if (tabIndex >= 0) {
+        // Activate the main window first
+        raise();
+        activateWindow();
+        show(); // Ensure it's not minimized
+        
+        // Switch to the specific tab
+        mpTabBar->setCurrentIndex(tabIndex);
+        
+        // Trigger the tab change logic to ensure the profile is properly activated
+        slot_tabChanged(tabIndex);
+        
+        updateWindowMenu(); // Refresh checkmarks
+    }
+}
+
+void mudlet::slot_activateDetachedWindowProfile()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (!action) {
+        return;
+    }
+
+    QString profileName = action->data().toString();
+    
+    // Find which detached window contains this profile
+    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
+            // Activate the detached window
+            detachedWindow->raise();
+            detachedWindow->activateWindow();
+            detachedWindow->show(); // Ensure it's not minimized
+            
+            // Switch to the specific profile tab in the detached window
+            detachedWindow->switchToProfile(profileName);
+            
+            updateWindowMenu(); // Refresh checkmarks
+            break;
+        }
+    }
 }
 
 // This removes the Host (profile) from this class's QMainWindow and related
@@ -5580,6 +5767,9 @@ void mudlet::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::WindowStateChange) {
         emit signal_windowStateChanged(windowState());
+    } else if (event->type() == QEvent::ActivationChange) {
+        // Update window menu when window activation changes
+        updateWindowMenu();
     }
     QWidget::changeEvent(event);
 }
@@ -5780,6 +5970,9 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
         // Update multi-view controls including "Reattach detached windows" menu visibility
         updateMultiViewControls();
 
+        // Update the window menu to reflect the removed window
+        updateWindowMenu();
+
         // Properly close the host to avoid dangling connections
         Host* pHost = mHostManager.getHost(profileName);
         if (pHost) {
@@ -5917,6 +6110,9 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Update tab bar auto-hide behavior since we now have detached windows
     updateMainWindowTabBarAutoHide();
+
+    // Update the window menu to reflect the new detached window
+    updateWindowMenu();
 
     // Only show connection dialog if there are no profiles loaded anywhere,
     // not just when the main window is empty (profiles might be in detached windows)
@@ -6712,6 +6908,9 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update tab bar auto-hide behavior since detached windows may have changed
     updateMainWindowTabBarAutoHide();
+    
+    // Update the window menu to reflect the window changes
+    updateWindowMenu();
     
     // Refresh tab bar to ensure CDC identifiers are displayed after reattachment
     refreshTabBar();

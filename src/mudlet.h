@@ -452,6 +452,11 @@ public slots:
     void slot_reattachAllDetachedWindows();
     void slot_toggleAlwaysOnTop();
     void slot_minimize();
+    void updateWindowMenu();
+    void slot_activateMainWindow();
+    void slot_activateDetachedWindow();
+    void slot_activateMainWindowProfile();
+    void slot_activateDetachedWindowProfile();
     void slot_replay();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
@@ -706,6 +711,10 @@ private:
     QMap<Host*, QToolBar*> mUserToolbarMap;
     // The collection of words in what mpHunspell_sharedDictionary points to:
     QSet<QString> mWordSet_shared;
+
+    // Window menu management for multiple windows
+    QList<QAction*> mWindowListActions;
+    QAction* mWindowListSeparator = nullptr;
 
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0; // Cancel split screen

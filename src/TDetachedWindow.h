@@ -55,6 +55,8 @@ public:
     void updateToolbarForProfile(Host* pHost);
     void setReattaching(bool reattaching) { mIsReattaching = reattaching; }
     void refreshTabBar();  // Update tab text to account for CDC identifiers
+    void updateWindowMenu();  // Update the window menu with current window list
+    void switchToProfile(const QString& profileName);  // Switch to a specific profile tab
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -109,6 +111,12 @@ private slots:
     void slot_muteGame();
     void slot_showAboutDialog();
 
+    // Window menu activation slots
+    void slot_activateMainWindow();
+    void slot_activateDetachedWindow();
+    void slot_activateMainWindowProfile();
+    void slot_activateDetachedWindowProfile();
+
 private:
     void setupUI();
     void createMenus();
@@ -121,7 +129,6 @@ private:
     void updateTabIndicator(int tabIndex = -1);  // -1 means current tab
     void saveWindowGeometry();
     void restoreWindowGeometry();
-    void switchToProfile(const QString& profileName);
     void checkForWindowMergeOpportunity();  // Check if this window overlaps with another detached window
     void performWindowMerge(TDetachedWindow* otherWindow);  // Automatically merge with another window
     void logWindowState(const QString& context);  // Debug method to track window state
@@ -191,6 +198,11 @@ private:
 
     // Flag to prevent duplicate reattach operations on this window
     bool mReattachInProgress{false};
+
+    // Window menu management for multiple windows
+    QList<QAction*> mWindowListActions;
+    QAction* mWindowListSeparator{nullptr};
+    QMenu* mpWindowMenu{nullptr};
 };
 
 #endif // TDETACHEDWINDOW_H
