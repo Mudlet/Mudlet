@@ -305,6 +305,13 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    // Mark this object as being destroyed to prevent callbacks from accessing invalid UI
+    setProperty("__destroying", true);
+    
+    // Clear any pending operation flags
+    mKeychainOperationInProgress = false;
+    mPendingProfileLoad.clear();
+    
     QCoreApplication::instance()->removeEventFilter(this);
 }
 
@@ -316,9 +323,49 @@ void dlgConnectionProfiles::accept()
         setVisible(false);
         // This is needed to make the above take effect as fast as possible:
         qApp->processEvents();
-        loadProfile(true);
-        QDialog::accept();
+        
+        // Check if keychain authentication is pending - if so, wait for it
+        ensurePasswordLoadedThenConnect(true);
     }
+}
+
+void dlgConnectionProfiles::slot_load()
+{
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible:
+    qApp->processEvents();
+    
+    // Check if keychain authentication is pending - if so, wait for it
+    ensurePasswordLoadedThenConnect(false);
+}
+
+void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
+{
+    const QString profile_name = profile_name_entry->text().trimmed();
+    
+    if (profile_name.isEmpty()) {
+        QDialog::accept();
+        return;
+    }
+    
+    // Check if we have any pending keychain operations for this profile
+    if (hasPendingKeychainOperation(profile_name)) {
+        // Queue the profile loading until keychain completes
+        mPendingConnect = alsoConnect;
+        mPendingProfileLoad = profile_name;
+        return; // Will be handled by keychain callback
+    }
+    
+    // No pending keychain operations, proceed immediately
+    loadProfile(alsoConnect);
+    QDialog::accept();
+}
+
+bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
+{
+    Q_UNUSED(profile_name)
+    // Simply check if we have a keychain operation in progress
+    return mKeychainOperationInProgress;
 }
 
 void dlgConnectionProfiles::slot_updateDescription()
@@ -1549,15 +1596,6 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     }
 }
 
-void dlgConnectionProfiles::slot_load()
-{
-    setVisible(false);
-    // This is needed to make the above take effect as fast as possible:
-    qApp->processEvents();
-    loadProfile(false);
-    QDialog::accept();
-}
-
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     const QString profile_name = profile_name_entry->text().trimmed();
@@ -2108,22 +2146,43 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
     // If secure storage is enabled, try keychain first, then fallback to QSettings
     if (mudlet::self()->storingPasswordsSecurely()) {
+        mKeychainOperationInProgress = true;
         auto* credManager = new CredentialManager(this);
         credManager->retrieveCredential(profile_name, "character", 
             [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+                // Clear the operation flag first
+                mKeychainOperationInProgress = false;
+                
                 // Check if profile selection has changed while we were waiting
                 if (profiles_tree_widget->currentItem() && 
                     profiles_tree_widget->currentItem()->data(csmNameRole).toString() == profile_name) {
                     
-                    if (success && !retrievedPassword.isEmpty()) {
+                    if (success) {
+                        // Keychain operation succeeded - set the password (even if empty)
                         character_password_entry->setText(retrievedPassword);
-                    } else {
-                        // Fallback to QSettings if keychain fails
-                        loadPasswordFromSettings(profile_name);
-                        if (!success && !errorMessage.isEmpty()) {
-                            qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
+                        if (retrievedPassword.isEmpty()) {
+                            qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
                         }
+                    } else {
+                        // Fallback to QSettings only if keychain operation failed
+                        loadPasswordFromSettings(profile_name);
+                        qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
                     }
+                }
+                
+                // Check if there's a pending connection waiting for this password load
+                // (do this regardless of profile selection state to avoid hanging)
+                if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+                    qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
+                    
+                    // Clear pending state
+                    QString profileToLoad = mPendingProfileLoad;
+                    bool shouldConnect = mPendingConnect;
+                    mPendingProfileLoad.clear();
+                    
+                    // Proceed with the connection
+                    loadProfile(shouldConnect);
+                    QDialog::accept();
                 }
                 
                 credManager->deleteLater();
@@ -2131,6 +2190,20 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     } else {
         // Secure storage disabled, use QSettings directly
         loadPasswordFromSettings(profile_name);
+        
+        // Check if there's a pending connection waiting
+        if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+            qDebug() << "dlgConnectionProfiles: Password loaded from settings, proceeding with pending connection for" << profile_name;
+            
+            // Clear pending state
+            QString profileToLoad = mPendingProfileLoad;
+            bool shouldConnect = mPendingConnect;
+            mPendingProfileLoad.clear();
+            
+            // Proceed with the connection
+            loadProfile(shouldConnect);
+            QDialog::accept();
+        }
     }
 }
 

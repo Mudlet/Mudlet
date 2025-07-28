@@ -89,6 +89,8 @@ public slots:
 protected:
     bool eventFilter(QObject*, QEvent*) override;
     void loadPasswordFromSettings(const QString& profile_name);
+    void ensurePasswordLoadedThenConnect(bool alsoConnect);
+    bool hasPendingKeychainOperation(const QString& profile_name) const;
 
 
 private:
@@ -147,6 +149,11 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
+    
+    // Async connection handling
+    QString mPendingProfileLoad;  // Profile name waiting for password load
+    bool mPendingConnect = false; // Whether to connect (true) or just load (false)
+    bool mKeychainOperationInProgress = false;  // Track if keychain op is active
 
 
 private slots:

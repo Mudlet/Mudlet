@@ -87,7 +87,7 @@ static void initializeOpenSSL()
 // Helper function to get and clear OpenSSL errors
 static QString getOpenSSLError()
 {
-    unsigned long err = ERR_get_error();
+    auto err = ERR_get_error();
     if (err == 0) {
         return QString();
     }

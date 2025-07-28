@@ -95,6 +95,9 @@ private:
     void handleTimeout();
     void cleanupCurrentOperation();
     
+    // Safety guard for keychain operation callbacks
+    bool isOperationValid() const;
+    
     // Static utility methods for fallback storage
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateServiceName(const QString& profileName, const QString& key);
