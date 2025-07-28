@@ -87,6 +87,9 @@ TDetachedWindow::~TDetachedWindow()
                 ++it;
             }
         }
+        
+        // Update multi-view controls since detached windows changed
+        mudletInstance->updateMultiViewControls();
     }
 
     saveWindowGeometry();
@@ -201,7 +204,8 @@ void TDetachedWindow::createMenus()
 
     auto closeAction = new QAction(tr("&Close"), this);
     closeAction->setShortcut(QKeySequence::Close);
-    connect(closeAction, &QAction::triggered, this, &QWidget::close);
+    closeAction->setStatusTip(tr("Close this window and all profiles in it"));
+    connect(closeAction, &QAction::triggered, this, &TDetachedWindow::slot_closeAllProfiles);
     windowMenu->addAction(closeAction);
 
     windowMenu->addSeparator();
@@ -223,8 +227,18 @@ void TDetachedWindow::createMenus()
 
 void TDetachedWindow::closeEvent(QCloseEvent* event)
 {
-    // Only remove consoles if this is not a reattachment
+    // Ensure profiles are properly closed when window is closed
+    // This prevents orphaned profiles that remain loaded but invisible
     if (!mIsReattaching) {
+        // Get a copy of profile names before we start closing them
+        QStringList profilesToClose = mProfileConsoleMap.keys();
+        
+        // Properly close each profile - this ensures proper cleanup and save prompts
+        for (const QString& profileName : profilesToClose) {
+            qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
+            mudlet::self()->slot_closeProfileByName(profileName);
+        }
+        
         // Remove all consoles from the stacked widget and reset their parents
         for (auto console : mProfileConsoleMap) {
             if (console) {
@@ -232,13 +246,11 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
                 console->setParent(nullptr);
             }
         }
-        mProfileConsoleMap.clear();
-    }
 
-    // Emit signal to notify main window only if not reattaching
-    if (!mIsReattaching) {
-        // Emit for each profile being closed
-        for (const QString& profileName : mProfileConsoleMap.keys()) {
+        mProfileConsoleMap.clear();
+        
+        // Emit signal to notify main window for any remaining cleanup
+        for (const QString& profileName : profilesToClose) {
             emit windowClosed(profileName);
         }
     }
@@ -1283,6 +1295,11 @@ void TDetachedWindow::closeProfileByIndex(int index)
 
     // If this was the last profile, close the detached window
     if (mProfileConsoleMap.isEmpty()) {
+        // Signal that this window is closing to update multi-view controls
+        // Since the profile map is now empty, closeEvent() won't emit windowClosed signals
+        // so we need to notify the main window about the window closure here
+        emit windowClosed(profileName);
+        
         QTimer::singleShot(0, this, [this] {
             close();
         });
@@ -1647,4 +1664,23 @@ void TDetachedWindow::refreshTabBar()
             mpTabBar->setTabText(i, displayText);
         }
     }
+}
+
+void TDetachedWindow::slot_closeAllProfiles()
+{
+    // Properly close all profiles before closing the window
+    // This ensures save prompts and proper cleanup
+    QStringList profilesToClose = mProfileConsoleMap.keys();
+    
+    qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing" << profilesToClose.size() << "profiles";
+    
+    for (const QString& profileName : profilesToClose) {
+        qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing profile:" << profileName;
+        mudlet::self()->slot_closeProfileByName(profileName);
+    }
+    
+    // After all profiles are closed, close the window
+    // The profiles should already be removed from mProfileConsoleMap by now,
+    // but closeEvent() will handle any remaining cleanup
+    close();
 }

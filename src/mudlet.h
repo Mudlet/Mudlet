@@ -264,6 +264,11 @@ public:
     bool migratePasswordsToSecureStorage();
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
+    
+    // Profile validation and orphan detection
+    bool hasOrphanedProfiles();
+    QStringList getOrphanedProfiles();
+    void reattachOrphanedProfiles();
     // Both of these revises the contents of the .aff file and handle a .dic
     // file that has been updated externally/manually (to add or remove words)
     // - the first also puts the contents of the .dic file into the

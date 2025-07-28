@@ -1595,17 +1595,41 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
 // Window menu slot implementations
 void mudlet::slot_reattachAllDetachedWindows()
 {
+    // First, check for and reattach any orphaned profiles
+    QStringList orphanedProfiles = getOrphanedProfiles();
+
+    if (!orphanedProfiles.isEmpty()) {
+        qWarning() << "slot_reattachAllDetachedWindows: Found orphaned profiles:" << orphanedProfiles;
+        reattachOrphanedProfiles();
+    }
+    
     // Get a copy of the detached windows map since reattaching will modify it
     auto detachedWindowsCopy = mDetachedWindows;
+
+    if (detachedWindowsCopy.isEmpty()) {
+        qDebug() << "slot_reattachAllDetachedWindows: No detached windows to reattach";
+        return;
+    }
+    
+    qDebug() << "slot_reattachAllDetachedWindows: Reattaching" << detachedWindowsCopy.size() << "detached windows";
 
     for (auto it = detachedWindowsCopy.begin(); it != detachedWindowsCopy.end(); ++it) {
         const QString& profileName = it.key();
         TDetachedWindow* detachedWindow = it.value();
 
         if (detachedWindow) {
+            qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
             // Use the existing reattach mechanism
             reattachTab(profileName, -1); // Use default insert index
         }
+    }
+    
+    // Final validation to ensure no profiles are left orphaned
+    QStringList remainingOrphans = getOrphanedProfiles();
+
+    if (!remainingOrphans.isEmpty()) {
+        qWarning() << "slot_reattachAllDetachedWindows: Still have orphaned profiles after reattachment:" << remainingOrphans;
+        reattachOrphanedProfiles();
     }
 }
 
@@ -1658,6 +1682,12 @@ void mudlet::updateMultiViewControls()
     }
     if (dactionMultiView->isEnabled() != isEnabled) {
         dactionMultiView->setEnabled(isEnabled);
+    }
+    
+    // Update reattach detached windows menu visibility
+    const bool hasDetachedWindows = !mDetachedWindows.isEmpty();
+    if (dactionReattachDetachedWindows->isVisible() != hasDetachedWindows) {
+        dactionReattachDetachedWindows->setVisible(hasDetachedWindows);
     }
 }
 
@@ -2049,6 +2079,34 @@ void mudlet::showEvent(QShowEvent* event)
 {
     mWindowMinimized = false;
     QMainWindow::showEvent(event);
+    
+    // Validate profiles on startup - check for orphaned profiles that might 
+    // have been left invisible due to improper detached window closure
+    static bool startupValidationDone = false;
+
+    if (!startupValidationDone) {
+        startupValidationDone = true;
+        
+        // Use a timer to defer this check until after full initialization
+        QTimer::singleShot(1000, this, [this]() {
+            QStringList orphanedProfiles = getOrphanedProfiles();
+
+            if (!orphanedProfiles.isEmpty()) {
+                qWarning() << "Startup validation: Found orphaned profiles from previous session:" << orphanedProfiles;
+                
+                // Ask user if they want to reattach the orphaned profiles
+                QString message = tr("Found %1 profile(s) that were left in an invisible state from a previous session:\n\n%2\n\nWould you like to reattach them to the main window?")
+                                 .arg(orphanedProfiles.size())
+                                 .arg(orphanedProfiles.join(", "));
+                                 
+                auto reply = QMessageBox::question(this, tr("Orphaned Profiles Detected"), message,
+                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+                if (reply == QMessageBox::Yes) {
+                    reattachOrphanedProfiles();
+                }
+            }
+        });
+    }
 }
 
 void mudlet::hideEvent(QHideEvent* event)
@@ -5684,6 +5742,9 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
 
         // Update tab bar auto-hide behavior since detached windows changed
         updateMainWindowTabBarAutoHide();
+        
+        // Update multi-view controls including "Reattach detached windows" menu visibility
+        updateMultiViewControls();
 
         // Properly close the host to avoid dangling connections
         Host* pHost = mHostManager.getHost(profileName);
@@ -6333,6 +6394,9 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
         targetWindow->updateToolbarForProfile(pHost);
     }
 
+    // Always update multi-view controls after moving profiles between windows
+    updateMultiViewControls();
+
     // Check if source window should be closed (no profiles left)
     if (sourceWindow->getProfileCount() == 0) {
         // Remove all entries for this window from detached windows map before closing
@@ -6351,6 +6415,9 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
 
         // Update tab bar auto-hide behavior since detached windows changed
         updateMainWindowTabBarAutoHide();
+        
+        // Update multi-view controls including "Reattach detached windows" menu visibility
+        updateMultiViewControls();
     }
 }
 
@@ -6612,4 +6679,112 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     
     // Refresh tab bar to ensure CDC identifiers are displayed after reattachment
     refreshTabBar();
+}
+
+bool mudlet::hasOrphanedProfiles()
+{
+    // Check if any loaded profiles don't have visible windows
+    for (const auto& pHost : mHostManager) {
+        if (!pHost || !pHost->mpConsole) {
+            continue;
+        }
+        
+        const QString profileName = pHost->getName();
+        
+        // Check if profile is in main window (has a tab)
+        bool inMainWindow = false;
+
+        for (int i = 0; i < mpTabBar->count(); ++i) {
+            if (mpTabBar->tabData(i).toString() == profileName) {
+                inMainWindow = true;
+                break;
+            }
+        }
+        
+        // Check if profile is in a detached window
+        bool inDetachedWindow = mDetachedWindows.contains(profileName);
+        
+        // If profile is not visible in either location, it's orphaned
+        if (!inMainWindow && !inDetachedWindow) {
+            qWarning() << "hasOrphanedProfiles: Found orphaned profile:" << profileName;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QStringList mudlet::getOrphanedProfiles()
+{
+    QStringList orphanedProfiles;
+    
+    // Find all loaded profiles that don't have visible windows
+    for (const auto& pHost : mHostManager) {
+        if (!pHost || !pHost->mpConsole) {
+            continue;
+        }
+        
+        const QString profileName = pHost->getName();
+        
+        // Check if profile is in main window (has a tab)
+        bool inMainWindow = false;
+        for (int i = 0; i < mpTabBar->count(); ++i) {
+            if (mpTabBar->tabData(i).toString() == profileName) {
+                inMainWindow = true;
+                break;
+            }
+        }
+        
+        // Check if profile is in a detached window
+        bool inDetachedWindow = mDetachedWindows.contains(profileName);
+        
+        // If profile is not visible in either location, it's orphaned
+        if (!inMainWindow && !inDetachedWindow) {
+            qWarning() << "getOrphanedProfiles: Found orphaned profile:" << profileName;
+            orphanedProfiles << profileName;
+        }
+    }
+
+    return orphanedProfiles;
+}
+
+void mudlet::reattachOrphanedProfiles()
+{
+    QStringList orphanedProfiles = getOrphanedProfiles();
+    
+    if (orphanedProfiles.isEmpty()) {
+        qDebug() << "reattachOrphanedProfiles: No orphaned profiles found";
+        return;
+    }
+    
+    qWarning() << "reattachOrphanedProfiles: Reattaching" << orphanedProfiles.size() << "orphaned profiles:" << orphanedProfiles;
+    
+    // Reattach each orphaned profile to the main window
+    for (const QString& profileName : orphanedProfiles) {
+        Host* pHost = mHostManager.getHost(profileName);
+        if (!pHost || !pHost->mpConsole) {
+            qWarning() << "reattachOrphanedProfiles: Invalid host for profile:" << profileName;
+            continue;
+        }
+        
+        qDebug() << "reattachOrphanedProfiles: Reattaching orphaned profile:" << profileName;
+        
+        // Add console back to main window
+        const int insertIndex = mpTabBar->count(); // Insert at end
+        addConsoleToSplitter(pHost->mpConsole, insertIndex);
+        
+        // Add tab back to tab bar
+        const int newTabIndex = mpTabBar->insertTab(insertIndex, profileName);
+        mpTabBar->setTabData(newTabIndex, profileName);
+        
+        // Make it the current tab
+        mpTabBar->setCurrentIndex(newTabIndex);
+        activateProfile(pHost);
+    }
+    
+    // Update UI after reattachment
+    updateMultiViewControls();
+    updateMainWindowTabBarAutoHide();
+    refreshTabBar();
+    enableToolbarButtons();
 }

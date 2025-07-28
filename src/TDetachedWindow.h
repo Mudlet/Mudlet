@@ -81,6 +81,7 @@ private slots:
     void slot_toggleAlwaysOnTop();
     void slot_saveProfile();
     void slot_exportProfile();
+    void slot_closeAllProfiles(); // Close all profiles properly before closing window
 
     // Detached window specific toolbar action slots
     void slot_connectProfile();
