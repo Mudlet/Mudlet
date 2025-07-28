@@ -1715,6 +1715,15 @@ void mudlet::slot_tabChanged(int tabID)
     updateMainWindowTabIndicators();
 }
 
+void mudlet::slot_refreshTabIndicatorsDelayed()
+{
+    // This slot is called by a timer to refresh tab indicators a few seconds
+    // after profile creation to catch connection status changes that typically
+    // happen within the first few seconds of opening a profile
+    updateMainWindowTabIndicators();
+    updateDetachedWindowToolbars();
+}
+
 void mudlet::addConsoleForNewHost(Host* pH)
 {
     if (pH->mpConsole) {
@@ -1816,6 +1825,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // profiles get shown across a split screen - even though mMultiView is NOT
     // set)!
     qApp->processEvents();
+    
+    // Set up a timer to refresh tab indicators after a few seconds
+    // This catches connection status changes that typically happen shortly after profile creation
+    QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
 

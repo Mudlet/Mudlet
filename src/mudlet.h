@@ -541,6 +541,7 @@ private slots:
     void slot_windowStateChanged(const Qt::WindowStates);
     void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
     void slot_aiError(const QString& error);
+    void slot_refreshTabIndicatorsDelayed();
 
 
 private:
