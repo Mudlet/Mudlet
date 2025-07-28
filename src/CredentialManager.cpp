@@ -153,6 +153,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
         if (callback) {
             callback(false, "Service and account cannot be empty");
         }
+
         return;
     }
 
@@ -162,6 +163,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
         if (callback) {
             callback(false, "Application is shutting down");
         }
+
         return;
     }
 
@@ -250,9 +252,11 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown() || (mudlet::self() && mudlet::self()->isGoingDown())) {
         qWarning() << "CredentialManager: Rejecting retrieveCredential operation during shutdown";
+
         if (callback) {
             callback(false, QString(), "Application is shutting down");
         }
+
         return;
     }
 
@@ -334,6 +338,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
         if (callback) {
             callback(false, "Service and account cannot be empty");
         }
+
         return;
     }
 
@@ -343,6 +348,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
         if (callback) {
             callback(false, "Application is shutting down");
         }
+
         return;
     }
 
@@ -654,6 +660,7 @@ bool CredentialManager::removeCredentialFromFile(const QString& profileName, con
     }
     
     bool removed = QFile::remove(filePath);
+
     if (!removed) {
         qWarning() << "CredentialManager: Failed to remove encrypted credential file:" << filePath;
     }
@@ -706,6 +713,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         if (sanitized.length() > 50) {
             sanitized = sanitized.left(50);
         }
+
         return sanitized;
     };
     
