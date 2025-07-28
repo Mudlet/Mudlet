@@ -2294,16 +2294,9 @@ void mudlet::showEvent(QShowEvent* event)
             if (!orphanedProfiles.isEmpty()) {
                 qWarning() << "Startup validation: Found orphaned profiles from previous session:" << orphanedProfiles;
                 
-                // Ask user if they want to reattach the orphaned profiles
-                QString message = tr("Found %1 profile(s) that were left in an invisible state from a previous session:\n\n%2\n\nWould you like to reattach them to the main window?")
-                                 .arg(orphanedProfiles.size())
-                                 .arg(orphanedProfiles.join(", "));
-                                 
-                auto reply = QMessageBox::question(this, tr("Orphaned Profiles Detected"), message,
-                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-                if (reply == QMessageBox::Yes) {
-                    reattachOrphanedProfiles();
-                }
+                // Automatically reattach orphaned profiles without user prompt
+                qDebug() << "Automatically reattaching" << orphanedProfiles.size() << "orphaned profiles:" << orphanedProfiles.join(", ");
+                reattachOrphanedProfiles();
             }
         });
     }
