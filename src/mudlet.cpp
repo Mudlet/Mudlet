@@ -2487,8 +2487,12 @@ void mudlet::writeSettings()
 void mudlet::slot_showConnectionDialog()
 {
     if (mpConnectionDialog) {
+        // If dialog already exists, bring it to the front of the main window
+        mpConnectionDialog->raise();
+        mpConnectionDialog->activateWindow();
         return;
     }
+
     mpConnectionDialog = new dlgConnectionProfiles(this);
     connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     mpConnectionDialog->fillout_form();
@@ -2498,7 +2502,24 @@ void mudlet::slot_showConnectionDialog()
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
-    mpConnectionDialog->show();
+    
+    // Use a timer to ensure the main window is ready before showing the dialog
+    // This is especially important at startup when the main window might not be fully initialized
+    QTimer::singleShot(0, this, [this]() {
+        // Ensure the main window is visible and ready
+        if (!isVisible()) {
+            show();
+        }
+        
+        // Bring the main window to the front first
+        raise();
+        activateWindow();
+        
+        // Then show and bring the dialog to the front
+        mpConnectionDialog->show();
+        mpConnectionDialog->raise();
+        mpConnectionDialog->activateWindow();
+    });
 }
 
 void mudlet::slot_showEditorDialog()
@@ -5884,8 +5905,9 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Update tab bar auto-hide behavior since we now have detached windows
     updateMainWindowTabBarAutoHide();
 
-    // If no tabs remain, show connection dialog
-    if (mpTabBar->count() == 0 && !mIsGoingDown) {
+    // Only show connection dialog if there are no profiles loaded anywhere,
+    // not just when the main window is empty (profiles might be in detached windows)
+    if (mpTabBar->count() == 0 && mHostManager.getHostCount() == 0 && !mIsGoingDown) {
         disableToolbarButtons();
         slot_showConnectionDialog();
         setWindowTitle(scmVersion);
@@ -6300,8 +6322,9 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
     // Update tab bar auto-hide behavior
     updateMainWindowTabBarAutoHide();
 
-    // If no tabs remain in main window, show connection dialog
-    if (mpTabBar->count() == 0 && !mIsGoingDown) {
+    // Only show connection dialog if there are no profiles loaded anywhere,
+    // not just when the main window is empty (profiles might be in detached windows)
+    if (mpTabBar->count() == 0 && mHostManager.getHostCount() == 0 && !mIsGoingDown) {
         disableToolbarButtons();
         slot_showConnectionDialog();
         setWindowTitle(scmVersion);
