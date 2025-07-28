@@ -3246,6 +3246,10 @@ void mudlet::slot_reconnect()
     pHost->mTelnet.reconnect();
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
+    
+    // Set up a timer to refresh tab indicators after a few seconds
+    // This catches connection status changes that typically happen shortly after reconnection
+    QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
 void mudlet::slot_disconnect()
