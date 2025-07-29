@@ -1587,7 +1587,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="66"/>
       <location filename="../src/TDetachedWindow.cpp" line="741"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (Sganciato)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="149"/>
@@ -1612,12 +1612,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="160"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>Esporta profilo come package</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="164"/>
       <source>Profile &amp;Settings</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Impostazioni Profilo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="166"/>
@@ -1637,17 +1637,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="178"/>
       <source>&amp;Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Finestra</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="180"/>
       <source>&amp;Reattach to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Riaggancia alla Finestra Principale</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="182"/>
       <source>Reattach this profile window to the main Mudlet window</source>
-      <translation type="unfinished"/>
+      <translation>Riaggancia questa finestra del profilo alla finestra principale di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="188"/>
@@ -1657,7 +1657,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="196"/>
       <source>Always on &amp;Top</source>
-      <translation type="unfinished"/>
+      <translation>Sempre in &amp;Primo Piano</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="199"/>
@@ -1672,7 +1672,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="357"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Riaggancia &apos;%1&apos; alla Finestra Principale</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="367"/>
@@ -1687,7 +1687,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="426"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Barra degli Strumenti Profilo</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="433"/>
@@ -1907,17 +1907,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="743"/>
       <source>Mudlet (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (scollegato)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="751"/>
       <source> - Connected</source>
-      <translation type="unfinished"/>
+      <translation> - Connesso</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="753"/>
       <source> to %1</source>
-      <translation type="unfinished"/>
+      <translation> a %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
@@ -1932,12 +1932,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="763"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (%1 profili) - %2 (Sganciata)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="781"/>
       <source>Profiles: %1 | Active: %2</source>
-      <translation type="unfinished"/>
+      <translation>Profili: %1 | Attivo: %2</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="789"/>
@@ -1947,7 +1947,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="792"/>
       <source>Connecting to %1...</source>
-      <translation type="unfinished"/>
+      <translation>Connessione a %1...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="795"/>
@@ -4576,12 +4576,12 @@ Motivo: </translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
       <source>User Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Utente Disconnesso</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>Connection/login attempt rejected by server</source>
-      <translation type="unfinished"/>
+      <translation>Tentativo di connessione/accesso rifiutato dal server</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="592"/>
@@ -4592,7 +4592,8 @@ Motivo: </translation>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Socket disconnesso.
+Causa: %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="644"/>
@@ -4634,7 +4635,7 @@ non sarà variata nuovamente.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="1628"/>
       <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Questo gioco sembra utilizzare il gestore di protocollo di KaVir, che funziona meglio quando Mudlet comunica il suo numero di versione durante la connessione. L'invio della versione è stato abilitato automaticamente per migliorare il supporto del colore. Riconnessione in corso...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1639"/>
@@ -9788,7 +9789,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="152"/>
       <source>Window</source>
-      <translation type="unfinished"/>
+      <translation>Finestra</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -9798,22 +9799,22 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="180"/>
       <source>Reattach detached windows</source>
-      <translation type="unfinished"/>
+      <translation>Riaggancia finestre sganciate</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="183"/>
       <source>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Riaggancia tutte le finestre del profilo sganciate alla finestra principale di Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="194"/>
       <source>Always on Top</source>
-      <translation type="unfinished"/>
+      <translation>Sempre in primo piano</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
       <source>&lt;p&gt;Keep the main Mudlet window always on top of other windows.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mantieni sempre la finestra principale di Mudlet in primo piano rispetto alle altre finestre.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="202"/>
