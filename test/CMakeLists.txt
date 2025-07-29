@@ -2,7 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.25.1)
 
 SET(CMAKE_AUTOMOC ON)
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
-SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD 20)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
@@ -117,6 +117,7 @@ add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
 
 add_executable(CredentialManagerTest CredentialManagerTest.cpp ../src/CredentialManager.cpp ../src/SecureStringUtils.cpp)
 target_link_libraries(CredentialManagerTest ${KEYCHAIN_LIBRARY} OpenSSL::SSL OpenSSL::Crypto)
+target_compile_definitions(CredentialManagerTest PRIVATE CREDENTIALMANAGER_MINIMAL_BUILD)
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
