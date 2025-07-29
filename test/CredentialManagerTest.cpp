@@ -141,6 +141,7 @@ void CredentialManagerTest::testInputSanitization()
     // Test with Unicode characters in keys
     QString unicodeKey = "key_with_unicode_αβγ_δεζ";
     bool unicodeStored = CredentialManager::storeCredential(profile, unicodeKey, password);
+
     if (unicodeStored) {
         QString unicodeRetrieved = CredentialManager::retrieveCredential(profile, unicodeKey);
         QCOMPARE(unicodeRetrieved, password);
