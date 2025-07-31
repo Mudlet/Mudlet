@@ -793,6 +793,7 @@ private:
     QString sanitizePackageName(const QString packageName) const;
     TCommandLine* activeCommandLine();
     void closeChildren();
+    void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
