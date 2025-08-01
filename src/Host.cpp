@@ -2235,14 +2235,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName, boo
 void Host::setupSandboxedLuaState(lua_State* L)
 {
     // Load only safe libraries
-    luaL_requiref(L, "_G", luaopen_base, 1);
-    lua_pop(L, 1);
-    luaL_requiref(L, "table", luaopen_table, 1);
-    lua_pop(L, 1);
-    luaL_requiref(L, "string", luaopen_string, 1);
-    lua_pop(L, 1);
-    luaL_requiref(L, "math", luaopen_math, 1);
-    lua_pop(L, 1);
+    luaopen_base(L);
+    luaopen_table(L);
+    luaopen_string(L);
+    luaopen_math(L);
     
     // Remove dangerous functions
     const char* dangerousFunctions[] = {
