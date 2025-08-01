@@ -50,7 +50,7 @@
 #include <QWidget>
 #include <QWindowStateChangeEvent>
 
-TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent)
+TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent, bool toolbarVisible)
     : QMainWindow(parent)
     , mCurrentProfileName(profileName)
 {
@@ -62,6 +62,11 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     createMenus();
     createStatusBar();
     restoreWindowGeometry();
+
+    // Set initial toolbar visibility based on main window state
+    if (mpToolBar) {
+        mpToolBar->setVisible(toolbarVisible);
+    }
 
     // Set window properties
     setWindowTitle(tr("Mudlet - %1 (Detached)").arg(profileName));
@@ -212,6 +217,14 @@ void TDetachedWindow::createMenus()
     mpWindowMenu->addAction(closeAction);
 
     mpWindowMenu->addSeparator();
+
+    // Toolbar visibility toggle
+    mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    mpActionToggleToolBar->setCheckable(true);
+    mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
+    mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
+    connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
+    mpWindowMenu->addAction(mpActionToggleToolBar);
 
     // Always on top toggle
     auto alwaysOnTopAction = new QAction(tr("Always on &Top"), this);
@@ -409,6 +422,14 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
         connect(closeWindowAction, &QAction::triggered, this, &QWidget::close);
     }
 
+    contextMenu.addSeparator();
+
+    // Add toolbar visibility toggle to the context menu
+    auto toolbarToggleAction = contextMenu.addAction(tr("Show Toolbar"));
+    toolbarToggleAction->setCheckable(true);
+    toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
+    connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
+
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
 
@@ -459,6 +480,15 @@ void TDetachedWindow::createToolBar()
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
     mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+
+    // Reattach action - placed first in the toolbar for prominence
+    mpActionReattach = new QAction(QIcon(qsl(":/icons/view-restore.png")), tr("Reattach"), this);
+    mpActionReattach->setToolTip(utils::richText(tr("Reattach this profile window to the main Mudlet window")));
+    mpActionReattach->setObjectName(qsl("reattach_action"));
+    mpToolBar->addAction(mpActionReattach);
+
+    // Add separator after reattach button to make it distinct
+    mpToolBar->addSeparator();
 
     // Connect button with dropdown actions
     mpButtonConnect = new QToolButton(this);
@@ -655,6 +685,9 @@ void TDetachedWindow::connectToolBarActions()
     connect(mpActionCloseProfile, &QAction::triggered, this, &TDetachedWindow::slot_closeCurrentProfile);
     connect(mpActionCloseApplication, &QAction::triggered, this, &TDetachedWindow::slot_closeApplication);
 
+    // Reattach action
+    connect(mpActionReattach, &QAction::triggered, this, &TDetachedWindow::onReattachAction);
+
     // Script editor actions - use our custom slots to ensure correct profile context
     connect(mpActionTriggers, &QAction::triggered, this, &TDetachedWindow::slot_showTriggerDialog);
     connect(mpActionAliases, &QAction::triggered, this, &TDetachedWindow::slot_showAliasDialog);
@@ -765,6 +798,9 @@ void TDetachedWindow::updateToolBarActions()
     // Help and About are always enabled
     mpActionHelp->setEnabled(true);
     mpActionAbout->setEnabled(true);
+
+    // Reattach is always enabled when the window exists
+    mpActionReattach->setEnabled(true);
 
     // Full screen toggle is always enabled
     mpActionFullScreenView->setEnabled(true);
@@ -928,6 +964,21 @@ void TDetachedWindow::slot_toggleAlwaysOnTop()
     QTimer::singleShot(100, this, [this]() {
         mIsChangingWindowFlags = false;
     });
+}
+
+void TDetachedWindow::slot_toggleToolBarVisibility()
+{
+    if (!mpToolBar) {
+        return;
+    }
+
+    bool isCurrentlyVisible = mpToolBar->isVisible();
+    mpToolBar->setVisible(!isCurrentlyVisible);
+    
+    // Update the action to reflect the new state
+    if (mpActionToggleToolBar) {
+        mpActionToggleToolBar->setChecked(!isCurrentlyVisible);
+    }
 }
 
 void TDetachedWindow::slot_saveProfile()

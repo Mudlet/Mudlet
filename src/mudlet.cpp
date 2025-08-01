@@ -217,6 +217,11 @@ void mudlet::init()
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
+    
+    // Add context menu to toolbar for show/hide functionality
+    mpMainToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(mpMainToolBar, &QWidget::customContextMenuRequested,
+            this, &mudlet::slot_showMainToolBarContextMenu);
     addToolBarBreak();
     auto frame = new QWidget(this);
     setCentralWidget(frame);
@@ -236,6 +241,11 @@ void mudlet::init()
     // Connect the tab bar's reattach signal (for drag and drop reattachment)
     connect(mpTabBar, &TTabBar::tabReattachRequested,
             this, &mudlet::slot_tabReattachRequested);
+    
+    // Add context menu to tab bar for toolbar visibility options
+    mpTabBar->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(mpTabBar, &QWidget::customContextMenuRequested,
+            this, &mudlet::slot_showTabContextMenu);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
@@ -418,6 +428,12 @@ void mudlet::init()
     mpActionNotes->setObjectName(qsl("notepad_action"));
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
+    // Create toolbar toggle action
+    mpActionToggleMainToolBar = new QAction(tr("Show Main Toolbar"), this);
+    mpActionToggleMainToolBar->setCheckable(true);
+    mpActionToggleMainToolBar->setChecked(true); // Initially checked
+    mpActionToggleMainToolBar->setObjectName(qsl("toggle_main_toolbar_action"));
+
     mpButtonPackageManagers = new QToolButton(this);
     mpButtonPackageManagers->setText(tr("Packages"));
     mpButtonPackageManagers->setObjectName(qsl("package_manager"));
@@ -512,6 +528,7 @@ void mudlet::init()
     connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::slot_showVariableDialog);
     connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::slot_showActionDialog);
     connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
+    connect(mpActionToggleMainToolBar.data(), &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_showAboutDialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multiView);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -610,6 +627,12 @@ void mudlet::init()
     connect(dactionToggleReplay, &QAction::triggered, this, &mudlet::slot_toggleReplay);
     connect(dactionToggleLogging, &QAction::triggered, this, &mudlet::slot_toggleLogging);
     connect(dactionToggleEmergencyStop, &QAction::triggered, this, &mudlet::slot_toggleEmergencyStop);
+
+    // Add toolbar toggle action to Options menu
+    if (menuOptions && mpActionToggleMainToolBar) {
+        menuOptions->addSeparator();
+        menuOptions->addAction(mpActionToggleMainToolBar);
+    }
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -2605,6 +2628,12 @@ void mudlet::setToolBarVisibility(const enums::controlsVisibility state)
     mToolbarVisibility = state;
 
     adjustToolBarVisibility();
+    
+    // Update the toggle action to match the current state
+    if (mpActionToggleMainToolBar) {
+        mpActionToggleMainToolBar->setChecked(state != enums::visibleNever);
+    }
+    
     emit signal_toolBarVisibilityChanged(state);
 }
 
@@ -3829,6 +3858,51 @@ void mudlet::slot_windowStateChanged(const Qt::WindowStates newState)
     if (dactionToggleFullScreen->isChecked() != (newState & Qt::WindowFullScreen)) {
         dactionToggleFullScreen->setChecked(newState & Qt::WindowFullScreen);
     }
+}
+
+void mudlet::slot_toggleMainToolBar()
+{
+    // Toggle the toolbar visibility
+    enums::controlsVisibility currentState = toolBarVisibility();
+    if (currentState == enums::visibleNever) {
+        setToolBarVisibility(enums::visibleAlways);
+        mpActionToggleMainToolBar->setChecked(true);
+    } else {
+        setToolBarVisibility(enums::visibleNever);
+        mpActionToggleMainToolBar->setChecked(false);
+    }
+}
+
+void mudlet::slot_showMainToolBarContextMenu(const QPoint& position)
+{
+    QMenu contextMenu(this);
+    
+    // Create a copy of the toggle action for the context menu
+    QAction* toggleAction = new QAction(tr("Show Main Toolbar"), &contextMenu);
+    toggleAction->setCheckable(true);
+    toggleAction->setChecked(mpMainToolBar->isVisible());
+    connect(toggleAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
+    
+    contextMenu.addAction(toggleAction);
+    
+    // Show the context menu at the global position
+    contextMenu.exec(mpMainToolBar->mapToGlobal(position));
+}
+
+void mudlet::slot_showTabContextMenu(const QPoint& position)
+{
+    QMenu contextMenu(this);
+    
+    // Add toolbar visibility toggle
+    QAction* toggleToolbarAction = new QAction(tr("Show Main Toolbar"), &contextMenu);
+    toggleToolbarAction->setCheckable(true);
+    toggleToolbarAction->setChecked(mpMainToolBar->isVisible());
+    connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
+    
+    contextMenu.addAction(toggleToolbarAction);
+    
+    // Show the context menu at the global position
+    contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
 
 // Called from the ctelnet instance for the host concerned:
@@ -6047,8 +6121,9 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         mpTabBar->repaint();
     }
 
-    // Create detached window
-    auto detachedWindow = new TDetachedWindow(profileName, console, this);
+    // Create detached window with toolbar state inherited from main window
+    bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
+    auto detachedWindow = new TDetachedWindow(profileName, console, this, toolbarVisible);
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Connect signals

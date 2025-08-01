@@ -491,6 +491,9 @@ public slots:
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
     void slot_showTimerDialog();
+    void slot_showTabContextMenu(const QPoint& position);
+    void slot_toggleMainToolBar();
+    void slot_showMainToolBarContextMenu(const QPoint& position);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
 
@@ -657,6 +660,7 @@ private:
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionSpeedDisplay;
     QPointer<QAction> mpActionTimers;
+    QPointer<QAction> mpActionToggleMainToolBar;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
     Announcer* mpAnnouncer = nullptr;
