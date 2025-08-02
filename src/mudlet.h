@@ -435,6 +435,7 @@ public slots:
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
+    void slot_showMapperDialog(); // Enhanced mapper dialog with per-profile dock widgets
     void slot_moduleManager();
     void slot_mudletDiscord();
     void slot_multiView(const bool);
@@ -741,11 +742,22 @@ private:
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
 
+    // Dock widget management for main window per-profile widgets
+    QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
+    QMap<QString, bool> mMainWindowDockWidgetIntendedVisibility; // Track intended visibility for each dock widget
+    QPointer<QDockWidget> mpCurrentMapDockWidget;
+
     // Helper methods for detached windows
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);
     void addConsoleToSplitter(TMainConsole* console, int index = -1);
+
+    // Helper methods for main window dock widget management
+    void updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName);
+    void transferDockWidgetToDetachedWindow(const QString& profileName, TDetachedWindow* detachedWindow);
+    void transferDockWidgetFromDetachedWindow(const QString& profileName, TDetachedWindow* detachedWindow);
+    void transferDockWidgetBetweenDetachedWindows(const QString& profileName, TDetachedWindow* sourceWindow, TDetachedWindow* targetWindow);
 };
 
 

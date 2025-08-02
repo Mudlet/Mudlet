@@ -29,6 +29,7 @@
 #include <QLabel>
 #include <QMap>
 #include <QStackedWidget>
+#include <QDockWidget>
 #include <functional>
 
 class TMainConsole;
@@ -58,6 +59,22 @@ public:
     void updateWindowMenu();  // Update the window menu with current window list
     void switchToProfile(const QString& profileName);  // Switch to a specific profile tab
 
+    // Dock widget management methods
+    QDockWidget* getDockWidget(const QString& mapKey) const { return mDockWidgetMap.value(mapKey); }
+    void addDockWidget(const QString& mapKey, QDockWidget* dockWidget) { mDockWidgetMap[mapKey] = dockWidget; }
+    void removeDockWidget(const QString& mapKey) { 
+        mDockWidgetMap.remove(mapKey); 
+        mDockWidgetIntendedVisibility.remove(mapKey);
+    }
+    
+    // Intended visibility management
+    void setDockWidgetIntendedVisibility(const QString& mapKey, bool visible) { mDockWidgetIntendedVisibility[mapKey] = visible; }
+    bool getDockWidgetIntendedVisibility(const QString& mapKey) const { return mDockWidgetIntendedVisibility.value(mapKey, false); }
+    
+    // Map dock widget access methods
+    QDockWidget* getMapDockWidget() const { return mpMapDockWidget; }
+    void setMapDockWidget(QDockWidget* dockWidget) { mpMapDockWidget = dockWidget; }
+
 protected:
     void closeEvent(QCloseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -79,6 +96,7 @@ private slots:
     void closeProfile();
     void closeProfileByIndex(int index);
     void slot_tabChanged(int index);
+    void slot_tabMoved(int oldPos, int newPos);
     void slot_toggleFullScreenView();
     void slot_toggleAlwaysOnTop();
     void slot_toggleToolBarVisibility();
@@ -128,6 +146,7 @@ private:
     void updateWindowTitle();
     void updateStatusBar(Host* pHost, bool isConnected, bool isConnecting);
     void updateTabIndicator(int tabIndex = -1);  // -1 means current tab
+    void updateDockWidgetVisibilityForProfile(const QString& profileName);  // Show/hide docked widgets based on active profile
     void saveWindowGeometry();
     void restoreWindowGeometry();
     void checkForWindowMergeOpportunity();  // Check if this window overlaps with another detached window
@@ -206,6 +225,11 @@ private:
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator{nullptr};
     QMenu* mpWindowMenu{nullptr};
+
+    // Docked widgets management
+    QMap<QString, QPointer<QDockWidget>> mDockWidgetMap;
+    QMap<QString, bool> mDockWidgetIntendedVisibility; // Track intended visibility for each dock widget
+    QDockWidget* mpMapDockWidget{nullptr};
 };
 
 #endif // TDETACHEDWINDOW_H

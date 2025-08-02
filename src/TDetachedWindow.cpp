@@ -25,6 +25,9 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "utils.h"
+#include "dlgMapper.h"
+#include "TRoomDB.h"
+#include "TMap.h"
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QAction>
@@ -49,6 +52,7 @@
 #include <QSizePolicy>
 #include <QWidget>
 #include <QWindowStateChangeEvent>
+#include <QDockWidget>
 
 TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent, bool toolbarVisible)
     : QMainWindow(parent)
@@ -100,6 +104,50 @@ TDetachedWindow::~TDetachedWindow()
         mudletInstance->updateMultiViewControls();
     }
 
+    // Clean up any docked widgets and restore main mappers
+    for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
+        if (it.value()) {
+            // If this is a map dock widget, restore the main mapper
+            if (it.key().startsWith("map_")) {
+                QString profileName = it.key().mid(4); // Remove "map_" prefix
+                if (auto mudletInstance = mudlet::self()) {
+                    if (auto pHost = mudletInstance->getHostManager().getHost(profileName)) {
+                        auto pMap = pHost->mpMap.data();
+                        if (pMap && pHost->mpDockableMapWidget) {
+                            // Find the main window's mapper
+                            auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                            if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                                pMap->mpMapper = mainMapper;
+                            }
+                        }
+                    }
+                }
+            }
+            it.value()->deleteLater();
+        }
+    }
+    mDockWidgetMap.clear();
+    
+    if (mpMapDockWidget) {
+        // Restore main mapper if this detached window had an active map
+        if (!mCurrentProfileName.isEmpty()) {
+            if (auto mudletInstance = mudlet::self()) {
+                if (auto pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
+                    auto pMap = pHost->mpMap.data();
+                    if (pMap && pHost->mpDockableMapWidget) {
+                        // Find the main window's mapper
+                        auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                        if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                            pMap->mpMapper = mainMapper;
+                        }
+                    }
+                }
+            }
+        }
+        mpMapDockWidget->deleteLater();
+        mpMapDockWidget = nullptr;
+    }
+
     saveWindowGeometry();
 }
 
@@ -116,6 +164,7 @@ void TDetachedWindow::setupUI()
     mpTabBar = new TTabBar(centralWidget);
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setTabsClosable(true);
+    mpTabBar->setMovable(true);
 
     // Add initial tab for the first profile
     if (!mCurrentProfileName.isEmpty()) {
@@ -158,6 +207,7 @@ void TDetachedWindow::setupUI()
     connect(mpTabBar, &TTabBar::tabDetachRequested, this, &TDetachedWindow::onReattachAction);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &TDetachedWindow::closeProfileByIndex);
     connect(mpTabBar, &QTabBar::currentChanged, this, &TDetachedWindow::slot_tabChanged);
+    connect(mpTabBar, &QTabBar::tabMoved, this, &TDetachedWindow::slot_tabMoved);
 
     // Connect double-click to reattach
     connect(mpTabBar, &QTabBar::tabBarDoubleClicked, this, &TDetachedWindow::onReattachAction);
@@ -934,6 +984,110 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     mpTabBar->setTabIcon(tabIndex, tabIcon);
 }
 
+void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profileName)
+{
+    // Clear the global map dock widget reference first
+    mpMapDockWidget = nullptr;
+    
+    qDebug() << "TDetachedWindow::updateDockWidgetVisibilityForProfile: Starting for profile" << profileName
+             << "- mDockWidgetMap.size():" << mDockWidgetMap.size();
+    
+    // Collect dock widgets to process to avoid iterator invalidation
+    QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
+    for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
+        if (it.value()) {
+            dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+            qDebug() << "TDetachedWindow: Found dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+        } else {
+            qDebug() << "TDetachedWindow: Found null dock widget in map for key:" << it.key();
+        }
+    }
+    
+    // Track if we found and showed a dock widget for the current profile
+    bool currentProfileHasVisibleDockWidget = false;
+    
+    // Process dock widgets without iterating over the map directly
+    for (const auto& dockPair : dockWidgetsToProcess) {
+        const QString& dockKey = dockPair.first;
+        QPointer<QDockWidget> dockWidget = dockPair.second;
+        
+        // Check if the dock widget still exists and is in our map
+        if (!dockWidget || !mDockWidgetMap.contains(dockKey)) {
+            qDebug() << "TDetachedWindow: Skipping dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr) 
+                     << "in map:" << mDockWidgetMap.contains(dockKey);
+            continue;
+        }
+        
+        // Check if this docked widget belongs to the current profile
+        if (dockKey.startsWith("map_")) {
+            QString dockProfileName = dockKey.mid(4); // Remove "map_" prefix
+            qDebug() << "TDetachedWindow: Processing map dock" << dockKey << "profile:" << dockProfileName << "current:" << profileName;
+            
+            if (dockProfileName == profileName) {
+                // This dock widget belongs to the current profile
+                // Check the intended visibility state, not the current visibility
+                bool shouldBeVisible = mDockWidgetIntendedVisibility.value(dockKey, false);
+                qDebug() << "TDetachedWindow: Found dock widget for current profile" << profileName 
+                         << "currently visible:" << dockWidget->isVisible() 
+                         << "should be visible:" << shouldBeVisible;
+                
+                // Show or hide based on intended visibility
+                if (shouldBeVisible) {
+                    dockWidget->show();
+                    dockWidget->raise();
+                    
+                    // Set this as the global map dock widget reference
+                    mpMapDockWidget = dockWidget;
+                    currentProfileHasVisibleDockWidget = true;
+                    
+                    qDebug() << "TDetachedWindow: Dock widget should be visible - showing and setting as active";
+                } else {
+                    dockWidget->setVisible(false);
+                    qDebug() << "TDetachedWindow: Dock widget should be hidden - respecting user preference";
+                }
+                
+                // Ensure the map's active mapper points to our detached instance (if visible)
+                if (auto pHost = mudlet::self()->getHostManager().getHost(profileName)) {
+                    if (auto pMap = pHost->mpMap.data()) {
+                        auto mapWidget = dockWidget->widget();
+                        if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
+                            // Only set as active mapper if the dock widget should be visible
+                            if (shouldBeVisible) {
+                                pMap->mpMapper = detachedMapper;
+                                qDebug() << "TDetachedWindow: Set active mapper for profile" << profileName;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // This dock widget belongs to a different profile - hide it
+                qDebug() << "TDetachedWindow: Hiding dock widget for different profile" << dockProfileName;
+                dockWidget->setVisible(false);
+                
+                // Restore main mapper for the other profile
+                if (auto pHost = mudlet::self()->getHostManager().getHost(dockProfileName)) {
+                    if (auto pMap = pHost->mpMap.data()) {
+                        if (pHost->mpDockableMapWidget) {
+                            auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                            if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                                pMap->mpMapper = mainMapper;
+                                qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Add other dock widget types here as they are implemented
+    }
+    
+    // Debug output to help track dock widget visibility changes
+    qDebug() << "TDetachedWindow::updateDockWidgetVisibilityForProfile:" << profileName 
+             << "- Found visible dock widget:" << currentProfileHasVisibleDockWidget
+             << "- Total dock widgets:" << dockWidgetsToProcess.size()
+             << "- mpMapDockWidget set:" << (mpMapDockWidget != nullptr);
+}
+
 void TDetachedWindow::slot_toggleFullScreenView()
 {
     if (isFullScreen()) {
@@ -1277,6 +1431,43 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
         return false;
     }
 
+    // Clean up any dock widgets for this profile before removing it
+    QString mapKey = qsl("map_%1").arg(profileName);
+    if (mDockWidgetMap.contains(mapKey)) {
+        QPointer<QDockWidget> mapDockWidget = mDockWidgetMap.value(mapKey);
+        if (mapDockWidget) {
+            qDebug() << "TDetachedWindow::removeProfile: Cleaning up dock widget for profile" << profileName;
+            
+            // If this is the currently active map dock, clear the global reference
+            if (mpMapDockWidget == mapDockWidget) {
+                mpMapDockWidget = nullptr;
+            }
+            
+            // Remove the dock widget from Qt's dock widget management
+            QMainWindow::removeDockWidget(mapDockWidget);
+            
+            // Restore the main window's mapper before deleting our dock widget
+            if (auto pHost = mudlet::self()->getHostManager().getHost(profileName)) {
+                if (auto pMap = pHost->mpMap.data()) {
+                    if (pHost->mpDockableMapWidget) {
+                        auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                        if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                            pMap->mpMapper = mainMapper;
+                            qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
+                        }
+                    }
+                }
+            }
+            
+            // Clean up the dock widget
+            mapDockWidget->deleteLater();
+        }
+        
+        // Remove from our tracking maps
+        mDockWidgetMap.remove(mapKey);
+        mDockWidgetIntendedVisibility.remove(mapKey);
+    }
+
     // Find the tab index
     int tabIndex = -1;
     for (int i = 0; i < mpTabBar->count(); ++i) {
@@ -1486,6 +1677,9 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
     updateToolBarActions();
     updateWindowTitle();
     updateTabIndicator();
+    
+    // Update docked window visibility based on the new active profile
+    updateDockWidgetVisibilityForProfile(profileName);
 
     // Force window repainting and layout update
     updateGeometry();
@@ -1513,6 +1707,62 @@ void TDetachedWindow::slot_tabChanged(int index)
     QString profileName = mpTabBar->tabData(index).toString();
     if (!profileName.isEmpty() && profileName != mCurrentProfileName) {
         switchToProfile(profileName);
+    }
+}
+
+void TDetachedWindow::slot_tabMoved(int oldPos, int newPos)
+{
+    // Get the current order of profile names from the tab bar
+    const QStringList& profileNamesInOrder = mpTabBar->tabNames();
+    const int itemsCount = mpConsoleContainer->count();
+    
+    // Validate that tab count matches console count
+    if (itemsCount != profileNamesInOrder.count()) {
+        qWarning().nospace().noquote() << "TDetachedWindow::slot_tabMoved(" << oldPos << ", " << newPos 
+                                       << ") WARNING - mismatch in count of tabs (" << profileNamesInOrder.count() 
+                                       << ") and TMainConsoles (" << itemsCount << ")";
+        return;
+    }
+
+    // Create a map of profile names to console widgets
+    QMap<QString, TMainConsole*> consoleWidgetMap;
+    for (auto it = mProfileConsoleMap.begin(); it != mProfileConsoleMap.end(); ++it) {
+        if (it.value()) {
+            consoleWidgetMap.insert(it.key(), it.value());
+        } else {
+            qWarning().nospace().noquote() << "TDetachedWindow::slot_tabMoved(" << oldPos << ", " << newPos 
+                                           << ") WARNING - nullptr for TMainConsole for profile: " << it.key();
+        }
+    }
+
+    // Remember the currently active widget before reordering
+    TMainConsole* currentActiveConsole = qobject_cast<TMainConsole*>(mpConsoleContainer->currentWidget());
+
+    // Reorder the console widgets in the stacked widget to match the new tab order
+    // Remove all widgets from the stacked widget and re-add them in the new order
+    QList<TMainConsole*> widgetsToReAdd;
+    for (const QString& profileName : profileNamesInOrder) {
+        TMainConsole* console = consoleWidgetMap.value(profileName);
+        if (console) {
+            mpConsoleContainer->removeWidget(console);
+            widgetsToReAdd.append(console);
+        }
+    }
+
+    // Re-add the widgets in the new order
+    for (TMainConsole* console : widgetsToReAdd) {
+        mpConsoleContainer->addWidget(console);
+    }
+
+    // Restore the currently active widget
+    if (currentActiveConsole && mpConsoleContainer->indexOf(currentActiveConsole) >= 0) {
+        mpConsoleContainer->setCurrentWidget(currentActiveConsole);
+    } else if (!mCurrentProfileName.isEmpty()) {
+        // Fallback: use the current profile name to find the correct console
+        TMainConsole* currentConsole = mProfileConsoleMap.value(mCurrentProfileName);
+        if (currentConsole) {
+            mpConsoleContainer->setCurrentWidget(currentConsole);
+        }
     }
 }
 
@@ -1775,9 +2025,164 @@ void TDetachedWindow::slot_showVariableDialog()
 
 void TDetachedWindow::slot_showMapperDialog()
 {
-    withCurrentProfileActive([this]() {
-        mudlet::self()->slot_mapper();
+    if (mCurrentProfileName.isEmpty()) {
+        return;
+    }
+
+    Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    if (!pHost) {
+        return;
+    }
+
+    auto pMap = pHost->mpMap.data();
+    if (!pMap) {
+        return;
+    }
+
+    // Check if we already have a mapper dock widget for this profile
+    QString mapKey = qsl("map_%1").arg(mCurrentProfileName);
+    QPointer<QDockWidget> existingMapDock = mDockWidgetMap.value(mapKey);
+    
+    if (existingMapDock) {
+        // Toggle visibility of existing mapper and update global reference
+        bool newVisibility = !existingMapDock->isVisible();
+        existingMapDock->setVisible(newVisibility);
+        
+        // Update mpMapDockWidget to point to the current profile's map if it's being shown
+        if (newVisibility) {
+            mpMapDockWidget = existingMapDock;
+            
+            // Ensure the map's active mapper points to our detached instance
+            auto mapWidget = existingMapDock->widget();
+            if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
+                pMap->mpMapper = detachedMapper;
+            }
+        } else if (mpMapDockWidget == existingMapDock) {
+            // If we're hiding the current map, clear the global reference and restore main mapper
+            mpMapDockWidget = nullptr;
+            
+            // Restore the main window's mapper as the active one
+            if (pHost->mpDockableMapWidget) {
+                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                    pMap->mpMapper = mainMapper;
+                }
+            }
+        }
+        return;
+    }
+
+    // Create a new docked mapper widget for this profile
+    auto newMapDockWidget = new QDockWidget(tr("Map - %1").arg(mCurrentProfileName), this);
+    newMapDockWidget->setObjectName(qsl("dockMap_%1_detached").arg(mCurrentProfileName));
+    
+    // Store the main window's mapper temporarily so we can restore it later
+    QPointer<dlgMapper> mainMapper = pMap->mpMapper;
+    QPointer<QDockWidget> mainDockWidget = pHost->mpDockableMapWidget;
+    
+    // Create a new mapper instance for the detached window
+    // We need to copy player room style details first
+    pHost->getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
+                                   pMap->mPlayerRoomOuterDiameterPercentage,
+                                   pMap->mPlayerRoomInnerDiameterPercentage,
+                                   pMap->mPlayerRoomOuterColor,
+                                   pMap->mPlayerRoomInnerColor);
+
+    // Create the mapper dialog
+    auto detachedMapper = new dlgMapper(newMapDockWidget, pHost, pMap);
+    detachedMapper->setStyleSheet(pHost->mProfileStyleSheet);
+    newMapDockWidget->setWidget(detachedMapper);
+
+    // CRITICAL: Set the map's active mapper to our detached instance
+    // This ensures map updates go to our detached window instead of the main window
+    pMap->mpMapper = detachedMapper;
+
+    // Initialize the mapper
+    if (pMap->mpRoomDB && !pMap->mpRoomDB->isEmpty()) {
+        detachedMapper->mp2dMap->init();
+        detachedMapper->updateAreaComboBox();
+        detachedMapper->resetAreaComboBoxToPlayerRoomArea();
+        detachedMapper->show();
+    }
+
+    // Add the dock widget to this detached window
+    QMainWindow::addDockWidget(Qt::RightDockWidgetArea, newMapDockWidget);
+    
+    // Store reference in our map for cleanup and profile-specific access
+    mDockWidgetMap[mapKey] = newMapDockWidget;
+    
+    // Set intended visibility to true since we're initially showing this dock widget
+    mDockWidgetIntendedVisibility[mapKey] = true;
+    
+    // Set global reference to the currently active map
+    mpMapDockWidget = newMapDockWidget;
+
+    // Connect to handle dock widget visibility changes
+    connect(newMapDockWidget, &QDockWidget::visibilityChanged, this, [this, mapKey](bool visible) {
+        auto mapDockWidget = mDockWidgetMap.value(mapKey);
+        if (!mapDockWidget) {
+            return;
+        }
+        
+        // Track user-initiated visibility changes (not system-initiated profile switches)
+        // Only update intended visibility if this is likely a user action
+        if (!mCurrentProfileName.isEmpty() && mCurrentProfileName == mapKey.mid(4)) {
+            // Current profile's dock widget visibility changed - likely user action
+            mDockWidgetIntendedVisibility[mapKey] = visible;
+            qDebug() << "TDetachedWindow: User changed dock widget visibility for" << mapKey << "to" << visible;
+        }
+        
+        // Extract profile name from mapKey to safely look up objects
+        QString profileName = mapKey;
+        if (profileName.startsWith("map_")) {
+            profileName = profileName.mid(4); // Remove "map_" prefix
+        }
+        
+        // Safely get the host and map - they might be null during shutdown
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        Host* pHost = mudletInstance->getHostManager().getHost(profileName);
+        if (!pHost) {
+            return;
+        }
+        
+        auto pMap = pHost->mpMap.data();
+        if (!pMap) {
+            return;
+        }
+        
+        if (!visible) {
+            // If this is the currently active map dock, clear the global reference
+            if (mpMapDockWidget == mapDockWidget) {
+                mpMapDockWidget = nullptr;
+            }
+            
+            // Restore the main window's mapper as the active one when hiding
+            if (pHost->mpDockableMapWidget) {
+                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                    pMap->mpMapper = mainMapper;
+                }
+            }
+        } else {
+            // When showing, set this as the active mapper
+            mpMapDockWidget = mapDockWidget;
+            
+            // Ensure the map's active mapper points to our detached instance
+            auto mapWidget = mapDockWidget->widget();
+            if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
+                pMap->mpMapper = detachedMapper;
+            }
+        }
+        
+        qDebug() << "TDetachedWindow: Map dock visibility changed for" << mapKey << "visible:" << visible;
     });
+
+    // Show the dock widget
+    newMapDockWidget->show();
 }
 
 void TDetachedWindow::slot_showHelpDialog()
