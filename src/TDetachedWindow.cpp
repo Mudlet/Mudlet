@@ -478,6 +478,14 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
+    // Add connection indicator toggle
+    auto connectionIndicatorToggleAction = contextMenu.addAction(tr("Show Connection Indicators on Tabs"));
+    connectionIndicatorToggleAction->setCheckable(true);
+    connectionIndicatorToggleAction->setChecked(mudlet::self()->showTabConnectionIndicators());
+    connect(connectionIndicatorToggleAction, &QAction::triggered, this, [this](bool checked) {
+        mudlet::self()->setShowTabConnectionIndicators(checked);
+    });
+
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
 
@@ -900,12 +908,18 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     Host* pHost = mudlet::self()->getHostManager().getHost(profileName);
     QIcon tabIcon;
 
-    if (pHost) {
-        bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-        bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-        tabIcon = mudlet::createConnectionStatusIcon(isConnected, isConnecting, false);
+    // Only show connection indicators if the global setting is enabled
+    if (mudlet::self()->showTabConnectionIndicators()) {
+        if (pHost) {
+            bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
+            bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
+            tabIcon = mudlet::createConnectionStatusIcon(isConnected, isConnecting, false);
+        } else {
+            tabIcon = mudlet::createConnectionStatusIcon(false, false, true);
+        }
     } else {
-        tabIcon = mudlet::createConnectionStatusIcon(false, false, true);
+        // No icon when indicators are disabled
+        tabIcon = QIcon();
     }
 
     // Set the tab text and icon, accounting for CDC identifiers
@@ -921,6 +935,18 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     
     mpTabBar->setTabText(tabIndex, displayText);
     mpTabBar->setTabIcon(tabIndex, tabIcon);
+}
+
+void TDetachedWindow::updateAllTabIndicators()
+{
+    if (!mpTabBar) {
+        return;
+    }
+
+    // Update all tabs in this detached window
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        updateTabIndicator(i);
+    }
 }
 
 void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profileName)

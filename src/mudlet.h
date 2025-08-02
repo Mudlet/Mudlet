@@ -309,12 +309,14 @@ public:
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
+    void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
+    bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
@@ -406,6 +408,7 @@ public:
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
+    bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
@@ -484,6 +487,8 @@ public slots:
     static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
+    void updateTabIndicators(); // Update all tab indicators (main window)
+    void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators
     void slot_showActionDialog();
     void slot_showAliasDialog();
     void slot_showEditorDialog();

@@ -74,6 +74,9 @@ public:
     // Map dock widget access methods
     QDockWidget* getMapDockWidget() const { return mpMapDockWidget; }
     void setMapDockWidget(QDockWidget* dockWidget) { mpMapDockWidget = dockWidget; }
+    
+    // Tab indicator methods
+    void updateAllTabIndicators();  // Update all tab indicators in this window
 
 protected:
     void closeEvent(QCloseEvent* event) override;

@@ -2543,6 +2543,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
+    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(true)).toBool();
 
 
     resize(size);
@@ -2715,6 +2716,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
+    settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
@@ -4089,6 +4091,18 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     
     contextMenu.addAction(toggleToolbarAction);
     
+    contextMenu.addSeparator();
+    
+    // Add connection indicator toggle
+    QAction* toggleConnectionIndicatorsAction = new QAction(tr("Show Connection Indicators on Tabs"), &contextMenu);
+    toggleConnectionIndicatorsAction->setCheckable(true);
+    toggleConnectionIndicatorsAction->setChecked(mShowTabConnectionIndicators);
+    connect(toggleConnectionIndicatorsAction, &QAction::triggered, this, [this](bool checked) {
+        setShowTabConnectionIndicators(checked);
+    });
+    
+    contextMenu.addAction(toggleConnectionIndicatorsAction);
+    
     // Show the context menu at the global position
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
@@ -5001,6 +5015,19 @@ void mudlet::setShowMapAuditErrors(const bool state)
         mShowMapAuditErrors = state;
 
         emit signal_showMapAuditErrorsChanged(state);
+    }
+}
+
+void mudlet::setShowTabConnectionIndicators(const bool state)
+{
+    if (mShowTabConnectionIndicators != state) {
+        mShowTabConnectionIndicators = state;
+        
+        // Update all tab indicators immediately
+        updateTabIndicators();
+        
+        // Update detached window tab indicators
+        updateDetachedWindowTabIndicators();
     }
 }
 
@@ -6707,16 +6734,39 @@ void mudlet::updateMainWindowTabIndicators()
         Host* pHost = mHostManager.getHost(profileName);
         QIcon tabIcon;
 
-        if (pHost) {
+        // Only show connection indicators if the setting is enabled
+        if (mShowTabConnectionIndicators && pHost) {
             bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
             bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
             tabIcon = createConnectionStatusIcon(isConnected, isConnecting, false);
-        } else {
+        } else if (mShowTabConnectionIndicators && !pHost) {
             tabIcon = createConnectionStatusIcon(false, false, true);
+        } else {
+            // No icon when indicators are disabled
+            tabIcon = QIcon();
         }
 
         // Only set the tab icon, keep the original tab text as just the profile name
         mpTabBar->setTabIcon(i, tabIcon);
+    }
+}
+
+void mudlet::updateTabIndicators()
+{
+    // For main window, just call the existing method
+    updateMainWindowTabIndicators();
+}
+
+void mudlet::updateDetachedWindowTabIndicators()
+{
+    // Update tab indicators for all detached windows
+    const auto& detachedWindows = getDetachedWindows();
+    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow) {
+            // Update all tabs in this detached window
+            detachedWindow->updateAllTabIndicators();
+        }
     }
 }
 
