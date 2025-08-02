@@ -47,7 +47,6 @@
 #include <QAbstractSocket>
 #include <QLabel>
 #include <QSet>
-#include <QStatusBar>
 #include <QStackedWidget>
 #include <QSizePolicy>
 #include <QWidget>
@@ -64,7 +63,6 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     setupUI();
     createToolBar();
     createMenus();
-    createStatusBar();
     restoreWindowGeometry();
 
     // Set initial toolbar visibility based on main window state
@@ -769,26 +767,6 @@ void TDetachedWindow::connectToolBarActions()
     connect(mpActionFullScreenView, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreenView);
 }
 
-void TDetachedWindow::createStatusBar()
-{
-    // Create status bar with connection and profile information
-    auto statusBar = this->statusBar();
-    statusBar->showMessage(tr("Ready"));
-
-    // Profile information (left side)
-    mpStatusBarProfileLabel = new QLabel(tr("Profile: %1").arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName));
-    mpStatusBarProfileLabel->setStyleSheet(qsl("QLabel { padding: 2px 8px; }"));
-    statusBar->addWidget(mpStatusBarProfileLabel);
-
-    // Add stretcher to push connection info to the right
-    statusBar->addWidget(new QWidget(), 1);
-
-    // Connection information (right side)
-    mpStatusBarConnectionLabel = new QLabel(tr("Disconnected"));
-    mpStatusBarConnectionLabel->setStyleSheet(qsl("QLabel { padding: 2px 8px; }"));
-    statusBar->addPermanentWidget(mpStatusBarConnectionLabel);
-}
-
 void TDetachedWindow::updateToolBarActions()
 {
     Host* pHost = nullptr;
@@ -818,9 +796,6 @@ void TDetachedWindow::updateToolBarActions()
         bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
         bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
 
-        // Update status bar
-        updateStatusBar(pHost, isConnected, isConnecting);
-
         // Enable/disable individual actions based on connection state
         // All actions should always be enabled to match main window behavior
         mpActionConnect->setEnabled(true);
@@ -829,9 +804,6 @@ void TDetachedWindow::updateToolBarActions()
         mpActionCloseProfile->setEnabled(true);
         mpActionCloseApplication->setEnabled(true);
     } else {
-        // Update status bar
-        updateStatusBar(nullptr, false, false);
-
         // Even when no profile is active, keep all actions enabled to match main window
         mpActionConnect->setEnabled(true);
         mpActionDisconnect->setEnabled(true);
@@ -902,39 +874,6 @@ void TDetachedWindow::updateWindowTitle()
     }
 
     setWindowTitle(title);
-}
-
-void TDetachedWindow::updateStatusBar(Host* pHost, bool isConnected, bool isConnecting)
-{
-    if (!mpStatusBarConnectionLabel || !mpStatusBarProfileLabel) {
-        return;
-    }
-
-    // Update profile label
-    if (mProfileConsoleMap.size() == 1) {
-        mpStatusBarProfileLabel->setText(tr("Profile: %1").arg(mCurrentProfileName));
-    } else {
-        mpStatusBarProfileLabel->setText(tr("Profiles: %1 | Active: %2")
-                                       .arg(mProfileConsoleMap.size())
-                                       .arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName));
-    }
-
-    // Update connection label
-    if (pHost) {
-        if (isConnected) {
-            mpStatusBarConnectionLabel->setText(tr("Connected to %1").arg(pHost->getUrl()));
-            mpStatusBarConnectionLabel->setStyleSheet(qsl("QLabel { color: green; padding: 2px 8px; }"));
-        } else if (isConnecting) {
-            mpStatusBarConnectionLabel->setText(tr("Connecting to %1...").arg(pHost->getUrl()));
-            mpStatusBarConnectionLabel->setStyleSheet(qsl("QLabel { color: orange; padding: 2px 8px; }"));
-        } else {
-            mpStatusBarConnectionLabel->setText(tr("Disconnected from %1").arg(pHost->getUrl()));
-            mpStatusBarConnectionLabel->setStyleSheet(qsl("QLabel { color: red; padding: 2px 8px; }"));
-        }
-    } else {
-        mpStatusBarConnectionLabel->setText(tr("No Profile"));
-        mpStatusBarConnectionLabel->setStyleSheet(qsl("QLabel { color: gray; padding: 2px 8px; }"));
-    }
 }
 
 void TDetachedWindow::updateTabIndicator(int tabIndex)
@@ -1144,7 +1083,6 @@ void TDetachedWindow::slot_saveProfile()
     Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
     if (pHost) {
         pHost->saveProfile();
-        statusBar()->showMessage(tr("Profile '%1' saved").arg(mCurrentProfileName), 2000);
     }
 }
 
@@ -1538,9 +1476,8 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             }
         } else {
             mCurrentProfileName.clear();
-            // Update window title and status bar when no profiles remain
+            // Update window title when no profiles remain
             updateWindowTitle();
-            updateStatusBar(nullptr, false, false);
             // Allow window to be hidden since no profiles remain
             mShouldStayVisible = false;
         }

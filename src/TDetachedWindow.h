@@ -140,11 +140,9 @@ private:
     void setupUI();
     void createMenus();
     void createToolBar();
-    void createStatusBar();
     void connectToolBarActions();
     void updateToolBarActions();
     void updateWindowTitle();
-    void updateStatusBar(Host* pHost, bool isConnected, bool isConnecting);
     void updateTabIndicator(int tabIndex = -1);  // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName);  // Show/hide docked widgets based on active profile
     void saveWindowGeometry();
@@ -197,10 +195,6 @@ private:
     QToolButton* mpButtonConnect{nullptr};
     QToolButton* mpButtonMute{nullptr};
     QToolButton* mpButtonPackageManagers{nullptr};
-
-    // Status bar
-    QLabel* mpStatusBarConnectionLabel{nullptr};
-    QLabel* mpStatusBarProfileLabel{nullptr};
 
     // Store window state
     QPoint mLastPosition;
