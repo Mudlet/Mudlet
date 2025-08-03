@@ -50,8 +50,12 @@ GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget *parent)
 , mpMap(pMap)
 , mpHost(pHost)
 {
+    if (mpHost->mBgColor_2.alpha() < 255) {
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_AlwaysStackOnTop);
+    } else {
+    setAttribute(Qt::WA_OpaquePaintEvent);
+    }
 }
 
 QSize GLWidget::minimumSizeHint() const

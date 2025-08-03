@@ -2043,6 +2043,18 @@ void dlgProfilePreferences::slot_setMapBgColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
+        // if 3D map, update transparency flags
+        if (pHost->mpMap->mpMapper->glWidget) {
+            GLWidget* map = pHost->mpMap->mpMapper->glWidget;
+            if (pHost->mBgColor_2.alpha() < 255) {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, false);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
+            } else {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, true);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
+            }
+        }
+
     }
 }
 
