@@ -519,7 +519,7 @@ int main(int argc, char* argv[])
 
     if (!envConnectProfilesText.isEmpty()) {
         // ':' is not an allowed character in a profile name, so we can use it to split the list
-        connectProfiles = envConnectProfilesText.split(QLatin1Char(':'),Qt::SkipEmptyParts);
+        connectProfiles = envConnectProfilesText.split(QLatin1Char(':'), Qt::SkipEmptyParts);
         for (auto& connectProfile : connectProfiles) {
             const auto thisOne = qMakePair(connectProfile.trimmed(), true);
             if (Q_LIKELY(!(connectOrLoadProfiles.contains(thisOne)
