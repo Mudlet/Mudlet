@@ -283,8 +283,11 @@ int main(int argc, char* argv[])
     // other than that a non-null fourth argument maybe responsible for
     // making the option take a value that follows it - as such they do not
     // need to be passed to the translation system.
-    const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
+    const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to connect automatically"), qsl("profile"));
     parser.addOption(profileToOpen);
+
+    const QCommandLineOption profileToLoad(QStringList() << qsl("l") << qsl("load"), qsl("Profile to load automatically"), qsl("profile"));
+    parser.addOption(profileToLoad);
 
     const QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
     parser.addOption(showHelp);
@@ -339,11 +342,13 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Options:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -s, --splashscreen           show splashscreen on startup."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open, may be\n"
-                                                                  "                                    repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       -l, --load=<profile>         additional profile to load but not"
+                                                                  "                                    connect, may be repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                                   "                                    predefined game, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open and\n"
+                                                                  "                                    connect, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       -s, --splashscreen           show splashscreen on startup."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       --steammode                  adjusts Mudlet settings to match\n"
                                                                   "                                    Steam's requirements."));
         texts << appendLF.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
@@ -473,18 +478,93 @@ int main(int argc, char* argv[])
 #endif
 #endif
 
-    QStringList cliProfiles = parser.values(profileToOpen);
-    qDebug() << "Got CLI profiles:" << cliProfiles;
+    // Check for profiles specified on the command line:
+    QList<QPair<QString, bool>> connectOrLoadProfiles;
+    auto connectProfiles = parser.values(profileToOpen);
+    auto loadProfiles = parser.values(profileToLoad);
+    for (auto& connectProfile : connectProfiles) {
+        if (Q_LIKELY(!(connectOrLoadProfiles.contains(qMakePair(connectProfile, true))))) {
+            connectOrLoadProfiles.append(qMakePair(connectProfile, true));
+        }
+    }
+    for (auto& loadProfile : loadProfiles) {
+        // If the same profile is also specified to be connected THAT takes
+        // priority:
+        if (Q_LIKELY(!(connectOrLoadProfiles.contains(qMakePair(loadProfile, false))
+                       ||connectOrLoadProfiles.contains(qMakePair(loadProfile, true))))) {
+            connectOrLoadProfiles.append(qMakePair(loadProfile, false));
+        }
+    }
 
-    if (cliProfiles.isEmpty()) {
-        qDebug() << "No CLI profiles specified, checking environment variable";
-        const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
-        qDebug() << "Environment MUDLET_PROFILES value:" << envProfiles;
-        if (!envProfiles.isEmpty()) {
-            qDebug() << "Found environment profiles, splitting on ':'";
-            // : is not an allowed character in a profile name, so we can use it to split the list
-            cliProfiles = envProfiles.split(':');
-            qDebug() << "Final profile list from environment:" << cliProfiles;
+    if (connectOrLoadProfiles.isEmpty()) {
+        qDebug().noquote().nospace() << "No profiles to connect or load given on the command line.";
+    } else {
+        qDebug().noquote().nospace() << "Following profiles to connect or load given on the command line:";
+        for (auto& connectOrLoadProfile : connectOrLoadProfiles) {
+            if (connectOrLoadProfile.second) {
+                qDebug().noquote().nospace() << "    " << connectOrLoadProfile.first << " (connect)";
+            } else {
+                qDebug().noquote().nospace() << "    " << connectOrLoadProfile.first << " (load)";
+            }
+        }
+    }
+
+    // Check for profiles specified by environmental variables:
+    QList<QPair<QString, bool>> connectOrLoadEnvProfiles;
+    QString envConnectProfilesText = qEnvironmentVariable("MUDLET_PROFILES");
+    if (envConnectProfilesText.isEmpty()) {
+        envConnectProfilesText = qEnvironmentVariable("MUDLET_CONNECT_PROFILES");
+    }
+    QString envLoadProfilesText = qEnvironmentVariable("MUDLET_LOAD_PROFILES");
+
+    if (!envConnectProfilesText.isEmpty()) {
+        // ':' is not an allowed character in a profile name, so we can use it to split the list
+        connectProfiles = envConnectProfilesText.split(QLatin1Char(':'),Qt::SkipEmptyParts);
+        for (auto& connectProfile : connectProfiles) {
+            const auto thisOne = qMakePair(connectProfile.trimmed(), true);
+            if (Q_LIKELY(!(connectOrLoadProfiles.contains(thisOne)
+                           ||connectOrLoadEnvProfiles.contains(thisOne)))) {
+                connectOrLoadEnvProfiles.append(thisOne);
+            }
+            // If the environment specifies a profile to connect to AND the
+            // command line specifies the SAME one to only load - then remove
+            // the load one and insert the connect one:
+            if (Q_UNLIKELY(connectOrLoadProfiles.contains(qMakePair(connectProfile.trimmed(), false)))) {
+                qDebug().noquote().nospace() << "    Amending the above, an environment variable is requesting that: \"" << connectProfile << "\" is connected rather than just loaded!";
+                // Theoretically we should use QList<T>::removeAll(const T&) but
+                // since we know there can be only one entry we don't need to:
+                connectOrLoadProfiles.removeOne(qMakePair(connectProfile.trimmed(), false));
+            }
+        }
+    }
+
+    if (!envLoadProfilesText.isEmpty()) {
+        loadProfiles = envLoadProfilesText.split(QLatin1Char(':'), Qt::SkipEmptyParts);
+        for (auto& loadProfile : loadProfiles) {
+            if (Q_LIKELY(!(connectOrLoadProfiles.contains(qMakePair(loadProfile.trimmed(), false))
+                           ||connectOrLoadProfiles.contains(qMakePair(loadProfile.trimmed(), true))
+                           ||connectOrLoadEnvProfiles.contains(qMakePair(loadProfile.trimmed(), false))
+                           ||connectOrLoadEnvProfiles.contains(qMakePair(loadProfile.trimmed(), true))))) {
+
+                connectOrLoadEnvProfiles.append(qMakePair(loadProfile.trimmed(), false));
+            }
+        }
+    }
+
+    if (connectOrLoadEnvProfiles.isEmpty()) {
+        qDebug().noquote().nospace() << "No profiles to connect or load given by environment variables.";
+    } else {
+        qDebug().noquote().nospace() << "Following profiles to connect or load given by environment variables:";
+        for (auto& connectOrLoadProfile : connectOrLoadEnvProfiles) {
+            if (connectOrLoadProfile.second) {
+                qDebug().noquote().nospace() << "    " << connectOrLoadProfile.first << " (connect)";
+            } else {
+                qDebug().noquote().nospace() << "    " << connectOrLoadProfile.first << " (load)";
+            }
+
+            // Append them to the other QList so we just have one to work on
+            // afterwards:
+            connectOrLoadProfiles.append(connectOrLoadProfile);
         }
     }
 
@@ -719,9 +799,9 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    QTimer::singleShot(0, qApp, [cliProfiles]() {
+    QTimer::singleShot(0, qApp, [connectOrLoadProfiles]() {
         // ensure Mudlet singleton is initialised before calling profile loading
-        mudlet::self()->startAutoLogin(cliProfiles);
+        mudlet::self()->startAutoLoadOrConnect(connectOrLoadProfiles);
     });
 
 #if defined(INCLUDE_UPDATER)

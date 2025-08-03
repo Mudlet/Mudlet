@@ -236,7 +236,7 @@ public:
     void commitLayoutUpdates(bool flush = false);
     void deleteProfileData(const QString &profile, const QString &item);
     void disableToolbarButtons();
-    void doAutoLogin(const QString&);
+    void doAutoConnectOrLoad(const QString&, const bool);
     void enableToolbarButtons();
     void forceClose();
     void armForceClose();
@@ -313,7 +313,7 @@ public:
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
-    void startAutoLogin(const QStringList&);
+    void startAutoLoadOrConnect(const QList<QPair<QString, bool>>&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();

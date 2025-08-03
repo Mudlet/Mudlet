@@ -3049,43 +3049,49 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
     }
 }
 
-void mudlet::startAutoLogin(const QStringList& cliProfiles)
+void mudlet::startAutoLoadOrConnect(const QList<QPair<QString, bool>>& profilesToConnectOrLoad)
 {
-    QElapsedTimer timer;
-    timer.start();
+    QElapsedTimer allAutoLoadingTimer;
+    allAutoLoadingTimer.start();
 
-    QStringList hostList = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QStringList hostList = QDir(getMudletPath(enums::profilesPath))
+            .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
     int loadedProfiles = 0;
 
-    for (auto& hostName : cliProfiles){
-        if (hostList.contains(hostName)) {
+    for (auto& profile : profilesToConnectOrLoad) {
+        if (hostList.contains(profile.first)) {
             QElapsedTimer timer;
             timer.start();
-            doAutoLogin(hostName);
-            hostList.removeOne(hostName);
+            doAutoConnectOrLoad(profile.first, profile.second);
+            hostList.removeOne(profile.first);
             loadedProfiles++;
-            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
+            qDebug().nospace().noquote() << "Profile: \"" << profile.first << "\" " << (profile.second ? "connected" : "loaded") << " in " << timer.elapsed()/1000.0 << " seconds.";
+        } else {
+            qWarning().nospace().noquote() << "Profile: \"" << profile.first << "\" cannot be found!";
         }
     }
 
-    for (auto& hostName : hostList) {
+    for (const auto& hostName : hostList) {
         const QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
             QElapsedTimer timer;
             timer.start();
-            doAutoLogin(hostName);
+            // We do not currently provide a means to load but not connect a
+            // profile automatically on start up from the "Select a profile"
+            // dialogue - that is a task for another PR - Slysven 2025/08
+            doAutoConnectOrLoad(hostName, true);
             loadedProfiles++;
-            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
+            qDebug().nospace().noquote() << "Profile: \"" << hostName << "\" connected in " << timer.elapsed()/1000.0 << " seconds.";
         }
     }
 
     if (loadedProfiles == 0) {
         slot_showConnectionDialog();
     } else {
-        qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed()/1000.0 << "seconds";
+        qDebug().nospace().noquote() << "All " << loadedProfiles << " profiles connected or loaded in " << allAutoLoadingTimer.elapsed()/1000.0 << " seconds";
     }
 }
 
@@ -3184,15 +3190,15 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->hide();
 }
 
-void mudlet::doAutoLogin(const QString& profile_name)
+void mudlet::doAutoConnectOrLoad(const QString& profile_name, const bool alsoConnect)
 {
     if (profile_name.isEmpty()) {
         return;
     }
 
-    loadProfile(profile_name, true);
+    loadProfile(profile_name, alsoConnect);
 
-    slot_connectionDialogueFinished(profile_name, true);
+    slot_connectionDialogueFinished(profile_name, alsoConnect);
     enableToolbarButtons();
 }
 
