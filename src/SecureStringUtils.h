@@ -30,20 +30,18 @@
  * 
  * This class provides cryptographically secure encryption for sensitive data like passwords
  * stored in configuration files. All encryption is profile-aware, using unique encryption
- * keys stored in platform secure storage (QtKeychain).
+ * keys stored in profile directories.
  * 
  * Features:
- * - Per-profile encryption keys stored in secure platform storage
- * - AES-256-GCM encryption with PBKDF2-SHA256 key derivation (when OpenSSL available)
- * - Fallback to Qt-based encryption for builds without OpenSSL support
+ * - Per-profile encryption keys stored in profile directories
+ * - Qt-based encryption with PBKDF2-SHA256 key derivation and HMAC authentication
  * - Authenticated encryption with integrity verification
  * - Secure memory clearing
  * - Automatic migration from plaintext passwords
  * - Graceful degradation when SSL/TLS is unavailable
  * 
- * Encrypted format (OpenSSL): [VERSION:1][SALT:16][IV:12][TAG:16][ENCRYPTED_DATA]
- * Encrypted format (Qt fallback): [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
- * All encoded as Base64 for safe text storage (QtKeychain, encrypted files).
+ * Encrypted format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
+ * All encoded as Base64 for safe text storage in encrypted files.
  */
 class SecureStringUtils
 {
@@ -84,24 +82,70 @@ public:
     static void secureByteArrayClear(QByteArray& array);
     
     /**
-     * @brief Check if OpenSSL crypto is available for secure encryption
-     * @return true if OpenSSL is available, false if fallback required
-     */
-    static bool isOpenSSLAvailable();
-
-    /**
      * @brief Check SSL backend configuration and report potential issues
      * @return QString with diagnostic information about SSL backend status
      */
     static QString getSSLBackendInfo();
 
     /**
-     * @brief Check if running in test environment (to avoid keychain prompts)
+     * @brief Check if running in test environment (to disable certain features during testing)
      * @return true if in test environment, false otherwise
      */
     static bool isTestEnvironment();
 
+    // Convenience methods for password storage and retrieval
+    
+    /**
+     * @brief Store an encrypted password for a profile and key
+     * @param profileName Name of the profile
+     * @param key Password identifier (e.g., "server_password", "proxy_password")
+     * @param password Plaintext password to encrypt and store
+     * @return true if stored successfully, false otherwise
+     */
+    static bool storePassword(const QString& profileName, const QString& key, const QString& password);
+    
+    /**
+     * @brief Retrieve and decrypt a password for a profile and key
+     * @param profileName Name of the profile
+     * @param key Password identifier
+     * @return Decrypted password, or empty string if not found or decryption failed
+     */
+    static QString retrievePassword(const QString& profileName, const QString& key);
+    
+    /**
+     * @brief Remove a stored password for a profile and key
+     * @param profileName Name of the profile
+     * @param key Password identifier
+     * @return true if removed successfully, false otherwise
+     */
+    static bool removePassword(const QString& profileName, const QString& key);
+    
+    /**
+     * @brief Check if a password is stored for a profile and key
+     * @param profileName Name of the profile
+     * @param key Password identifier
+     * @return true if password exists, false otherwise
+     */
+    static bool hasPassword(const QString& profileName, const QString& key);
+
 private:
+    // Password file storage helpers
+    
+    /**
+     * @brief Generate the file path for storing a password
+     * @param profileName Name of the profile
+     * @param key Password identifier
+     * @return Full path to password file
+     */
+    static QString getPasswordFilePath(const QString& profileName, const QString& key);
+    
+    /**
+     * @brief Validate that a key name is safe for file storage
+     * @param key Password identifier to validate
+     * @return true if key is valid for file storage
+     */
+    static bool isValidPasswordKey(const QString& key);
+
     /**
      * @brief Generate a cryptographic key using PBKDF2
      * @param password Base password/passphrase
@@ -119,22 +163,14 @@ private:
     static QByteArray getProfileEncryptionKey(const QString& profileName);
     
     /**
-     * @brief Store a profile-specific encryption key in secure storage
-     * @param profileName Name of the profile
-     * @param key 32-byte encryption key to store
-     * @return true if storage was successful
-     */
-    static bool storeProfileEncryptionKey(const QString& profileName, const QByteArray& key);
-    
-    /**
-     * @brief Load encryption key from profile directory file (portable mode)
+     * @brief Load encryption key from profile directory file
      * @param profileName Name of the profile
      * @return 32-byte encryption key, or empty if not found/invalid
      */
     static QByteArray loadEncryptionKeyFromFile(const QString& profileName);
     
     /**
-     * @brief Store encryption key to profile directory file (portable mode)
+     * @brief Store encryption key to profile directory file
      * @param profileName Name of the profile
      * @param key 32-byte encryption key to store
      * @return true if storage was successful
@@ -148,41 +184,13 @@ private:
     static QByteArray generateSalt();
     
     /**
-     * @brief Generate a random IV for AES-GCM
-     * @return 12-byte random IV
-     */
-    static QByteArray generateIV();
-    
-    /**
-     * @brief Encrypt data using AES-256-GCM
-     * @param plaintext Data to encrypt
-     * @param key 32-byte AES key
-     * @param iv 12-byte initialization vector
-     * @param tag Output parameter for 16-byte authentication tag
-     * @return Encrypted data, or empty on failure
-     */
-    static QByteArray encryptAES(const QByteArray& plaintext, const QByteArray& key, 
-                                const QByteArray& iv, QByteArray& tag);
-    
-    /**
-     * @brief Decrypt data using AES-256-GCM
-     * @param ciphertext Encrypted data
-     * @param key 32-byte AES key
-     * @param iv 12-byte initialization vector
-     * @param tag 16-byte authentication tag
-     * @return Decrypted data, or empty on failure/authentication error
-     */
-    static QByteArray decryptAES(const QByteArray& ciphertext, const QByteArray& key,
-                                const QByteArray& iv, const QByteArray& tag);
-    
-    /**
-     * @brief Generate a random nonce for Qt fallback encryption
+     * @brief Generate a random nonce for encryption
      * @return 16-byte random nonce
      */
     static QByteArray generateNonce();
     
     /**
-     * @brief Encrypt data using Qt fallback (XOR cipher + HMAC-SHA256)
+     * @brief Encrypt data using XOR cipher + HMAC-SHA256
      * @param plaintext Data to encrypt
      * @param key 32-byte encryption key
      * @param salt 16-byte salt
@@ -190,12 +198,12 @@ private:
      * @param hmac Output parameter for 32-byte HMAC
      * @return Encrypted data, or empty on failure
      */
-    static QByteArray encryptQtFallback(const QByteArray& plaintext, const QByteArray& key,
-                                       const QByteArray& salt, const QByteArray& nonce,
-                                       QByteArray& hmac);
+    static QByteArray encryptData(const QByteArray& plaintext, const QByteArray& key,
+                                 const QByteArray& salt, const QByteArray& nonce,
+                                 QByteArray& hmac);
     
     /**
-     * @brief Decrypt data using Qt fallback (XOR cipher + HMAC-SHA256)
+     * @brief Decrypt data using XOR cipher + HMAC-SHA256
      * @param ciphertext Encrypted data
      * @param key 32-byte encryption key
      * @param salt 16-byte salt
@@ -203,21 +211,18 @@ private:
      * @param hmac 32-byte HMAC for verification
      * @return Decrypted data, or empty on failure/authentication error
      */
-    static QByteArray decryptQtFallback(const QByteArray& ciphertext, const QByteArray& key,
-                                       const QByteArray& salt, const QByteArray& nonce,
-                                       const QByteArray& hmac);
+    static QByteArray decryptData(const QByteArray& ciphertext, const QByteArray& key,
+                                 const QByteArray& salt, const QByteArray& nonce,
+                                 const QByteArray& hmac);
     
     // Constants for the encrypted format
-    static constexpr quint8 ENCRYPTION_VERSION_OPENSSL = 1;  // OpenSSL AES-GCM
-    static constexpr quint8 ENCRYPTION_VERSION_QT_FALLBACK = 2; // Qt crypto fallback
+    static constexpr quint8 ENCRYPTION_VERSION_CURRENT = 2; // Current version
     static constexpr int SALT_SIZE = 16;
-    static constexpr int IV_SIZE = 12;    // AES-GCM standard IV size  
-    static constexpr int NONCE_SIZE = 16; // Qt fallback nonce size
-    static constexpr int TAG_SIZE = 16;   // AES-GCM authentication tag size
-    static constexpr int HMAC_SIZE = 32;  // Qt fallback HMAC-SHA256 size
+    static constexpr int NONCE_SIZE = 16; // Nonce size
+    static constexpr int HMAC_SIZE = 32;  // HMAC-SHA256 size
     static constexpr int KEY_SIZE = 32;   // 256-bit key
     static constexpr int PBKDF2_ITERATIONS = 100000; // Strong key derivation
-    static constexpr int MIN_ENCRYPTED_SIZE = 1 + SALT_SIZE + IV_SIZE + TAG_SIZE; // version + salt + iv + tag + at least some data
+    static constexpr int MIN_ENCRYPTED_SIZE = 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE; // version + salt + nonce + hmac + at least some data
 };
 
 #endif // SECURESTRINGUTILS_H

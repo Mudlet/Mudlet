@@ -34,21 +34,7 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QVersionNumber>
-#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include "../3rdparty/qtkeychain/keychain.h"
-#else
-#include <qt6keychain/keychain.h>
-#endif
-// OpenSSL includes for AES-GCM encryption
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-#include <openssl/evp.h>
-#include <openssl/rand.h>
-#include <openssl/kdf.h>
-#include <openssl/crypto.h>
-#include <openssl/err.h>
-#include <openssl/opensslv.h>
-#endif
-// Qt includes for fallback encryption and SSL availability check
+// Qt includes for encryption and SSL availability check
 #include <QCryptographicHash>
 #include <QMessageAuthenticationCode>
 #include <QRandomGenerator>
@@ -57,92 +43,9 @@
 #endif
 #include "post_guard.h"
 
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-// Static initialization flag to ensure OpenSSL is initialized only once
-static std::atomic<bool> openssl_initialized{false};
-
-// Initialize OpenSSL for use in this module
-static void initializeOpenSSL()
-{
-    if (!openssl_initialized.exchange(true)) {
-        // Initialize OpenSSL crypto library
-        OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, nullptr);
-        
-        // Ensure random number generator is seeded
-        if (RAND_status() != 1) {
-            // If system random is not available, seed manually
-            unsigned char seed[32];
-            QRandomGenerator* rng = QRandomGenerator::system();
-            for (int i = 0; i < 32; ++i) {
-                seed[i] = static_cast<unsigned char>(rng->bounded(256));
-            }
-            RAND_seed(seed, sizeof(seed));
-            
-            // Clear seed from memory
-            OPENSSL_cleanse(seed, sizeof(seed));
-        }
-    }
-}
-
-// Helper function to get and clear OpenSSL errors
-static QString getOpenSSLError()
-{
-    auto err = ERR_get_error();
-    if (err == 0) {
-        return QString();
-    }
-    
-    char buffer[256];
-    ERR_error_string_n(err, buffer, sizeof(buffer));
-    
-    // Clear all remaining errors from the error queue
-    ERR_clear_error();
-    
-    return QString::fromUtf8(buffer);
-}
-#endif
-
-bool SecureStringUtils::isOpenSSLAvailable()
-{
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-    // Initialize OpenSSL if not already done
-    initializeOpenSSL();
-    
-    // Perform a simple test to ensure OpenSSL is working properly
-    // This helps catch configuration issues early
-    static bool tested = false;
-    static bool working = false;
-    
-    if (!tested) {
-        tested = true;
-        
-        // Test basic EVP functionality
-        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-        if (ctx) {
-            // Test if we can initialize AES-256-GCM
-            if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) == 1) {
-                working = true;
-            }
-            EVP_CIPHER_CTX_free(ctx);
-        }
-        
-        if (!working) {
-            QString error = getOpenSSLError();
-            qWarning() << "OpenSSL availability test failed:" << (error.isEmpty() ? "Unknown error" : error);
-        }
-    }
-    
-    return working;
-#else
-    return false; // OpenSSL not compiled in
-#endif
-}
-
 QString SecureStringUtils::getSSLBackendInfo()
 {
     QStringList info;
-    
-    info << QString("OpenSSL crypto available: %1").arg(isOpenSSLAvailable() ? "Yes" : "No");
     
 #ifndef QT_NO_SSL
     // Check Qt's SSL backend
@@ -150,14 +53,6 @@ QString SecureStringUtils::getSSLBackendInfo()
         info << "Qt SSL support: Available";
         info << QString("SSL backend library: %1").arg(QSslSocket::sslLibraryBuildVersionString());
         info << QString("Active backend: %1").arg(QSslSocket::activeBackend());
-        
-        // Check if OpenSSL backend is active
-        QString backend = QSslSocket::activeBackend();
-        if (backend.contains("openssl", Qt::CaseInsensitive)) {
-            info << "SSL backend type: OpenSSL";
-        } else {
-            info << QString("SSL backend type: %1 (not OpenSSL)").arg(backend);
-        }
         
         // Check supported protocols
         QStringList protocols;
@@ -170,25 +65,6 @@ QString SecureStringUtils::getSSLBackendInfo()
     }
 #else
     info << "Qt SSL support: Compiled without SSL";
-#endif
-
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-    info << "OpenSSL crypto: Compiled in";
-    
-    // Check OpenSSL version at runtime
-    const char* version = OpenSSL_version(OPENSSL_VERSION);
-    if (version) {
-        info << QString("OpenSSL version: %1").arg(QString::fromUtf8(version));
-    }
-    
-    // Check if RAND is working
-    if (RAND_status() == 1) {
-        info << "OpenSSL random: Working";
-    } else {
-        info << "OpenSSL random: Not properly seeded";
-    }
-#else
-    info << "OpenSSL crypto: Not compiled in";
 #endif
 
     return info.join("\n");
@@ -207,6 +83,7 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
     
     // Check if it's valid Base64
     QRegularExpression base64Regex(qsl("^[A-Za-z0-9+/]*={0,2}$"));
+
     if (!base64Regex.match(text).hasMatch()) {
         return false;
     }
@@ -219,10 +96,10 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
             return false;
         }
         
-        // Check version byte - support both OpenSSL and Qt fallback versions
+        // Check version byte - only support current version
         quint8 version = static_cast<quint8>(decoded[0]);
-        return (version == ENCRYPTION_VERSION_OPENSSL || version == ENCRYPTION_VERSION_QT_FALLBACK);
-        
+
+        return (version == ENCRYPTION_VERSION_CURRENT);
     } catch (...) {
         return false;
     }
@@ -290,204 +167,6 @@ QByteArray SecureStringUtils::generateSalt()
     return salt;
 }
 
-QByteArray SecureStringUtils::generateIV()
-{
-    QByteArray iv;
-    iv.resize(IV_SIZE);
-    
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-    // Ensure OpenSSL is initialized
-    initializeOpenSSL();
-    
-    if (RAND_bytes(reinterpret_cast<unsigned char*>(iv.data()), IV_SIZE) != 1) {
-        // Fallback to Qt's random generator if OpenSSL fails
-        QRandomGenerator* rng = QRandomGenerator::system();
-        for (int i = 0; i < IV_SIZE; ++i) {
-            iv[i] = static_cast<char>(rng->bounded(256));
-        }
-    }
-#else
-    // Use Qt's random generator when OpenSSL not available
-    QRandomGenerator* rng = QRandomGenerator::system();
-    for (int i = 0; i < IV_SIZE; ++i) {
-        iv[i] = static_cast<char>(rng->bounded(256));
-    }
-#endif
-    
-    return iv;
-}
-
-QByteArray SecureStringUtils::encryptAES(const QByteArray& plaintext, const QByteArray& key, 
-                                        const QByteArray& iv, QByteArray& tag)
-{
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-    if (plaintext.isEmpty() || key.size() != KEY_SIZE || iv.size() != IV_SIZE) {
-        return QByteArray();
-    }
-    
-    // Ensure OpenSSL is initialized
-    initializeOpenSSL();
-    
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) {
-        return QByteArray();
-    }
-    
-    QByteArray ciphertext;
-    int len;
-    int ciphertext_len;
-    
-    try {
-        // Initialize encryption
-        if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1) {
-            QString error = getOpenSSLError();
-            qWarning() << "OpenSSL AES-GCM initialization failed:" << (error.isEmpty() ? "Unknown error" : error);
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Set IV length
-        if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, nullptr) != 1) {
-            QString error = getOpenSSLError();
-            qWarning() << "OpenSSL AES-GCM IV length setting failed:" << (error.isEmpty() ? "Unknown error" : error);
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Initialize key and IV
-        if (EVP_EncryptInit_ex(ctx, nullptr, nullptr, 
-                              reinterpret_cast<const unsigned char*>(key.data()), 
-                              reinterpret_cast<const unsigned char*>(iv.data())) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Encrypt plaintext
-        ciphertext.resize(plaintext.size() + 16); // Extra space for safety
-        if (EVP_EncryptUpdate(ctx, reinterpret_cast<unsigned char*>(ciphertext.data()), 
-                             &len, reinterpret_cast<const unsigned char*>(plaintext.data()), 
-                             plaintext.size()) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        ciphertext_len = len;
-        
-        // Finalize encryption
-        if (EVP_EncryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(ciphertext.data()) + len, &len) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        ciphertext_len += len;
-        ciphertext.resize(ciphertext_len);
-        
-        // Get the authentication tag
-        tag.resize(TAG_SIZE);
-        if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, TAG_SIZE, tag.data()) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        EVP_CIPHER_CTX_free(ctx);
-        return ciphertext;
-        
-    } catch (...) {
-        EVP_CIPHER_CTX_free(ctx);
-        return QByteArray();
-    }
-#else
-    Q_UNUSED(plaintext)
-    Q_UNUSED(key)
-    Q_UNUSED(iv)
-    Q_UNUSED(tag)
-    // OpenSSL not available - this should not be called in Qt fallback mode
-    return QByteArray();
-#endif
-}
-
-QByteArray SecureStringUtils::decryptAES(const QByteArray& ciphertext, const QByteArray& key,
-                                        const QByteArray& iv, const QByteArray& tag)
-{
-#ifdef MUDLET_USE_OPENSSL_CRYPTO
-    if (ciphertext.isEmpty() || key.size() != KEY_SIZE || iv.size() != IV_SIZE || tag.size() != TAG_SIZE) {
-        return QByteArray();
-    }
-    
-    // Ensure OpenSSL is initialized
-    initializeOpenSSL();
-    
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) {
-        return QByteArray();
-    }
-    
-    QByteArray plaintext;
-    int len;
-    int plaintext_len;
-    
-    try {
-        // Initialize decryption
-        if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Set IV length
-        if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, nullptr) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Initialize key and IV
-        if (EVP_DecryptInit_ex(ctx, nullptr, nullptr, 
-                              reinterpret_cast<const unsigned char*>(key.data()), 
-                              reinterpret_cast<const unsigned char*>(iv.data())) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Decrypt ciphertext
-        plaintext.resize(ciphertext.size() + 16); // Extra space for safety
-        if (EVP_DecryptUpdate(ctx, reinterpret_cast<unsigned char*>(plaintext.data()), 
-                             &len, reinterpret_cast<const unsigned char*>(ciphertext.data()), 
-                             ciphertext.size()) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        plaintext_len = len;
-        
-        // Set expected tag value
-        if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, TAG_SIZE, 
-                               const_cast<void*>(reinterpret_cast<const void*>(tag.data()))) != 1) {
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        
-        // Finalize decryption (this will verify the tag)
-        if (EVP_DecryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(plaintext.data()) + len, &len) != 1) {
-            // Authentication failed
-            EVP_CIPHER_CTX_free(ctx);
-            return QByteArray();
-        }
-        plaintext_len += len;
-        plaintext.resize(plaintext_len);
-        
-        EVP_CIPHER_CTX_free(ctx);
-        return plaintext;
-        
-    } catch (...) {
-        EVP_CIPHER_CTX_free(ctx);
-        return QByteArray();
-    }
-#else
-    Q_UNUSED(ciphertext)
-    Q_UNUSED(key)
-    Q_UNUSED(iv)
-    Q_UNUSED(tag)
-    // OpenSSL not available - this should not be called in Qt fallback mode
-    return QByteArray();
-#endif
-}
-
 QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, const QString& profileName)
 {
     if (plaintext.isEmpty() || profileName.isEmpty()) {
@@ -515,66 +194,27 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
             return QString();
         }
         
-        QByteArray result;
-        
-        // Choose encryption method based on OpenSSL availability
-        if (isOpenSSLAvailable()) {
-            // Use OpenSSL AES-256-GCM encryption
-            QByteArray iv = generateIV();
-            QByteArray tag;
-            QByteArray encryptedData = encryptAES(plaintextBytes, derivedKey, iv, tag);
+        // Use Qt crypto encryption
+        QByteArray nonce = generateNonce();
+        QByteArray hmac;
+        QByteArray encryptedData = encryptData(plaintextBytes, derivedKey, salt, nonce, hmac);
 
-            if (encryptedData.isEmpty()) {
-                qWarning() << "OpenSSL AES-256-GCM encryption failed, falling back to Qt encryption";
-                
-                // Fall back to Qt encryption if OpenSSL fails
-                QByteArray nonce = generateNonce();
-                QByteArray hmac;
-                encryptedData = encryptQtFallback(plaintextBytes, derivedKey, salt, nonce, hmac);
-                
-                if (encryptedData.isEmpty()) {
-                    // Securely clear sensitive data before returning
-                    secureByteArrayClear(plaintextBytes);
-                    secureByteArrayClear(derivedKey);
-                    secureByteArrayClear(profileKey);
-                    return QString();
-                }
-                
-                // Build Qt fallback format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
-                result.append(static_cast<char>(ENCRYPTION_VERSION_QT_FALLBACK));
-                result.append(salt);
-                result.append(nonce);
-                result.append(hmac);
-                result.append(encryptedData);
-            } else {
-                // Build OpenSSL format: [VERSION:1][SALT:16][IV:12][TAG:16][ENCRYPTED_DATA]
-                result.append(static_cast<char>(ENCRYPTION_VERSION_OPENSSL));
-                result.append(salt);
-                result.append(iv);
-                result.append(tag);
-                result.append(encryptedData);
-            }
-        } else {
-            // Use Qt fallback encryption
-            QByteArray nonce = generateNonce();
-            QByteArray hmac;
-            QByteArray encryptedData = encryptQtFallback(plaintextBytes, derivedKey, salt, nonce, hmac);
-
-            if (encryptedData.isEmpty()) {
-                // Securely clear sensitive data before returning
-                secureByteArrayClear(plaintextBytes);
-                secureByteArrayClear(derivedKey);
-                secureByteArrayClear(profileKey);
-                return QString();
-            }
-            
-            // Build Qt fallback format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
-            result.append(static_cast<char>(ENCRYPTION_VERSION_QT_FALLBACK));
-            result.append(salt);
-            result.append(nonce);
-            result.append(hmac);
-            result.append(encryptedData);
+        if (encryptedData.isEmpty()) {
+            // Securely clear sensitive data before returning
+            secureByteArrayClear(plaintextBytes);
+            secureByteArrayClear(derivedKey);
+            secureByteArrayClear(profileKey);
+            return QString();
         }
+        
+        // Build encrypted format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
+        QByteArray result;
+
+        result.append(static_cast<char>(ENCRYPTION_VERSION_CURRENT));
+        result.append(salt);
+        result.append(nonce);
+        result.append(hmac);
+        result.append(encryptedData);
         
         // Securely clear sensitive data
         secureByteArrayClear(plaintextBytes);
@@ -588,7 +228,6 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
         secureByteArrayClear(result);
         
         return base64Result;
-        
     } catch (...) {
         // If encryption fails for any reason, return empty string
         return QString();
@@ -612,7 +251,7 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         // Extract version
         quint8 version = static_cast<quint8>(encrypted[0]);
 
-        if (version != ENCRYPTION_VERSION_OPENSSL && version != ENCRYPTION_VERSION_QT_FALLBACK) {
+        if (version != ENCRYPTION_VERSION_CURRENT) {
             return QString(); // Unsupported version
         }
         
@@ -621,6 +260,7 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         
         // Get profile-specific encryption key
         QByteArray profileKey = getProfileEncryptionKey(profileName);
+
         if (profileKey.isEmpty()) {
             return QString();
         }
@@ -632,49 +272,22 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
             return QString();
         }
         
-        QByteArray decrypted;
-        
-        if (version == ENCRYPTION_VERSION_OPENSSL) {
-            // OpenSSL AES-GCM format: [VERSION:1][SALT:16][IV:12][TAG:16][ENCRYPTED_DATA]
-            if (encrypted.size() < 1 + SALT_SIZE + IV_SIZE + TAG_SIZE) {
-                return QString(); // Invalid format
-            }
-            
-            // Extract IV (bytes 17-28)
-            QByteArray iv = encrypted.mid(1 + SALT_SIZE, IV_SIZE);
-            
-            // Extract authentication tag (bytes 29-44)
-            QByteArray tag = encrypted.mid(1 + SALT_SIZE + IV_SIZE, TAG_SIZE);
-            
-            // Extract encrypted data (bytes 45+)
-            QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + IV_SIZE + TAG_SIZE);
-            
-            // Decrypt using AES-256-GCM
-            decrypted = decryptAES(encryptedData, derivedKey, iv, tag);
-            
-            if (decrypted.isEmpty()) {
-                qWarning() << "OpenSSL AES-256-GCM decryption failed for profile:" << profileName;
-                // Note: We cannot fall back to Qt encryption here because the data was encrypted with OpenSSL
-                // The only proper fallback would be to re-encrypt the original plaintext with Qt if we had it
-            }
-        } else if (version == ENCRYPTION_VERSION_QT_FALLBACK) {
-            // Qt fallback format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
-            if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {
-                return QString(); // Invalid format
-            }
-            
-            // Extract nonce (bytes 17-32)
-            QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
-            
-            // Extract HMAC (bytes 33-64)
-            QByteArray hmac = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE, HMAC_SIZE);
-            
-            // Extract encrypted data (bytes 65+)
-            QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE);
-            
-            // Decrypt using Qt fallback
-            decrypted = decryptQtFallback(encryptedData, derivedKey, salt, nonce, hmac);
+        // Current format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
+        if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {
+            return QString(); // Invalid format
         }
+        
+        // Extract nonce (bytes 17-32)
+        QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
+        
+        // Extract HMAC (bytes 33-64)
+        QByteArray hmac = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE, HMAC_SIZE);
+        
+        // Extract encrypted data (bytes 65+)
+        QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE);
+        
+        // Decrypt the data
+        QByteArray decrypted = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
         
         if (decrypted.isEmpty()) {
             // Securely clear sensitive data before returning
@@ -702,21 +315,7 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
 
 QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName)
 {
-    QByteArray existingKey;
-    
-    // Skip keychain in test environment
-    if (!isTestEnvironment()) {
-        // In test environment, skip keychain entirely
-        if (isTestEnvironment()) {
-            // Skip keychain operations in test mode
-        } else {
-            // Try to load existing key from secure storage first
-            // Currently using file fallback for simplicity and reliability
-            // Future improvement: integrate with async keychain API
-        }
-    }
-    
-    // If keychain failed or we're in test mode, try to load from profile directory (portable mode)
+    // Try to load existing key from profile directory
     QByteArray fileKey = loadEncryptionKeyFromFile(profileName);
 
     if (fileKey.size() == KEY_SIZE) {
@@ -734,12 +333,7 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         newKey[i] = static_cast<char>(rng->bounded(256));
     }
     
-    // Try to store the new key in secure storage first (skip in test mode)
-    if (!isTestEnvironment() && storeProfileEncryptionKey(profileName, newKey)) {
-        return newKey;
-    }
-    
-    // If secure storage failed or we're in test mode, store in profile directory (portable mode)
+    // Store the new key in profile directory
     if (storeEncryptionKeyToFile(profileName, newKey)) {
         return newKey;
     }
@@ -753,18 +347,6 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
     hash.addData(qsl("MudletProfileEncryption2025").toUtf8());
     
     return hash.result();
-}
-
-bool SecureStringUtils::storeProfileEncryptionKey(const QString& profileName, const QByteArray& key)
-{
-    // Skip keychain in test environment
-    if (isTestEnvironment()) {
-        return false; // Let caller fall back to file storage
-    }
-    
-    // Currently using file storage for encryption keys to maintain reliability
-    // This provides a stable foundation while keychain integration can be added later
-    return false; // Use file storage for encryption keys
 }
 
 QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileName)
@@ -860,6 +442,7 @@ QByteArray SecureStringUtils::generateNonce()
     
     // Fill with cryptographically secure random bytes
     QRandomGenerator* rng = QRandomGenerator::system();
+
     for (int i = 0; i < NONCE_SIZE; ++i) {
         nonce[i] = static_cast<char>(rng->bounded(256));
     }
@@ -867,7 +450,7 @@ QByteArray SecureStringUtils::generateNonce()
     return nonce;
 }
 
-QByteArray SecureStringUtils::encryptQtFallback(const QByteArray& plaintext, const QByteArray& key,
+QByteArray SecureStringUtils::encryptData(const QByteArray& plaintext, const QByteArray& key,
                                                const QByteArray& salt, const QByteArray& nonce,
                                                QByteArray& hmac)
 {
@@ -881,6 +464,7 @@ QByteArray SecureStringUtils::encryptQtFallback(const QByteArray& plaintext, con
         
         // XOR encryption (simple but authenticated via HMAC)
         QByteArray encrypted = plaintext;
+
         for (int i = 0; i < encrypted.size(); ++i) {
             encrypted[i] = encrypted[i] ^ cipherKey[i % cipherKey.size()];
         }
@@ -895,13 +479,12 @@ QByteArray SecureStringUtils::encryptQtFallback(const QByteArray& plaintext, con
         secureByteArrayClear(macData);
         
         return encrypted;
-        
     } catch (...) {
         return QByteArray();
     }
 }
 
-QByteArray SecureStringUtils::decryptQtFallback(const QByteArray& ciphertext, const QByteArray& key,
+QByteArray SecureStringUtils::decryptData(const QByteArray& ciphertext, const QByteArray& key,
                                                const QByteArray& salt, const QByteArray& nonce,
                                                const QByteArray& hmac)
 {
@@ -917,6 +500,7 @@ QByteArray SecureStringUtils::decryptQtFallback(const QByteArray& ciphertext, co
         
         // Constant-time comparison to prevent timing attacks
         bool hmacValid = (hmac.size() == expectedHmac.size());
+
         for (int i = 0; i < qMin(hmac.size(), expectedHmac.size()); ++i) {
             hmacValid &= (hmac[i] == expectedHmac[i]);
         }
@@ -932,6 +516,7 @@ QByteArray SecureStringUtils::decryptQtFallback(const QByteArray& ciphertext, co
         
         // XOR decryption (same operation as encryption)
         QByteArray decrypted = ciphertext;
+
         for (int i = 0; i < decrypted.size(); ++i) {
             decrypted[i] = decrypted[i] ^ cipherKey[i % cipherKey.size()];
         }
@@ -941,9 +526,147 @@ QByteArray SecureStringUtils::decryptQtFallback(const QByteArray& ciphertext, co
         secureByteArrayClear(macData);
         secureByteArrayClear(expectedHmac);
         
-        return decrypted;
-        
+        return decrypted; 
     } catch (...) {
         return QByteArray();
     }
+}
+
+// Convenience methods for password storage and retrieval
+
+bool SecureStringUtils::storePassword(const QString& profileName, const QString& key, const QString& password)
+{
+    if (profileName.isEmpty() || key.isEmpty() || !isValidPasswordKey(key)) {
+        return false;
+    }
+    
+    if (password.isEmpty()) {
+        // Allow storing empty passwords (effectively removing them)
+        return removePassword(profileName, key);
+    }
+    
+    try {
+        QString filePath = getPasswordFilePath(profileName, key);
+        
+        // Ensure directory exists
+        QFileInfo fileInfo(filePath);
+        QDir dir = fileInfo.dir();
+        if (!dir.exists() && !dir.mkpath(dir.absolutePath())) {
+            qDebug() << "SecureStringUtils::storePassword() - Failed to create directory:" << dir.absolutePath();
+            return false;
+        }
+        
+        // Encrypt the password
+        QString encryptedPassword = encryptStringForProfile(password, profileName);
+        if (encryptedPassword.isEmpty()) {
+            qDebug() << "SecureStringUtils::storePassword() - Failed to encrypt password";
+            return false;
+        }
+        
+        // Save to file
+        QSaveFile file(filePath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+            qDebug() << "SecureStringUtils::storePassword() - Failed to open file for writing:" << filePath << file.errorString();
+            return false;
+        }
+        
+        QDataStream ofs(&file);
+        ofs.setVersion(QDataStream::Qt_5_12);
+        ofs << encryptedPassword;
+        
+        if (!file.commit()) {
+            qDebug() << "SecureStringUtils::storePassword() - Failed to commit file:" << filePath << file.errorString();
+            return false;
+        }
+        
+        return true;
+    } catch (...) {
+        qDebug() << "SecureStringUtils::storePassword() - Exception occurred";
+        return false;
+    }
+}
+
+QString SecureStringUtils::retrievePassword(const QString& profileName, const QString& key)
+{
+    if (profileName.isEmpty() || key.isEmpty() || !isValidPasswordKey(key)) {
+        return QString();
+    }
+    
+    try {
+        QString filePath = getPasswordFilePath(profileName, key);
+        
+        QFile file(filePath);
+        if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
+            // File doesn't exist or can't be read - not an error, just no password stored
+            return QString();
+        }
+        
+        QDataStream ifs(&file);
+        ifs.setVersion(QDataStream::Qt_5_12);
+        
+        QString encryptedPassword;
+        ifs >> encryptedPassword;
+        file.close();
+        
+        if (encryptedPassword.isEmpty()) {
+            return QString();
+        }
+        
+        // Decrypt the password
+        return decryptStringForProfile(encryptedPassword, profileName);
+    } catch (...) {
+        qDebug() << "SecureStringUtils::retrievePassword() - Exception occurred";
+        return QString();
+    }
+}
+
+bool SecureStringUtils::removePassword(const QString& profileName, const QString& key)
+{
+    if (profileName.isEmpty() || key.isEmpty() || !isValidPasswordKey(key)) {
+        return false;
+    }
+    
+    try {
+        QString filePath = getPasswordFilePath(profileName, key);
+        
+        QFile file(filePath);
+        if (!file.exists()) {
+            // File doesn't exist - consider it successfully removed
+            return true;
+        }
+        
+        return file.remove();
+    } catch (...) {
+        qDebug() << "SecureStringUtils::removePassword() - Exception occurred";
+        return false;
+    }
+}
+
+bool SecureStringUtils::hasPassword(const QString& profileName, const QString& key)
+{
+    if (profileName.isEmpty() || key.isEmpty() || !isValidPasswordKey(key)) {
+        return false;
+    }
+    
+    QString filePath = getPasswordFilePath(profileName, key);
+    return QFile::exists(filePath);
+}
+
+QString SecureStringUtils::getPasswordFilePath(const QString& profileName, const QString& key)
+{
+    // Use the same profile path structure as mudlet
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    return QString("%1/profiles/%2/passwords/%3.dat").arg(configPath, profileName, key);
+}
+
+bool SecureStringUtils::isValidPasswordKey(const QString& key)
+{
+    if (key.isEmpty() || key.length() > 100) {
+        return false;
+    }
+    
+    // Allow alphanumeric characters, underscores, and hyphens
+    // This ensures the key is safe for use as a filename
+    QRegularExpression validKeyRegex(qsl("^[a-zA-Z0-9_-]+$"));
+    return validKeyRegex.match(key).hasMatch();
 }

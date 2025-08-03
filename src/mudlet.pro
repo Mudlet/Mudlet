@@ -90,28 +90,6 @@ greaterThan(QT_MAJOR_VERSION, 5) {
     QT += core5compat
 }
 
-# Configure Qt SSL backend to use OpenSSL instead of platform default
-# This ensures consistent SSL socket behavior across platforms
-CONFIG += use_openssl_backend
-contains(CONFIG, use_openssl_backend) {
-    !build_pass : message("Configuring Qt to use OpenSSL backend for SSL sockets")
-    
-    # Force Qt to use OpenSSL backend instead of platform default (e.g., Secure Transport on macOS)
-    # Qt6 uses different plugin name format
-    greaterThan(QT_MAJOR_VERSION, 5) {
-        QTPLUGIN += qopensslbackend
-    } else {
-        QTPLUGIN += qsslbackend-openssl
-    }
-    
-    # Define macro to indicate OpenSSL backend is being used
-    DEFINES += QT_SSL_BACKEND_OPENSSL
-    
-    # Ensure OpenSSL libraries are linked for SSL backend support
-    # Note: OpenSSL libraries are already linked in platform-specific sections below
-    # This section just ensures the defines are set when the config is enabled
-}
-
 TEMPLATE = app
 
 # Define a variable for the Git executable
@@ -289,19 +267,6 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 
 # We should consider the XDG specifications in:
 # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-
-########################### Crypto library configuration ########################
-# Configure OpenSSL crypto support for secure string utilities
-# This enables AES-GCM encryption for credential storage with fallback to Qt crypto
-CONFIG += use_openssl_crypto
-contains(CONFIG, use_openssl_crypto) {
-    !build_pass : message("Enabling OpenSSL crypto support for secure string utilities")
-    
-    # Define macro to indicate OpenSSL crypto is available
-    DEFINES += MUDLET_USE_OPENSSL_CRYPTO
-    
-    # OpenSSL libraries will be linked by platform-specific sections below
-}
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
@@ -509,35 +474,7 @@ exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/cc
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
-# On macOS, use OpenSSL for SSL/TLS support with fallback paths
-macx {
-    LIBS += -lz
-    
-    # Try to find OpenSSL in common locations
-    # First try Homebrew ARM64 (Apple Silicon)
-    exists(/opt/homebrew/opt/openssl@3/lib/libssl.dylib) {
-        OPENSSL_PREFIX = /opt/homebrew/opt/openssl@3
-        message("Using Homebrew OpenSSL (ARM64): $$OPENSSL_PREFIX")
-    } else:exists(/usr/local/opt/openssl@3/lib/libssl.dylib) {
-        # Fallback to Homebrew Intel location
-        OPENSSL_PREFIX = /usr/local/opt/openssl@3
-        message("Using Homebrew OpenSSL (Intel): $$OPENSSL_PREFIX")
-    } else:exists(/opt/homebrew/opt/openssl@1.1/lib/libssl.dylib) {
-        # Fallback to OpenSSL 1.1 if 3.x not available
-        OPENSSL_PREFIX = /opt/homebrew/opt/openssl@1.1
-        message("Using Homebrew OpenSSL 1.1 (ARM64): $$OPENSSL_PREFIX")
-    } else:exists(/usr/local/opt/openssl@1.1/lib/libssl.dylib) {
-        OPENSSL_PREFIX = /usr/local/opt/openssl@1.1
-        message("Using Homebrew OpenSSL 1.1 (Intel): $$OPENSSL_PREFIX")
-    } else {
-        # Final fallback to system OpenSSL (if available)
-        OPENSSL_PREFIX = /usr
-        message("Using system OpenSSL: $$OPENSSL_PREFIX")
-    }
-    
-    LIBS += -L$$OPENSSL_PREFIX/lib -lssl -lcrypto
-    INCLUDEPATH += $$OPENSSL_PREFIX/include
-}
+macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 

@@ -468,17 +468,6 @@ find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
-find_package(OpenSSL REQUIRED)
-
-# Define the macro so SecureStringUtils knows to use OpenSSL
-if(OpenSSL_FOUND)
-    add_compile_definitions(MUDLET_USE_OPENSSL_CRYPTO)
-    
-    # Optionally force Qt to use OpenSSL backend instead of platform default
-    # Uncomment the following lines if you want to force OpenSSL usage for Qt SSL
-    # set_property(TARGET mudlet PROPERTY QT_SSL_BACKEND "openssl")
-    # add_compile_definitions(QT_SSL_BACKEND_OPENSSL)
-endif()
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.
@@ -620,8 +609,6 @@ target_link_libraries(
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
-        OpenSSL::SSL
-        OpenSSL::Crypto
 # PLACEMARKER: sample benchmarking code
 #       nanobench
         ${QT_LIBS})
