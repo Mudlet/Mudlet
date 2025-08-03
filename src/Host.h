@@ -748,6 +748,9 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
+    // stops all triggers/aliases/everything from running
+    bool mEmergencyStop = false;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
