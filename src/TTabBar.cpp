@@ -37,9 +37,10 @@
 #include "post_guard.h"
 
 // Constants for improved drag detection
-static const int DETACH_DISTANCE_THRESHOLD = 80;  // Increased from 50
-static const int VERTICAL_MOVEMENT_RATIO_THRESHOLD = 60;  // Percentage: vertical movement must be 60% of total
-static const int TAB_REORDER_DELAY_MS = 150;  // Allow Qt tab reordering to process first
+static const int DETACH_DISTANCE_THRESHOLD = 80;  // Pixels to drag before tab detaches
+static const int DETACH_PIXEL_BUFFER = 20;        // Drag tolerance buffer
+static const int VERTICAL_MOVEMENT_RATIO_THRESHOLD = 60;  // Percentage of movement that must be vertical
+static const int TAB_REORDER_DELAY_MS = 150;  // Delay before allowing tab detachment
 
 
 void TTabBar::setNamedTabState(const QString& tabName, const bool state, QSet<QString>& effect)
