@@ -545,7 +545,7 @@ void TDetachedWindow::createToolBar()
     mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 
     // Reattach action - placed first in the toolbar for prominence
-    mpActionReattach = new QAction(QIcon(qsl(":/icons/view-restore.png")), tr("Reattach"), this);
+    mpActionReattach = new QAction(QIcon(qsl(":/icons/mudlet_main_48px.png")), tr("Reattach"), this);
     mpActionReattach->setToolTip(utils::richText(tr("Reattach this profile window to the main Mudlet window")));
     mpActionReattach->setObjectName(qsl("reattach_action"));
     mpToolBar->addAction(mpActionReattach);
