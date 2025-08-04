@@ -1893,7 +1893,7 @@ void mudlet::closeHost(const QString& name)
         
         // Remove from our tracking map
         mMainWindowDockWidgetMap.remove(mapKey);
-        mMainWindowDockWidgetIntendedVisibility.remove(mapKey);
+        mMainWindowDockWidgetUserPreference.remove(mapKey);
     }
 
     mpTabBar->removeTab(name);
@@ -3261,8 +3261,8 @@ void mudlet::slot_showMapperDialog()
     // Store reference in our map for cleanup and profile-specific access
     mMainWindowDockWidgetMap[mapKey] = newMapDockWidget;
     
-    // Set intended visibility to true since we're initially showing this dock widget
-    mMainWindowDockWidgetIntendedVisibility[mapKey] = true;
+    // Set user preference to true since we're initially showing this dock widget
+    mMainWindowDockWidgetUserPreference[mapKey] = true;
     
     // Set global reference to the currently active map
     mpCurrentMapDockWidget = newMapDockWidget;
@@ -3275,10 +3275,10 @@ void mudlet::slot_showMapperDialog()
         }
         
         // Track user-initiated visibility changes (not system-initiated profile switches)
-        // Only update intended visibility if this is likely a user action
+        // Only update user preference if this is likely a user action
         if (getActiveHost() && getActiveHost()->getName() == mapKey.mid(4)) {
             // Current profile's dock widget visibility changed - likely user action
-            mMainWindowDockWidgetIntendedVisibility[mapKey] = visible;
+            mMainWindowDockWidgetUserPreference[mapKey] = visible;
             qDebug() << "mudlet: User changed dock widget visibility for" << mapKey << "to" << visible;
         }
         
@@ -7257,13 +7257,13 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
             
             if (dockProfileName == profileName) {
                 // This dock widget belongs to the current profile
-                // Check the intended visibility state, not the current visibility
-                bool shouldBeVisible = mMainWindowDockWidgetIntendedVisibility.value(dockKey, false);
+                // Check the user's preference for dock widget visibility
+                bool shouldBeVisible = mMainWindowDockWidgetUserPreference.value(dockKey, false);
                 qDebug() << "mudlet: Found main window dock widget for current profile" << profileName 
                          << "currently visible:" << dockWidget->isVisible() 
                          << "should be visible:" << shouldBeVisible;
                 
-                // Show or hide based on intended visibility
+                // Show or hide based on user preference
                 if (shouldBeVisible) {
                     dockWidget->show();
                     dockWidget->raise();
@@ -7336,11 +7336,11 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     
     qDebug() << "mudlet::transferDockWidgetToDetachedWindow: Transferring dock widget for profile" << profileName;
     
-    // Store the current visibility state and determine intended visibility
+    // Store the current visibility state and determine user preference
     bool wasVisible = mainDockWidget->isVisible();
     // If the dock widget is currently visible, the user clearly wants it visible
-    // If it's not visible, respect the stored intended visibility (defaulting to false for new profiles)
-    bool intendedVisible = wasVisible || mMainWindowDockWidgetIntendedVisibility.value(mapKey, false);
+    // If it's not visible, respect the stored user preference (defaulting to false for new profiles)
+    bool intendedVisible = wasVisible || mMainWindowDockWidgetUserPreference.value(mapKey, false);
     
     // Get the mapper widget from the main window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(mainDockWidget->widget());
@@ -7354,7 +7354,7 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     
     // Clear from main window tracking
     mMainWindowDockWidgetMap.remove(mapKey);
-    mMainWindowDockWidgetIntendedVisibility.remove(mapKey);
+    mMainWindowDockWidgetUserPreference.remove(mapKey);
     if (mpCurrentMapDockWidget == mainDockWidget) {
         mpCurrentMapDockWidget = nullptr;
     }
@@ -7369,8 +7369,8 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     // Transfer to detached window's tracking map
     detachedWindow->addDockWidget(mapKey, mainDockWidget);
     
-    // Transfer the intended visibility state as well
-    detachedWindow->setDockWidgetIntendedVisibility(mapKey, intendedVisible);
+    // Transfer the user preference state as well
+    detachedWindow->setDockWidgetUserPreference(mapKey, intendedVisible);
     
     // Set the visibility to match the intended state
     mainDockWidget->setVisible(intendedVisible);
@@ -7401,11 +7401,11 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     
     qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: Transferring dock widget for profile" << profileName;
     
-    // Store the current visibility state and determine intended visibility
+    // Store the current visibility state and determine user preference
     bool wasVisible = detachedDockWidget->isVisible();
     // If the dock widget is currently visible, the user clearly wants it visible
-    // If it's not visible, respect the stored intended visibility
-    bool intendedVisible = wasVisible || detachedWindow->getDockWidgetIntendedVisibility(mapKey);
+    // If it's not visible, respect the stored user preference
+    bool intendedVisible = wasVisible || detachedWindow->getDockWidgetUserPreference(mapKey);
     
     // Get the mapper widget from the detached window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(detachedDockWidget->widget());
@@ -7435,8 +7435,8 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     // Transfer to main window's tracking map
     mMainWindowDockWidgetMap[mapKey] = detachedDockWidget;
     
-    // Transfer the intended visibility state as well
-    mMainWindowDockWidgetIntendedVisibility[mapKey] = intendedVisible;
+    // Transfer the user preference state as well
+    mMainWindowDockWidgetUserPreference[mapKey] = intendedVisible;
     
     // Set the visibility to match the intended state
     detachedDockWidget->setVisible(intendedVisible);
@@ -7467,11 +7467,11 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     
     qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: Transferring dock widget for profile" << profileName;
     
-    // Store the current visibility state and determine intended visibility
+    // Store the current visibility state and determine user preference
     bool wasVisible = sourceDockWidget->isVisible();
     // If the dock widget is currently visible, the user clearly wants it visible
-    // If it's not visible, respect the stored intended visibility
-    bool intendedVisible = wasVisible || sourceWindow->getDockWidgetIntendedVisibility(mapKey);
+    // If it's not visible, respect the stored user preference
+    bool intendedVisible = wasVisible || sourceWindow->getDockWidgetUserPreference(mapKey);
     
     // Get the mapper widget from the source dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(sourceDockWidget->widget());
@@ -7501,8 +7501,8 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     // Transfer to target window's tracking map
     targetWindow->addDockWidget(mapKey, sourceDockWidget);
     
-    // Transfer the intended visibility state as well
-    targetWindow->setDockWidgetIntendedVisibility(mapKey, intendedVisible);
+    // Transfer the user preference state as well
+    targetWindow->setDockWidgetUserPreference(mapKey, intendedVisible);
     
     // Set the visibility to match the intended state
     sourceDockWidget->setVisible(intendedVisible);

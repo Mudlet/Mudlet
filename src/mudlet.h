@@ -749,7 +749,7 @@ private:
 
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
-    QMap<QString, bool> mMainWindowDockWidgetIntendedVisibility; // Track intended visibility for each dock widget
+    QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows

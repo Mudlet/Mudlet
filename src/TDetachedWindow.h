@@ -3,7 +3,10 @@
 
 /***************************************************************************
  *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
- *                                                                         *
+ *                    // Docked widgets management
+    QMap<QString, QPointer<QDockWidget>> mDockWidgetMap;
+    QMap<QString, bool> mDockWidgetUserPreference;  // User's show/hide preference for dock widgets
+    QDockWidget* mpMapDockWidget{nullptr};                                                     *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -64,12 +67,12 @@ public:
     void addDockWidget(const QString& mapKey, QDockWidget* dockWidget) { mDockWidgetMap[mapKey] = dockWidget; }
     void removeDockWidget(const QString& mapKey) { 
         mDockWidgetMap.remove(mapKey); 
-        mDockWidgetIntendedVisibility.remove(mapKey);
+        mDockWidgetUserPreference.remove(mapKey);
     }
     
-    // Intended visibility management
-    void setDockWidgetIntendedVisibility(const QString& mapKey, bool visible) { mDockWidgetIntendedVisibility[mapKey] = visible; }
-    bool getDockWidgetIntendedVisibility(const QString& mapKey) const { return mDockWidgetIntendedVisibility.value(mapKey, false); }
+    // User preference management for dock widget visibility
+    void setDockWidgetUserPreference(const QString& mapKey, bool visible) { mDockWidgetUserPreference[mapKey] = visible; }
+    bool getDockWidgetUserPreference(const QString& mapKey) const { return mDockWidgetUserPreference.value(mapKey, false); }
     
     // Map dock widget access methods
     QDockWidget* getMapDockWidget() const { return mpMapDockWidget; }
@@ -225,7 +228,7 @@ private:
 
     // Docked widgets management
     QMap<QString, QPointer<QDockWidget>> mDockWidgetMap;
-    QMap<QString, bool> mDockWidgetIntendedVisibility; // Track intended visibility for each dock widget
+    QMap<QString, bool> mDockWidgetUserPreference;  // User's show/hide preference for dock widgets
     QDockWidget* mpMapDockWidget{nullptr};
 };
 

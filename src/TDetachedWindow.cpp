@@ -997,8 +997,8 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
             
             if (dockProfileName == profileName) {
                 // This dock widget belongs to the current profile
-                // Check the intended visibility state, not the current visibility
-                bool shouldBeVisible = mDockWidgetIntendedVisibility.value(dockKey, false);
+                // Check the user's preference for dock widget visibility
+                bool shouldBeVisible = mDockWidgetUserPreference.value(dockKey, false);
                 qDebug() << "TDetachedWindow: Found dock widget for current profile" << profileName 
                          << "currently visible:" << dockWidget->isVisible() 
                          << "should be visible:" << shouldBeVisible;
@@ -1436,7 +1436,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
         
         // Remove from our tracking maps
         mDockWidgetMap.remove(mapKey);
-        mDockWidgetIntendedVisibility.remove(mapKey);
+        mDockWidgetUserPreference.remove(mapKey);
     }
 
     // Find the tab index
@@ -2081,8 +2081,8 @@ void TDetachedWindow::slot_showMapperDialog()
     // Store reference in our map for cleanup and profile-specific access
     mDockWidgetMap[mapKey] = newMapDockWidget;
     
-    // Set intended visibility to true since we're initially showing this dock widget
-    mDockWidgetIntendedVisibility[mapKey] = true;
+    // Set user preference to true since we're initially showing this dock widget
+    mDockWidgetUserPreference[mapKey] = true;
     
     // Set global reference to the currently active map
     mpMapDockWidget = newMapDockWidget;
@@ -2095,10 +2095,10 @@ void TDetachedWindow::slot_showMapperDialog()
         }
         
         // Track user-initiated visibility changes (not system-initiated profile switches)
-        // Only update intended visibility if this is likely a user action
+        // Only update user preference if this is likely a user action
         if (!mCurrentProfileName.isEmpty() && mCurrentProfileName == mapKey.mid(4)) {
             // Current profile's dock widget visibility changed - likely user action
-            mDockWidgetIntendedVisibility[mapKey] = visible;
+            mDockWidgetUserPreference[mapKey] = visible;
             qDebug() << "TDetachedWindow: User changed dock widget visibility for" << mapKey << "to" << visible;
         }
         
