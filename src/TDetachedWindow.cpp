@@ -164,6 +164,13 @@ void TDetachedWindow::setupUI()
     mpTabBar->setTabsClosable(true);
     mpTabBar->setMovable(true);
 
+    // Inherit font from main window's tab bar to ensure consistency
+    if (auto mudletInstance = mudlet::self()) {
+        if (mudletInstance->mpTabBar) {
+            mpTabBar->setFont(mudletInstance->mpTabBar->font());
+        }
+    }
+
     // Add initial tab for the first profile
     if (!mCurrentProfileName.isEmpty()) {
         QString displayText = mCurrentProfileName;
