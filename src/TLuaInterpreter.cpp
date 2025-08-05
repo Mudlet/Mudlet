@@ -1330,7 +1330,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 
     auto [ok, filename, error] = (saveAsFile.isNull())
                                ? host.saveProfile(saveToDir)
-                               : host.saveProfileAs(saveToDir + saveAsFile);
+                               : host.saveProfileAs(saveToDir + "/" + saveAsFile);
 
     if (ok) {
         lua_pushboolean(L, true);
