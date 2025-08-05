@@ -1320,10 +1320,17 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     if (lua_isstring(L, 1)) {
         saveToDir = lua_tostring(L, 1);
     }
+    QString fileName;
+    if (!lua_isnoneornil(L, 2)) {
+        fileName = getVerifiedString(L, __func__, 2, "file name", true);
+        if (!fileName.endsWith(".xml", Qt::CaseInsensitive)) {
+            fileName = fileName + ".xml";
+        }
+    }
 
-    auto [ok, filename, error] = (saveToDir.endsWith(".xml", Qt::CaseInsensitive))
-                               ? host.saveProfileAs(saveToDir)
-                               : host.saveProfile(saveToDir);
+    auto [ok, filename, error] = (fileName.isNull())
+                               ? host.saveProfile(saveToDir)
+                               : host.saveProfileAs(saveToDir + fileName);
 
     if (ok) {
         lua_pushboolean(L, true);
