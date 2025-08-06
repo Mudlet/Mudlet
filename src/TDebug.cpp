@@ -53,10 +53,12 @@ TDebug& TDebug::operator>>(Host* pHost)
             // The smpDebugConsole must have just come on-line - so unload all
             // the stacked up messages:
             QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+
             while (!smMessageQueue.isEmpty() && debugConsole) {
                 const auto& message = smMessageQueue.dequeue();
                 // Create local copy for each print call to ensure thread safety
                 QPointer<TConsole> localDebugConsole = debugConsole;
+
                 if (localDebugConsole) {
                     if (message.mTag.isNull()) {
                         localDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
@@ -74,6 +76,7 @@ TDebug& TDebug::operator>>(Host* pHost)
 
         // Check if debug console is still valid before using it
         QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+
         if (!debugConsole) {
             return *this;
         }
@@ -82,13 +85,16 @@ TDebug& TDebug::operator>>(Host* pHost)
         // the Host is probably being destroyed, so treat as system message
         if (pHost && !smIdentifierMap.contains(pHost)) {
             QPointer<TConsole> localDebugConsole = debugConsole;
+
             if (localDebugConsole) {
                 localDebugConsole->print(csmTagSystemMessage % msg, fgColor, bgColor);
             }
+
             return *this;
         }
 
         auto tag = deduceProfileTag(msg, pHost);
+
         if (tag.isNull()) {
             // We use an empty message with no host pointer to flush out the
             // enqueued messages the first time the CDC is shown - so in that
@@ -104,6 +110,7 @@ TDebug& TDebug::operator>>(Host* pHost)
             // This is a system message or something went wrong in identifying the profile or more than one profile is active
             // Create local copy and re-check debugConsole validity before printing
             QPointer<TConsole> localDebugConsole = debugConsole;
+
             if (localDebugConsole) {
                 localDebugConsole->print(tag % msg, fgColor, bgColor);
             }
@@ -116,6 +123,7 @@ TDebug& TDebug::operator>>(Host* pHost)
             }
         }
     }
+
     return *this;
 }
 
@@ -250,6 +258,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     } else {
         // Host is being destroyed: find by hostName and remove
         const Host* foundHost = nullptr;
+
         for (auto it = smIdentifierMap.begin(); it != smIdentifierMap.end(); ++it) {
             if (it.value().first == hostName) {
                 foundHost = it.key();
@@ -257,6 +266,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
                 break;
             }
         }
+
         if (foundHost) {
             smIdentifierMap.remove(foundHost);
         }
@@ -267,6 +277,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         // is a normal identifier so push it in at the back of the queue for reuse:
         smAvailableIdentifiers.enqueue(identifier.second);
     }
+
     TDebug localMessage(Qt::darkGray, Qt::white);
     localMessage << qsl("Profile '%1' ended.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);

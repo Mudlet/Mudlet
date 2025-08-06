@@ -253,6 +253,7 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
             // Improved directional detection: require predominantly vertical movement
             // and sufficient distance from the tab bar
             bool isVerticalMovement = false;
+
             if (verticalDistance > 0) {
                 const int verticalPercentage = (verticalDistance * 100) / (horizontalDistance + verticalDistance);
                 isVerticalMovement = verticalPercentage >= VERTICAL_MOVEMENT_RATIO_THRESHOLD;
@@ -284,6 +285,7 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
 void TTabBar::dragEnterEvent(QDragEnterEvent* event)
 {
     const QMimeData* mimeData = event->mimeData();
+
     if (mimeData->hasFormat("application/x-mudlet-tab")) {
         event->acceptProposedAction();
     } else {
@@ -294,6 +296,7 @@ void TTabBar::dragEnterEvent(QDragEnterEvent* event)
 void TTabBar::dragMoveEvent(QDragMoveEvent* event)
 {
     const QMimeData* mimeData = event->mimeData();
+
     if (mimeData->hasFormat("application/x-mudlet-tab")) {
         event->acceptProposedAction();
     } else {
@@ -304,6 +307,7 @@ void TTabBar::dragMoveEvent(QDragMoveEvent* event)
 void TTabBar::dropEvent(QDropEvent* event)
 {
     const QMimeData* mimeData = event->mimeData();
+
     if (mimeData->hasFormat("application/x-mudlet-tab")) {
         const QString tabName = QString::fromUtf8(mimeData->data("application/x-mudlet-tab"));
         const int dropIndex = tabAt(event->position().toPoint());

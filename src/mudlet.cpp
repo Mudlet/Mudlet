@@ -1692,6 +1692,7 @@ void mudlet::updateWindowMenu()
         menuWindow->removeAction(action);
         action->deleteLater();
     }
+
     mWindowListActions.clear();
 
     // Remove separator if it exists
@@ -1707,12 +1708,14 @@ void mudlet::updateWindowMenu()
 
     // Only show window list if there are multiple windows OR if there are multiple profiles
     bool hasMultipleProfiles = mHostManager.getHostCount() > 1;
+
     if (totalWindows > 1 || hasMultipleProfiles) {
         // Add separator before window list
         mWindowListSeparator = menuWindow->addSeparator();
 
         // Add main window profiles
         QStringList mainWindowProfiles;
+
         for (const auto& host : mHostManager) {
             if (host && host->mpConsole) {
                 const QString profileName = host->getName();
@@ -1742,8 +1745,10 @@ void mudlet::updateWindowMenu()
         // Add detached window profiles
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
+
         for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
             TDetachedWindow* detachedWindow = it.value();
+
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1753,6 +1758,7 @@ void mudlet::updateWindowMenu()
         for (TDetachedWindow* detachedWindow : uniqueDetachedWindows) {
             // Get all profiles in this detached window
             QStringList profilesInWindow = detachedWindow->getProfileNames();
+
             for (const QString& windowProfileName : profilesInWindow) {
                 QString actionText = tr("%1 (Detached)").arg(windowProfileName);
                 QAction* profileAction = new QAction(actionText, this);
@@ -1769,6 +1775,7 @@ void mudlet::updateWindowMenu()
     // Also update window menus on all detached windows
     for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
         TDetachedWindow* detachedWindow = it.value();
+
         if (detachedWindow) {
             detachedWindow->updateWindowMenu();
         }
@@ -1791,8 +1798,10 @@ void mudlet::slot_activateDetachedWindow()
     }
 
     QString profileName = action->data().toString();
+
     if (mDetachedWindows.contains(profileName)) {
         TDetachedWindow* detachedWindow = mDetachedWindows[profileName];
+
         if (detachedWindow) {
             detachedWindow->raise();
             detachedWindow->activateWindow();
@@ -1805,6 +1814,7 @@ void mudlet::slot_activateDetachedWindow()
 void mudlet::slot_activateMainWindowProfile()
 {
     QAction* action = qobject_cast<QAction*>(sender());
+
     if (!action) {
         return;
     }
@@ -1813,6 +1823,7 @@ void mudlet::slot_activateMainWindowProfile()
     
     // Find the tab index for this profile in the main window
     int tabIndex = -1;
+
     for (int i = 0; i < mpTabBar->count(); ++i) {
         if (mpTabBar->tabData(i).toString() == profileName) {
             tabIndex = i;
@@ -1839,6 +1850,7 @@ void mudlet::slot_activateMainWindowProfile()
 void mudlet::slot_activateDetachedWindowProfile()
 {
     QAction* action = qobject_cast<QAction*>(sender());
+
     if (!action) {
         return;
     }
@@ -1848,6 +1860,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     // Find which detached window contains this profile
     for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
         TDetachedWindow* detachedWindow = it.value();
+
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
@@ -1868,16 +1881,20 @@ void mudlet::slot_activateDetachedWindowProfile()
 void mudlet::closeHost(const QString& name)
 {
     Host* pH = mHostManager.getHost(name);
+
     if (!pH) {
         // Don't try and close a non-existant profile:
         return;
     }
+
     migrateDebugConsole(pH);
 
     // Clean up any main window dock widgets for this profile
     const QString mapKey = qsl("map_%1").arg(name);
+
     if (mMainWindowDockWidgetMap.contains(mapKey)) {
         QPointer<QDockWidget> mapDockWidget = mMainWindowDockWidgetMap.value(mapKey);
+
         if (mapDockWidget) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet::closeHost: Cleaning up main window dock widget for profile" << name;
@@ -1911,15 +1928,18 @@ void mudlet::closeHost(const QString& name)
 void mudlet::updateMultiViewControls()
 {
     const bool isEnabled = (mHostManager.getHostCount() > 1);
+
     if (mpActionMultiView->isEnabled() != isEnabled){
         mpActionMultiView->setEnabled(isEnabled);
     }
+
     if (dactionMultiView->isEnabled() != isEnabled) {
         dactionMultiView->setEnabled(isEnabled);
     }
     
     // Update reattach detached windows menu visibility
     const bool hasDetachedWindows = !mDetachedWindows.isEmpty();
+
     if (dactionReattachDetachedWindows->isVisible() != hasDetachedWindows) {
         dactionReattachDetachedWindows->setVisible(hasDetachedWindows);
     }
@@ -1932,6 +1952,7 @@ void mudlet::reshowRequiredMainConsoles()
             if (host->mpConsole) {
                 // Only show consoles that are in the main window, not detached ones
                 const QString profileName = host->getName();
+
                 if (!mDetachedWindows.contains(profileName)) {
                     host->mpConsole->show();
                 }
@@ -3169,20 +3190,24 @@ void mudlet::slot_showHelpDialogIrc()
 void mudlet::slot_mapper()
 {
     Host* pHost = getActiveHost();
+
     if (!pHost) {
         return;
     }
+
     pHost->showHideOrCreateMapper(true);
 }
 
 void mudlet::slot_showMapperDialog()
 {
     Host* pHost = getActiveHost();
+
     if (!pHost) {
         return;
     }
 
     auto pMap = pHost->mpMap.data();
+
     if (!pMap) {
         return;
     }
@@ -3236,6 +3261,7 @@ void mudlet::slot_showMapperDialog()
             // Restore the host's default mapper if it exists
             if (pHost->mpDockableMapWidget) {
                 auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
                 }
@@ -3297,6 +3323,7 @@ void mudlet::slot_showMapperDialog()
     // Connect to handle dock widget visibility changes
     connect(newMapDockWidget, &QDockWidget::visibilityChanged, this, [this, mapKey](bool visible) {
         auto mapDockWidget = mMainWindowDockWidgetMap.value(mapKey);
+
         if (!mapDockWidget) {
             return;
         }
@@ -3310,21 +3337,25 @@ void mudlet::slot_showMapperDialog()
         
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
+
         if (profileName.startsWith("map_")) {
             profileName = profileName.mid(4); // Remove "map_" prefix
         }
         
         // Safely get the host and map - they might be null during shutdown
         Host* pHost = getActiveHost();
+
         if (!pHost || pHost->getName() != profileName) {
             // Try to get the specific host for this profile
             pHost = mHostManager.getHost(profileName);
+
             if (!pHost) {
                 return;
             }
         }
         
         auto pMap = pHost->mpMap.data();
+
         if (!pMap) {
             return;
         }
@@ -3338,6 +3369,7 @@ void mudlet::slot_showMapperDialog()
             // Restore the host's default mapper when hiding
             if (pHost->mpDockableMapWidget) {
                 auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
                 }
@@ -3348,6 +3380,7 @@ void mudlet::slot_showMapperDialog()
             
             // Ensure the map's active mapper points to our main window instance
             auto mapWidget = mapDockWidget->widget();
+
             if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
                 pMap->mpMapper = mainMapper;
             }
@@ -3405,10 +3438,13 @@ void mudlet::slot_toggleEmergencyStop()
 void mudlet::slot_notes()
 {
     Host* pHost = getActiveHost();
+
     if (!pHost) {
         return;
     }
+
     dlgNotepad* pNotes = pHost->mpNotePad;
+
     if (!pNotes) {
         pHost->mpNotePad = new dlgNotepad(pHost);
         pNotes = pHost->mpNotePad;
@@ -3421,6 +3457,7 @@ void mudlet::slot_notes()
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
         pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
     }
+
     pNotes->raise();
     pNotes->show();
 }
@@ -4113,6 +4150,7 @@ void mudlet::synchronizeToolBarVisibility(bool visible)
         } else {
             setToolBarVisibility(enums::visibleNever);
         }
+
         if (mpActionToggleMainToolBar) {
             mpActionToggleMainToolBar->setChecked(visible);
         }
@@ -4132,6 +4170,7 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     
     // Find which tab was right-clicked
     int tabIndex = -1;
+
     for (int i = 0; i < mpTabBar->count(); ++i) {
         if (mpTabBar->tabRect(i).contains(position)) {
             tabIndex = i;
@@ -5886,6 +5925,7 @@ void mudlet::refreshTabBar()
 {
     for (const auto& pHost : mHostManager) {
         const QString hostName = pHost->getName();
+
         if (smDebugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
         } else {
@@ -5896,6 +5936,7 @@ void mudlet::refreshTabBar()
     // Also refresh all detached windows to ensure they show CDC identifiers
     for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
         TDetachedWindow* detachedWindow = it.value();
+
         if (detachedWindow) {
             detachedWindow->refreshTabBar();
         }
@@ -6506,9 +6547,10 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
         detachedWindow->setReattaching(true);
     }
 
-    // CRITICAL DEBUG: Check if main window splitter already contains a console for this profile
+    // heck if main window splitter already contains a console for this profile
     for (int i = 0; i < mpSplitter_profileContainer->count(); ++i) {
         QWidget* widget = mpSplitter_profileContainer->widget(i);
+
         if (auto* existingConsole = qobject_cast<TMainConsole*>(widget)) {
             if (existingConsole->objectName() == safeProfileName) {
                 qWarning() << "reattachTab: CONFLICT! Main window already has console for" << safeProfileName
@@ -6524,8 +6566,9 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // Transfer any dock widgets from the detached window to the main window BEFORE removing the profile
     transferDockWidgetFromDetachedWindow(safeProfileName, detachedWindow);
 
-    // CRITICAL: Remove the profile from the detached window properly
+    // Remove the profile from the detached window properly
     bool removalSuccess = detachedWindow->removeProfile(safeProfileName);
+
     if (!removalSuccess) {
         qWarning() << "reattachTab: Failed to remove profile" << safeProfileName << "from detached window";
         return;
@@ -6547,13 +6590,15 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     const int newTabIndex = mpTabBar->insertTab(insertIndex, safeProfileName);
     mpTabBar->setTabData(newTabIndex, safeProfileName);
 
-    // CRITICAL DEBUG: Check for duplicate tabs
+    // Check for duplicate tabs
     int tabCount = 0;
+
     for (int i = 0; i < mpTabBar->count(); ++i) {
         if (mpTabBar->tabData(i).toString() == safeProfileName) {
             tabCount++;
         }
     }
+
     if (tabCount > 1) {
         qWarning() << "reattachTab: DUPLICATE TABS! Found" << tabCount << "tabs for" << safeProfileName;
     }
@@ -6561,13 +6606,14 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // Set as current tab
     mpTabBar->setCurrentIndex(newTabIndex);
 
-    // CRITICAL: Remove from detached windows map BEFORE activating profile
+    // Remove from detached windows map BEFORE activating profile
     // This is essential because activateProfile checks mDetachedWindows to decide
     // whether to show the console, and we need it to see this profile as being in main window
     mDetachedWindows.remove(safeProfileName);
 
-    // CRITICAL: Force activation of the profile to ensure it's properly shown
+    // Force activation of the profile to ensure it's properly shown
     Host* pHost = mHostManager.getHost(safeProfileName);
+
     if (pHost) {
         activateProfile(pHost);
 
@@ -6648,6 +6694,7 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
 TMainConsole* mudlet::removeConsoleFromSplitter(const QString& profileName)
 {
     Host* pHost = mHostManager.getHost(profileName);
+
     if (!pHost || !pHost->mpConsole) {
         return nullptr;
     }
@@ -6832,8 +6879,10 @@ void mudlet::updateDetachedWindowTabIndicators()
 {
     // Update tab indicators for all detached windows
     const auto& detachedWindows = getDetachedWindows();
+
     for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
         TDetachedWindow* detachedWindow = it.value();
+
         if (detachedWindow) {
             // Update all tabs in this detached window
             detachedWindow->updateAllTabIndicators();
@@ -7315,6 +7364,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
+
     for (auto it = mMainWindowDockWidgetMap.begin(); it != mMainWindowDockWidgetMap.end(); ++it) {
         if (it.value()) {
             dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
@@ -7338,24 +7388,30 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
         
         // Check if the dock widget still exists and is in our map
         if (!dockWidget || !mMainWindowDockWidgetMap.contains(dockKey)) {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet: Skipping main window dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr) 
                      << "in map:" << mMainWindowDockWidgetMap.contains(dockKey);
+#endif
             continue;
         }
         
         // Check if this docked widget belongs to the current profile
         if (dockKey.startsWith("map_")) {
             QString dockProfileName = dockKey.mid(4); // Remove "map_" prefix
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet: Processing main window map dock" << dockKey << "profile:" << dockProfileName << "current:" << profileName;
-            
+#endif
+
             if (dockProfileName == profileName) {
                 // This dock widget belongs to the current profile
                 // Check the user's preference for dock widget visibility
                 bool shouldBeVisible = mMainWindowDockWidgetUserPreference.value(dockKey, false);
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "mudlet: Found main window dock widget for current profile" << profileName 
                          << "currently visible:" << dockWidget->isVisible() 
                          << "should be visible:" << shouldBeVisible;
-                
+#endif
+
                 // Show or hide based on user preference
                 if (shouldBeVisible) {
                     dockWidget->show();
@@ -7364,32 +7420,41 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                     // Set this as the current map dock widget reference
                     mpCurrentMapDockWidget = dockWidget;
                     currentProfileHasVisibleDockWidget = true;
-                    
+
+#if defined(DEBUG_WINDOW_HANDLING)
                     qDebug() << "mudlet: Main window dock widget should be visible - showing and setting as active";
+#endif
                 } else {
                     // Block signals to prevent user preference from being updated by system-initiated change
                     dockWidget->blockSignals(true);
                     dockWidget->setVisible(false);
                     dockWidget->blockSignals(false);
+#if defined(DEBUG_WINDOW_HANDLING)
                     qDebug() << "mudlet: Main window dock widget should be hidden - respecting user preference";
+#endif
                 }
                 
                 // Ensure the map's active mapper points to our main window instance (if visible)
                 if (auto pHost = mHostManager.getHost(profileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
                         auto mapWidget = dockWidget->widget();
+
                         if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
                             // Only set as active mapper if the dock widget should be visible
                             if (shouldBeVisible) {
                                 pMap->mpMapper = mainMapper;
+#if defined(DEBUG_WINDOW_HANDLING)
                                 qDebug() << "mudlet: Set active mapper for main window profile" << profileName;
+#endif
                             }
                         }
                     }
                 }
             } else {
                 // This dock widget belongs to a different profile - hide it
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "mudlet: Hiding main window dock widget for different profile" << dockProfileName;
+#endif
                 // Block signals to prevent user preference from being updated by system-initiated change
                 dockWidget->blockSignals(true);
                 dockWidget->setVisible(false);
@@ -7400,9 +7465,12 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                     if (auto pMap = pHost->mpMap.data()) {
                         if (pHost->mpDockableMapWidget) {
                             auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+
                             if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                                 pMap->mpMapper = hostMapper;
+#if defined(DEBUG_WINDOW_HANDLING)
                                 qDebug() << "mudlet: Restored host mapper for main window profile" << dockProfileName;
+#endif
                             }
                         }
                     }
@@ -7411,12 +7479,14 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
         }
         // Add other dock widget types here as they are implemented
     }
-    
+
+#if defined(DEBUG_WINDOW_HANDLING)
     // Debug output to help track dock widget visibility changes
     qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile:" << profileName 
              << "- Found visible dock widget:" << currentProfileHasVisibleDockWidget
              << "- Total dock widgets:" << dockWidgetsToProcess.size()
              << "- mpCurrentMapDockWidget set:" << (mpCurrentMapDockWidget != nullptr);
+#endif
 }
 
 void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDetachedWindow* detachedWindow)
@@ -7447,6 +7517,7 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     
     // Get the mapper widget from the main window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(mainDockWidget->widget());
+
     if (!mapperWidget) {
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetToDetachedWindow: No mapper widget found in dock widget";
@@ -7484,6 +7555,7 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     mainDockWidget->blockSignals(true);
     mainDockWidget->setVisible(intendedVisible);
     mainDockWidget->blockSignals(false);
+
     if (intendedVisible) {
         // Update detached window's global reference if it's now visible
         detachedWindow->setMapDockWidget(mainDockWidget);
@@ -7491,8 +7563,10 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     
     // Update the mapper's parent
     mapperWidget->setParent(mainDockWidget);
-    
+
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetToDetachedWindow: Transfer completed for profile" << profileName << "wasVisible:" << wasVisible << "intendedVisible:" << intendedVisible;
+#endif
 }
 
 void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TDetachedWindow* detachedWindow)
@@ -7523,6 +7597,7 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     
     // Get the mapper widget from the detached window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(detachedDockWidget->widget());
+
     if (!mapperWidget) {
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: No mapper widget found in dock widget";
@@ -7571,17 +7646,20 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
         
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
+
         if (profileName.startsWith("map_")) {
             profileName = profileName.mid(4); // Remove "map_" prefix
         }
         
         // Safely get the host - it might be null during shutdown
         Host* pHost = mHostManager.getHost(profileName);
+
         if (!pHost) {
             return;
         }
         
         auto pMap = pHost->mpMap.data();
+
         if (!pMap) {
             return;
         }
@@ -7612,6 +7690,7 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     detachedDockWidget->blockSignals(true);
     detachedDockWidget->setVisible(intendedVisible);
     detachedDockWidget->blockSignals(false);
+
     if (intendedVisible) {
         // Update main window's global reference if it's now visible
         mpCurrentMapDockWidget = detachedDockWidget;
@@ -7619,8 +7698,9 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     
     // Update the mapper's parent
     mapperWidget->setParent(detachedDockWidget);
-    
+#if defined(DEBUG_WINDOW_HANDLING)    
     qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: Transfer completed for profile" << profileName << "wasVisible:" << wasVisible << "intendedVisible:" << intendedVisible;
+#endif
 }
 
 void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName, TDetachedWindow* sourceWindow, TDetachedWindow* targetWindow)
@@ -7633,11 +7713,15 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     QPointer<QDockWidget> sourceDockWidget = sourceWindow->getDockWidget(mapKey);
     
     if (!sourceDockWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)  
         qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: No dock widget found in source window for profile" << profileName;
+#endif
         return;
     }
-    
+
+#if defined(DEBUG_WINDOW_HANDLING)  
     qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: Transferring dock widget for profile" << profileName;
+#endif
     
     // Store the current visibility state and determine user preference
     bool wasVisible = sourceDockWidget->isVisible();
@@ -7647,8 +7731,11 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     
     // Get the mapper widget from the source dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(sourceDockWidget->widget());
+
     if (!mapperWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)  
         qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: No mapper widget found in dock widget";
+#endif
         return;
     }
     
@@ -7678,6 +7765,7 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     
     // Set the visibility to match the intended state
     sourceDockWidget->setVisible(intendedVisible);
+
     if (intendedVisible) {
         // Update target window's global reference if it's now visible
         targetWindow->setMapDockWidget(sourceDockWidget);
@@ -7685,8 +7773,10 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     
     // Update the mapper's parent
     mapperWidget->setParent(sourceDockWidget);
-    
+
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: Transfer completed for profile" << profileName << "wasVisible:" << wasVisible << "intendedVisible:" << intendedVisible;
+#endif
 }
 
 bool mudlet::hasOrphanedProfiles()
@@ -7736,6 +7826,7 @@ QStringList mudlet::getOrphanedProfiles()
         
         // Check if profile is in main window (has a tab)
         bool inMainWindow = false;
+
         for (int i = 0; i < mpTabBar->count(); ++i) {
             if (mpTabBar->tabData(i).toString() == profileName) {
                 inMainWindow = true;
@@ -7772,6 +7863,7 @@ void mudlet::reattachOrphanedProfiles()
     // Reattach each orphaned profile to the main window
     for (const QString& profileName : orphanedProfiles) {
         Host* pHost = mHostManager.getHost(profileName);
+
         if (!pHost || !pHost->mpConsole) {
             qWarning() << "reattachOrphanedProfiles: Invalid host for profile:" << profileName;
             continue;
