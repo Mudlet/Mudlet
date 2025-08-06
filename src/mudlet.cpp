@@ -1630,18 +1630,24 @@ void mudlet::slot_reattachAllDetachedWindows()
     auto detachedWindowsCopy = mDetachedWindows;
 
     if (detachedWindowsCopy.isEmpty()) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "slot_reattachAllDetachedWindows: No detached windows to reattach";
+#endif
         return;
     }
     
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "slot_reattachAllDetachedWindows: Reattaching" << detachedWindowsCopy.size() << "detached windows";
+#endif
 
     for (auto it = detachedWindowsCopy.begin(); it != detachedWindowsCopy.end(); ++it) {
         const QString& profileName = it.key();
         TDetachedWindow* detachedWindow = it.value();
 
         if (detachedWindow) {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
+#endif
             // Use the existing reattach mechanism
             reattachTab(profileName, -1); // Use default insert index
         }
@@ -1873,7 +1879,9 @@ void mudlet::closeHost(const QString& name)
     if (mMainWindowDockWidgetMap.contains(mapKey)) {
         QPointer<QDockWidget> mapDockWidget = mMainWindowDockWidgetMap.value(mapKey);
         if (mapDockWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet::closeHost: Cleaning up main window dock widget for profile" << name;
+#endif
             
             // If this is the currently active map dock, clear the global reference
             if (mpCurrentMapDockWidget == mapDockWidget) {
@@ -2337,7 +2345,9 @@ void mudlet::showEvent(QShowEvent* event)
                 qWarning() << "Startup validation: Found orphaned profiles from previous session:" << orphanedProfiles;
                 
                 // Automatically reattach orphaned profiles without user prompt
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "Automatically reattaching" << orphanedProfiles.size() << "orphaned profiles:" << orphanedProfiles.join(", ");
+#endif
                 reattachOrphanedProfiles();
             }
         });
@@ -3190,7 +3200,9 @@ void mudlet::slot_showMapperDialog()
             auto detachedMapDock = detachedWindow->getDockWidget(mapKey);
 
             if (detachedMapDock && detachedMapDock->isVisible()) {
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "mudlet: Closing map in detached window for profile" << profileName << "to prevent conflicts";
+#endif
                 // Block signals to prevent user preference from being updated by system-initiated change
                 detachedMapDock->blockSignals(true);
                 detachedMapDock->setVisible(false);
@@ -3292,7 +3304,9 @@ void mudlet::slot_showMapperDialog()
         // Track user-initiated visibility changes - always update user preference
         // to ensure dock widget state is properly tracked regardless of which profile is active
         mMainWindowDockWidgetUserPreference[mapKey] = visible;
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet: User changed dock widget visibility for" << mapKey << "to" << visible;
+#endif
         
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
@@ -3339,7 +3353,9 @@ void mudlet::slot_showMapperDialog()
             }
         }
         
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet: Main window map dock visibility changed for" << mapKey << "visible:" << visible;
+#endif
     });
 
     // Show the dock widget

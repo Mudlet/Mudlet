@@ -964,17 +964,23 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
     // Clear the global map dock widget reference first
     mpMapDockWidget = nullptr;
     
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "TDetachedWindow::updateDockWidgetVisibilityForProfile: Starting for profile" << profileName
              << "- mDockWidgetMap.size():" << mDockWidgetMap.size();
+#endif
     
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
     for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
         if (it.value()) {
             dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow: Found dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+#endif
         } else {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow: Found null dock widget in map for key:" << it.key();
+#endif
         }
     }
     
@@ -988,23 +994,29 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
         
         // Check if the dock widget still exists and is in our map
         if (!dockWidget || !mDockWidgetMap.contains(dockKey)) {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow: Skipping dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr) 
                      << "in map:" << mDockWidgetMap.contains(dockKey);
+#endif
             continue;
         }
         
         // Check if this docked widget belongs to the current profile
         if (dockKey.startsWith("map_")) {
             QString dockProfileName = dockKey.mid(4); // Remove "map_" prefix
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow: Processing map dock" << dockKey << "profile:" << dockProfileName << "current:" << profileName;
+#endif
             
             if (dockProfileName == profileName) {
                 // This dock widget belongs to the current profile
                 // Check the user's preference for dock widget visibility
                 bool shouldBeVisible = mDockWidgetUserPreference.value(dockKey, false);
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "TDetachedWindow: Found dock widget for current profile" << profileName 
                          << "currently visible:" << dockWidget->isVisible() 
                          << "should be visible:" << shouldBeVisible;
+#endif
                 
                 // Show or hide based on intended visibility
                 if (shouldBeVisible) {
@@ -1015,13 +1027,17 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                     mpMapDockWidget = dockWidget;
                     currentProfileHasVisibleDockWidget = true;
                     
+#if defined(DEBUG_WINDOW_HANDLING)
                     qDebug() << "TDetachedWindow: Dock widget should be visible - showing and setting as active";
+#endif
                 } else {
                     // Block signals to prevent user preference from being updated by system-initiated change
                     dockWidget->blockSignals(true);
                     dockWidget->setVisible(false);
                     dockWidget->blockSignals(false);
+#if defined(DEBUG_WINDOW_HANDLING)
                     qDebug() << "TDetachedWindow: Dock widget should be hidden - respecting user preference";
+#endif
                 }
                 
                 // Ensure the map's active mapper points to our detached instance (if visible)
@@ -1032,14 +1048,18 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                             // Only set as active mapper if the dock widget should be visible
                             if (shouldBeVisible) {
                                 pMap->mpMapper = detachedMapper;
+#if defined(DEBUG_WINDOW_HANDLING)
                                 qDebug() << "TDetachedWindow: Set active mapper for profile" << profileName;
+#endif
                             }
                         }
                     }
                 }
             } else {
                 // This dock widget belongs to a different profile - hide it
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "TDetachedWindow: Hiding dock widget for different profile" << dockProfileName;
+#endif
                 // Block signals to prevent user preference from being updated by system-initiated change
                 dockWidget->blockSignals(true);
                 dockWidget->setVisible(false);
@@ -1052,7 +1072,9 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                             auto mainMapWidget = pHost->mpDockableMapWidget->widget();
                             if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                                 pMap->mpMapper = mainMapper;
+#if defined(DEBUG_WINDOW_HANDLING)
                                 qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
+#endif
                             }
                         }
                     }
@@ -1063,10 +1085,12 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
     }
     
     // Debug output to help track dock widget visibility changes
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "TDetachedWindow::updateDockWidgetVisibilityForProfile:" << profileName 
              << "- Found visible dock widget:" << currentProfileHasVisibleDockWidget
              << "- Total dock widgets:" << dockWidgetsToProcess.size()
              << "- mpMapDockWidget set:" << (mpMapDockWidget != nullptr);
+#endif
 }
 
 void TDetachedWindow::slot_toggleFullScreenView()
@@ -2172,7 +2196,9 @@ void TDetachedWindow::slot_showMapperDialog()
         // Track user-initiated visibility changes - always update user preference
         // to ensure dock widget state is properly tracked regardless of which profile is active
         mDockWidgetUserPreference[mapKey] = visible;
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "TDetachedWindow: User changed dock widget visibility for" << mapKey << "to" << visible;
+#endif
         
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
