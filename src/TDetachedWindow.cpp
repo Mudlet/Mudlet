@@ -308,7 +308,9 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
         
         // Properly close each profile - this ensures proper cleanup and save prompts
         for (const QString& profileName : profilesToClose) {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
+#endif
             mudlet::self()->slot_closeProfileByName(profileName);
         }
         
@@ -398,7 +400,9 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
     // Prevent the window from being hidden if it should stay visible (has profiles)
     // IMPORTANT: Only allow hiding if there are NO profiles remaining, regardless of mIsReattaching
     if (mShouldStayVisible && mpTabBar && mpTabBar->count() > 0) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "TDetachedWindow::hideEvent: Preventing window hide - has" << mpTabBar->count() << "profiles";
+#endif
         // Force the window to stay visible - but only if not minimized
         QTimer::singleShot(0, this, [this]() {
             if (mpTabBar && mpTabBar->count() > 0 && !mIsBeingMinimized) {
@@ -1473,7 +1477,9 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
     if (mDockWidgetMap.contains(mapKey)) {
         QPointer<QDockWidget> mapDockWidget = mDockWidgetMap.value(mapKey);
         if (mapDockWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::removeProfile: Cleaning up dock widget for profile" << profileName;
+#endif
             
             // If this is the currently active map dock, clear the global reference
             if (mpMapDockWidget == mapDockWidget) {
@@ -1490,7 +1496,9 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
                         auto mainMapWidget = pHost->mpDockableMapWidget->widget();
                         if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                             pMap->mpMapper = mainMapper;
+#if defined(DEBUG_WINDOW_HANDLING)
                             qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
+#endif
                         }
                     }
                 }
@@ -1944,7 +1952,9 @@ void TDetachedWindow::logWindowState(const QString& context)
 {
     // Simplified debug output for critical state information only
     if (mShouldStayVisible && mpTabBar && mpTabBar->count() > 0 && !isVisible()) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "TDetachedWindow [" << context << "] WARNING: Window should stay visible but is hidden - profiles:" << getProfileCount();
+#endif
     }
 }
 
@@ -2083,7 +2093,9 @@ void TDetachedWindow::slot_showMapperDialog()
     auto mainMapDock = mudletInstance->getMainWindowDockWidget(mapKey);
 
     if (mainMapDock && mainMapDock->isVisible()) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "TDetachedWindow: Closing main window map for profile" << mCurrentProfileName << "to prevent conflicts";
+#endif
         // Block signals to prevent user preference from being updated by system-initiated change
         mainMapDock->blockSignals(true);
         mainMapDock->setVisible(false);
@@ -2100,7 +2112,9 @@ void TDetachedWindow::slot_showMapperDialog()
             auto otherMapDock = otherWindow->getDockWidget(mapKey);
 
             if (otherMapDock && otherMapDock->isVisible()) {
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "TDetachedWindow: Closing map in other detached window for profile" << mCurrentProfileName;
+#endif
                 // Block signals to prevent user preference from being updated by system-initiated change
                 otherMapDock->blockSignals(true);
                 otherMapDock->setVisible(false);

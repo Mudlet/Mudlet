@@ -7429,11 +7429,15 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     QPointer<QDockWidget> mainDockWidget = mMainWindowDockWidgetMap.value(mapKey);
     
     if (!mainDockWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetToDetachedWindow: No main window dock widget found for profile" << profileName;
+#endif
         return;
     }
     
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetToDetachedWindow: Transferring dock widget for profile" << profileName;
+#endif
     
     // Store the current visibility state and determine user preference
     bool wasVisible = mainDockWidget->isVisible();
@@ -7444,7 +7448,9 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     // Get the mapper widget from the main window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(mainDockWidget->widget());
     if (!mapperWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetToDetachedWindow: No mapper widget found in dock widget";
+#endif
         return;
     }
     
@@ -7499,11 +7505,15 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     QPointer<QDockWidget> detachedDockWidget = detachedWindow->getDockWidget(mapKey);
     
     if (!detachedDockWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: No detached window dock widget found for profile" << profileName;
+#endif
         return;
     }
     
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: Transferring dock widget for profile" << profileName;
+#endif
     
     // Store the current visibility state and determine user preference
     bool wasVisible = detachedDockWidget->isVisible();
@@ -7514,7 +7524,9 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     // Get the mapper widget from the detached window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(detachedDockWidget->widget());
     if (!mapperWidget) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: No mapper widget found in dock widget";
+#endif
         return;
     }
     
@@ -7749,7 +7761,9 @@ void mudlet::reattachOrphanedProfiles()
     QStringList orphanedProfiles = getOrphanedProfiles();
     
     if (orphanedProfiles.isEmpty()) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "reattachOrphanedProfiles: No orphaned profiles found";
+#endif
         return;
     }
     
@@ -7763,7 +7777,9 @@ void mudlet::reattachOrphanedProfiles()
             continue;
         }
         
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "reattachOrphanedProfiles: Reattaching orphaned profile:" << profileName;
+#endif
         
         // Add console back to main window
         const int insertIndex = mpTabBar->count(); // Insert at end
