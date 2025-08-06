@@ -2246,7 +2246,9 @@ void TDetachedWindow::slot_showMapperDialog()
             }
         }
         
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "TDetachedWindow: Map dock visibility changed for" << mapKey << "visible:" << visible;
+#endif
     });
 
     // Show the dock widget

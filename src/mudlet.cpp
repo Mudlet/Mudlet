@@ -6949,7 +6949,9 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
         return;
     }
 
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet: Moving profile" << profileName << "between detached windows";
+#endif
 
     // Store console state before move
     const QSize oldSize = console->size();
@@ -7205,12 +7207,16 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // EXPERIMENTAL: Force a complete refresh of the main window state
     // This ensures that all UI elements are properly synchronized after the profile move
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "moveProfileFromDetachedToMainWindow: Forcing complete main window refresh";
+#endif
 
     // Make sure the moved profile becomes the current active one
     if (pHost && mpCurrentActiveHost != pHost) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "moveProfileFromDetachedToMainWindow: Current active host is" << (mpCurrentActiveHost ? mpCurrentActiveHost->getName() : "null")
                  << ", forcing switch to" << pHost->getName();
+#endif
         mpCurrentActiveHost = pHost;
     }
 
@@ -7232,16 +7238,22 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     // Process any remaining events
     QCoreApplication::processEvents();
 
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "moveProfileFromDetachedToMainWindow: Completed main window refresh";
+#endif
 
     // IMPORTANT: Only close window if it's now empty
     if (sourceWindow->getProfileCount() == 0) {
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "moveProfileFromDetachedToMainWindow: Source window is now empty, closing it";
+#endif
         // Window is now empty, remove all entries for this window from detached windows map
         auto it = mDetachedWindows.begin();
         while (it != mDetachedWindows.end()) {
             if (it.value() == sourceWindow) {
+#if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "moveProfileFromDetachedToMainWindow: Removing" << it.key() << "from detached windows map";
+#endif
                 it = mDetachedWindows.erase(it);
             } else {
                 ++it;
@@ -7252,10 +7264,14 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
         sourceWindow->close();
         sourceWindow->deleteLater();
 
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "moveProfileFromDetachedToMainWindow: Closed empty detached window";
+#endif
     } else {
         // Window still has other profiles
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "moveProfileFromDetachedToMainWindow: Window still has" << sourceWindow->getProfileCount() << "profiles";
+#endif
     }
 
     // Verify Host->Console relationship is still intact
@@ -7292,17 +7308,23 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     // Clear the current map dock widget reference first
     mpCurrentMapDockWidget = nullptr;
     
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile: Starting for profile" << profileName
              << "- mMainWindowDockWidgetMap.size():" << mMainWindowDockWidgetMap.size();
+#endif
     
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
     for (auto it = mMainWindowDockWidgetMap.begin(); it != mMainWindowDockWidgetMap.end(); ++it) {
         if (it.value()) {
             dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet: Found main window dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+#endif
         } else {
+#if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet: Found null main window dock widget in map for key:" << it.key();
+#endif
         }
     }
     
