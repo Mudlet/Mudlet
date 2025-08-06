@@ -65,6 +65,7 @@ public:
     // Dock widget management methods
     QDockWidget* getDockWidget(const QString& mapKey) const { return mDockWidgetMap.value(mapKey); }
     void addDockWidget(const QString& mapKey, QDockWidget* dockWidget) { mDockWidgetMap[mapKey] = dockWidget; }
+    void addTransferredDockWidget(const QString& mapKey, QDockWidget* dockWidget); // Sets up signal connections for transferred dock widgets
     void removeDockWidget(const QString& mapKey) { 
         mDockWidgetMap.remove(mapKey); 
         mDockWidgetUserPreference.remove(mapKey);
@@ -77,6 +78,10 @@ public:
     // Map dock widget access methods
     QDockWidget* getMapDockWidget() const { return mpMapDockWidget; }
     void setMapDockWidget(QDockWidget* dockWidget) { mpMapDockWidget = dockWidget; }
+    
+    // Toolbar synchronization methods
+    void setToolBarVisibility(bool visible);
+    bool isToolBarVisible() const;
     
     // Tab indicator methods
     void updateAllTabIndicators();  // Update all tab indicators in this window
@@ -118,6 +123,7 @@ private slots:
     void slot_closeApplication();
     void slot_showTriggerDialog();
     void slot_showAliasDialog();
+    void slot_showDetachedToolBarContextMenu(const QPoint& position);
     void slot_showTimerDialog();
     void slot_showActionDialog();
     void slot_showScriptDialog();

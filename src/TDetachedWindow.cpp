@@ -279,7 +279,6 @@ void TDetachedWindow::createMenus()
     mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
-    mpWindowMenu->addAction(mpActionToggleToolBar);
 
     // Always on top toggle
     auto alwaysOnTopAction = new QAction(tr("Always on &Top"), this);
@@ -480,7 +479,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     contextMenu.addSeparator();
 
     // Add toolbar visibility toggle to the context menu
-    auto toolbarToggleAction = contextMenu.addAction(tr("Show Toolbar"));
+    auto toolbarToggleAction = contextMenu.addAction(tr("Profile Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
@@ -730,6 +729,10 @@ void TDetachedWindow::createToolBar()
     mpActionFullScreenView->setCheckable(true);
     mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
     mpToolBar->addAction(mpActionFullScreenView);
+
+    // Setup context menu for the toolbar
+    mpToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(mpToolBar, &QToolBar::customContextMenuRequested, this, &TDetachedWindow::slot_showDetachedToolBarContextMenu);
 
     // Connect all actions to their respective slots in the main mudlet instance
     connectToolBarActions();
@@ -1014,7 +1017,10 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                     
                     qDebug() << "TDetachedWindow: Dock widget should be visible - showing and setting as active";
                 } else {
+                    // Block signals to prevent user preference from being updated by system-initiated change
+                    dockWidget->blockSignals(true);
                     dockWidget->setVisible(false);
+                    dockWidget->blockSignals(false);
                     qDebug() << "TDetachedWindow: Dock widget should be hidden - respecting user preference";
                 }
                 
@@ -1034,7 +1040,10 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
             } else {
                 // This dock widget belongs to a different profile - hide it
                 qDebug() << "TDetachedWindow: Hiding dock widget for different profile" << dockProfileName;
+                // Block signals to prevent user preference from being updated by system-initiated change
+                dockWidget->blockSignals(true);
                 dockWidget->setVisible(false);
+                dockWidget->blockSignals(false);
                 
                 // Restore main mapper for the other profile
                 if (auto pHost = mudlet::self()->getHostManager().getHost(dockProfileName)) {
@@ -1098,13 +1107,46 @@ void TDetachedWindow::slot_toggleToolBarVisibility()
         return;
     }
 
-    bool isCurrentlyVisible = mpToolBar->isVisible();
-    mpToolBar->setVisible(!isCurrentlyVisible);
+    bool newVisibility = !isToolBarVisible();
     
-    // Update the action to reflect the new state
-    if (mpActionToggleToolBar) {
-        mpActionToggleToolBar->setChecked(!isCurrentlyVisible);
+    // Synchronize toolbar visibility across all windows
+    auto mudletInstance = mudlet::self();
+    if (mudletInstance) {
+        mudletInstance->synchronizeToolBarVisibility(newVisibility);
     }
+}
+
+void TDetachedWindow::slot_showDetachedToolBarContextMenu(const QPoint& position)
+{
+    if (!mpToolBar) {
+        return;
+    }
+
+    QMenu menu(this);
+    
+    // Create "Profile Toolbar" toggle action
+    QAction* toolbarToggleAction = menu.addAction(tr("Profile Toolbar"));
+    toolbarToggleAction->setCheckable(true);
+    toolbarToggleAction->setChecked(mpToolBar->isVisible());
+    connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
+    
+    // Show the context menu at the clicked position
+    menu.exec(mpToolBar->mapToGlobal(position));
+}
+
+void TDetachedWindow::setToolBarVisibility(bool visible)
+{
+    if (mpToolBar) {
+        mpToolBar->setVisible(visible);
+    }
+    if (mpActionToggleToolBar) {
+        mpActionToggleToolBar->setChecked(visible);
+    }
+}
+
+bool TDetachedWindow::isToolBarVisible() const
+{
+    return mpToolBar ? mpToolBar->isVisible() : false;
 }
 
 void TDetachedWindow::slot_saveProfile()
@@ -2009,8 +2051,41 @@ void TDetachedWindow::slot_showMapperDialog()
         return;
     }
 
-    // Check if we already have a mapper dock widget for this profile
+    // Close any existing map for this profile in other windows first
+    auto mudletInstance = mudlet::self();
     QString mapKey = qsl("map_%1").arg(mCurrentProfileName);
+    
+    // Check if main window has a map for this profile and close it
+    auto mainMapDock = mudletInstance->getMainWindowDockWidget(mapKey);
+
+    if (mainMapDock && mainMapDock->isVisible()) {
+        qDebug() << "TDetachedWindow: Closing main window map for profile" << mCurrentProfileName << "to prevent conflicts";
+        // Block signals to prevent user preference from being updated by system-initiated change
+        mainMapDock->blockSignals(true);
+        mainMapDock->setVisible(false);
+        mainMapDock->blockSignals(false);
+    }
+    
+    // Check other detached windows for conflicting maps
+    const auto& detachedWindows = mudletInstance->getDetachedWindows();
+
+    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
+        TDetachedWindow* otherWindow = it.value();
+
+        if (otherWindow && otherWindow != this) {
+            auto otherMapDock = otherWindow->getDockWidget(mapKey);
+
+            if (otherMapDock && otherMapDock->isVisible()) {
+                qDebug() << "TDetachedWindow: Closing map in other detached window for profile" << mCurrentProfileName;
+                // Block signals to prevent user preference from being updated by system-initiated change
+                otherMapDock->blockSignals(true);
+                otherMapDock->setVisible(false);
+                otherMapDock->blockSignals(false);
+            }
+        }
+    }
+
+    // Check if we already have a mapper dock widget for this profile
     QPointer<QDockWidget> existingMapDock = mDockWidgetMap.value(mapKey);
     
     if (existingMapDock) {
@@ -2094,13 +2169,10 @@ void TDetachedWindow::slot_showMapperDialog()
             return;
         }
         
-        // Track user-initiated visibility changes (not system-initiated profile switches)
-        // Only update user preference if this is likely a user action
-        if (!mCurrentProfileName.isEmpty() && mCurrentProfileName == mapKey.mid(4)) {
-            // Current profile's dock widget visibility changed - likely user action
-            mDockWidgetUserPreference[mapKey] = visible;
-            qDebug() << "TDetachedWindow: User changed dock widget visibility for" << mapKey << "to" << visible;
-        }
+        // Track user-initiated visibility changes - always update user preference
+        // to ensure dock widget state is properly tracked regardless of which profile is active
+        mDockWidgetUserPreference[mapKey] = visible;
+        qDebug() << "TDetachedWindow: User changed dock widget visibility for" << mapKey << "to" << visible;
         
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
@@ -2301,4 +2373,72 @@ void TDetachedWindow::slot_closeAllProfiles()
     // The profiles should already be removed from mProfileConsoleMap by now,
     // but closeEvent() will handle any remaining cleanup
     close();
+}
+
+void TDetachedWindow::addTransferredDockWidget(const QString& mapKey, QDockWidget* dockWidget)
+{
+    // Add to the map
+    mDockWidgetMap[mapKey] = dockWidget;
+    
+    // Set up signal connection for visibility changes - similar to what's done for new dock widgets
+    connect(dockWidget, &QDockWidget::visibilityChanged, this, [this, mapKey](bool visible) {
+        auto mapDockWidget = mDockWidgetMap.value(mapKey);
+        if (!mapDockWidget) {
+            return;
+        }
+        
+        // Track user-initiated visibility changes - always update user preference
+        // to ensure dock widget state is properly tracked regardless of which profile is active
+        mDockWidgetUserPreference[mapKey] = visible;
+        qDebug() << "TDetachedWindow: User changed dock widget visibility for" << mapKey << "to" << visible;
+        
+        // Extract profile name from mapKey to safely look up objects
+        QString profileName = mapKey;
+        if (profileName.startsWith("map_")) {
+            profileName = profileName.mid(4); // Remove "map_" prefix
+        }
+        
+        // Safely get the host and map - they might be null during shutdown
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        Host* pHost = mudletInstance->getHostManager().getHost(profileName);
+        if (!pHost) {
+            return;
+        }
+        
+        auto pMap = pHost->mpMap.data();
+        if (!pMap) {
+            return;
+        }
+        
+        if (!visible) {
+            // If this is the currently active map dock, clear the global reference
+            if (mpMapDockWidget == mapDockWidget) {
+                mpMapDockWidget = nullptr;
+            }
+            
+            // Restore the main window's mapper as the active one when hiding
+            if (pHost->mpDockableMapWidget) {
+                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
+                    pMap->mpMapper = mainMapper;
+                }
+            }
+        } else {
+            // When showing, set this as the active mapper
+            mpMapDockWidget = mapDockWidget;
+            
+            // Ensure the map's active mapper points to our detached instance
+            auto mapWidget = mapDockWidget->widget();
+            if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
+                pMap->mpMapper = detachedMapper;
+            }
+        }
+        
+        // Update visibility for the current profile
+        updateDockWidgetVisibilityForProfile(profileName);
+    });
 }
