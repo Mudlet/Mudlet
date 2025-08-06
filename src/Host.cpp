@@ -462,7 +462,8 @@ Host::~Host()
     // directly as a member variable. This ensures the destructor doesn't depend on the
     // object's state being valid.
 
-    TDebug::removeHost(this, mHostName);
+    // Don't pass 'this' pointer during destruction - it's unsafe as the Host is being destroyed
+    TDebug::removeHost(nullptr, mHostName);
 }
 
 void Host::forceClose()
@@ -1069,7 +1070,7 @@ void Host::updateConsolesFont()
         mpEditorDialog->setDisplayFont(mpConsole->font());
     }
 
-    if (mudlet::self()->smpDebugArea) {
+    if (mudlet::self()->smpDebugArea && mudlet::self()->smpDebugConsole) {
         mudlet::self()->smpDebugConsole->setFont(mpConsole->font());
     }
 
@@ -2982,10 +2983,10 @@ void Host::updateProxySettings(QNetworkAccessManager* manager)
 
 std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 {
-    if (!mpDownloaderProxy) {
-        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    if (!mpConnectionProxy) {
+        mpConnectionProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
     }
-    auto& proxy = mpDownloaderProxy;
+    auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
     if (!mProxyUsername.isEmpty()) {
@@ -2995,7 +2996,7 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
         proxy->setPassword(mProxyPassword);
     }
 
-    return mpDownloaderProxy;
+    return mpConnectionProxy;
 }
 
 void Host::loadSecuredPassword()

@@ -555,6 +555,10 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Enable the features associated with reporting problems in processing Unicode
 #   codepoints that cannot be displayed on screen in a `TConsole`:
 # target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
+#
+# * Produce qDebug() messages about window handling operations like dock widget
+#   transfers, profile switching, and detached window management:
+# target_compile_definitions(mudlet PRIVATE DEBUG_WINDOW_HANDLING)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

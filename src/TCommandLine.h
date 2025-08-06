@@ -154,7 +154,9 @@ private:
     QToolButton* mpPasswordToggleButton = nullptr;
     // Store text that was in the command line before echo suppression started
     // This allows us to restore user input after password prompts complete
-    QString mPreEchoText;
+    QString mTextToRestoreAfterEchoSuppression;
+    // Track whether the preserved text was originally selected (for auto-clear OFF)
+    bool mRestoredTextShouldBeSelected = false;
 
 private slots:
     void slot_togglePasswordVisibility();
