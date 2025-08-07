@@ -957,7 +957,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // this needs to run after `writers` and `mWritingHostAndModules` have been set
     // so that the currentlySavingProfile() check can run properly
     emit profileSaveStarted();
-    qApp->processEvents();
+    
+    // Only process events if we're not in the middle of closing down
+    // This prevents recursive closure scenarios that can lead to heap-use-after-free
+    if (!mIsClosingDown) {
+        qApp->processEvents();
+    }
 
     auto watcher = new QFutureWatcher<void>;
     mModuleFuture = QtConcurrent::run([=, this]() {
