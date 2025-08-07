@@ -1269,6 +1269,7 @@ void Host::updateDisplayDimensions()
 
 void Host::stopAllTriggers()
 {
+    mEmergencyStop = true;
     mTriggerUnit.stopAllTriggers();
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
@@ -1277,6 +1278,7 @@ void Host::stopAllTriggers()
 
 void Host::reenableAllTriggers()
 {
+    mEmergencyStop = false;
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
@@ -1736,6 +1738,10 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
 // If a handler matches the event, the Lua stack will be cleared after this function
 void Host::raiseEvent(const TEvent& pE)
 {
+    if (Q_UNLIKELY(mEmergencyStop)) {
+        return;
+    }
+
     if (pE.mArgumentList.isEmpty()) {
         return;
     }
@@ -2238,6 +2244,54 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName, boo
     }
 }
 
+void Host::setupSandboxedLuaState(lua_State* L)
+{
+    // Load only safe libraries
+    luaopen_base(L);
+    luaopen_table(L);
+    luaopen_string(L);
+    luaopen_math(L);
+    
+    // Remove dangerous functions
+    const char* dangerousFunctions[] = {
+        // File operations
+        "dofile", "loadfile", "load", "loadstring", 
+        // Module system
+        "require", "module", 
+        // Library access
+        "io", "os", "debug",
+        // Environment manipulation
+        "getfenv", "setfenv",
+        // Raw memory access
+        "collectgarbage",
+        nullptr
+    };
+    
+    for (int i = 0; dangerousFunctions[i] != nullptr; ++i) {
+        lua_pushnil(L);
+        lua_setglobal(L, dangerousFunctions[i]);
+    }
+    
+    // Remove package system entirely to prevent require() restoration
+    lua_pushnil(L);
+    lua_setglobal(L, "package");
+    
+    // Remove potentially dangerous base functions
+    lua_getglobal(L, "_G");
+    if (lua_istable(L, -1)) {
+        const char* removedBaseFunctions[] = {
+            "rawget", "rawset", "rawequal", "rawlen",
+            nullptr
+        };
+        
+        for (int i = 0; removedBaseFunctions[i] != nullptr; ++i) {
+            lua_pushnil(L);
+            lua_setfield(L, -2, removedBaseFunctions[i]);
+        }
+    }
+    lua_pop(L, 1); // pop _G
+}
+
 QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 {
     QString packageName;
@@ -2255,7 +2309,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     }
 
     lua_State* L = luaL_newstate();
-    luaL_openlibs(L);
+    setupSandboxedLuaState(L);
 
     int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 

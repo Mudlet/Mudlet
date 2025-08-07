@@ -603,6 +603,7 @@ target_link_libraries(
         mudlet
         communi
         edbee-lib
+        QTagEdit
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
