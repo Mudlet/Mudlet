@@ -2157,9 +2157,6 @@ void mudlet::disableToolbarButtons()
 
     mpActionVariables->setEnabled(false);
 
-    // mpActionMudletDiscord->setEnabled(false);
-    // dactionDiscord->setEnabled(false);
-
     mpActionMapper->setEnabled(false);
     dactionShowMap->setEnabled(false);
 
@@ -2175,9 +2172,6 @@ void mudlet::disableToolbarButtons()
     dactionToggleReplay->setEnabled(false);
     dactionToggleLogging->setEnabled(false);
     dactionToggleEmergencyStop->setEnabled(false);
-
-    // mpActionIRC->setEnabled(false);
-    // dactionIRC->setEnabled(false);
 
     dactionInputLine->setEnabled(false);
 
