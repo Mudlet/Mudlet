@@ -76,3 +76,13 @@ find_package(Lua51 REQUIRED)
 target_link_libraries(
     TLuaInterfaceTest
     LUA51::LUA51)
+
+# Add simplified test for pointer validation logic (the core of the crash fix)
+add_executable(SimplePointerValidationTest SimplePointerValidationTest.cpp)
+add_test(NAME SimplePointerValidationTest COMMAND SimplePointerValidationTest)
+target_link_libraries(SimplePointerValidationTest Qt6::Test Qt6::Widgets)
+
+# Add test specifically for save method crash scenario
+add_executable(SaveMethodCrashTest SaveMethodCrashTest.cpp)
+add_test(NAME SaveMethodCrashTest COMMAND SaveMethodCrashTest)
+target_link_libraries(SaveMethodCrashTest Qt6::Test Qt6::Widgets)

@@ -448,7 +448,13 @@ private:
     void keyGrabCallback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
-
+    bool isTreeWidgetItemValid(QTreeWidgetItem* item, QTreeWidget* treeWidget) const;
+    
+    // Helper method to validate and clear current item pointer if invalid
+    // Returns true if item is valid, false if it was cleared
+    bool validateCurrentItem(QTreeWidgetItem*& currentItem, QTreeWidget* treeWidget);
+    
+    void clearAllCurrentItemPointers();
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
     void checkForMoreThanOneTriggerItem();
