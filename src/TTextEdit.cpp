@@ -156,7 +156,8 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
 
 void TTextEdit::focusOutEvent(QFocusEvent* event)
 {
-    if (mpHost->caretEnabled()) {
+    // Safety check: during destruction, mpHost might be null
+    if (mpHost && mpHost->caretEnabled()) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -251,6 +252,11 @@ void TTextEdit::updateHorizontalScrollBar()
 
 void TTextEdit::updateScreenView()
 {
+    // Safety check: during destruction, mpHost or mpConsole might be null
+    if (!mpHost || !mpConsole) {
+        return;
+    }
+    
     mFontWidth = fontMetrics().averageCharWidth();
     mFontHeight = fontMetrics().height();
     if (isHidden()) {
@@ -1937,12 +1943,17 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
-    if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
-        mpHost->updateDisplayDimensions();
+    
+    // Safety check: during destruction, mpHost or mpConsole might be null
+    if (mpHost && mpConsole) {
+        if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
+            mpHost->updateDisplayDimensions();
+        }
     }
 
     QWidget::resizeEvent(event);
-    if (!mIsLowerPane
+    
+    if (mpConsole && !mIsLowerPane
         && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole))) {
 
         mpConsole->raiseMudletResizeEvent();
