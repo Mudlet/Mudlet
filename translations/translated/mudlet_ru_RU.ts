@@ -1720,7 +1720,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="280"/>
       <source>Close this window and all profiles in it</source>
-      <translation type="unfinished"/>
+      <translation>Закрыть это окно и все профили в нем</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="287"/>
