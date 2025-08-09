@@ -538,6 +538,7 @@ signals:
     void signal_windowStateChanged(const Qt::WindowStates);
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
+    void signal_showTabConnectionIndicatorsChanged(bool);
 
 
 private slots:

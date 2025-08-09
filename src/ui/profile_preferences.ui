@@ -39,10 +39,10 @@
       <string notr="true"/>
      </property>
      <property name="tabShape">
-      <enum>QTabWidget::Rounded</enum>
+      <enum>QTabWidget::TabShape::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -61,7 +61,7 @@
           <string>Icon sizes</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_iconsAndToolbars">
-          <item row="0" column="0" alignment="Qt::AlignRight">
+          <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_mainIconSize">
             <property name="text">
              <string>Icon size toolbars:</string>
@@ -71,7 +71,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1" alignment="Qt::AlignLeft">
+          <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QSpinBox" name="MainIconSize">
             <property name="specialValueText">
              <string/>
@@ -87,7 +87,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2" alignment="Qt::AlignRight">
+          <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_33">
             <property name="text">
              <string>Icon size in tree views:</string>
@@ -97,7 +97,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="3" alignment="Qt::AlignLeft">
+          <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QSpinBox" name="TEFolderIconSize">
             <property name="minimum">
              <number>1</number>
@@ -110,7 +110,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
+          <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_menuBarVisiblity">
             <property name="text">
              <string>Show menu bar:</string>
@@ -120,7 +120,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1" alignment="Qt::AlignLeft">
+          <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QComboBox" name="comboBox_menuBarVisibility">
             <property name="currentIndex">
              <number>0</number>
@@ -142,7 +142,7 @@
             </item>
            </widget>
           </item>
-          <item row="1" column="2" alignment="Qt::AlignRight">
+          <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_toolBarVisibility">
             <property name="text">
              <string>Show main toolbar</string>
@@ -152,7 +152,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="3" alignment="Qt::AlignLeft">
+          <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QComboBox" name="comboBox_toolBarVisibility">
             <property name="currentIndex">
              <number>0</number>
@@ -275,7 +275,7 @@
              <string>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::RichText</enum>
+             <enum>Qt::TextFormat::RichText</enum>
             </property>
            </widget>
           </item>
@@ -329,7 +329,7 @@
              <string>Please reconnect to your game for the change to take effect</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::AutoText</enum>
+             <enum>Qt::TextFormat::AutoText</enum>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -379,7 +379,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
+          <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_whereToLog">
             <property name="text">
              <string>Save log files in:</string>
@@ -410,7 +410,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
+          <item row="2" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_logFileNameFormat">
             <property name="text">
              <string>Log format:</string>
@@ -423,7 +423,7 @@
           <item row="2" column="1" colspan="3">
            <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
           </item>
-          <item row="3" column="0" alignment="Qt::AlignRight">
+          <item row="3" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_logFileName">
             <property name="text">
              <string>Log name:</string>
@@ -436,7 +436,7 @@
           <item row="3" column="1" colspan="2">
            <widget class="QLineEdit" name="lineEdit_logFileName">
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -459,7 +459,7 @@
        <item>
         <spacer name="verticalSpacer_general">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -610,7 +610,7 @@
              </sizepolicy>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
             <property name="maximum">
              <number>300</number>
@@ -685,7 +685,7 @@
           <item row="2" column="4">
            <spacer name="horizontalSpacer_radioButtons_userDictionary">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -701,7 +701,7 @@
        <item>
         <spacer name="verticalSpacer_inputLine">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -735,7 +735,7 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_font" columnstretch="0,1,0,0,0">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font" columnstretch="0,1,0,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="label_displayFont">
             <property name="text">
@@ -1041,7 +1041,7 @@ you can use it but there could be issues with aligning columns of text</string>
           </sizepolicy>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="title">
           <string>Word wrapping</string>
@@ -1050,7 +1050,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QFrame" name="frame_wrap_at">
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_wrap_at">
              <item>
@@ -1104,7 +1104,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QFrame" name="frame_indent_wrapped">
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_indent_wrapped">
              <item>
@@ -1158,7 +1158,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QFrame" name="frame_hanging_indent_wrapped">
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_hanging_indent_wrapped">
              <item>
@@ -1253,6 +1253,26 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Display options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_displayOptions">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
+             <string>Display control characters as:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_controlCharacterHandling</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
+            <property name="text">
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
@@ -1270,16 +1290,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
-            <property name="text">
-             <string>Make 'Ambiguous' E. Asian width characters wide</string>
-            </property>
-            <property name="tristate">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_echoLuaErrors">
             <property name="toolTip">
@@ -1290,23 +1300,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_controlCharacterHandling">
-            <property name="text">
-             <string>Display control characters as:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_controlCharacterHandling</cstring>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="1">
            <widget class="QComboBox" name="comboBox_controlCharacterHandling">
             <property name="currentIndex">
              <number>0</number>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
             </property>
             <item>
              <property name="text">
@@ -1325,13 +1325,23 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_showTabConnectionIndicators">
+            <property name="toolTip">
+             <string>Display whenever a tab is connected or a disconnected</string>
+            </property>
+            <property name="text">
+             <string>Show connection status on tabs</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
        <item>
         <spacer name="verticalSpacer_mainDisplay">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1363,10 +1373,10 @@ you can use it but there could be issues with aligning columns of text</string>
              </size>
             </property>
             <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
+             <enum>QFrame::Shape::StyledPanel</enum>
             </property>
             <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
+             <enum>QFrame::Shadow::Raised</enum>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_frame_edbeePreviewWidget">
              <property name="spacing">
@@ -1407,7 +1417,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToContents</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
             </property>
            </widget>
           </item>
@@ -1494,7 +1504,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_codeEditor">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1655,7 +1665,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="3" column="0" colspan="4">
            <widget class="Line" name="line_colorsSeparator">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2066,7 +2076,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_displayColors">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -2160,7 +2170,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="3" column="0" colspan="3">
            <widget class="Line" name="line">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2359,14 +2369,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
+          <item row="2" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_mapSymbolsFont">
             <property name="text">
              <string>2D Map Room Symbol Font</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1" alignment="Qt::AlignLeft">
+          <item row="2" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
           </item>
           <item row="3" column="0">
@@ -2431,7 +2441,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>0</number>
                </property>
                <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToContents</enum>
+                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
                </property>
                <item>
                 <property name="text">
@@ -2461,7 +2471,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="suffix">
                 <string>%</string>
@@ -2489,7 +2499,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="suffix">
                 <string>%</string>
@@ -2514,7 +2524,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_mapper">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -2680,7 +2690,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="4" column="0" colspan="4">
            <widget class="Line" name="line_mapperColorsSeparator">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -3017,7 +3027,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_mapperColors">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3053,7 +3063,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="1">
            <widget class="QLineEdit" name="ircHostName">
             <property name="inputMethodHints">
-             <set>Qt::ImhUrlCharactersOnly</set>
+             <set>Qt::InputMethodHint::ImhUrlCharactersOnly</set>
             </property>
             <property name="placeholderText">
              <string>irc.example.net</string>
@@ -3073,7 +3083,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="3">
            <widget class="QLineEdit" name="ircHostPort">
             <property name="inputMethodHints">
-             <set>Qt::ImhDigitsOnly</set>
+             <set>Qt::InputMethodHint::ImhDigitsOnly</set>
             </property>
             <property name="placeholderText">
              <string>6667</string>
@@ -3127,7 +3137,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="2" column="1">
            <widget class="QLineEdit" name="ircPassword">
             <property name="echoMode">
-             <enum>QLineEdit::Password</enum>
+             <enum>QLineEdit::EchoMode::Password</enum>
             </property>
             <property name="placeholderText">
              <string>password (optional)</string>
@@ -3257,7 +3267,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
                <property name="placeholderText">
                 <string>specific Discord username</string>
@@ -3289,7 +3299,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
                </property>
                <property name="inputMethodHints">
-                <set>Qt::ImhDigitsOnly</set>
+                <set>Qt::InputMethodHint::ImhDigitsOnly</set>
                </property>
                <property name="inputMask">
                 <string notr="true">9999;#</string>
@@ -3311,10 +3321,10 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_connection">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3358,13 +3368,13 @@ you can use it but there could be issues with aligning columns of text</string>
              <item row="0" column="0">
               <widget class="QLabel" name="label">
                <property name="layoutDirection">
-                <enum>Qt::LeftToRight</enum>
+                <enum>Qt::LayoutDirection::LeftToRight</enum>
                </property>
                <property name="text">
                 <string>Issuer:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3381,7 +3391,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Issued to:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3398,7 +3408,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Expires:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3415,7 +3425,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Serial:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3492,10 +3502,10 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
             <property name="frameShape">
-             <enum>QFrame::Box</enum>
+             <enum>QFrame::Shape::Box</enum>
             </property>
             <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
+             <enum>QFrame::Shadow::Plain</enum>
             </property>
             <property name="lineWidth">
              <number>3</number>
@@ -3540,7 +3550,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>false</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3549,7 +3559,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>5</number>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::NoTextInteraction</set>
+                <set>Qt::TextInteractionFlag::NoTextInteraction</set>
                </property>
               </widget>
              </item>
@@ -3574,7 +3584,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>false</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3583,7 +3593,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>5</number>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::NoTextInteraction</set>
+                <set>Qt::TextInteractionFlag::NoTextInteraction</set>
                </property>
               </widget>
              </item>
@@ -3608,7 +3618,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>false</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3617,7 +3627,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>5</number>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::NoTextInteraction</set>
+                <set>Qt::TextInteractionFlag::NoTextInteraction</set>
                </property>
               </widget>
              </item>
@@ -3645,7 +3655,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>true</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3747,7 +3757,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Password for logging into the proxy if required.&lt;/p&gt;</string>
             </property>
             <property name="echoMode">
-             <enum>QLineEdit::Password</enum>
+             <enum>QLineEdit::EchoMode::Password</enum>
             </property>
             <property name="placeholderText">
              <string>password (optional)</string>
@@ -3760,10 +3770,10 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_chat">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3789,17 +3799,17 @@ you can use it but there could be issues with aligning columns of text</string>
           </sizepolicy>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="title">
           <string>Main window shortcuts</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_groupBox_mainWindowShortcuts">
           <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
+           <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
           </property>
           <item>
            <widget class="QLabel" name="label_shortcutsInstructions">
@@ -3807,7 +3817,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>To disable shortcut input 'Esc' key.</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
             </property>
            </widget>
           </item>
@@ -3820,7 +3830,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item alignment="Qt::AlignRight">
+          <item alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
             <property name="text">
              <string>Reset to defaults</string>
@@ -3833,7 +3843,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_shortcuts">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3959,10 +3969,10 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_accessibility">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -4061,7 +4071,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>Please reconnect to your game for the change to take effect</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::AutoText</enum>
+             <enum>Qt::TextFormat::AutoText</enum>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -4245,10 +4255,10 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>true</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
                <property name="buttonSymbols">
-                <enum>QAbstractSpinBox::PlusMinus</enum>
+                <enum>QAbstractSpinBox::ButtonSymbols::PlusMinus</enum>
                </property>
                <property name="accelerated">
                 <bool>true</bool>
@@ -4257,7 +4267,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>true</bool>
                </property>
                <property name="currentSection">
-                <enum>QDateTimeEdit::HourSection</enum>
+                <enum>QDateTimeEdit::Section::HourSection</enum>
                </property>
                <property name="displayFormat">
                 <string comment="Used to set a time interval only">h:mm:ss.zzz</string>
@@ -4318,7 +4328,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -4344,7 +4354,7 @@ you can use it but there could be issues with aligning columns of text</string>
       <item>
        <spacer name="horizontalSpacer_bottom">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
