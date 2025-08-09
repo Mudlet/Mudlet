@@ -1716,12 +1716,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="287"/>
       <source>Show &amp;Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>도구 모음 표시(&amp;T)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="290"/>
       <source>Show or hide the toolbar</source>
-      <translation type="unfinished"/>
+      <translation>도구 모음 표시 또는 숨기기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="507"/>
@@ -1906,7 +1906,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="738"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>정보</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="739"/>
@@ -1936,7 +1936,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="2228"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>지도 - %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="916"/>
@@ -9839,7 +9839,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="180"/>
       <source>Reattach detached windows</source>
-      <translation type="unfinished"/>
+      <translation>분리된 창 다시 부착</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="183"/>
@@ -10817,7 +10817,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="432"/>
       <source>Show Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>메인 도구 모음 표시</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="488"/>
@@ -11022,7 +11022,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="1011"/>
       <source>Esperanto</source>
-      <translation type="unfinished"/>
+      <translation>에스페란토어</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1012"/>
@@ -11168,12 +11168,12 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="1041"/>
       <source>Faroese</source>
-      <translation type="unfinished"/>
+      <translation>페로어</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1042"/>
       <source>Faroese (Faroe Islands)</source>
-      <translation type="unfinished"/>
+      <translation>페로 제도(페로 제도)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1043"/>
@@ -11321,17 +11321,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="1105"/>
       <source>Mongolian</source>
-      <translation type="unfinished"/>
+      <translation>몽골어</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1106"/>
       <source>Mongolian (Mongolia)</source>
-      <translation type="unfinished"/>
+      <translation>몽골어(몽골)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1171"/>
       <source>Tagalog</source>
-      <translation type="unfinished"/>
+      <translation>타갈로그어</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1274"/>
@@ -11354,17 +11354,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="1734"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (메인 창)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1763"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (분리됨)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3280"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>지도 - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3962"/>
@@ -11397,12 +11397,12 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="4186"/>
       <source>Detach Tab &quot;%1&quot;</source>
-      <translation type="unfinished"/>
+      <translation>탭 &quot;%1&quot; 분리</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4207"/>
       <source>Show Connection Indicators on Tabs</source>
-      <translation type="unfinished"/>
+      <translation>탭에 연결 표시기 표시</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4791"/>
