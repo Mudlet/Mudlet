@@ -2653,7 +2653,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
-    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(true)).toBool();
+    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
     resize(size);
