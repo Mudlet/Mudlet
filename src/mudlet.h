@@ -238,6 +238,7 @@ public:
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
+    void updateMainWindowToolbarState();
     void forceClose();
     void armForceClose();
     Host* getActiveHost();

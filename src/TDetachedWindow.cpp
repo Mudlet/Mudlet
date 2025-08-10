@@ -86,6 +86,9 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
 
 TDetachedWindow::~TDetachedWindow()
 {
+    // Set flag to prevent event handlers from accessing potentially invalid data
+    mIsBeingDestroyed = true;
+    
     // Immediately remove all references to this window from the main mudlet window
     if (auto mudletInstance = mudlet::self()) {
         auto& detachedWindowsMap = const_cast<QMap<QString, QPointer<TDetachedWindow>>&>(mudletInstance->getDetachedWindows());
@@ -675,6 +678,36 @@ void TDetachedWindow::createToolBar()
     mpButtonMute->addAction(mpActionMuteGame);
     mpButtonMute->setDefaultAction(mpActionMuteMedia);
 
+    // Discord button with dropdown actions
+    mpButtonDiscord = new QToolButton(this);
+    mpButtonDiscord->setText(qsl("Discord"));
+    mpButtonDiscord->setObjectName(qsl("discord"));
+    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setAutoRaise(true);
+    mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    mpToolBar->addWidget(mpButtonDiscord);
+
+    mpActionDiscord = new QAction(tr("Open Discord"), this);
+    mpActionDiscord->setIcon(QIcon(qsl(":/icons/Discord-Logo-Color.png")));
+    mpActionDiscord->setIconText(qsl("Discord"));
+    mpActionDiscord->setObjectName(qsl("openDiscord"));
+
+    mpActionMudletDiscord = new QAction(QIcon(qsl(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
+    mpActionMudletDiscord->setToolTip(utils::richText(tr("Open a link to the Mudlet server on Discord")));
+    mpToolBar->addAction(mpActionMudletDiscord);
+    mpActionMudletDiscord->setObjectName(qsl("mudlet_discord"));
+    mpToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
+    mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+
+    mpActionIRC = new QAction(tr("Open IRC"), this);
+    mpActionIRC->setIcon(QIcon(qsl(":/icons/internet-telephony.png")));
+    mpActionIRC->setObjectName(qsl("openIRC"));
+
+    mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->addAction(mpActionIRC);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
+
     // Map and other tools
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
     mpActionMapper->setToolTip(utils::richText(tr("Show/hide the map")));
@@ -804,6 +837,11 @@ void TDetachedWindow::connectToolBarActions()
     connect(mpActionReconnectStandalone, &QAction::triggered, this, &TDetachedWindow::slot_reconnectProfile);
     connect(mpActionAbout, &QAction::triggered, this, &TDetachedWindow::slot_showAboutDialog);
     connect(mpActionFullScreenView, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreenView);
+
+    // Discord/IRC actions - use our custom slots to ensure correct profile context
+    connect(mpActionDiscord, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
+    connect(mpActionMudletDiscord, &QAction::triggered, this, &TDetachedWindow::slot_mudletDiscord);
+    connect(mpActionIRC, &QAction::triggered, this, &TDetachedWindow::slot_irc);
 }
 
 void TDetachedWindow::updateToolBarActions()
@@ -867,6 +905,39 @@ void TDetachedWindow::updateToolBarActions()
 
     // Full screen toggle is always enabled
     mpActionFullScreenView->setEnabled(true);
+
+    // Update Discord icon based on current profile
+    updateDiscordNamedIcon();
+}
+
+void TDetachedWindow::updateDiscordNamedIcon()
+{
+    Host* pHost = nullptr;
+    
+    if (!mCurrentProfileName.isEmpty()) {
+        pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    }
+    
+    if (!pHost) {
+        // No active host - reset Discord icon to default state
+        mpActionDiscord->setIconText(qsl("Discord"));
+        
+        // Hide Mudlet Discord action as there's no game with custom invite
+        if (mpActionMudletDiscord->isVisible()) {
+            mpActionMudletDiscord->setVisible(false);
+        }
+        return;
+    }
+
+    const QString gameName = pHost->getDiscordGameName();
+    const bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
+
+    mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
+
+    // Show/hide Mudlet Discord action based on whether game has custom invite
+    if (mpActionMudletDiscord->isVisible() != hasCustom) {
+        mpActionMudletDiscord->setVisible(hasCustom);
+    }
 }
 
 void TDetachedWindow::updateToolbarForProfile(Host* pHost)
@@ -1228,6 +1299,11 @@ void TDetachedWindow::slot_exportProfile()
 
 void TDetachedWindow::updateWindowMenu()
 {
+    // Don't update menu if the window is being destroyed
+    if (mIsBeingDestroyed) {
+        return;
+    }
+    
     // Clean up existing window list actions
     for (QAction* action : mWindowListActions) {
         mpWindowMenu->removeAction(action);
@@ -2394,6 +2470,40 @@ void TDetachedWindow::slot_showAboutDialog()
     });
 }
 
+void TDetachedWindow::slot_profileDiscord()
+{
+    auto mudletInstance = mudlet::self();
+    if (!mudletInstance || mCurrentProfileName.isEmpty()) {
+        return;
+    }
+    
+    Host* pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName);
+    QString invite;
+    if (pHost) {
+        invite = pHost->getDiscordInviteURL();
+    }
+    
+    if (invite.isEmpty()) {
+        // Fall back to Mudlet Discord - call the slot directly without profile switching
+        mudletInstance->slot_mudletDiscord();
+    } else {
+        mudletInstance->openWebPage(invite);
+    }
+}
+
+void TDetachedWindow::slot_mudletDiscord()
+{
+    auto mudletInstance = mudlet::self();
+    if (mudletInstance) {
+        mudletInstance->slot_mudletDiscord();
+    }
+}
+
+void TDetachedWindow::slot_irc()
+{
+    mudlet::self()->slot_irc();
+}
+
 void TDetachedWindow::slot_muteMedia()
 {
     withCurrentProfileActive([this]() {
@@ -2421,6 +2531,12 @@ void TDetachedWindow::slot_muteGame()
 
 void TDetachedWindow::changeEvent(QEvent* event)
 {
+    // Don't process events if the window is being destroyed
+    if (mIsBeingDestroyed) {
+        QMainWindow::changeEvent(event);
+        return;
+    }
+    
     if (event->type() == QEvent::WindowStateChange) {
         auto stateChangeEvent = static_cast<QWindowStateChangeEvent*>(event);
 
