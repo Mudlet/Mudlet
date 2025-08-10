@@ -199,12 +199,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
-      # Upload regular DMG version to bashupload.com first, then register with WordPress
-      
+      # Upload regular DMG version
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
-      -F "file_remote=${DEPLOY_URL}" \
+      -F "file_remote=$DEPLOY_URL" \
       -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=${FILE_CATEGORY}" \
@@ -218,11 +217,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "output=json" \
       -F "do=Add File"
 
-      # Upload portable version to bashupload.com first, then register with WordPress
+      # Upload portable version
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
-      -F "file_remote=${PORTABLE_DEPLOY_URL}" \
+      -F "file_remote=$PORTABLE_DEPLOY_URL" \
       -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS Portable)" \
       -F "file_des=sha256: $PORTABLE_SHA256SUM" \
       -F "file_cat=${FILE_CATEGORY}" \
