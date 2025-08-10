@@ -1606,6 +1606,8 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
 
     QTimer::singleShot(0, this, [this, profileName] {
         closeHost(profileName);
+        // Update main window toolbar state in case this was the active profile
+        updateMainWindowToolbarState();
         // Check to see if there are any profiles left...
         if (!mHostManager.getHostCount() && !mIsGoingDown) {
             disableToolbarButtons();
@@ -1969,6 +1971,9 @@ void mudlet::slot_tabChanged(int tabID)
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
     
+    // Update main window toolbar state for the new active profile
+    updateMainWindowToolbarState();
+    
     // Update main window dock widget visibility for the new active profile
     updateMainWindowDockWidgetVisibilityForProfile(hostName);
 }
@@ -2152,9 +2157,6 @@ void mudlet::disableToolbarButtons()
 
     mpActionVariables->setEnabled(false);
 
-    mpActionMudletDiscord->setEnabled(false);
-    dactionDiscord->setEnabled(false);
-
     mpActionMapper->setEnabled(false);
     dactionShowMap->setEnabled(false);
 
@@ -2170,9 +2172,6 @@ void mudlet::disableToolbarButtons()
     dactionToggleReplay->setEnabled(false);
     dactionToggleLogging->setEnabled(false);
     dactionToggleEmergencyStop->setEnabled(false);
-
-    mpActionIRC->setEnabled(false);
-    dactionIRC->setEnabled(false);
 
     dactionInputLine->setEnabled(false);
 
@@ -2195,6 +2194,92 @@ void mudlet::disableToolbarButtons()
     mpActionCloseProfile->setEnabled(false);
     dactionCloseProfile->setEnabled(false);
 
+    updateDetachedWindowToolbars();
+    updateMainWindowTabIndicators();
+}
+
+void mudlet::updateMainWindowToolbarState()
+{
+    // Update toolbar buttons based on whether the main window has any active profiles
+    // This is called when tabs are detached/reattached to ensure proper button states
+    
+    Host* activeHost = getActiveHost();
+    bool hasActiveProfileInMainWindow = false;
+    
+    // Check if we have tabs in the main window and if the active host is actually in the main window
+    if (activeHost != nullptr && mpTabBar->count() > 0) {
+        QString activeHostName = activeHost->getName();
+        // Check if the active host is NOT in a detached window
+        hasActiveProfileInMainWindow = !mDetachedWindows.contains(activeHostName);
+    }
+    
+    // Profile-specific actions should only be enabled if there's an active profile in the main window
+    mpActionCloseProfile->setEnabled(hasActiveProfileInMainWindow);
+    dactionCloseProfile->setEnabled(hasActiveProfileInMainWindow);
+    
+    // Connection actions should also follow the same logic
+    mpActionReconnect->setEnabled(hasActiveProfileInMainWindow);
+    dactionReconnect->setEnabled(hasActiveProfileInMainWindow);
+    
+    mpActionDisconnect->setEnabled(hasActiveProfileInMainWindow);
+    dactionDisconnect->setEnabled(hasActiveProfileInMainWindow);
+    
+    // Profile editor actions - only enable if there's an active profile in main window
+    mpActionTriggers->setEnabled(hasActiveProfileInMainWindow);
+    dactionScriptEditor->setEnabled(hasActiveProfileInMainWindow);
+    dactionShowErrors->setEnabled(hasActiveProfileInMainWindow);
+    
+    mpActionAliases->setEnabled(hasActiveProfileInMainWindow);
+    mpActionTimers->setEnabled(hasActiveProfileInMainWindow);
+    mpActionButtons->setEnabled(hasActiveProfileInMainWindow);
+    mpActionScripts->setEnabled(hasActiveProfileInMainWindow);
+    mpActionKeys->setEnabled(hasActiveProfileInMainWindow);
+    mpActionVariables->setEnabled(hasActiveProfileInMainWindow);
+    
+    mpActionMapper->setEnabled(hasActiveProfileInMainWindow);
+    dactionShowMap->setEnabled(hasActiveProfileInMainWindow);
+    
+    mpActionNotes->setEnabled(hasActiveProfileInMainWindow);
+    dactionNotepad->setEnabled(hasActiveProfileInMainWindow);
+    
+    mpButtonPackageManagers->setEnabled(hasActiveProfileInMainWindow);
+    dactionPackageManager->setEnabled(hasActiveProfileInMainWindow);
+    dactionModuleManager->setEnabled(hasActiveProfileInMainWindow);
+    dactionPackageExporter->setEnabled(hasActiveProfileInMainWindow);
+    
+    dactionToggleTimeStamp->setEnabled(hasActiveProfileInMainWindow);
+    dactionToggleReplay->setEnabled(hasActiveProfileInMainWindow);
+    dactionToggleLogging->setEnabled(hasActiveProfileInMainWindow);
+    dactionToggleEmergencyStop->setEnabled(hasActiveProfileInMainWindow);
+    
+    mpActionIRC->setEnabled(true);
+    dactionIRC->setEnabled(true);
+    
+    dactionInputLine->setEnabled(hasActiveProfileInMainWindow);
+    
+    // Replay action has special logic
+    if (!mpToolBarReplay && hasActiveProfileInMainWindow) {
+        mpActionReplay->setEnabled(true);
+        dactionReplay->setEnabled(true);
+        mpActionReplay->setToolTip(utils::richText(tr("Load a Mudlet replay.")));
+        dactionReplay->setToolTip(mpActionReplay->toolTip());
+    } else if (!hasActiveProfileInMainWindow) {
+        mpActionReplay->setEnabled(false);
+        dactionReplay->setEnabled(false);
+        mpActionReplay->setToolTip(tr("<p>Load a Mudlet replay.</p>"
+                                      "<p><i>Disabled until a profile is loaded.</i></p>"));
+        dactionReplay->setToolTip(mpActionReplay->toolTip());
+    }
+    
+    mpActionMudletDiscord->setEnabled(true);
+    dactionDiscord->setEnabled(true);
+    
+    // Hide Discord button in main window when no profiles are active (revert to default state)
+    mpButtonDiscord->setVisible(hasActiveProfileInMainWindow);
+    
+    // Update Discord icon visibility based on active host state
+    updateDiscordNamedIcon();
+    
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
 }
@@ -3496,7 +3581,18 @@ void mudlet::slot_mudletDiscord()
 void mudlet::updateDiscordNamedIcon()
 {
     Host* pHost = getActiveHost();
+    
     if (!pHost) {
+        // No active host - reset Discord icon to default state (hidden)
+        mpActionDiscord->setIconText(qsl("Discord"));
+        
+        // Hide Mudlet Discord action as there's no game with custom invite
+        if (mpActionMudletDiscord->isVisible()) {
+            mpActionMudletDiscord->setVisible(false);
+        }
+        if (dactionDiscord->isVisible()) {
+            dactionDiscord->setVisible(false);
+        }
         return;
     }
 
@@ -6516,6 +6612,9 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Update the window menu to reflect the new detached window
     updateWindowMenu();
 
+    // Update main window toolbar state since we may have no more tabs
+    updateMainWindowToolbarState();
+
     // Only show connection dialog if there are no profiles loaded anywhere,
     // not just when the main window is empty (profiles might be in detached windows)
     if (mpTabBar->count() == 0 && mHostManager.getHostCount() == 0 && !mIsGoingDown) {
@@ -6684,7 +6783,8 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // Refresh tab bar to ensure CDC identifiers are displayed after reattachment
     refreshTabBar();
 
-    enableToolbarButtons();
+    // Update main window toolbar state to reflect the reattached profile
+    updateMainWindowToolbarState();
 
     if (pHost) {
         setWindowTitle(QString("%1 - %2").arg(safeProfileName, scmVersion));

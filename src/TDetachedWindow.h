@@ -139,6 +139,11 @@ private slots:
     void slot_muteGame();
     void slot_showAboutDialog();
 
+    // Discord and IRC slots for detached window context
+    void slot_profileDiscord();
+    void slot_mudletDiscord();
+    void slot_irc();
+
     // Window menu activation slots
     void slot_activateMainWindow();
     void slot_activateDetachedWindow();
@@ -152,6 +157,7 @@ private:
     void connectToolBarActions();
     void updateToolBarActions();
     void updateWindowTitle();
+    void updateDiscordNamedIcon();
     void updateTabIndicator(int tabIndex = -1);  // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName);  // Show/hide docked widgets based on active profile
     void saveWindowGeometry();
@@ -200,9 +206,15 @@ private:
     QAction* mpActionReconnectStandalone{nullptr};
     QAction* mpActionReattach{nullptr};
 
+    // Discord and IRC actions
+    QAction* mpActionDiscord{nullptr};
+    QAction* mpActionMudletDiscord{nullptr};
+    QAction* mpActionIRC{nullptr};
+
     // Toolbar buttons
     QToolButton* mpButtonConnect{nullptr};
     QToolButton* mpButtonMute{nullptr};
+    QToolButton* mpButtonDiscord{nullptr};
     QToolButton* mpButtonPackageManagers{nullptr};
 
     // Store window state
@@ -223,6 +235,9 @@ private:
 
     // Flag to prevent duplicate reattach operations on this window
     bool mReattachInProgress{false};
+
+    // Flag to indicate window is being destroyed (prevents updateWindowMenu during destruction)
+    bool mIsBeingDestroyed{false};
 
     // Window menu management for multiple windows
     QList<QAction*> mWindowListActions;
