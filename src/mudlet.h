@@ -451,7 +451,6 @@ public slots:
     void slot_notes();
     void slot_openMappingScriptsPage();
     void slot_packageExporter();
-    void slot_createModule();
     void slot_packageManager();
     void slot_processEventLoopHackTimerRun();
     void slot_profileDiscord();
