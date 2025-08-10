@@ -113,7 +113,29 @@ fi
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
+# Deploy Qt dependencies, including optional modules like TextToSpeech
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "--force" "./mudlet.exe"
+
+# Explicitly copy Qt6TextToSpeech.dll if available (windeployqt6 sometimes misses optional modules)
+if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/Qt6TextToSpeech.dll" ]; then
+  cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/Qt6TextToSpeech.dll" .
+  echo "Qt6TextToSpeech.dll copied"
+else
+  echo "Warning: Qt6TextToSpeech.dll not found - text-to-speech may not work"
+fi
+
+# Verify that system qtkeychain was properly deployed by windeployqt6
+if [ ! -f "./libqt6keychain.dll" ]; then
+  echo "Warning: libqt6keychain.dll not deployed by windeployqt6, trying to copy manually..."
+  if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/libqt6keychain.dll" ]; then
+    cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/libqt6keychain.dll" .
+    echo "libqt6keychain.dll copied from system location"
+  else
+    echo "Error: libqt6keychain.dll not found in system location either"
+  fi
+else
+  echo "libqt6keychain.dll correctly deployed by windeployqt6"
+fi
 
 # To determine which system libraries have to be copied in it requires
 # continually trying to run the executable on the target type system
@@ -219,6 +241,48 @@ cp -v -p -t . \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
+echo ""
+
+# Create portable version
+echo "Creating portable ZIP package..."
+PORTABLE_ZIP_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/portable-${MSYSTEM}-${BUILD_CONFIG}"
+if [ -d "${PORTABLE_ZIP_DIR}" ]; then
+  rm -rf "${PORTABLE_ZIP_DIR}"
+fi
+mkdir -p "${PORTABLE_ZIP_DIR}"
+
+# Copy all packaged files to portable directory
+cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"
+
+# Create portable.txt file to enable portable mode (empty file)
+touch "${PORTABLE_ZIP_DIR}/portable.txt"
+echo "Created portable.txt file in: ${PORTABLE_ZIP_DIR}/portable.txt"
+
+# Verify portable.txt was created
+if [ -f "${PORTABLE_ZIP_DIR}/portable.txt" ]; then
+  echo "✓ portable.txt file exists and is ready for packaging"
+  ls -la "${PORTABLE_ZIP_DIR}/portable.txt"
+else
+  echo "✗ ERROR: portable.txt file was not created!"
+  exit 1
+fi
+
+# Create the portable ZIP archive
+cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
+PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
+
+echo "Creating ZIP from directory: $(basename "${PORTABLE_ZIP_DIR}")"
+echo "Contents of portable directory before ZIP creation:"
+ls -la "${PORTABLE_ZIP_DIR}/" | head -20
+
+zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"
+
+# Verify portable.txt is in the ZIP
+echo "Verifying portable.txt is in the ZIP:"
+unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt || echo "WARNING: portable.txt not found in ZIP!"
+
+echo ""
+echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
 echo ""
 
 # For debugging purposes:

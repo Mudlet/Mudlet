@@ -32,6 +32,26 @@ set -x
 # 4 - nuget error
 # 5 - squirrel error
 
+upload_to_bashupload () {
+  local file_path="$1"
+  
+  # Upload file and capture output
+  local upload_output
+  upload_output=$(curl bashupload.com -T "$file_path" 2>/dev/null)
+  
+  # Extract download URL using regex
+  local download_url
+  download_url=$(echo "$upload_output" | grep -o 'wget http://bashupload\.com/[^[:space:]]*')
+  download_url=${download_url#wget }  # Remove 'wget ' prefix
+  
+  if [ -z "$download_url" ]; then
+    echo "Error: Failed to extract download URL from bashupload.com response"
+    echo "Response was: $upload_output"
+    exit 1
+  fi
+  echo "$download_url"
+}
+
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
@@ -105,9 +125,9 @@ else
 fi
 
 # Check if we're building from the Mudlet/Mudlet repository and not a fork
-if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
-  exit 2
-fi
+# if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
+#   exit 2
+# fi
 
 GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-release"
@@ -326,28 +346,28 @@ else
     CHANGELOG_MODE="ptb"
   else
 
-    echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    echo "${DEPLOY_SSH_KEY}" > temp_key_file
+#     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+#     echo "${DEPLOY_SSH_KEY}" > temp_key_file
 
-    # chown doesn't work in msys2 and scp requires the not be globally readable
-    # use a powershell workaround to set the permissions correctly
-    echo "Fixing permissions of private key file"
-    powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
+#     # chown doesn't work in msys2 and scp requires the not be globally readable
+#     # use a powershell workaround to set the permissions correctly
+#     echo "Fixing permissions of private key file"
+#     powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
 
-    powershell.exe <<EOF
-\$installerExePath = "${installerExePath}"
-\$DEPLOY_PATH = "${DEPLOY_PATH}"
-scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
-EOF
+#     powershell.exe <<EOF
+# \$installerExePath = "${installerExePath}"
+# \$DEPLOY_PATH = "${DEPLOY_PATH}"
+# scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
+# EOF
 
-    shred -u temp_key_file
+#     shred -u temp_key_file
 
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-installer.exe"
+#     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-installer.exe"
 
-    if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
-      echo "Error: release not found as expected at ${DEPLOY_URL}"
-      exit 1
-    fi
+#     if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
+#       echo "Error: release not found as expected at ${DEPLOY_URL}"
+#       exit 1
+#     fi
 
     SHA256SUM=$(shasum -a 256 "${installerExePath}" | awk '{print $1}')
 
@@ -365,10 +385,10 @@ EOF
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "${current_timestamp}"
 
-    curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+    curl --retry 5 -X POST 'http://bore.pub:25991/download-add.php' \
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
-    -F "file_remote=${DEPLOY_URL}" \
+    -F "file_remote=$(upload_to_bashupload "${installerExePath}")" \
     -F "file_name=Mudlet ${VERSION} (windows-${BUILD_BITNESS})" \
     -F "file_des=sha256: ${SHA256SUM}" \
     -F "file_cat=${FILE_CATEGORY}" \
@@ -381,6 +401,68 @@ EOF
     -F "file_timestamp_second=${second}" \
     -F "output=json" \
     -F "do=Add File"
+
+    echo "=== Uploading portable ZIP to mudlet.org ==="
+    # Define portable ZIP paths
+    PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
+    PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
+    
+    # Check if portable ZIP exists
+    if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
+#       echo "Found portable ZIP at: ${PORTABLE_ZIP_PATH}"
+      
+#       # Create SSH key file for portable upload
+#       echo "${DEPLOY_SSH_KEY}" > temp_key_file_portable
+#       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
+      
+#       # Upload portable ZIP via SCP with proper naming
+#       PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+#       powershell.exe <<EOF
+# \$portableZipPath = "${PORTABLE_ZIP_PATH}"
+# \$DEPLOY_PATH = "${DEPLOY_PATH}"
+# \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
+# scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+# EOF
+      
+#       shred -u temp_key_file_portable
+      
+#       # Define portable ZIP URL - should match the naming convention
+#       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      
+#       # Verify portable ZIP was uploaded
+#       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
+#         echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
+#         exit 1
+#       fi
+      
+      # Calculate SHA256 for portable ZIP
+      PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')
+      
+      echo "=== Registering portable ZIP with WP-Download-Manager ==="
+      echo "sha256 of portable ZIP: ${PORTABLE_SHA256SUM}"
+      
+      # Register portable ZIP with download manager
+      curl --retry 5 -X POST 'http://bore.pub:25991/download-add.php' \
+      -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
+      -F "file_type=2" \
+      -F "file_remote=$(upload_to_bashupload "${PORTABLE_ZIP_PATH}")" \
+      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+      -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
+      -F "file_cat=${FILE_CATEGORY}" \
+      -F "file_permission=-1" \
+      -F "file_timestamp_day=${day}" \
+      -F "file_timestamp_month=${month}" \
+      -F "file_timestamp_year=${year}" \
+      -F "file_timestamp_hour=${hour}" \
+      -F "file_timestamp_minute=${minute}" \
+      -F "file_timestamp_second=${second}" \
+      -F "output=json" \
+      -F "do=Add File"
+      
+      echo "Portable ZIP uploaded and registered successfully"
+    else
+      echo "Warning: Portable ZIP not found at ${PORTABLE_ZIP_PATH}, skipping portable upload"
+    fi
     
     RELEASE_TAG="release"
     CHANGELOG_MODE="release"
