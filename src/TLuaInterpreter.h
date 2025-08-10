@@ -95,6 +95,7 @@ public:
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void parseMSSP(const QString& string_data);
+    void handleIreComposerEdit(const QString& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
@@ -698,6 +699,7 @@ public:
     static int aiChat(lua_State*);
     static int aiPrompt(lua_State*);
     static int aiPromptStream(lua_State*);
+    static int setActiveProfile(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

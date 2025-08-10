@@ -92,6 +92,8 @@ private:
     int mDragIndex = -1;
     bool mDetachEnabled = true;
     static const int DETACH_DISTANCE_THRESHOLD = 50;
+    qint64 mDragStartTime = 0;
+    bool mPendingDetach = false;
 
 private slots:
     void onDetachedTabReattach(const QString& tabName);
