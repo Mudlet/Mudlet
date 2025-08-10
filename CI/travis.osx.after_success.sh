@@ -36,26 +36,6 @@ sign_app_bundle () {
   xcrun stapler staple "${appBundle}"
 }
 
-upload_to_bashupload () {
-  local file_path="$1"
-  
-  # Upload file and capture output
-  local upload_output
-  upload_output=$(curl bashupload.com -T "$file_path" 2>/dev/null)
-  
-  # Extract download URL using regex
-  local download_url
-  download_url=$(echo "$upload_output" | grep -o 'wget http://bashupload\.com/[^[:space:]]*')
-  download_url=${download_url#wget }  # Remove 'wget ' prefix
-  
-  if [ -z "$download_url" ]; then
-    echo "Error: Failed to extract download URL from bashupload.com response"
-    echo "Response was: $upload_output"
-    exit 1
-  fi
-  echo "$download_url"
-}
-
 BUILD_DIR="${BUILD_FOLDER}"
 SOURCE_DIR="${GITHUB_WORKSPACE}"
 

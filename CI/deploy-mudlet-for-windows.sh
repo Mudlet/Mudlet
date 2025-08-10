@@ -32,26 +32,6 @@ set -x
 # 4 - nuget error
 # 5 - squirrel error
 
-upload_to_bashupload () {
-  local file_path="$1"
-  
-  # Upload file and capture output
-  local upload_output
-  upload_output=$(curl bashupload.com -T "$file_path" 2>/dev/null)
-  
-  # Extract download URL using regex
-  local download_url
-  download_url=$(echo "$upload_output" | grep -o 'wget http://bashupload\.com/[^[:space:]]*')
-  download_url=${download_url#wget }  # Remove 'wget ' prefix
-  
-  if [ -z "$download_url" ]; then
-    echo "Error: Failed to extract download URL from bashupload.com response"
-    echo "Response was: $upload_output"
-    exit 1
-  fi
-  echo "$download_url"
-}
-
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
@@ -386,7 +366,7 @@ EOF
     curl --retry 5 -X POST 'https://mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
-    -F "file_remote=$(upload_to_bashupload "${installerExePath}")" \
+    -F "file_remote=${DEPLOY_URL}" \
     -F "file_name=Mudlet ${VERSION} (windows-${BUILD_BITNESS})" \
     -F "file_des=sha256: ${SHA256SUM}" \
     -F "file_cat=${FILE_CATEGORY}" \
@@ -443,7 +423,7 @@ EOF
       curl --retry 5 -X POST 'https://mudlet.org/download-add.php' \
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
-      -F "file_remote=$(upload_to_bashupload "${PORTABLE_ZIP_PATH}")" \
+      -F "file_remote=${PORTABLE_DEPLOY_URL}" \
       -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
       -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
       -F "file_cat=${FILE_CATEGORY}" \
