@@ -201,7 +201,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
       # Upload regular DMG version to bashupload.com first, then register with WordPress
       
-      curl --retry 5 -X POST 'https://mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=${DEPLOY_URL}" \
@@ -219,7 +219,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "do=Add File"
 
       # Upload portable version to bashupload.com first, then register with WordPress
-      curl --retry 5 -X POST 'https://mudlet.org/download-add.php' \
+      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
