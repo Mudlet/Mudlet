@@ -100,7 +100,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     // install-as-module option
-    if (ui->findChild<QCheckBox*>(qsl("checkBox_installAsModule"))) {
+    if (ui->checkBox_installAsModule) {
         auto installBox = ui->checkBox_installAsModule;
         mInstallAsModuleAfterExport = installBox->isChecked();
         connect(installBox, &QCheckBox::toggled, this, [this](bool checked){ mInstallAsModuleAfterExport = checked; });
