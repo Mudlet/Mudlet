@@ -542,10 +542,42 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="infoLabel">
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="widget_installOption" native="true">
+      <layout class="QHBoxLayout" name="horizontalLayout_installOption">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QCheckBox" name="checkBox_installAsModule">
+         <property name="text">
+          <string>Install as module after export</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_install">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="infoLabel">
      <property name="font">
       <font>
        <pointsize>8</pointsize>

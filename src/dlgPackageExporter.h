@@ -156,6 +156,7 @@ private:
     QString mPackageComment;
     bool mCheckChildren = true;
     inline static bool mExportingPackage = false;
+    bool mInstallAsModuleAfterExport = false;
 
 signals:
     void signal_exportLocationChanged(const QString& location);

@@ -33,12 +33,14 @@
 #include "TTrigger.h"
 
 #include "pre_guard.h"
+#include <QCheckBox>
 #include <QtConcurrent>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMimeData>
+#include "dlgModuleManager.h"
 #include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
@@ -97,6 +99,12 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
+    // install-as-module option
+    if (ui->findChild<QCheckBox*>(qsl("checkBox_installAsModule"))) {
+        auto installBox = ui->checkBox_installAsModule;
+        mInstallAsModuleAfterExport = installBox->isChecked();
+        connect(installBox, &QCheckBox::toggled, this, [this](bool checked){ mInstallAsModuleAfterExport = checked; });
+    }
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     connect(ui->lineEdit_author, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(ui->lineEdit_title, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
@@ -625,6 +633,19 @@ void dlgPackageExporter::slot_exportPackage()
                                                  .arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>")
                                                                             .arg(getActualPath().toHtmlEscaped())),
                                          true);
+
+                    // Optional auto-install as module
+                    if (mInstallAsModuleAfterExport) {
+                        const auto installPath = mPackagePathFileName;
+                        if (!installPath.isEmpty() && QFileInfo::exists(installPath)) {
+                            if (auto [ok, message] = mpHost->installPackage(installPath, enums::PackageModuleType::ModuleFromUI); !ok) {
+                                // Show precise failure without altering exported file
+                                displayResultMessage(tr("Failed to install module: %1").arg(message.toHtmlEscaped()), false);
+                            } else if (mpHost->mpModuleManager) {
+                                mpHost->mpModuleManager->layoutModules();
+                            }
+                        }
+                    }
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
