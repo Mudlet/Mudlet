@@ -123,14 +123,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
     BUILD = $${BUILD}-$${GIT_SHA1}
 } else {
-    # HACK: Force BUILD to be empty for release builds to pass validation
-    GITHUB_REF_VAR = $$(GITHUB_REF)
-    contains(GITHUB_REF_VAR, "refs/tags/Mudlet-") {
-        BUILD = ""
-        message("HACK: Forcing BUILD to empty for release tag")
-    } else {
-        BUILD = "-dev-"$${GIT_SHA1}
-    }
+    BUILD = "-dev-"$${GIT_SHA1}
 }
 
 # Write BUILD to app-build.txt, note that this adds a newline to the file

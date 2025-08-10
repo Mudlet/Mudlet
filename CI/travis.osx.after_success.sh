@@ -164,13 +164,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      # scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      # DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
 
-      # if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
-      #   echo "Error: release not found as expected at $DEPLOY_URL"
-      #   exit 1
-      # fi
+      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+        echo "Error: release not found as expected at $DEPLOY_URL"
+        exit 1
+      fi
 
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
 
@@ -201,13 +201,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
       PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
 
       echo "=== Uploading portable version ==="
-      # scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      # PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
 
-      # if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
-      #   echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
-      #   exit 1
-      # fi
+      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
+        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+        exit 1
+      fi
 
       if [ "${ARCH}" = "arm64" ]; then
         FILE_CATEGORY="4"
@@ -220,12 +220,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
       read -r day month year hour minute second <<< "$current_timestamp"
 
       # Upload regular DMG version to bashupload.com first, then register with WordPress
-      DMG_REMOTE_URL=$(upload_to_bashupload "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg")
       
-      curl --retry 5 -X POST 'http://bore.pub:25991/download-add.php' \
+      curl --retry 5 -X POST 'https://mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
-      -F "file_remote=$DMG_REMOTE_URL" \
+      -F "file_remote=${DEPLOY_URL}" \
       -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
       -F "file_des=sha256: $SHA256SUM" \
       -F "file_cat=${FILE_CATEGORY}" \
@@ -240,12 +239,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
       -F "do=Add File"
 
       # Upload portable version to bashupload.com first, then register with WordPress
-      PORTABLE_REMOTE_URL=$(upload_to_bashupload "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz")
-      
-      curl --retry 5 -X POST 'http://bore.pub:25991/download-add.php' \
+      curl --retry 5 -X POST 'https://mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
-      -F "file_remote=$PORTABLE_REMOTE_URL" \
+      -F "file_remote=${PORTABLE_DEPLOY_URL}" \
       -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS Portable)" \
       -F "file_des=sha256: $PORTABLE_SHA256SUM" \
       -F "file_cat=${FILE_CATEGORY}" \

@@ -17,7 +17,7 @@ jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    # if: ${{ github.repository_owner == 'Mudlet' }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     strategy:
       fail-fast: false
       matrix:
@@ -26,7 +26,7 @@ jobs:
           # ',' in some of the following with a '/' seemed to cause extra
           # spurious steps in the build and broke things! - SlySven
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: depot-ubuntu-22.04-32	
+          - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
@@ -34,7 +34,7 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: depot-ubuntu-22.04-32	
+          - os: ubuntu-22.04
             # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
             triplet: x64-linux
@@ -273,9 +273,7 @@ jobs:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         sudo apt-get -y install pcregrep
-        if [ "${{ github.repository_owner }}" = "Mudlet" ]; then
-          ${{github.workspace}}/CI/travis.validate_deployment.sh
-        fi
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
 
     - name: (macOS) Set build info
@@ -284,9 +282,7 @@ jobs:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         brew install pcre
-        if [ "${{ github.repository_owner }}" = "Mudlet" ]; then
-          ${{github.workspace}}/CI/travis.validate_deployment.sh
-        fi
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
         # remove it as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
         brew uninstall pcre
@@ -369,11 +365,11 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
-    # - name: add ssh-agent for release uploads
-    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
-    #   uses: webfactory/ssh-agent@v0.9.1
-    #   with:
-    #     ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
+    - name: add ssh-agent for release uploads
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
+      uses: webfactory/ssh-agent@v0.9.1
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
     - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
