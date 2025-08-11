@@ -260,7 +260,7 @@ echo "Created portable.txt file in: ${PORTABLE_ZIP_DIR}/portable.txt"
 
 # Verify portable.txt was created
 if [ -f "${PORTABLE_ZIP_DIR}/portable.txt" ]; then
-  echo "✓ portable.txt file exists and is ready for packaging"
+  echo "portable.txt file exists and is ready for packaging"
   ls -la "${PORTABLE_ZIP_DIR}/portable.txt"
 else
   echo "ERROR: portable.txt file was not created!"
