@@ -638,6 +638,10 @@ void dlgPackageExporter::slot_exportPackage()
                     if (mInstallAsModuleAfterExport) {
                         const auto installPath = mPackagePathFileName;
                         if (!installPath.isEmpty() && QFileInfo::exists(installPath)) {
+                            // Avoid duplication on repeated exports by uninstalling existing module first
+                            if (!mPackageName.isEmpty()) {
+                                mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI);
+                            }
                             if (auto [ok, message] = mpHost->installPackage(installPath, enums::PackageModuleType::ModuleFromUI); !ok) {
                                 // Show precise failure without altering exported file
                                 displayResultMessage(tr("Failed to install module: %1").arg(message.toHtmlEscaped()), false);
