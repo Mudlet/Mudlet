@@ -114,28 +114,7 @@ fi
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
 # Deploy Qt dependencies, including optional modules like TextToSpeech
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "--force" "./mudlet.exe"
-
-# Explicitly copy Qt6TextToSpeech.dll if available (windeployqt6 sometimes misses optional modules)
-if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/Qt6TextToSpeech.dll" ]; then
-  cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/Qt6TextToSpeech.dll" .
-  echo "Qt6TextToSpeech.dll copied"
-else
-  echo "Warning: Qt6TextToSpeech.dll not found - text-to-speech may not work"
-fi
-
-# Verify that system qtkeychain was properly deployed by windeployqt6
-if [ ! -f "./libqt6keychain.dll" ]; then
-  echo "Warning: libqt6keychain.dll not deployed by windeployqt6, trying to copy manually..."
-  if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/libqt6keychain.dll" ]; then
-    cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/libqt6keychain.dll" .
-    echo "libqt6keychain.dll copied from system location"
-  else
-    echo "Error: libqt6keychain.dll not found in system location either"
-  fi
-else
-  echo "libqt6keychain.dll correctly deployed by windeployqt6"
-fi
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
 
 # To determine which system libraries have to be copied in it requires
 # continually trying to run the executable on the target type system

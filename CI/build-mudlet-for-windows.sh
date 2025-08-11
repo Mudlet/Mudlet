@@ -117,9 +117,6 @@ export LUA_PATH
 LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
 export LUA_CPATH
 
-# Use system-installed qtkeychain instead of building our own
-export WITH_OWN_QTKEYCHAIN="NO"
-
 echo ""
 echo "Adjusting LUA paths for Lua 5.1:"
 echo "LUA_PATH is: ${LUA_PATH}"
