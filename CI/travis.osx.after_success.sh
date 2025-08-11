@@ -164,6 +164,14 @@ if [ "${DEPLOY}" = "deploy" ]; then
       if [ -n "$APP_PATH" ]; then
         APP_DIR=$(dirname "$APP_PATH")
         echo "Found mudlet.app at: $APP_PATH"
+        MACOS_DIR="${APP_PATH}/Contents/MacOS"
+        if [ -d "$MACOS_DIR" ]; then
+          touch "${MACOS_DIR}/portable.txt"
+          echo "Created portable.txt at: ${MACOS_DIR}/portable.txt"
+        else
+          echo "Error: Could not find MacOS directory at: $MACOS_DIR"
+          exit 1
+        fi
         
         # Sign the app bundle specifically for portable version
         if [ -n "$MACOS_SIGNING_PASS" ]; then
