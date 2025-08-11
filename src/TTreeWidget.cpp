@@ -332,12 +332,7 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 {
     QTreeWidgetItem* pItem = itemAt(event->position().toPoint());
 
-    if (!pItem) {
-        event->setDropAction(Qt::IgnoreAction);
-        event->ignore();
-    }
-
-    if (pItem == topLevelItem(0)) {
+    if (!pItem || pItem == topLevelItem(0)) {
         event->setDropAction(Qt::IgnoreAction);
         event->ignore();
     }
