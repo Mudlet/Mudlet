@@ -338,10 +338,8 @@ void TTreeWidget::dropEvent(QDropEvent* event)
     }
 
     if (pItem == topLevelItem(0)) {
-        if ((dropIndicatorPosition() == QAbstractItemView::AboveItem) || (dropIndicatorPosition() == QAbstractItemView::BelowItem)) {
-            event->setDropAction(Qt::IgnoreAction);
-            event->ignore();
-        }
+        event->setDropAction(Qt::IgnoreAction);
+        event->ignore();
     }
 
     if (mIsVarTree) {
