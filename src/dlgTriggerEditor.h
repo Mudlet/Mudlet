@@ -615,7 +615,7 @@ private:
     struct infoTextParts {
         QString summary;
         QVector<infoOption> options;
-    }
+    };
 
     QVector<infoTextParts> infoAddAlias;
 
