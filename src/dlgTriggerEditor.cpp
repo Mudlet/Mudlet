@@ -198,7 +198,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
-    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this [=](const QString& URL) {
+    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, [=](const QString& URL) {
         mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
     })
 
