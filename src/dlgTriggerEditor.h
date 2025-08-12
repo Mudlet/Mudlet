@@ -617,7 +617,8 @@ private:
         QVector<infoOption> options;
     };
 
-    QVector<infoTextParts> infoAddAlias;
+    // QVector<infoTextParts> infoTextsForAllObjects;
+    infoTextParts infoAddAlias;
 
     QString descActive;
     QString descInactive;
