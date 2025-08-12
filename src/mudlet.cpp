@@ -2648,12 +2648,12 @@ void mudlet::readLateSettings(const QSettings& settings)
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
     // it is suggested Mudlet 4.x:
     setMenuBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
-    setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleAlways)).toInt()));
+    setToolBarVisibility(static_cast<enums::controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(enums::visibleNever)).toInt()));
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
-    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(true)).toBool();
+    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
     resize(size);
@@ -4299,16 +4299,6 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     
     contextMenu.addSeparator();
     
-    // Add connection indicator toggle
-    QAction* toggleConnectionIndicatorsAction = new QAction(tr("Show Connection Indicators on Tabs"), &contextMenu);
-    toggleConnectionIndicatorsAction->setCheckable(true);
-    toggleConnectionIndicatorsAction->setChecked(mShowTabConnectionIndicators);
-    connect(toggleConnectionIndicatorsAction, &QAction::triggered, this, [this](bool checked) {
-        setShowTabConnectionIndicators(checked);
-    });
-    
-    contextMenu.addAction(toggleConnectionIndicatorsAction);
-    
     // Show the context menu at the global position
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
@@ -5226,15 +5216,19 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
 void mudlet::setShowTabConnectionIndicators(const bool state)
 {
-    if (mShowTabConnectionIndicators != state) {
-        mShowTabConnectionIndicators = state;
-        
-        // Update all tab indicators immediately
-        updateTabIndicators();
-        
-        // Update detached window tab indicators
-        updateDetachedWindowTabIndicators();
+    if (mShowTabConnectionIndicators == state) {
+        return;
     }
+
+    mShowTabConnectionIndicators = state;
+    
+    // Update all tab indicators immediately
+    updateTabIndicators();
+    
+    // Update detached window tab indicators
+    updateDetachedWindowTabIndicators();
+
+    emit signal_showTabConnectionIndicatorsChanged(state);
 }
 
 void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
@@ -6440,7 +6434,8 @@ void mudlet::slot_aiError(const QString& error)
 
 void mudlet::slot_tabDetachRequested(int index, const QPoint& globalPos)
 {
-    if (index < 0 || index >= mpTabBar->count()) {
+    // ensure at least one tab is present in the main window
+    if (index < 1 || index >= mpTabBar->count()) {
         return;
     }
 

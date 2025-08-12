@@ -7487,6 +7487,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.setF3SearchEnabled(value);
         return success();
     }
+    if (key == qsl("showTabConnectionIndicators")) {
+        mudlet::self()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7616,7 +7620,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
-        { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } } //, <- not needed until another one is added
+        { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } },
+        { qsl("showTabConnectionIndicators"), [&](){ lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators); } },
     };
 
     auto it = configMap.find(key);
