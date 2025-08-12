@@ -6440,7 +6440,8 @@ void mudlet::slot_aiError(const QString& error)
 
 void mudlet::slot_tabDetachRequested(int index, const QPoint& globalPos)
 {
-    if (index < 0 || index >= mpTabBar->count()) {
+    // ensure at least one tab is present in the main window
+    if (index < 1 || index >= mpTabBar->count()) {
         return;
     }
 
