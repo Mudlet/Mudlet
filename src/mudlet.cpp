@@ -2653,7 +2653,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
-    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(true)).toBool();
+    mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
     resize(size);
@@ -4299,16 +4299,6 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     
     contextMenu.addSeparator();
     
-    // Add connection indicator toggle
-    QAction* toggleConnectionIndicatorsAction = new QAction(tr("Show Connection Indicators on Tabs"), &contextMenu);
-    toggleConnectionIndicatorsAction->setCheckable(true);
-    toggleConnectionIndicatorsAction->setChecked(mShowTabConnectionIndicators);
-    connect(toggleConnectionIndicatorsAction, &QAction::triggered, this, [this](bool checked) {
-        setShowTabConnectionIndicators(checked);
-    });
-    
-    contextMenu.addAction(toggleConnectionIndicatorsAction);
-    
     // Show the context menu at the global position
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
@@ -5226,15 +5216,19 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
 void mudlet::setShowTabConnectionIndicators(const bool state)
 {
-    if (mShowTabConnectionIndicators != state) {
-        mShowTabConnectionIndicators = state;
-        
-        // Update all tab indicators immediately
-        updateTabIndicators();
-        
-        // Update detached window tab indicators
-        updateDetachedWindowTabIndicators();
+    if (mShowTabConnectionIndicators == state) {
+        return;
     }
+
+    mShowTabConnectionIndicators = state;
+    
+    // Update all tab indicators immediately
+    updateTabIndicators();
+    
+    // Update detached window tab indicators
+    updateDetachedWindowTabIndicators();
+
+    emit signal_showTabConnectionIndicatorsChanged(state);
 }
 
 void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
