@@ -6096,9 +6096,7 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
-        mpAliasMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddAlias);
+        clearAliasForm();
     }
 }
 
@@ -6145,9 +6143,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
-        mpKeysMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddKey);
+        clearKeyForm();
     }
 }
 
@@ -6444,9 +6440,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpActionsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddButton);
+        clearActionForm();
         return;
     }
 
@@ -6557,9 +6551,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         }
     } else {
         // On root of treewidget_actions: - show help message instead
-        mpActionsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddButton);
+        clearActionForm();
     }
 }
 
@@ -6594,9 +6586,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpScriptsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddScript);
+        clearScriptForm();
         return;
     }
 
@@ -6639,9 +6629,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
-        mpScriptsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddScript);
+        clearScriptForm();
     }
 }
 
@@ -6694,9 +6682,7 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
-        mpTimersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTimer);
+        clearTimerForm();
     }
 }
 
@@ -7919,9 +7905,7 @@ void dlgTriggerEditor::slot_showTimers()
     if (!pI || pI == treeWidget_timers->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpTimersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTimer);
+        clearTimerForm();
     } else {
         mpTimersMainArea->show();
         mpSourceEditorArea->show();
@@ -7948,9 +7932,7 @@ void dlgTriggerEditor::showCurrentTriggerItem()
     if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpTriggersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTrigger);
+        clearTriggerForm();
     } else {
         mpTriggersMainArea->show();
         mpSourceEditorArea->show();
@@ -7965,9 +7947,7 @@ void dlgTriggerEditor::slot_showTriggers()
     if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpTriggersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTrigger);
+        clearTriggerForm();
     } else {
         mpTriggersMainArea->show();
         mpSourceEditorArea->show();
@@ -8013,9 +7993,7 @@ void dlgTriggerEditor::slot_showKeys()
     if (!pI || pI == treeWidget_keys->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpKeysMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddKey);
+        clearKeyForm();
     } else {
         mpKeysMainArea->show();
         mpSourceEditorArea->show();
@@ -8074,8 +8052,7 @@ void dlgTriggerEditor::show_vars()
             mpVarsMainArea->show();
             slot_variableSelected(treeWidget_variables->currentItem());
         } else {
-            mpVarsMainArea->hide();
-            showInfo(msgInfoAddVar);
+            clearVarForm();
         }
     }
     treeWidget_variables->show();
@@ -8089,9 +8066,7 @@ void dlgTriggerEditor::slot_showAliases()
     if (!pI || pI == treeWidget_aliases->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpAliasMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddAlias);
+        clearAliasForm();
     } else {
         mpAliasMainArea->show();
         mpSourceEditorArea->show();
