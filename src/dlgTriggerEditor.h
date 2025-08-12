@@ -186,9 +186,6 @@ public:
     void showError(const QString&);
     void showWarning(const QString&);
     void showInfo(const QString&);
-    void showIntro();
-    QString createInfoText(const QString&);
-    QString createInfoOptionText(const infoOption&, const QString&); 
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
@@ -620,6 +617,10 @@ private:
     // QVector<infoTextParts> infoTextsForAllObjects;
     infoTextParts infoAddAlias;
 
+    void showIntro();
+    QString createInfoText(const QString&);
+    QString createInfoOptionText(const infoOption&, const QString&); 
+    
     QString descActive;
     QString descInactive;
     QString descActiveFolder;
