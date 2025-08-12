@@ -8188,9 +8188,9 @@ QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
 }
 
 
-QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents) const
+QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents)
 {
-    if (!option.name == desiredContents) {
+    if (option.name != desiredContents) {
         return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
     } else {
         return qsl("<li>%1%2</li>").arg(option.headline, option.contents); // %2 wrapped in <p></p> etc.
