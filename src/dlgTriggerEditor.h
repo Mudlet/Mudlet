@@ -186,6 +186,9 @@ public:
     void showError(const QString&);
     void showWarning(const QString&);
     void showInfo(const QString&);
+    void showIntro();
+    QString createInfoText(const QString&);
+    QString createInfoOptionText(const QString&, const QString&); 
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
@@ -602,6 +605,20 @@ private:
     QString msgInfoAddButton;
     QString msgInfoAddVar;
     QString msgInfoAddKey;
+
+    struct infoOption {
+        QString name;
+        QString headline;
+        QString contents;  
+    };
+
+    struct infoTextParts {
+        QString summary;
+        QVector<infoOption> options;
+    }
+
+    QVector<infoTextParts> infoAddAlias;
+
     QString descActive;
     QString descInactive;
     QString descActiveFolder;

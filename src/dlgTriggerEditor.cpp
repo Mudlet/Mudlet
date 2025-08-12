@@ -79,6 +79,17 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
 
+    infoAddAlias.summary = tr("<p>Alias react on user input.</p>");
+    infoAddAlias.options.append({qsl("alias1"), tr("How to add a new alias now"), 
+        tr(	"<ol><li>Click on the 'Add Item' icon above.</li>"
+	        "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
+	        "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
+	        "<li><strong>Activate</strong> the alias.</li></ol>")};
+    infoAddAlias.options.append({qsl("alias2"), tr("How to add a new alias from the command line"), 
+        tr( "<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")};
+    infoAddAlias.options.append({qsl("alias3"), tr("Check the Mudlet manual for more information"), 
+        tr( "<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")};
+
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
                            "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
@@ -187,6 +198,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this [=](const QString& URL) {
+        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
+    })
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
@@ -4231,7 +4245,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddAlias);
+    showIntro();
     slot_aliasSelected(treeWidget_aliases->currentItem());
 }
 
@@ -8092,6 +8106,18 @@ void dlgTriggerEditor::showError(const QString& error)
     }
 }
 
+void dlgTriggerEditor::showWarning(const QString& error)
+{
+    mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
+    mpSystemMessageArea->notificationAreaIconLabelError->hide();
+    mpSystemMessageArea->notificationAreaIconLabelWarning->show();
+    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->show();
+    if (!mpHost->mIsProfileLoadingSequence) {
+        mudlet::self()->announce(error);
+    }
+}
+
 void dlgTriggerEditor::showInfo(const QString& error)
 {
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
@@ -8104,15 +8130,70 @@ void dlgTriggerEditor::showInfo(const QString& error)
     }
 }
 
-void dlgTriggerEditor::showWarning(const QString& error)
+void dlgTriggerEditor::showIntro()
 {
-    mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
+    QString text;
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        text = msgInfoAddTrigger;
+        break;
+    case EditorViewType::cmTimerView:
+        text = msgInfoAddTimer;
+        break;
+    case EditorViewType::cmAliasView:
+        // text = msgInfoAddAlias;
+        text = createInfoText(qsl("")) // TODO: How to tell it, there was no link clicked?
+        break;
+    case EditorViewType::cmScriptView:
+        text = msgInfoAddScript;
+        break;
+    case EditorViewType::cmActionView:
+        text = msgInfoAddButton;
+        break;
+    case EditorViewType::cmKeysView:
+        text = msgInfoAddKey;
+        break;
+    case EditorViewType::cmVarsView:
+        text = msgInfoAddVar;
+        break;
+    default:
+        qWarning() << "ERROR: dlgTriggerEditor::showInfo() undefined view, not sure what to show";
+    }
+
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
-    mpSystemMessageArea->notificationAreaIconLabelWarning->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+    mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
+    }
+}
+
+QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
+{
+    QString infoTextOptions;
+    QString infoTextSummary;
+
+    // TODO: Prototype currently works for Alias only
+    infoTextSummary = infoAddAlias.summary;
+    QVectorIterator<infoOption> iterateOptions(infoAddAlias.options);
+    while (iterateOptions.hasNext()) {
+        infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredContents));
+    }
+
+    return qsl("<p>%1</p><ol>%2</ol>")
+        .arg(infoTextSummary, infoTextOptions)
+}
+
+
+QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents) const
+{
+    if (!option.name == desiredContents) {
+        return qsl("<li><a href="%1">%2</a></li>").arg(option.name, option.headline);
+    } else {
+        return qsl("<li>%1%2</li>").arg(option.headline, option.contents); // %2 wrapped in <p></p> etc.
     }
 }
 
