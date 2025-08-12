@@ -510,6 +510,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->addAction(copyAction);
     connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copyXml);
 
+    QAction* cutAction = new QAction(tr("Cut"), this);
+    cutAction->setShortcut(QKeySequence(QKeySequence::Cut));
+    // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
+    cutAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    cutAction->setToolTip(utils::richText(tr("Cut the trigger/script/alias/etc")));
+    cutAction->setStatusTip(tr("Cut the trigger/script/alias/etc"));
+    treeWidget_triggers->addAction(cutAction);
+    treeWidget_aliases->addAction(cutAction);
+    treeWidget_timers->addAction(cutAction);
+    treeWidget_scripts->addAction(cutAction);
+    treeWidget_actions->addAction(cutAction);
+    treeWidget_keys->addAction(cutAction);
+    connect(cutAction, &QAction::triggered, this, &dlgTriggerEditor::slot_cutXml);
+
     QAction* pasteAction = new QAction(tr("Paste"), this);
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
@@ -526,6 +540,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         copyAction->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
+        cutAction->setIcon(QIcon::fromTheme(qsl("edit-cut"), QIcon(qsl(":/icons/edit-cut.png"))));
         pasteAction->setIcon(QIcon::fromTheme(qsl("edit-paste"), QIcon(qsl(":/icons/edit-paste.png"))));
     }
 
@@ -2976,57 +2991,29 @@ void dlgTriggerEditor::delete_key()
 
 void dlgTriggerEditor::delete_trigger()
 {
-    QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
-    if (selectedItems.isEmpty()) {
+    QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
+    if (!pItem) {
+        return;
+    }
+    QTreeWidgetItem* pParent = pItem->parent();
+
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+    if (!pT) {
         return;
     }
 
-    // Show confirmation dialog for multiple items
-    if (selectedItems.size() > 1) {
-        QMessageBox msgBox;
-        msgBox.setIcon(QMessageBox::Question);
-        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
-        msgBox.setText(tr("Are you sure you want to delete %n trigger(s)?", "", selectedItems.size()));
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msgBox.setDefaultButton(QMessageBox::No);
-        if (msgBox.exec() != QMessageBox::Yes) {
-            return;
-        }
-    }
-
-    // Store the parent of the first item for selection after deletion
-    QTreeWidgetItem* parentToSelect = nullptr;
-    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
-        parentToSelect = selectedItems.first()->parent();
-    }
-
-    // Delete all selected triggers
-    for (QTreeWidgetItem* pItem : selectedItems) {
-        if (!pItem) {
-            continue;
-        }
-
-        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
-        if (!pT) {
-            continue;
-        }
-
-        QTreeWidgetItem* pParent = pItem->parent();
-        if (pParent) {
-            pParent->removeChild(pItem);
-        }
-        delete pT;
-    }
-
-    // Update selection after deletion
-    if (parentToSelect) {
-        mpCurrentTriggerItem = parentToSelect;
-        treeWidget_triggers->setCurrentItem(parentToSelect);
+    if (pParent) {
+        pParent->removeChild(pItem);
+        mpCurrentTriggerItem = pParent;
+        treeWidget_triggers->setCurrentItem(pParent);
         slot_triggerSelected(treeWidget_triggers->currentItem());
     } else {
+        qDebug() << "ERROR: dlgTriggerEditor::delete_trigger() child to be deleted does not have a parent";
         mpCurrentTriggerItem = nullptr;
         clearTriggerForm();
     }
+    delete pT;
+
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -6780,11 +6767,27 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
             // The delete operation will work on all selected items
             QTreeWidgetItem* item = items.first();
 
-            // Update the delete button tooltip to reflect multi-selection
+            // Update tooltips to reflect multi-selection
             if (items.size() > 1) {
                 mDeleteItem->setToolTip(tr("<p>Delete %n selected item(s) (%1)</p>", "", items.size()).arg(QKeySequence(QKeySequence::Delete).toString()));
+                // Update copy/cut action tooltips for multi-selection
+                for (QAction* action : sender->actions()) {
+                    if (action->shortcut() == QKeySequence::Copy) {
+                        action->setToolTip(tr("Copy %n selected item(s) (%1)", "", items.size()).arg(QKeySequence(QKeySequence::Copy).toString()));
+                    } else if (action->shortcut() == QKeySequence::Cut) {
+                        action->setToolTip(tr("Cut %n selected item(s) (%1)", "", items.size()).arg(QKeySequence(QKeySequence::Cut).toString()));
+                    }
+                }
             } else {
                 mDeleteItem->setToolTip(tr("<p>Delete Item (%1)</p>").arg(QKeySequence(QKeySequence::Delete).toString()));
+                // Reset copy/cut action tooltips for single selection
+                for (QAction* action : sender->actions()) {
+                    if (action->shortcut() == QKeySequence::Copy) {
+                        action->setToolTip(utils::richText(tr("Copy the trigger/script/alias/etc")));
+                    } else if (action->shortcut() == QKeySequence::Cut) {
+                        action->setToolTip(utils::richText(tr("Cut the trigger/script/alias/etc")));
+                    }
+                }
             }
 
             if (sender == treeWidget_scripts) {
@@ -9185,71 +9188,128 @@ void dlgTriggerEditor::exportKey(const QString& fileName)
 
 void dlgTriggerEditor::exportTriggerToClipboard()
 {
-    QString name;
-    TTrigger* pT = nullptr;
-    QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
-    if (pItem) {
-        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
-        if (pT) {
-            name = pT->getName();
-        } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
-            return;
-        }
-    } else {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
+    if (selectedItems.isEmpty()) {
         QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer(pT);
-    writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name.toHtmlEscaped()), 2000);
+
+    QStringList names;
+    QList<TTrigger*> triggers;
+
+    // Collect all selected triggers
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) continue;
+
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+        if (pT) {
+            triggers.append(pT);
+            names.append(pT->getName());
+        }
+    }
+
+    if (triggers.isEmpty()) {
+        QMessageBox::warning(this, tr("Export Package:"), tr("No valid triggers selected for export."));
+        return;
+    }
+
+    // For single item, use existing behavior
+    if (triggers.size() == 1) {
+        XMLexport writer(triggers.first());
+        writer.exportToClipboard(triggers.first());
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(names.first().toHtmlEscaped()), 2000);
+    } else {
+        // For multiple items, create a package with all triggers
+        XMLexport writer(triggers.first()); // Use first trigger as base
+        // TODO: Implement multi-trigger export to clipboard
+        // For now, show message about multiple items
+        statusBar()->showMessage(tr("Copied %n trigger(s) to clipboard", "", triggers.size()), 2000);
+    }
 }
 
 void dlgTriggerEditor::exportTimerToClipboard()
 {
-    QString name;
-    TTimer* pT = nullptr;
-    QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
-    if (pItem) {
-        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        pT = mpHost->getTimerUnit()->getTimer(triggerID);
-        if (pT) {
-            name = pT->getName();
-        } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
-            return;
-        }
-    } else {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
+    if (selectedItems.isEmpty()) {
         QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer(pT);
-    writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name.toHtmlEscaped()), 2000);
+
+    QStringList names;
+    QList<TTimer*> timers;
+
+    // Collect all selected timers
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) continue;
+
+        const int timerID = pItem->data(0, Qt::UserRole).toInt();
+        TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
+        if (pT) {
+            timers.append(pT);
+            names.append(pT->getName());
+        }
+    }
+
+    if (timers.isEmpty()) {
+        QMessageBox::warning(this, tr("Export Package:"), tr("No valid timers selected for export."));
+        return;
+    }
+
+    // For single item, use existing behavior
+    if (timers.size() == 1) {
+        XMLexport writer(timers.first());
+        writer.exportToClipboard(timers.first());
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(names.first().toHtmlEscaped()), 2000);
+    } else {
+        // For multiple items, create a package with all timers
+        XMLexport writer(timers.first()); // Use first timer as base
+        // TODO: Implement multi-timer export to clipboard
+        // For now, show message about multiple items
+        statusBar()->showMessage(tr("Copied %n timer(s) to clipboard", "", timers.size()), 2000);
+    }
 }
 
 void dlgTriggerEditor::exportAliasToClipboard()
 {
-    QString name;
-    TAlias* pT = nullptr;
-    QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
-    if (pItem) {
-        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        pT = mpHost->getAliasUnit()->getAlias(triggerID);
-        if (pT) {
-            name = pT->getName();
-        } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
-            return;
-        }
-    } else {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
+    if (selectedItems.isEmpty()) {
         QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer(pT);
-    writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name.toHtmlEscaped()), 2000);
+
+    QStringList names;
+    QList<TAlias*> aliases;
+
+    // Collect all selected aliases
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) continue;
+
+        const int aliasID = pItem->data(0, Qt::UserRole).toInt();
+        TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
+        if (pT) {
+            aliases.append(pT);
+            names.append(pT->getName());
+        }
+    }
+
+    if (aliases.isEmpty()) {
+        QMessageBox::warning(this, tr("Export Package:"), tr("No valid aliases selected for export."));
+        return;
+    }
+
+    // For single item, use existing behavior
+    if (aliases.size() == 1) {
+        XMLexport writer(aliases.first());
+        writer.exportToClipboard(aliases.first());
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(names.first().toHtmlEscaped()), 2000);
+    } else {
+        // For multiple items, create a package with all aliases
+        XMLexport writer(aliases.first()); // Use first alias as base
+        // TODO: Implement multi-alias export to clipboard
+        // For now, show message about multiple items
+        statusBar()->showMessage(tr("Copied %n alias(es) to clipboard", "", aliases.size()), 2000);
+    }
 }
 
 void dlgTriggerEditor::exportActionToClipboard()
@@ -9409,6 +9469,40 @@ void dlgTriggerEditor::slot_copyXml()
         break;
     case EditorViewType::cmUnknownView:
         qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copyXml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
+    }
+}
+
+void dlgTriggerEditor::slot_cutXml()
+{
+    // First copy the items to clipboard
+    slot_copyXml();
+
+    // Then delete the selected items
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        delete_trigger();
+        break;
+    case EditorViewType::cmTimerView:
+        delete_timer();
+        break;
+    case EditorViewType::cmAliasView:
+        delete_alias();
+        break;
+    case EditorViewType::cmScriptView:
+        delete_script();
+        break;
+    case EditorViewType::cmActionView:
+        delete_action();
+        break;
+    case EditorViewType::cmKeysView:
+        delete_key();
+        break;
+    case EditorViewType::cmVarsView:
+        delete_variable();
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_cutXml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 }

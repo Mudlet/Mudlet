@@ -278,6 +278,7 @@ public slots:
     void slot_sourceReplace();
     void slot_saveEdits();
     void slot_copyXml();
+    void slot_cutXml();
     void slot_pasteXml();
 // Not used:    void slot_choseActionIcon();
     void slot_showAllTriggerControls(const bool);
