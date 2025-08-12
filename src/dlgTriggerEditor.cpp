@@ -2684,197 +2684,404 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
 
 void dlgTriggerEditor::delete_alias()
 {
-    QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QTreeWidgetItem* pParent = pItem->parent();
-    TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
-    if (!pT) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
 
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentAliasItem = pParent;
-        treeWidget_aliases->setCurrentItem(pParent);
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n alias(es)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
+
+    // Delete all selected aliases
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
+        }
+
+        TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
+        if (!pT) {
+            continue;
+        }
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
+        delete pT;
+    }
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentAliasItem = parentToSelect;
+        treeWidget_aliases->setCurrentItem(parentToSelect);
         slot_aliasSelected(treeWidget_aliases->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_alias() child to be deleted does not have a parent";
         mpCurrentAliasItem = nullptr;
         clearAliasForm();
     }
-    delete pT;
 }
 
 void dlgTriggerEditor::delete_action()
 {
-    QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QTreeWidgetItem* pParent = pItem->parent();
-    TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
-    if (!pT) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
 
-    // if active, deactivate.
-    if (pT->isActive()) {
-        pT->deactivate();
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n action(s)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
     }
 
-    // set this and the parent TActions as changed so the toolbar is updated.
-    pT->setDataChanged();
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
 
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentActionItem = pParent;
-        treeWidget_actions->setCurrentItem(pParent);
+    // Delete all selected actions
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
+        }
+
+        TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
+        if (!pT) {
+            continue;
+        }
+
+        // if active, deactivate.
+        if (pT->isActive()) {
+            pT->deactivate();
+        }
+
+        // set this and the parent TActions as changed so the toolbar is updated.
+        pT->setDataChanged();
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
+        delete pT;
+    }
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentActionItem = parentToSelect;
+        treeWidget_actions->setCurrentItem(parentToSelect);
         slot_actionSelected(treeWidget_actions->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_action() child to be deleted does not have a parent";
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
-    delete pT;
     mpHost->getActionUnit()->updateToolbar();
 }
 
 void dlgTriggerEditor::delete_variable()
 {
-    QTreeWidgetItem* pItem = treeWidget_variables->currentItem();
-    if (!pItem) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_variables->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
-    QTreeWidgetItem* pParent = pItem->parent();
+
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n variable(s)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
+
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(pItem);
-    if (var) {
-        lI->deleteVar(var);
-        TVar* parent = var->getParent();
-        if (parent) {
-            parent->removeChild(var);
+
+    // Delete all selected variables
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
         }
-        vu->removeVariable(var);
-        delete var;
+
+        TVar* var = vu->getWVar(pItem);
+        if (var) {
+            lI->deleteVar(var);
+            TVar* parent = var->getParent();
+            if (parent) {
+                parent->removeChild(var);
+            }
+            vu->removeVariable(var);
+            delete var;
+        }
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
     }
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentVarItem = pParent;
-        treeWidget_variables->setCurrentItem(pParent);
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentVarItem = parentToSelect;
+        treeWidget_variables->setCurrentItem(parentToSelect);
         slot_variableSelected(treeWidget_variables->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_action() child to be deleted does not have a parent";
         mpCurrentVarItem = nullptr;
         clearVarForm();
     }
-
 }
 
 void dlgTriggerEditor::delete_script()
 {
-    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QTreeWidgetItem* pParent = pItem->parent();
-    TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
-    if (!pT) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_scripts->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
 
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentScriptItem = pParent;
-        treeWidget_scripts->setCurrentItem(pParent);
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n script(s)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
+
+    // Delete all selected scripts
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
+        }
+
+        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+        if (!pT) {
+            continue;
+        }
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
+        delete pT;
+    }
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentScriptItem = parentToSelect;
+        treeWidget_scripts->setCurrentItem(parentToSelect);
         slot_scriptsSelected(treeWidget_scripts->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_script() child to be deleted does not have a parent";
         mpCurrentScriptItem = nullptr;
         clearScriptForm();
     }
-    delete pT;
 }
 
 void dlgTriggerEditor::delete_key()
 {
-    QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QTreeWidgetItem* pParent = pItem->parent();
-
-    TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
-    if (!pT) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_keys->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
 
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentKeyItem = pParent;
-        treeWidget_keys->setCurrentItem(pParent);
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n key(s)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
+
+    // Delete all selected keys
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
+        }
+
+        TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        if (!pT) {
+            continue;
+        }
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
+        delete pT;
+    }
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentKeyItem = parentToSelect;
+        treeWidget_keys->setCurrentItem(parentToSelect);
         slot_keySelected(treeWidget_keys->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_key() child to be deleted does not have a parent";
         mpCurrentKeyItem = nullptr;
         clearKeyForm();
     }
-    delete pT;
 }
 
 void dlgTriggerEditor::delete_trigger()
 {
-    QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QTreeWidgetItem* pParent = pItem->parent();
-
-    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
-    if (!pT) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
 
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentTriggerItem = pParent;
-        treeWidget_triggers->setCurrentItem(pParent);
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n trigger(s)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
+
+    // Delete all selected triggers
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
+        }
+
+        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        if (!pT) {
+            continue;
+        }
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
+        delete pT;
+    }
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentTriggerItem = parentToSelect;
+        treeWidget_triggers->setCurrentItem(parentToSelect);
         slot_triggerSelected(treeWidget_triggers->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_trigger() child to be deleted does not have a parent";
         mpCurrentTriggerItem = nullptr;
         clearTriggerForm();
     }
-    delete pT;
-
 }
 
 void dlgTriggerEditor::delete_timer()
 {
-    QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QTreeWidgetItem* pParent = pItem->parent();
-
-    TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
-    if (!pT) {
+    QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
+    if (selectedItems.isEmpty()) {
         return;
     }
 
-    if (pParent) {
-        pParent->removeChild(pItem);
-        mpCurrentTimerItem = pParent;
-        treeWidget_timers->setCurrentItem(pParent);
+    // Show confirmation dialog for multiple items
+    if (selectedItems.size() > 1) {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
+        msgBox.setText(tr("Are you sure you want to delete %n timer(s)?", "", selectedItems.size()));
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        if (msgBox.exec() != QMessageBox::Yes) {
+            return;
+        }
+    }
+
+    // Store the parent of the first item for selection after deletion
+    QTreeWidgetItem* parentToSelect = nullptr;
+    if (!selectedItems.isEmpty() && selectedItems.first()->parent()) {
+        parentToSelect = selectedItems.first()->parent();
+    }
+
+    // Delete all selected timers
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        if (!pItem) {
+            continue;
+        }
+
+        TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
+        if (!pT) {
+            continue;
+        }
+
+        QTreeWidgetItem* pParent = pItem->parent();
+        if (pParent) {
+            pParent->removeChild(pItem);
+        }
+        delete pT;
+    }
+
+    // Update selection after deletion
+    if (parentToSelect) {
+        mpCurrentTimerItem = parentToSelect;
+        treeWidget_timers->setCurrentItem(parentToSelect);
         slot_timerSelected(treeWidget_timers->currentItem());
     } else {
-        qDebug() << "ERROR: dlgTriggerEditor::delete_timer() child to be deleted does not have a parent";
         mpCurrentTimerItem = nullptr;
         clearTimerForm();
     }
-    delete pT;
 }
 
 
@@ -6569,7 +6776,17 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
     if (sender) {
         QList<QTreeWidgetItem*> items = sender->selectedItems();
         if (!items.empty()) {
+            // When multiple items are selected, show the details of the first item
+            // The delete operation will work on all selected items
             QTreeWidgetItem* item = items.first();
+
+            // Update the delete button tooltip to reflect multi-selection
+            if (items.size() > 1) {
+                mDeleteItem->setToolTip(tr("<p>Delete %n selected item(s) (%1)</p>", "", items.size()).arg(QKeySequence(QKeySequence::Delete).toString()));
+            } else {
+                mDeleteItem->setToolTip(tr("<p>Delete Item (%1)</p>").arg(QKeySequence(QKeySequence::Delete).toString()));
+            }
+
             if (sender == treeWidget_scripts) {
                 slot_scriptsSelected(item);
             } else if (sender == treeWidget_keys) {
@@ -6585,6 +6802,9 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
             } else if (sender == treeWidget_triggers) {
                 slot_triggerSelected(item);
             }
+        } else {
+            // No items selected, reset delete button tooltip
+            mDeleteItem->setToolTip(tr("<p>Delete Item (%1)</p>").arg(QKeySequence(QKeySequence::Delete).toString()));
         }
     }
 }

@@ -36,7 +36,7 @@ TTreeWidget::TTreeWidget(QWidget* pW)
 : QTreeWidget(pW)
 , mChildID()
 {
-    setSelectionMode(QAbstractItemView::SingleSelection);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setDragEnabled(true);
     setAcceptDrops(true);
@@ -351,7 +351,13 @@ void TTreeWidget::dropEvent(QDropEvent* event)
             event->ignore();
         }
         QTreeWidgetItem* newpItem = pItem;
-        QTreeWidgetItem* cItem = selectedItems().first();
+        QList<QTreeWidgetItem*> selectedItemsList = selectedItems();
+        if (selectedItemsList.isEmpty()) {
+            event->setDropAction(Qt::IgnoreAction);
+            event->ignore();
+            return;
+        }
+        QTreeWidgetItem* cItem = selectedItemsList.first();
         QTreeWidgetItem* oldpItem = cItem->parent();
         if (!lI->reparentVariable(newpItem, cItem, oldpItem)) {
             event->setDropAction(Qt::IgnoreAction);
