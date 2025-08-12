@@ -1718,27 +1718,27 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="280"/>
       <source>Close this window and all profiles in it</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi questa finestra e tutti i profili al suo interno</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="287"/>
       <source>Show &amp;Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostra &amp;Barra degli Strumenti</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="290"/>
       <source>Show or hide the toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostra o nascondi la barra degli strumenti</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="507"/>
       <source>Show Connection Indicators on Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Indicatori di Connessione sulle Schede</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="567"/>
       <source>Reattach</source>
-      <translation type="unfinished"/>
+      <translation>Riaggancia</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="598"/>
@@ -1933,12 +1933,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1276"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Finestra Principale)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1307"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Sganciata)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="2228"/>
@@ -9594,7 +9594,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/main.cpp" line="350"/>
       <source>       -f, --fullscreen             start Mudlet in fullscreen mode.</source>
-      <translation type="unfinished"/>
+      <translation>       -f, --fullscreen             avvia Mudlet a schermo intero.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="351"/>
@@ -10786,7 +10786,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="432"/>
       <source>Show Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Barra degli Strumenti Principale</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="488"/>
@@ -11323,12 +11323,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="1734"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Finestra Principale)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1763"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Sganciata)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3280"/>
@@ -11366,12 +11366,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="4186"/>
       <source>Detach Tab &quot;%1&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Sgancia Scheda &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4207"/>
       <source>Show Connection Indicators on Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Indicatori di Connessione sulle Schede</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4791"/>
