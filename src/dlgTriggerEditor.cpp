@@ -8020,9 +8020,7 @@ void dlgTriggerEditor::slot_showVariables()
     if (!pI || pI == treeWidget_variables->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpVarsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddVar);
+        clearVarForm();
     } else {
         mpVarsMainArea->show();
         mpSourceEditorArea->show();
