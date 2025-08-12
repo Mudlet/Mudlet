@@ -188,7 +188,7 @@ public:
     void showInfo(const QString&);
     void showIntro();
     QString createInfoText(const QString&);
-    QString createInfoOptionText(const QString&, const QString&); 
+    QString createInfoOptionText(const infoOption&, const QString&); 
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);

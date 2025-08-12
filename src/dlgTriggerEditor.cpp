@@ -200,7 +200,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
     connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, [=](const QString& URL) {
         mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
-    })
+    });
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
@@ -8142,7 +8142,7 @@ void dlgTriggerEditor::showIntro()
         break;
     case EditorViewType::cmAliasView:
         // text = msgInfoAddAlias;
-        text = createInfoText(qsl("")) // TODO: How to tell it, there was no link clicked?
+        text = createInfoText(qsl("")); // TODO: How to tell it, there was no link clicked?
         break;
     case EditorViewType::cmScriptView:
         text = msgInfoAddScript;
@@ -8184,14 +8184,14 @@ QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
     }
 
     return qsl("<p>%1</p><ol>%2</ol>")
-        .arg(infoTextSummary, infoTextOptions)
+        .arg(infoTextSummary, infoTextOptions);
 }
 
 
 QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents) const
 {
     if (!option.name == desiredContents) {
-        return qsl("<li><a href="%1">%2</a></li>").arg(option.name, option.headline);
+        return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
     } else {
         return qsl("<li>%1%2</li>").arg(option.headline, option.contents); // %2 wrapped in <p></p> etc.
     }
