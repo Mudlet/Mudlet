@@ -174,6 +174,8 @@ private slots:
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
+    void slot_changeShowTabConnectionIndicators(bool state);
+
 
 signals:
     void signal_themeUpdateCompleted();
