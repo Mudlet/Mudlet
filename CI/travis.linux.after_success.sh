@@ -99,6 +99,12 @@ then
       tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
     else
       tar -cvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
+      echo "=== Creating portable version for Linux ==="
+      PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
+      touch "portable.txt"
+      echo "Created portable.txt file"
+      tar -czf "${PORTABLE_NAME}.tar.gz" "Mudlet.AppImage" "portable.txt"
+      rm -f "portable.txt"
     fi
 
     if [ "${public_test_build}" == "true" ]; then
@@ -134,6 +140,35 @@ then
       -F "file_remote=$DEPLOY_URL" \
       -F "file_name=Mudlet ${VERSION} (Linux)" \
       -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=5" \
+      -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
+      -F "output=json" \
+      -F "do=Add File"
+
+      echo "=== Uploading portable version ==="
+      PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
+        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+        exit 1
+      fi
+
+      PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
+
+      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$PORTABLE_DEPLOY_URL" \
+      -F "file_name=Mudlet ${VERSION} (Linux Portable)" \
+      -F "file_des=sha256: $PORTABLE_SHA256SUM" \
       -F "file_cat=5" \
       -F "file_permission=-1" \
       -F "file_timestamp_day=$day" \
