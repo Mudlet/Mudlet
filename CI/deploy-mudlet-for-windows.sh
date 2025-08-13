@@ -37,8 +37,8 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "does not supported what is needed."
   exit 2
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
+  export ARCH="x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
@@ -52,7 +52,6 @@ cd "${GITHUB_WORKSPACE}" || exit 1
 PATH="/c/ProgramData/Chocolatey/bin:${PATH}"
 export PATH
 
-PublicTestBuild=false
 # Check if GITHUB_REPO_TAG is "false"
 if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
   echo "=== GITHUB_REPO_TAG is FALSE ==="
@@ -61,9 +60,9 @@ if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== GITHUB_SCHEDULED_BUILD is TRUE, this is a PTB ==="
     MUDLET_VERSION_BUILD="-ptb"
-    PublicTestBuild=true
   else
     MUDLET_VERSION_BUILD="-testing"
+    echo "=== GITHUB_SCHEDULED_BUILD is FALSE, this is NOT a PTB ==="
   fi
 
   # Check if this is a pull request
@@ -76,31 +75,38 @@ if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
 
     if [[ "${MUDLET_VERSION_BUILD}" == "-ptb" ]]; then
       # Get current date in YYYY-MM-DD format
-      DATE=$(date +%F)
-      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
+      CURRENT_DATE=$(date +%F)
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${CURRENT_DATE}"
     fi
   fi
+else
+  echo "=== GITHUB_REPO_TAG is TRUE ==="
 fi
 
 # Convert to lowercase, not all systems deal with uppercase ASCII characters
+# This will still be empty for a Release build
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
 # Extract version from the mudlet.pro file
-VersionLine=$(grep "VERSION =" "${GITHUB_WORKSPACE}/src/mudlet.pro")
-VersionRegex='= {1}(.+)$'
+VERSION_LINE=$(grep "VERSION =" "${GITHUB_WORKSPACE}/src/mudlet.pro")
+VERSION_REGEX='= {1}(.+)$'
 
-# Use Bash regex matching to extract version
-if [[ ${VersionLine} =~ ${VersionRegex} ]]; then
+# Use Bash regex matching to extract version - don't double-quote these as that
+# can mess things up!
+if [[ ${VERSION_LINE} =~ ${VERSION_REGEX} ]]; then
   VERSION="${BASH_REMATCH[1]}"
 fi
 
 # Check if MUDLET_VERSION_BUILD is empty and print accordingly
 if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
-  # Possible release build
+  # Probably a release build - so typical output could be:
+  #    "BUILDING MUDLET 4.19.1
   echo "BUILDING MUDLET ${VERSION}"
 else
   # Include Git SHA1 in the build information
+  # Probably a PTB - so typical output could be:
+  #    "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678
   echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
 fi
 
@@ -109,54 +115,39 @@ if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
   exit 2
 fi
 
-GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
-PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-release"
+# This will change to end in "-debug" if we ever do that type of build:
+PACKAGE_PATH="$(cygpath -au "${GITHUB_WORKSPACE}/package-${MSYSTEM}-release")"
+PACKAGE_WINPATH="$(cygpath -aw "${PACKAGE_PATH}")"
+cd "${PACKAGE_PATH}" || exit 1
 
-cd "${PACKAGE_DIR}" || exit 1
-
-# Remove specific file types from the directory
-rm ./*.cpp ./*.o
-
-# Helper function to move a packaged mudlet to the upload directory and set up an artifact upload
-# We require the files to be uploaded to exist in ${PACKAGE_DIR}
-moveToUploadDir() {
-  local uploadFilename=$1
-  local unzip=$2
-  echo "=== Setting up upload directory ==="
-  local uploadDir="${GITHUB_WORKSPACE}/upload"
-  local uploadDirUnix
-  uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
-
-  # Check if the upload directory exists, if not, create it
-  if [[ ! -d "${uploadDirUnix}" ]]; then
-    mkdir -p "${uploadDirUnix}"
-  fi
-
-  echo "=== Copying files to upload directory ==="
-  rsync -avR "${PACKAGE_DIR}"/./* "${uploadDirUnix}"
-
-  # Append these variables to the GITHUB_ENV to make them available in subsequent steps
-  {
-    echo "FOLDER_TO_UPLOAD=${uploadDir}/"
-    echo "UPLOAD_FILENAME=${uploadFilename}"
-    echo "PARAM_UNZIP=${unzip}"
-  } >> "${GITHUB_ENV}"
-}
-
-# Check if GITHUB_REPO_TAG and PublicTestBuild are "false" for a snapshot build
-if [[ "${GITHUB_REPO_TAG}" == "false" ]] && [[ "${PublicTestBuild}" == false ]]; then
+# Check if GITHUB_REPO_TAG and GITHUB_SCHEDULED_BUILD are not "true" for a snapshot build
+if [[ "${GITHUB_REPO_TAG}" != "true" ]] && [[ "${GITHUB_SCHEDULED_BUILD}" != "true" ]]; then
   echo "=== Creating a snapshot build ==="
-  mv "${PACKAGE_DIR}/mudlet.exe" "Mudlet.exe"
+  PACKAGE_EXE="Mudlet.exe"
+  mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
 
-  # Define the upload filename
-  uploadFilename="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-${BUILD_BITNESS}"
+  # Define the upload filename - MUDLET_VERSION_BUILD will at least be something
+  # like "-testing" or "-testing-pr####" but NOT "-ptb-*"
+  # THIS IS THE NAME GIVEN TO THE GHA "artifact" which is automagically made
+  # as a zip archive file.
+  ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64"
+  ARTIFACT_WINPATHORFILE="$(cygpath -aw "${PACKAGE_PATH}")"
+  # Append these variables to the GITHUB_ENV to make them available in
+  # subsequent steps, the fourth one being 0 means "don't unzip the archive when
+  # it is uploaded to the Mudlet website". In this place and further down when
+  # appending to the GH Actions environment DO NOT add escaped double-quotes
+  # around the string after the '=' such extra double quotes
+  {
+    echo "ARTIFACT_NAME=${ARTIFACT_NAME}"
+    echo "ARTIFACT_WINPATHORFILE=${ARTIFACT_WINPATHORFILE}"
+    echo "ARTIFACT_COMPRESSION=9"
+    echo "ARTIFACT_UNZIP=0"
+  } >> "${GITHUB_ENV}"
 
-  # Move packaged files to the upload directory
-  moveToUploadDir "${uploadFilename}" 0
 else
-
+  # A Public Test Build or a Release
   # Check if it's a Public Test Build
-  if [[ "${PublicTestBuild}" == "true" ]]; then
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
 
     # Get the commit date of the last commit
     COMMIT_DATE=$(git show -s --format="%cs")
@@ -166,163 +157,186 @@ else
     if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
       echo "=== No new commits, aborting public test build generation ==="
       exit 0
+    else
+      echo "=== New commits, continuing to create a public test build ==="
     fi
 
-    echo "=== Creating a public test build ==="
-    # Squirrel uses Start menu name from the binary, renaming it
-    mv "${PACKAGE_DIR}/mudlet.exe" "${PACKAGE_DIR}/Mudlet PTB.exe"
-    echo "moved mudlet.exe to ${PACKAGE_DIR}/Mudlet PTB.exe"
-    # ensure sha part always starts with a character due to a known issue
-    VersionAndSha="${VERSION}-ptb-${BUILD_COMMIT}"
-
+    # Squirrel uses the name of the binary for the Start menu, so need to rename
+    # it:
+    PACKAGE_EXE="Mudlet PTB.exe"
   else
     echo "=== Creating a release build ==="
-    mv "${PACKAGE_DIR}/mudlet.exe" "${PACKAGE_DIR}/Mudlet.exe"
-    VersionAndSha="${VERSION}"
+    PACKAGE_EXE="Mudlet.exe"
   fi
 
-  echo "VersionAndSha: ${VersionAndSha}"
+  echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
+  mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
+  PACKAGE_EXE_PATHFILE="$(cygpath -au "${PACKAGE_PATH}/${PACKAGE_EXE}")"
+  PACKAGE_EXE_WINPATHFILE="$(cygpath -aw "${PACKAGE_EXE_PATHFILE}")"
+
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "${GITHUB_WORKSPACE}/installers"
   cd "${GITHUB_WORKSPACE}/installers/windows" || exit 1
 
   echo "=== Setting up Java 21 for signing ==="
-  JAVA_HOME="$(cygpath -u "${JAVA_HOME_21_X64}")"
+  # Java is installed by default, we just need to select which version to use:
+  JAVA_HOME="$(cygpath -au "${JAVA_HOME_21_X64}")"
   export JAVA_HOME
   export PATH="${JAVA_HOME}/bin:${PATH}"
+  JAVA_JAR_WINPATHFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar")"
 
   if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-      echo "=== Code signing skipped - no Azure token provided ==="
+    echo "=== Code signing of Mudlet application and bundled libraries skipped - no Azure token provided ==="
   else
-      echo "=== Signing Mudlet and dll files ==="
-      if [[ "${PublicTestBuild}" == "true" ]]; then
-          java.exe -jar "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar" --storetype TRUSTEDSIGNING \
-              --keystore eus.codesigning.azure.net \
-              --storepass "${AZURE_ACCESS_TOKEN}" \
-              --alias Mudlet/Mudlet \
-              "${PACKAGE_DIR}/Mudlet PTB.exe" "${PACKAGE_DIR}/**/*.dll"
-      else
-          java.exe -jar "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar" --storetype TRUSTEDSIGNING \
-              --keystore eus.codesigning.azure.net \
-              --storepass "${AZURE_ACCESS_TOKEN}" \
-              --alias Mudlet/Mudlet \
-              "${PACKAGE_DIR}/Mudlet.exe" "${PACKAGE_DIR}/**/*.dll"
-      fi
-  fi
-
-  echo "=== Installing Squirrel for Windows ==="
-  nuget install squirrel.windows -ExcludeVersion
-
-  echo "=== Setting up directories ==="
-  SQUIRRELWIN="${GITHUB_WORKSPACE}/squirrel-packaging-prep"
-  SQUIRRELWINBIN="${SQUIRRELWIN}/lib/net45/"
-
-  if [[ ! -d "${SQUIRRELWINBIN}" ]]; then
-    mkdir -p "${SQUIRRELWINBIN}"
-  fi
-
-  echo "=== Moving things to where Squirrel expects them ==="
-  mv "${PACKAGE_DIR}/"* "${SQUIRRELWINBIN}"
-
-  # Set the path to the nuspec file
-  NuSpec="${GITHUB_WORKSPACE}/installers/windows/mudlet.nuspec"
-  echo "=== Creating Nuget package ==="
-
-  # Rename the id and title for Squirrel
-  if [[ "${PublicTestBuild}" == "true" ]]; then
-    # Allow public test builds to be installed side by side with the release builds by renaming the app
-    # No dots in the <id>: Guidelines by Squirrel
-    if [ "${MSYSTEM}" = "MINGW64" ]; then
-      sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_-PublicTestBuild<\/id>/" "${NuSpec}"
-    else
-      sed -i 's/<id>Mudlet<\/id>/<id>Mudlet-PublicTestBuild<\/id>/' "${NuSpec}"
-    fi
-    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS} (Public Test Build)<\/title>/" "${NuSpec}"
-  else
-    if [ "${MSYSTEM}" = "MINGW64" ]; then
-      sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_<\/id>/" "${NuSpec}"
-    fi
-    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS}<\/title>/" "${NuSpec}"
-  fi
-
-  # Create NuGet package
-  nuget pack "${NuSpec}" -Version "${VersionAndSha}" -BasePath "${SQUIRRELWIN}" -OutputDirectory "${SQUIRRELWIN}"
-
-  echo "=== Preparing to create installer ==="
-  if [[ "${PublicTestBuild}" == "true" ]]; then
-    TestBuildString="-PublicTestBuild"
-    InstallerIconFile="${GITHUB_WORKSPACE}/src/icons/mudlet_ptb.ico"
-  else
-    TestBuildString=""
-    InstallerIconFile="${GITHUB_WORKSPACE}/src/icons/mudlet.ico"
-  fi
-
-  # Ensure 64 bit build is properly tagged
-  if [ "${MSYSTEM}" = "MINGW64" ]; then
-    TestBuildString="_64_${TestBuildString}"
-  fi
-
-  nupkg_path="${GITHUB_WORKSPACE}/squirrel-packaging-prep/Mudlet${TestBuildString}.${VersionAndSha}.nupkg"
-  if [[ ! -f "${nupkg_path}" ]]; then
-    echo "=== ERROR: nupkg doesn't exist as expected! Build aborted."
-    exit 4
-  fi
-
-  # Execute Squirrel to create the installer
-  echo "=== Creating installers from Nuget package ==="
-  ./squirrel.windows/tools/Squirrel --releasify "${nupkg_path}" \
-    --releaseDir "${GITHUB_WORKSPACE}/squirreloutput" \
-    --loadingGif "${GITHUB_WORKSPACE}/installers/windows/splash-installing-2x.png" \
-    --no-msi --setupIcon "${InstallerIconFile}"
-    
-  echo "=== Removing old directory content of release folder ==="
-  rm -rf "${PACKAGE_DIR:?}/*"
-
-  echo "=== Copying installer over ==="
-  if [[ "${PublicTestBuild}" == "true" ]]; then
-    installerExePath="${PACKAGE_DIR}/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-${BUILD_BITNESS}.exe"
-  else # release
-    installerExePath="${PACKAGE_DIR}/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-installer.exe"
-  fi
-  echo  "installerExePath: ${installerExePath}"
-  mv "${GITHUB_WORKSPACE}/squirreloutput/Setup.exe" "${installerExePath}"
-
-  # Sign the final installer
-  echo "=== Signing installer ==="
-  java.exe -jar "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar" --storetype TRUSTEDSIGNING \
+    echo "=== Signing Mudlet executable and bundled libraries ==="
+    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
+      --storetype TRUSTEDSIGNING \
       --keystore eus.codesigning.azure.net \
       --storepass "${AZURE_ACCESS_TOKEN}" \
       --alias Mudlet/Mudlet \
-      "${installerExePath}"
+      "${PACKAGE_EXE_WINPATHFILE}" "${PACKAGE_WINPATH}\\**\\*.dll"
+  fi
 
-  # Check if the setup executable exists
-  if [[ ! -f "${installerExePath}" ]]; then
-    echo "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
+  echo "=== Preparing an intermediate artifact of the (signed) code ==="
+  # What will it be called:
+  if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
+  else
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64"
+  fi
+  # This intermediate will NOT be uploaded but will remain on the GH server as
+  # an artifact for a default (90?) days
+  INTERMEDIATE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${PACKAGE_PATH}\\")"
+  {
+    echo "INTERMEDIATE_ARTIFACT_NAME=${INTERMEDIATE_ARTIFACT_NAME}"
+    echo "INTERMEDIATE_ARTIFACT_WINPATHORFILE=${INTERMEDIATE_ARTIFACT_WINPATHORFILE}"
+    echo "INTERMEDIATE_ARTIFACT_COMPRESSION=9"
+  } >> "${GITHUB_ENV}"
 
-    # Check if the SquirrelSetup.log exists and display its content
-    if [[ -f "./squirrel.windows/tools/SquirrelSetup.log" ]]; then
-      echo "SquirrelSetup.log: "
-      cat "./squirrel.windows/tools/SquirrelSetup.log"
+  echo "=== Installing Clowd.Squirrel for Windows ==="
+  # Although archived this is a replacement for the squirrel.windows original
+  nuget install Clowd.Squirrel -ExcludeVersion -NonInteractive
+
+  echo "=== Setting up directories ==="
+  RELEASE_DIR="$(cygpath -au "${GITHUB_WORKSPACE}/release")"
+  mkdir -p "${RELEASE_DIR}"
+  RELEASE_WINDIR="$(cygpath -aw "${RELEASE_DIR}")"
+
+  echo "=== Preparing to create installer ==="
+  # Set parameters for Clowd.Squirrel and other stages
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
+    # Allow public test builds to be installed side by side with the release
+    # builds by renaming the app
+    # No dots in the <id>: Guidelines by Squirrel
+    NAME_SUFFIX='_64_-PublicTestBuild'
+    INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet_ptb.ico")
+    ID='Mudlet_64_-PublicTestBuild'
+    TITLE='Mudlet x64 (Public Test Build)'
+    LOADING_GIF="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-ptb-2x.png")"
+    # Because the packaging tools use "Semantic Versioning" it makes sense
+    # use the date in a number year-first form rather than the SHA1 as
+    # that enables chonological ordering - although we do not seem to rely on it
+    # https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver20sort
+    # This suggested that "4.19.1-ptb.20250811" would work and be sorted.
+    # However it is rejected as invalid. This would seem to suggest that it is
+    # using the older:
+    # https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver10sort
+    # which cannot handle dotted numbers. So revert to original methodology that
+    # appended the short commit SHA1 - and just not worry about any sort of
+    # sorting:
+    INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}"
+    # The name we want to use for the installer;
+    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64.exe"
+    DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    # The name that has to be passed as the artifact so that the Mudlet website
+    # will accept it as a PTB:
+    ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64-installer.exe"
+  else
+    NAME_SUFFIX='_64_'
+    INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet.ico")
+    ID='Mudlet_64_'
+    TITLE='Mudlet x64'
+    LOADING_GIF=$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-2x.png")
+    # Typically       '4.19.1'
+    INSTALLER_VERSION="${VERSION}"
+    # Typically of form: 'Mudlet-4.19.1-windows-64-installer.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}-windows-64-installer.exe"
+    DBLSQD_VERSION_STRING="${VERSION}"
+  fi
+  ./Clowd.Squirrel/tools/Squirrel.exe pack \
+    --allowUnaware \
+    --noDelta \
+    --packId="${ID}" \
+    --packVersion="${INSTALLER_VERSION}" \
+    --packAuthors='Mudlet Makers' \
+    --packTitle="${TITLE}" \
+    --packDir="$(cygpath -aw "${PACKAGE_PATH}")" \
+    --splashImage="${LOADING_GIF}" \
+    --icon="${INSTALLER_ICON_WINFILE}" \
+    --releaseDir="${RELEASE_WINDIR}"
+
+  # The above should produce, for both Release and PTBs SEVERAL files including
+  # a 'Mudlet${NAME_SUFFIX}Setup.exe' in the ${RELEASE_DIR}:
+  # Check if the expected 'setup' executable exists
+  EXPECTED_SETUP_EXE="${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe"
+  if [[ ! -f ${EXPECTED_SETUP_EXE} ]]; then
+    echo "=== ERROR: Clowd.Squirrel failed to generate the installer ${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe! ==="
+    echo 'Build aborted. Squirrel log is:'
+
+    # Check if the Squirrel.log exists and display its content
+    SQUIRREL_LOG_PATHFILE=$(cygpath -au "${LOCALAPPDATA}/SquirrelClowdTemp/Squirrel.log")
+    if [[ -f ${SQUIRREL_LOG_PATHFILE} ]]; then
+      echo "=== SquirrelSetup.log ==="
+      cat "${SQUIRREL_LOG_PATHFILE}"
+    else
+      echo "  \"${SQUIRREL_LOG_PATHFILE}\" - not found"
     fi
-
-    # Check if the Squirrel-Releasify.log exists and display its content
-    if [[ -f "./squirrel.windows/tools/Squirrel-Releasify.log" ]]; then
-      echo "Squirrel-Releasify.log: "
-      cat "./squirrel.windows/tools/Squirrel-Releasify.log"
-    fi
+    echo "=== End of SquirrelSetup.log ==="
 
     exit 5
   fi
 
-  if [[ "${PublicTestBuild}" == "true" ]]; then
-    echo "=== Uploading public test build to make.mudlet.org ==="
+  echo "=== Renaming installer ==="
+  INSTALLER_EXE_WINPATHFILE="$(cygpath -aw "${RELEASE_DIR}/${INSTALLER_EXE}")"
+  INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
+  echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
+  mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
 
-    uploadFilename="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-${BUILD_BITNESS}-installer.exe"
-    echo "uploadFilename: ${uploadFilename}"
+  # Sign the final installer
+  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
+    echo "=== Code signing of Mudlet installer skipped - no Azure token provided ==="
+  else
+    echo "=== Signing installer ==="
+    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
+      --storetype TRUSTEDSIGNING \
+      --keystore eus.codesigning.azure.net \
+      --storepass "${AZURE_ACCESS_TOKEN}" \
+      --alias Mudlet/Mudlet \
+      "${INSTALLER_EXE_WINPATHFILE}"
+  fi
 
-    # Installer named ${uploadFilename} should exist in ${PACKAGE_DIR} now, we're ok to proceed
-    moveToUploadDir "${uploadFilename}" 1
-    RELEASE_TAG="public-test-build"
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
+    echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
+    # Copy the signed installer to a separate directory - as ${RELEASE_WINDIR}
+    # will contain other files we do not want to upload:
+    UPLOAD_PATH=$(cygpath -au "${GITHUB_WORKSPACE}/upload")
+    mkdir -p "${UPLOAD_PATH}"
+    cp -vp "${INSTALLER_EXE_PATHFILE}" "${UPLOAD_PATH}"
+    # Append these variables to the GITHUB_ENV to make them available in
+    # subsequent steps, the fourth one being 1 means "unzip the archive when
+    # it is uploaded to the Mudlet website":
+    ARTIFACT_WINPATHORFILE="$(cygpath -aw "${UPLOAD_PATH}")"
+    {
+      echo "ARTIFACT_NAME=${ARTIFACT_NAME}"
+      echo "ARTIFACT_WINPATHORFILE=${ARTIFACT_WINPATHORFILE}"
+      echo "ARTIFACT_COMPRESSION=0"
+      echo "ARTIFACT_UNZIP=1"
+    } >> "${GITHUB_ENV}"
+
+    # This identifies the "channel" that the release applies to, currently
+    # we have three defined: this one; "release" and (unused) "testing":
+    DBLSQD_CHANNEL="public-test-build"
     CHANGELOG_MODE="ptb"
   else
 
@@ -333,21 +347,21 @@ else
     powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
 
     powershell.exe <<EOF
-\$installerExePath = "${installerExePath}"
+\$installerExePath = "${INSTALLER_EXE_WINPATHFILE}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
 EOF
 
     shred -u temp_key_file
 
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-installer.exe"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
 
     if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
       echo "Error: release not found as expected at ${DEPLOY_URL}"
       exit 1
     fi
 
-    SHA256SUM=$(shasum -a 256 "${installerExePath}" | awk '{print $1}')
+    SHA256SUM=$(shasum -a 256 "${INSTALLER_EXE_PATHFILE}" | awk '{print $1}')
 
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
     read -r day month year hour minute second <<< "${current_timestamp}"
@@ -367,7 +381,7 @@ EOF
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
     -F "file_remote=${DEPLOY_URL}" \
-    -F "file_name=Mudlet ${VERSION} (windows-${BUILD_BITNESS})" \
+    -F "file_name=Mudlet ${VERSION} (windows-64)" \
     -F "file_des=sha256: ${SHA256SUM}" \
     -F "file_cat=${FILE_CATEGORY}" \
     -F "file_permission=-1" \
@@ -384,15 +398,15 @@ EOF
     # Define portable ZIP paths
     PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
     PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
-    
+
     # Check if portable ZIP exists
     if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
       echo "Found portable ZIP at: ${PORTABLE_ZIP_PATH}"
-      
+
       # Create SSH key file for portable upload
       echo "${DEPLOY_SSH_KEY}" > temp_key_file_portable
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
-      
+
       # Upload portable ZIP via SCP with proper naming
       PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
       powershell.exe <<EOF
@@ -401,24 +415,24 @@ EOF
 \$remoteFileName = "${PORTABLE_REMOTE_NAME}"
 scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
 EOF
-      
+
       shred -u temp_key_file_portable
-      
+
       # Define portable ZIP URL - should match the naming convention
       PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
-      
+
       # Verify portable ZIP was uploaded
       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
         echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
         exit 1
       fi
-      
+
       # Calculate SHA256 for portable ZIP
       PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')
-      
+
       echo "=== Registering portable ZIP with WP-Download-Manager ==="
       echo "sha256 of portable ZIP: ${PORTABLE_SHA256SUM}"
-      
+
       # Register portable ZIP with download manager
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
@@ -436,65 +450,69 @@ EOF
       -F "file_timestamp_second=${second}" \
       -F "output=json" \
       -F "do=Add File"
-      
+
       echo "Portable ZIP uploaded and registered successfully"
     else
       echo "Warning: Portable ZIP not found at ${PORTABLE_ZIP_PATH}, skipping portable upload"
     fi
-    
-    RELEASE_TAG="release"
+
+    DBLSQD_CHANNEL="release"
     CHANGELOG_MODE="release"
   fi
 
   echo "=== Installing NodeJS ==="
+  # Check: according to https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md
+  # we already have node 22.17.1 available to us:
   choco install --no-progress nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
   export PATH
 
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
+  echo "=== Logging-in to dblsqd ==="
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
   echo "=== Downloading release feed ==="
-  DownloadedFeed=$(mktemp)
-  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "${DownloadedFeed}"
+  DOWNLOADED_FEED=$(mktemp)
+  # We used to support both "x86" and "x86_64" and stored the current one in ARCH
+  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${DBLSQD_CHANNEL}/win/${ARCH}" -o "${DOWNLOADED_FEED}"
 
   echo "=== Generating a changelog ==="
   cd "${GITHUB_WORKSPACE}/CI" || exit 1
-  
-  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode "${CHANGELOG_MODE}" --releasefile "${DownloadedFeed}")
+
+  GENERATE_CHANGELOG_FILEPATH="$(cygpath -a "${GITHUB_WORKSPACE}/CI/generate-changelog.lua")"
+  CHANGELOG="$(lua5.1 "${GENERATE_CHANGELOG_FILEPATH}" --mode "${CHANGELOG_MODE}" --releasefile "${DOWNLOADED_FEED}")"
+  # cd - seems to swap between the current and previous working directory!
   cd - || exit 1
-  echo "${Changelog}"
+  echo "=== Changelog ==="
+  echo "${CHANGELOG}"
+  echo "=== End of Changelog ==="
 
   echo "=== Creating release in Dblsqd ==="
-  if [[ "${PublicTestBuild}" == "true" ]]; then
-    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
-  else # release
-    VersionString="${VERSION}"
-  fi
-  
-  echo "VersionString: ${VERSION}String"
-  export VersionString
+  echo "DBLSQD_VERSION_STRING=\"${DBLSQD_VERSION_STRING}\""
+  export DBLSQD_VERSION_STRING
 
   # This may fail as a build from another architecture may have already registered a release with dblsqd,
-  # if so, that is OK...
-  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"${Changelog}\" \"${VersionString}\""
-  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "${Changelog}" "${VersionString}" || true
+  # if so, that is OK. Don't reproduce the changelog contents in the following
+  # echo - we've already shown them:
+  echo "dblsqd release -a mudlet -c ${DBLSQD_CHANNEL} -m \${CHANGELOG} \"${DBLSQD_VERSION_STRING}\""
+  dblsqd release -a mudlet -c "${DBLSQD_CHANNEL}" -m "${CHANGELOG}" "${DBLSQD_VERSION_STRING}" || true
 
   # PTB's are handled by the register script, release builds are just pushed here
-  if [[ "${RELEASE_TAG}" == "release" ]]; then
+  if [[ "${DBLSQD_CHANNEL}" == "release" ]]; then
     echo "=== Registering release with Dblsqd ==="
-    echo "dblsqd push -a mudlet -c release -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
-    dblsqd push -a mudlet -c release -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
+    echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
   fi
 
 fi
 
-# Make PublicTestBuild available GHA to check if we need to run the register step
+# Make ARCH, VERSION_STRING and BUILD_COMMIT available to the
+# GHA "build-mudlet-win.yml" workflow so they can be passed to the
+# "Register Release" step:
 {
-  echo "PUBLIC_TEST_BUILD=${PublicTestBuild}"
   echo "ARCH=${ARCH}"
-  echo "VERSION_STRING=${VersionString}"
+  echo "VERSION_STRING=${DBLSQD_VERSION_STRING}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
 } >> "${GITHUB_ENV}"
 
@@ -503,10 +521,10 @@ echo "******************************************************"
 echo ""
 if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
   # A release build
-  echo "Finished building Mudlet ${VERSION}"
+  echo "Finished deploying Mudlet ${VERSION}"
 else
   # Not a release build so include the Git SHA1 in the message
-  echo "Finished building Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+  echo "Finished deploying Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
 fi
 
 if [[ -n "${DEPLOY_URL}" ]]; then

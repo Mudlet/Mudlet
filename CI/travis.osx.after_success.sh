@@ -158,7 +158,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       echo "=== Creating portable version ==="
       PORTABLE_NAME="Mudlet-${VERSION}-${ARCH}-portable"
       cd "${HOME}/Desktop"
-      
+
       # Find the app dynamically to avoid path issues
       APP_PATH=$(find "${BUILD_DIR}" -name "mudlet.app" -type d | head -1)
       if [ -n "$APP_PATH" ]; then
@@ -172,13 +172,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
           echo "Error: Could not find MacOS directory at: $MACOS_DIR"
           exit 1
         fi
-        
+
         # Sign the app bundle specifically for portable version
         if [ -n "$MACOS_SIGNING_PASS" ]; then
           echo "Signing app bundle for portable version"
           sign_app_bundle "$APP_PATH"
         fi
-        
+
         tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
       else
         echo "Error: Could not find mudlet.app anywhere in ${BUILD_DIR}"
