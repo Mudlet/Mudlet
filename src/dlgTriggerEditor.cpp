@@ -79,7 +79,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
 
-    infoAddAlias.summary = tr("<p>Alias react on user input.</p>");
+    infoAddAlias.summary = tr("Alias react on user input.");
     infoAddAlias.options.append({qsl("alias1"), tr("How to add a new alias now"), 
         tr("<ol><li>Click on the 'Add Item' icon above.</li>"
            "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
@@ -974,11 +974,12 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
     //     mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
 
     QString infoText = createInfoText(URL);
-    mpSystemMessageArea->notificationAreaMessageBox->setText(infoText);
     QApplication::beep();
     mudlet::self()->mTrayIcon.showMessage("Debug click", 
         qsl("URL: %1\ninfo text:%2").arg(URL, infoText),
         mudlet::self()->mTrayIcon.icon());
+
+    mpSystemMessageArea->notificationAreaMessageBox->setText(infoText);
 }
 
 void dlgTriggerEditor::slot_editorThemeChanged()
