@@ -8142,7 +8142,7 @@ void dlgTriggerEditor::showIntro()
         break;
     case EditorViewType::cmAliasView:
         // text = msgInfoAddAlias;
-        text = createInfoText(qsl("")); // TODO: How to tell it, there was no link clicked?
+        text = createInfoText(qsl("")); // Got no better idea, how to tell it, there was no link clicked..
         break;
     case EditorViewType::cmScriptView:
         text = msgInfoAddScript;
@@ -8183,15 +8183,16 @@ QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
         infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredContents));
     }
 
-    return qsl("<p>%1</p><ol>%2</ol>")
-        .arg(infoTextSummary, infoTextOptions);
+    return qsl("<p>%1</p><ul>%2</ul>%3")
+        .arg(infoTextSummary, infoTextOptions, desiredContents); // TODO: DEBUG: remove %3 and desiredContents
 }
 
 
 QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents)
 {
     if (option.name != desiredContents) {
-        return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
+        // TODO: DEBUG: return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
+        return qsl("<li>%1 - %2</a></li>").arg(option.name, option.headline);
     } else {
         return qsl("<li>%1%2</li>").arg(option.headline, option.contents); // %2 wrapped in <p></p> etc.
     }
