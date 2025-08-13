@@ -976,7 +976,7 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
     if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
-        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
+        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(mCurrentView, URL));
     }
 }
 
@@ -8147,11 +8147,12 @@ void dlgTriggerEditor::showIntro()
         text = msgInfoAddTrigger;
         break;
     case EditorViewType::cmTimerView:
-        text = msgInfoAddTimer;
+        // text = msgInfoAddTimer;
+        text = createInfoText(mCurrentView);
         break;
     case EditorViewType::cmAliasView:
         // text = msgInfoAddAlias;
-        text = createInfoText(qsl("")); // Got no better idea, how to tell it, there was no link clicked..
+        text = createInfoText(mCurrentView);
         break;
     case EditorViewType::cmScriptView:
         text = msgInfoAddScript;
@@ -8180,22 +8181,24 @@ void dlgTriggerEditor::showIntro()
     }
 }
 
-QString dlgTriggerEditor::createInfoText(const QString& desiredOption)
+QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QString& desiredOption)
 {
-    QString infoTextOptions;
-    QString infoTextSummary;
-
     // TODO: Prototype currently works for Alias only
-    infoTextSummary = infoAddAlias.summary;
-    QVectorIterator<infoOption> iterateOptions(infoAddAlias.options);
+    if (!infoAddItem.contains(viewType)) {
+        qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view, not implemented yet";
+        return(QString);
+    }
+
+    infoTextParts infoAddCurrentItem = infoAddItem.key(viewType);
+    QVectorIterator<infoOption> iterateOptions(infoAddCurrentItem.options);
+    QString infoTextOptions;
     while (iterateOptions.hasNext()) {
         infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredOption));
     }
 
     return qsl("<p>%1</p><ul>%2</ul>")
-        .arg(infoTextSummary, infoTextOptions);
+        .arg(infoAddCurrentItem.summary, infoTextOptions);
 }
-
 
 QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredOption)
 {
