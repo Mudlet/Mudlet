@@ -16,6 +16,26 @@ sign_and_notarize () {
   done
 }
 
+sign_app_bundle () {
+
+  local appBundle="$1"
+  echo "Signing app bundle: ${appBundle}"
+  codesign -s "$IDENTITY" -o runtime --timestamp "${appBundle}"
+  echo "Successfully signed app bundle"
+
+  echo "Notarizing app bundle"
+  for i in {1..3}; do
+    echo "Trying to notarize app bundle (attempt ${i})"
+    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
+      echo "Successfully notarized app bundle"
+      break
+    fi
+  done
+
+  echo "Stapling notarization ticket to app bundle"
+  xcrun stapler staple "${appBundle}"
+}
+
 BUILD_DIR="${BUILD_FOLDER}"
 SOURCE_DIR="${GITHUB_WORKSPACE}"
 
@@ -134,6 +154,49 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
 
+      # Create portable version (compressed .app bundle)
+      echo "=== Creating portable version ==="
+      PORTABLE_NAME="Mudlet-${VERSION}-${ARCH}-portable"
+      cd "${HOME}/Desktop"
+      
+      # Find the app dynamically to avoid path issues
+      APP_PATH=$(find "${BUILD_DIR}" -name "mudlet.app" -type d | head -1)
+      if [ -n "$APP_PATH" ]; then
+        APP_DIR=$(dirname "$APP_PATH")
+        echo "Found mudlet.app at: $APP_PATH"
+        MACOS_DIR="${APP_PATH}/Contents/MacOS"
+        if [ -d "$MACOS_DIR" ]; then
+          touch "${MACOS_DIR}/portable.txt"
+          echo "Created portable.txt at: ${MACOS_DIR}/portable.txt"
+        else
+          echo "Error: Could not find MacOS directory at: $MACOS_DIR"
+          exit 1
+        fi
+        
+        # Sign the app bundle specifically for portable version
+        if [ -n "$MACOS_SIGNING_PASS" ]; then
+          echo "Signing app bundle for portable version"
+          sign_app_bundle "$APP_PATH"
+        fi
+        
+        tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+      else
+        echo "Error: Could not find mudlet.app anywhere in ${BUILD_DIR}"
+        echo "Directory contents:"
+        find "${BUILD_DIR}" -name "*.app" -type d
+        exit 1
+      fi
+      PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
+
+      echo "=== Uploading portable version ==="
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
+        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+        exit 1
+      fi
+
       if [ "${ARCH}" = "arm64" ]; then
         FILE_CATEGORY="4"
       else
@@ -144,12 +207,31 @@ if [ "${DEPLOY}" = "deploy" ]; then
       current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
       read -r day month year hour minute second <<< "$current_timestamp"
 
+      # Upload regular DMG version
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
       -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
       -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=${FILE_CATEGORY}" \
+      -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
+      -F "output=json" \
+      -F "do=Add File"
+
+      # Upload portable version
+      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$PORTABLE_DEPLOY_URL" \
+      -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS Portable)" \
+      -F "file_des=sha256: $PORTABLE_SHA256SUM" \
       -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \
       -F "file_timestamp_day=$day" \
