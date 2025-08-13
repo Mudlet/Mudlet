@@ -969,7 +969,7 @@ void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
     mSearchSplitterState = searchSplitter->saveState();
 }
 
-void slot_clickedMessageBox(const QString& URL)
+void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 {
     //     mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
 
