@@ -8252,10 +8252,10 @@ QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QS
     }
 
     infoTextParts infoAddCurrentItem = infoAddItem.value(viewType);
-    QVectorIterator<infoOption> iterateOptions(infoAddCurrentItem.options);
     QString infoTextOptions;
-    while (iterateOptions.hasNext()) {
-        infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredOption));
+
+    for (const infoOption &currentOption : infoAddCurrentItem.options) {
+        infoTextOptions.append(createInfoOptionText(currentOption, desiredOption));
     }
 
     return qsl("<p>%1</p><ul>%2</ul>")
