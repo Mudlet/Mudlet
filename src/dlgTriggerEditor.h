@@ -616,7 +616,6 @@ private:
     };
 
     QMap<EditorViewType, infoTextParts> infoAddItem;
-    infoTextParts infoAddAlias;
 
     void showIntro();
     QString createInfoText(const EditorViewType, const QString& = QString());

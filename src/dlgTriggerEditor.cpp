@@ -79,18 +79,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
 
-    infoAddAlias.summary = tr("Alias react on user input.");
-    infoAddAlias.options.append({qsl("alias1"), tr("How to add a new alias now"), 
-        tr("<ol><li>Click on the 'Add Item' icon above.</li>"
-           "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
-           "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
-           "<li><strong>Activate</strong> the alias.</li></ol>")});
-    infoAddAlias.options.append({qsl("alias2"), tr("How to add a new alias from the command line"), 
-        tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")});
-    infoAddAlias.options.append({qsl("alias3"), tr("Check the Mudlet manual for more information"), 
-        tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")});
-
-    infoAddItem.insert(EditorViewType::cmAliasView, {infoAddAlias.summary, infoAddAlias.options});
+    infoAddItem.insert(EditorViewType::cmAliasView, {
+        tr("Alias react on user input."), {
+        {qsl("alias1"), tr("How to add a new alias now"),
+            tr("<ol><li>Click on the 'Add Item' icon above.</li>"
+               "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
+               "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
+               "<li><strong>Activate</strong> the alias. That's it!</li></ol>")},
+        {qsl("alias2"), tr("How to add a new alias from the command line"),
+            tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
+        {qsl("alias3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")}
+        }
+    });
 
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
