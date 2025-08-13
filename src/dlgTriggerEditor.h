@@ -615,7 +615,7 @@ private:
         QVector<infoOption> options;
     };
 
-    // QVector<infoTextParts> infoTextsForAllObjects;
+    QMap<EditorViewType, infoTextParts> infoAddItem;
     infoTextParts infoAddAlias;
 
     void showIntro();

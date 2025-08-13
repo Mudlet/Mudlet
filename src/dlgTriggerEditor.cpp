@@ -90,6 +90,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     infoAddAlias.options.append({qsl("alias3"), tr("Check the Mudlet manual for more information"), 
         tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")});
 
+    infoAddItem.insert(EditorViewType::cmAliasView, {infoAddAlias.summary, infoAddAlias.options});
+
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
                            "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
@@ -8200,7 +8202,7 @@ QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const Q
     if (option.name != desiredContents) {
         return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
     } else {
-        return qsl("<li>%1%2</li>").arg(option.headline, option.contents); // %2 wrapped in <p></p> etc.
+        return qsl("<li><strong>%1</strong>%2</li>").arg(option.headline, option.contents); // contents are wrapped in <p></p> etc.
     }
 }
 
