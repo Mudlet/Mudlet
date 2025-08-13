@@ -8180,7 +8180,7 @@ void dlgTriggerEditor::showIntro()
     }
 }
 
-QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
+QString dlgTriggerEditor::createInfoText(const QString& desiredOption)
 {
     QString infoTextOptions;
     QString infoTextSummary;
@@ -8189,7 +8189,7 @@ QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
     infoTextSummary = infoAddAlias.summary;
     QVectorIterator<infoOption> iterateOptions(infoAddAlias.options);
     while (iterateOptions.hasNext()) {
-        infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredContents));
+        infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredOption));
     }
 
     return qsl("<p>%1</p><ul>%2</ul>")
@@ -8197,9 +8197,9 @@ QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
 }
 
 
-QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents)
+QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredOption)
 {
-    if (option.name != desiredContents) {
+    if (option.name != desiredOption) {
         return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
     } else {
         return qsl("<li><strong>%1</strong>%2</li>").arg(option.headline, option.contents); // contents are wrapped in <p></p> etc.
