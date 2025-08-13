@@ -8246,7 +8246,6 @@ void dlgTriggerEditor::showIntro()
 
 QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QString& desiredOption)
 {
-    // TODO: Prototype currently works for Alias only
     if (!infoAddItem.contains(viewType)) {
         qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view";
         return(QString());
