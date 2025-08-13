@@ -615,11 +615,10 @@ private:
         QVector<infoOption> options;
     };
 
-    // QVector<infoTextParts> infoTextsForAllObjects;
-    infoTextParts infoAddAlias;
+    QMap<EditorViewType, infoTextParts> infoAddItem;
 
     void showIntro();
-    QString createInfoText(const QString&);
+    QString createInfoText(const EditorViewType, const QString& = QString());
     QString createInfoOptionText(const infoOption&, const QString&); 
     QString descActive;
     QString descInactive;

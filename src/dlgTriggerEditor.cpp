@@ -79,16 +79,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
 
-    infoAddAlias.summary = tr("Alias react on user input.");
-    infoAddAlias.options.append({qsl("alias1"), tr("How to add a new alias now"), 
-        tr("<ol><li>Click on the 'Add Item' icon above.</li>"
-           "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
-           "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
-           "<li><strong>Activate</strong> the alias.</li></ol>")});
-    infoAddAlias.options.append({qsl("alias2"), tr("How to add a new alias from the command line"), 
-        tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")});
-    infoAddAlias.options.append({qsl("alias3"), tr("Check the Mudlet manual for more information"), 
-        tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")});
+    infoAddItem.insert(EditorViewType::cmAliasView, {
+        tr("Alias react on user input."), {
+        {qsl("alias1"), tr("How to add a new alias now"),
+            tr("<ol><li>Click on the 'Add Item' icon above.</li>"
+               "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
+               "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
+               "<li><strong>Activate</strong> the alias. That's it!</li></ol>")},
+        {qsl("alias2"), tr("How to add a new alias from the command line"),
+            tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
+        {qsl("alias3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")}
+        }
+    });
 
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -974,7 +977,7 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
     if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
-        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
+        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(mCurrentView, URL));
     }
 }
 
@@ -8145,11 +8148,12 @@ void dlgTriggerEditor::showIntro()
         text = msgInfoAddTrigger;
         break;
     case EditorViewType::cmTimerView:
-        text = msgInfoAddTimer;
+        // text = msgInfoAddTimer;
+        text = createInfoText(mCurrentView);
         break;
     case EditorViewType::cmAliasView:
         // text = msgInfoAddAlias;
-        text = createInfoText(qsl("")); // Got no better idea, how to tell it, there was no link clicked..
+        text = createInfoText(mCurrentView);
         break;
     case EditorViewType::cmScriptView:
         text = msgInfoAddScript;
@@ -8164,7 +8168,7 @@ void dlgTriggerEditor::showIntro()
         text = msgInfoAddVar;
         break;
     default:
-        qWarning() << "ERROR: dlgTriggerEditor::showInfo() undefined view, not sure what to show";
+        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view, not sure what to show";
     }
 
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
@@ -8178,29 +8182,31 @@ void dlgTriggerEditor::showIntro()
     }
 }
 
-QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
+QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QString& desiredOption)
 {
-    QString infoTextOptions;
-    QString infoTextSummary;
-
     // TODO: Prototype currently works for Alias only
-    infoTextSummary = infoAddAlias.summary;
-    QVectorIterator<infoOption> iterateOptions(infoAddAlias.options);
+    if (!infoAddItem.contains(viewType)) {
+        qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view, not implemented yet";
+        return(QString());
+    }
+
+    infoTextParts infoAddCurrentItem = infoAddItem.value(viewType);
+    QVectorIterator<infoOption> iterateOptions(infoAddCurrentItem.options);
+    QString infoTextOptions;
     while (iterateOptions.hasNext()) {
-        infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredContents));
+        infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredOption));
     }
 
     return qsl("<p>%1</p><ul>%2</ul>")
-        .arg(infoTextSummary, infoTextOptions);
+        .arg(infoAddCurrentItem.summary, infoTextOptions);
 }
 
-
-QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredContents)
+QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredOption)
 {
-    if (option.name != desiredContents) {
+    if (option.name != desiredOption) {
         return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
     } else {
-        return qsl("<li>%1%2</li>").arg(option.headline, option.contents); // %2 wrapped in <p></p> etc.
+        return qsl("<li><strong>%1</strong>%2</li>").arg(option.headline, option.contents); // contents are wrapped in <p></p> etc.
     }
 }
 
