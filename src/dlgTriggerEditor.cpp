@@ -85,7 +85,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<ol><li>Click on the 'Add Item' icon above.</li>"
                "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
                "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
-               "<li><strong>Activate</strong> the alias. That's it!</li></ol>")},
+               "<li><strong>Activate</strong> the alias.</li></ol>")},
         {qsl("alias2"), tr("How to add a new alias from the command line"),
             tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
         {qsl("alias3"), tr("Check the Mudlet manual for more information"),
@@ -102,16 +102,37 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                            "<p>That's it! If you'd like to be able to create triggers from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>more information</a>.</p>");
 
-    msgInfoAddScript = tr("<p>Scripts organize code and can react to events. To add a new script:"
-                          "<ol><li>Click on the 'Add Item' icon above.</li>"
-                          "<li>Enter a script in the box below. You can for example define <strong>functions</strong> to be called by other triggers, aliases, etc.</li>"
-                          "<li>If you write lua <strong>commands</strong> without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
-                          "<li>If needed, you can register a list of <strong>events</strong> with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</li>"
-                          "<li><strong>Activate</strong> the script.</li></ol></p>"
-                          "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>"
-                          "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
-                          "<p><code>lua registerAnonymousEventHandler(&quot;nameOfTheMudletEvent&quot;, &quot;nameOfYourFunctionToBeCalled&quot;)</code></p>"
-                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>more information</a>.</p>");
+    infoAddItem.insert(EditorViewType::cmTriggerView, {
+        tr("Triggers react on game output."), {
+        {qsl("trigger1"), tr("How to add a new trigger now"),
+            tr("<ol><li>Click on the 'Add Item' icon above.</li>"
+               "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
+               "<li>Select the appropriate pattern <strong>type</strong>.</li>"
+               "<li>Define a clear text <strong>command</strong> that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
+               "<li><strong>Activate</strong> the trigger.</li></ol>")},
+        {qsl("trigger2"), tr("How to add a new trigger from the command line"),
+            tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
+        {qsl("trigger3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.</p>")}
+        }
+    });
+
+    infoAddItem.insert(EditorViewType::cmScriptView, {
+        tr("Scripts organize code and can react to events."), {
+        {qsl("script1"), tr("How to add a new script now"),
+            tr("<ol><li>Click on the 'Add Item' icon above.</li>"
+               "<li>Enter a script in the box below. You can for example define <strong>functions</strong> to be called by other triggers, aliases, etc.</li>"
+               "<li>If you write lua <strong>commands</strong> without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
+               "<li><strong>Activate</strong> the script.</li></ol>"
+               "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>")},
+        {qsl("script2"), tr("How to have a script react to events"),
+            tr("<p>You can register a list of <strong>events</strong> with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</p>"
+               "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
+               "<p><code>lua registerAnonymousEventHandler(&quot;nameOfTheMudletEvent&quot;, &quot;nameOfYourFunctionToBeCalled&quot;)</code></p>")},
+        {qsl("script3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.</p>")}
+        }
+    });
 
     msgInfoAddTimer = tr("<p>Timers react after a timespan once or regularly. To add a new timer:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -124,6 +145,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>This will greet you exactly 3 seconds after it was made.</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>more information</a>.</p>");
 
+    infoAddItem.insert(EditorViewType::cmTimerView, {
+        tr("Timers react after a timespan once or regularly."), {
+        {qsl("timer1"), tr("How to add a new timer now"),
+            tr("<ol><li>Click on the 'Add Item' icon above.</li>"
+               "<li>Define the <strong>timespan</strong> after which the timer should react in a this format: hours : minutes : seconds.</li>"
+               "<li>Define a clear text <strong>command</strong> that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
+               "<li><strong>Activate</strong> the timer.</li></ol>"
+               "<p><strong>Note:</strong> If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.</p>")},
+        {qsl("timer2"), tr("How to add a new timer from the command line"),
+            tr("<p>Timers can also be defined from the input line in the main profile window like this:</p>"
+               "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
+               "<p>This will greet you exactly 3 seconds after it was made.</p>")},
+        {qsl("timer3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>Introduction to Timers</a> for a detailed overview.</p>")}
+        }
+    });
+
     msgInfoAddButton = tr("<p>Buttons react on mouse clicks. To add a new button:"
                           "<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
                           "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
@@ -134,6 +172,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                           "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
                           "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>more information</a>.</p>");
 
+    infoAddItem.insert(EditorViewType::cmActionView, {
+        tr("Buttons react on mouse clicks."), {
+        {qsl("button1"), tr("How to add a new button now"),
+            tr("<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
+               "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
+               "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
+               "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
+               "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
+               "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
+               "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>")},
+//        {qsl("button2"), tr("How to add a new button from the command line"),
+//            tr("")},
+        {qsl("button3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.</p>")}
+        }
+    });
+
     msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
                        "<ol><li>Click on the 'Add Item' icon above.</li>"
                        "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
@@ -143,6 +198,22 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
                        "<p>Pressing F8 will make you jump.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>more information</a>.</p>");
+
+    infoAddItem.insert(EditorViewType::cmKeysView, {
+        tr("Keys react on keyboard presses."), {
+        {qsl("key1"), tr("How to add a new keybinding now"),
+            tr("<ol><li>Click on the 'Add Item' icon above.</li>"
+               "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
+               "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
+               "<li><strong>Activate</strong> the new key binding.</li></ol>")},
+        {qsl("key2"), tr("How to add a new keybinding from the command line"),
+            tr("<p>Keys can be defined from the input line in the main profile window like this:</p>"
+               "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
+               "<p>Pressing F8 will make you jump.</p>")},
+        {qsl("key3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.</p>")}
+        }
+    });
 
     msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
                        "<ol><li>Click on the 'Add Item' icon above. To add a table instead click 'Add Group'.</li>"
@@ -155,6 +226,24 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p><code>lua foo = &quot;bar&quot;</code></p>"
                        "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>more information</a>.</p>");
+
+    infoAddItem.insert(EditorViewType::cmVarsView, {
+        tr("Variables store information."), {
+        {qsl("variable1"), tr("How to add a new variable now"),
+            tr("<ol><li>Click on the 'Add Item' icon above. To add a table instead click 'Add Group'.</li>"
+               "<li>Select type of variable value (can be a string, integer, boolean)</li>"
+               "<li>Enter the value you want to store in this variable.</li>"
+               "<li>If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.</li>"
+               "<li>To remove a variable manually, set it to 'nil' or click on the 'Delete' icon above.</li></ol>"
+               "<p><strong>Note:</strong> Variables created here won't be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.</p>")},
+        {qsl("variable2"), tr("How to add a new variable from the command line"),
+            tr("<p>Variables and tables can also be defined from the input line in the main profile window like this:</p>"
+               "<p><code>lua foo = &quot;bar&quot;</code></p>"
+               "<p>This will create a string called 'foo' with 'bar' as its value.</p>")},
+        {qsl("variable3"), tr("Check the Mudlet manual for more information"),
+            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>Introduction to Variables</a> for a detailed overview.</p>")}
+        }
+    });
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
     //: Item is currently on, short enough to be spoken
@@ -8142,34 +8231,7 @@ void dlgTriggerEditor::showInfo(const QString& error)
 
 void dlgTriggerEditor::showIntro()
 {
-    QString text;
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView:
-        text = msgInfoAddTrigger;
-        break;
-    case EditorViewType::cmTimerView:
-        // text = msgInfoAddTimer;
-        text = createInfoText(mCurrentView);
-        break;
-    case EditorViewType::cmAliasView:
-        // text = msgInfoAddAlias;
-        text = createInfoText(mCurrentView);
-        break;
-    case EditorViewType::cmScriptView:
-        text = msgInfoAddScript;
-        break;
-    case EditorViewType::cmActionView:
-        text = msgInfoAddButton;
-        break;
-    case EditorViewType::cmKeysView:
-        text = msgInfoAddKey;
-        break;
-    case EditorViewType::cmVarsView:
-        text = msgInfoAddVar;
-        break;
-    default:
-        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view, not sure what to show";
-    }
+    QString text = createInfoText(mCurrentView);
 
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
@@ -8186,7 +8248,7 @@ QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QS
 {
     // TODO: Prototype currently works for Alias only
     if (!infoAddItem.contains(viewType)) {
-        qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view, not implemented yet";
+        qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view";
         return(QString());
     }
 
@@ -10445,7 +10507,7 @@ void dlgTriggerEditor::clearTimerForm()
 {
     mpTimersMainArea->hide();
     mpTimersMainArea->hide();
-    showInfo(msgInfoAddTimer);
+    showIntro();
 }
 
 void dlgTriggerEditor::clearAliasForm()
@@ -10459,28 +10521,28 @@ void dlgTriggerEditor::clearScriptForm()
 {
     mpScriptsMainArea->hide();
     mpSourceEditorArea->hide();
-    showInfo(msgInfoAddScript);
+    showIntro();
 }
 
 void dlgTriggerEditor::clearActionForm()
 {
     mpActionsMainArea->hide();
     mpSourceEditorArea->hide();
-    showInfo(msgInfoAddButton);
+    showIntro();
 }
 
 void dlgTriggerEditor::clearKeyForm()
 {
     mpKeysMainArea->hide();
     mpSourceEditorArea->hide();
-    showInfo(msgInfoAddKey);
+    showIntro();
 }
 
 void dlgTriggerEditor::clearVarForm()
 {
     mpVarsMainArea->hide();
     mpSourceEditorArea->hide();
-    showInfo(msgInfoAddVar);
+    showIntro();
 }
 
 void dlgTriggerEditor::setEditorShowBidi(const bool state)
