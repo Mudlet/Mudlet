@@ -971,15 +971,11 @@ void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
 
 void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 {
-    //     mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
-
-    QString infoText = createInfoText(URL);
-    QApplication::beep();
-    mudlet::self()->mTrayIcon.showMessage("Debug click", 
-        qsl("URL: %1\ninfo text:%2").arg(URL, infoText),
-        mudlet::self()->mTrayIcon.icon());
-
-    mpSystemMessageArea->notificationAreaMessageBox->setText(infoText);
+    if (URL.startsWith("http")) {
+        QDesktopServices::openUrl(URL);
+    } else { // internal links used by expanding info text navigation
+        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
+    }
 }
 
 void dlgTriggerEditor::slot_editorThemeChanged()
@@ -8194,8 +8190,8 @@ QString dlgTriggerEditor::createInfoText(const QString& desiredContents)
         infoTextOptions.append(createInfoOptionText(iterateOptions.next(), desiredContents));
     }
 
-    return qsl("<p>%1</p><ul>%2</ul>%3")
-        .arg(infoTextSummary, infoTextOptions, desiredContents); // TODO: DEBUG: remove %3 and desiredContents
+    return qsl("<p>%1</p><ul>%2</ul>")
+        .arg(infoTextSummary, infoTextOptions);
 }
 
 
