@@ -8166,7 +8166,7 @@ void dlgTriggerEditor::showIntro()
         text = msgInfoAddVar;
         break;
     default:
-        qWarning() << "ERROR: dlgTriggerEditor::showInfo() undefined view, not sure what to show";
+        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view, not sure what to show";
     }
 
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
