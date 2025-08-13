@@ -977,7 +977,7 @@ void slot_clickedMessageBox(const QString& URL)
     mpSystemMessageArea->notificationAreaMessageBox->setText(infoText);
     QApplication::beep();
     mudlet::self()->mTrayIcon.showMessage("Debug click", 
-        qsl("URL: %1\ninfo text:%2".arg(URL, infoText)),
+        qsl("URL: %1\ninfo text:%2").arg(URL, infoText),
         mudlet::self()->mTrayIcon.icon());
 }
 
