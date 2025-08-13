@@ -198,9 +198,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
-    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, [=](const QString& URL) {
-        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
-    });
+    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, &dlgTriggerEditor::slot_clickedMessageBox);
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
@@ -969,6 +967,18 @@ void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
     Q_UNUSED(pos)
     Q_UNUSED(index)
     mSearchSplitterState = searchSplitter->saveState();
+}
+
+void slot_clickedMessageBox(const QString& URL)
+{
+    //     mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(URL));
+
+    QString infoText = createInfoText(URL);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(infoText);
+    QApplication::beep();
+    mudlet::self()->mTrayIcon.showMessage("Debug click", 
+        qsl("URL: %1\ninfo text:%2".arg(URL, infoText)),
+        mudlet::self()->mTrayIcon.icon());
 }
 
 void dlgTriggerEditor::slot_editorThemeChanged()

@@ -315,6 +315,7 @@ private slots:
     void slot_restoreEditorItemsToolbar();
     void slot_itemEdited();
     void slot_searchSplitterMoved(const int pos, const int index);
+    void slot_clickedMessageBox(const QString&);
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -620,7 +621,6 @@ private:
     void showIntro();
     QString createInfoText(const QString&);
     QString createInfoOptionText(const infoOption&, const QString&); 
-    
     QString descActive;
     QString descInactive;
     QString descActiveFolder;
