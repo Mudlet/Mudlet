@@ -4245,7 +4245,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
-    showIntro();
+    showInfo(msgInfoAddAlias);
     slot_aliasSelected(treeWidget_aliases->currentItem());
 }
 
@@ -10425,7 +10425,7 @@ void dlgTriggerEditor::clearTriggerForm()
 {
     mpTriggersMainArea->hide();
     mpSourceEditorArea->hide();
-    showInfo(msgInfoAddTrigger);
+    showIntro();
 }
 
 void dlgTriggerEditor::clearTimerForm()
@@ -10439,7 +10439,7 @@ void dlgTriggerEditor::clearAliasForm()
 {
     mpAliasMainArea->hide();
     mpSourceEditorArea->hide();
-    showInfo(msgInfoAddAlias);
+    showIntro();
 }
 
 void dlgTriggerEditor::clearScriptForm()
