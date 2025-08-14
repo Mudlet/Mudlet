@@ -60,17 +60,17 @@ FetchAndCheckURL() {
       return 1
     fi
 
-    if [ "$ARCH" == "x86_64" ]; then
-      search_pattern="windows-64.exe"
+    if [ "${ARCH}" == "x86_64" ]; then
+      SEARCH_PATTERN="windows-64.exe"
     else
       echo "ARCH environment variable is not set to x86_64 as expected."
       exit 2
     fi
 
-    echo "Searching for $search_pattern"
+    echo "Searching for ${SEARCH_PATTERN}"
 
     # Use jq to filter the JSON data
-    matching_url=$(echo "$json_data" | jq -r --arg search_pattern "$search_pattern" '.data[] | select(.platform == "windows" and (.url | test($search_pattern))) | .url')
+    matching_url=$(echo "$json_data" | jq -r --arg search_pattern "${SEARCH_PATTERN}" '.data[] | select(.platform == "windows" and (.url | test(${SEARCH_PATTERN}))) | .url')
 
     # Check if the URL was found
     if [ -z "$matching_url" ]; then
