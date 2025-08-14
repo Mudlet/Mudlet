@@ -221,6 +221,48 @@ cp -v -p -t . \
 
 echo ""
 
+# Create portable version
+echo "Creating portable ZIP package..."
+PORTABLE_ZIP_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/portable-${MSYSTEM}-${BUILD_CONFIG}"
+if [ -d "${PORTABLE_ZIP_DIR}" ]; then
+  rm -rf "${PORTABLE_ZIP_DIR}"
+fi
+mkdir -p "${PORTABLE_ZIP_DIR}"
+
+# Copy all packaged files to portable directory
+cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"
+
+# Create portable.txt file to enable portable mode (empty file)
+touch "${PORTABLE_ZIP_DIR}/portable.txt"
+echo "Created portable.txt file in: ${PORTABLE_ZIP_DIR}/portable.txt"
+
+# Verify portable.txt was created
+if [ -f "${PORTABLE_ZIP_DIR}/portable.txt" ]; then
+  echo "portable.txt file exists and is ready for packaging"
+  ls -la "${PORTABLE_ZIP_DIR}/portable.txt"
+else
+  echo "ERROR: portable.txt file was not created!"
+  exit 1
+fi
+
+# Create the portable ZIP archive
+cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
+PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
+
+echo "Creating ZIP from directory: $(basename "${PORTABLE_ZIP_DIR}")"
+echo "Contents of portable directory before ZIP creation:"
+ls -la "${PORTABLE_ZIP_DIR}/" | head -20
+
+zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"
+
+# Verify portable.txt is in the ZIP
+echo "Verifying portable.txt is in the ZIP:"
+unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt || echo "WARNING: portable.txt not found in ZIP!"
+
+echo ""
+echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
+echo ""
+
 # For debugging purposes:
 # echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "~/src/mudlet/package"):"
 # /usr/bin/ls -aRl
