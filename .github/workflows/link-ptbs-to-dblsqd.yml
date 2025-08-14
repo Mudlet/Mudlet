@@ -20,8 +20,11 @@ jobs:
 
     - name: Retrieve latest PTB version
       run: |
-        # Get the latest Windows version, because that one runs first and will be registered in dblsqd. Linux/macOS won't exist yet
-        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86 | jq --raw-output ".releases[0].version")
+        # Get the latest Windows version, because that one runs first and will
+        # be registered in dblsqd. Linux/macOS won't exist yet. Note that we
+        # had to switch to the "x86_64" arch in 2025 as we stopped producing
+        # 32 bit Windows builds "x86" arch earlier in that year
+        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64 | jq --raw-output ".releases[0].version")
         export PTB_COMMIT=$(lua -e "print(os.getenv('PTB_VERSION'):match('.+\-(.+)$'))")
 
         echo "Latest PTB version is: $PTB_VERSION"

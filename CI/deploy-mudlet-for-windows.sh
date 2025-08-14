@@ -38,7 +38,8 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   exit 2
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILDCOMPONENT="x86_64"
-  export ARCH="x86_64"
+  # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
+  # as well and exported this value as ARCH for use here and in other scripts
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
@@ -474,8 +475,7 @@ EOF
 
   echo "=== Downloading release feed ==="
   DOWNLOADED_FEED=$(mktemp)
-  # We used to support both "x86" and "x86_64" and stored the current one in ARCH
-  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${DBLSQD_CHANNEL}/win/${ARCH}" -o "${DOWNLOADED_FEED}"
+  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${DBLSQD_CHANNEL}/win/x86_64" -o "${DOWNLOADED_FEED}"
 
   echo "=== Generating a changelog ==="
   cd "${GITHUB_WORKSPACE}/CI" || exit 1
@@ -501,17 +501,16 @@ EOF
   # PTB's are handled by the register script, release builds are just pushed here
   if [[ "${DBLSQD_CHANNEL}" == "release" ]]; then
     echo "=== Registering release with Dblsqd ==="
-    echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
-    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
+    echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64 \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}"
   fi
 
 fi
 
-# Make ARCH, VERSION_STRING and BUILD_COMMIT available to the
+# Make VERSION_STRING and BUILD_COMMIT available to the
 # GHA "build-mudlet-win.yml" workflow so they can be passed to the
 # "Register Release" step:
 {
-  echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${DBLSQD_VERSION_STRING}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
 } >> "${GITHUB_ENV}"
