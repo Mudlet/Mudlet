@@ -113,7 +113,6 @@ fi
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-# Deploy Qt dependencies, including optional modules like TextToSpeech
 "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
 
 # To determine which system libraries have to be copied in it requires
