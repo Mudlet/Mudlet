@@ -2,6 +2,10 @@
 If you don't have previous Git experience, we highly recommend downloading and installing
 the free [Github for Desktop](https://desktop.github.com) app to contribute code to Mudlet 🌟
 
+# UI design guidelines
+
+Have a look at the [UI design philosophy](UI-design-philosophy.md) when improving Mudlet's interface.
+
 # Coding guidelines
 
 If you're a first-timer, don't worry about conforming to all of these! We'll show you the ropes.
