@@ -8253,22 +8253,14 @@ QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QS
 
     infoTextParts infoAddCurrentItem = infoAddItem.value(viewType);
     QString infoTextOptions;
-
-    for (const infoOption &currentOption : infoAddCurrentItem.options) {
-        infoTextOptions.append(createInfoOptionText(currentOption, desiredOption));
+    for (const auto &[name, headline, contents] : infoAddCurrentItem.options) {
+        infoTextOptions.append(
+            (name != desiredOption)
+            ? qsl("<li><a href='%1'>%2</a></li>").arg(name, headline)
+            : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
-
     return qsl("<p>%1</p><ul>%2</ul>")
         .arg(infoAddCurrentItem.summary, infoTextOptions);
-}
-
-QString dlgTriggerEditor::createInfoOptionText(const infoOption& option, const QString& desiredOption)
-{
-    if (option.name != desiredOption) {
-        return qsl("<li><a href='%1'>%2</a></li>").arg(option.name, option.headline);
-    } else {
-        return qsl("<li><strong>%1</strong>%2</li>").arg(option.headline, option.contents); // contents are wrapped in <p></p> etc.
-    }
 }
 
 void dlgTriggerEditor::slot_showActions()
