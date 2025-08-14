@@ -75,7 +75,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 
 TRoom::~TRoom()
 {
-    if (mpRoomDB) {
+    if (mpRoomDB && !mpRoomDB->mBulkDeletionMode) {
         mpRoomDB->__removeRoom(id);
     }
 }
