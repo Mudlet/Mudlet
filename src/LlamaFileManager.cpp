@@ -95,28 +95,41 @@ bool LlamafileManager::start(const Config& newConfig) {
 }
 
 void LlamafileManager::stop() {
+    qDebug() << "LlamafileManager::stop() - Called, current status:" << static_cast<int>(currentStatus);
+    
     if (currentStatus == Status::Stopped || currentStatus == Status::Stopping) {
+        qDebug() << "LlamafileManager::stop() - Already stopped or stopping, returning early";
         return;
     }
 
+    qDebug() << "LlamafileManager::stop() - Setting status to Stopping";
     setStatus(Status::Stopping);
     healthCheckTimer->stop();
     healthy = false;
 
     if (process && process->state() != QProcess::NotRunning) {
+        qDebug() << "LlamafileManager::stop() - Process is running, attempting graceful termination";
         // Try graceful termination first
         process->terminate();
 
+        qDebug() << "LlamafileManager::stop() - Waiting up to 5 seconds for graceful shutdown";
         // Wait up to 5 seconds for graceful shutdown
         if (!process->waitForFinished(5000)) {
             qDebug() << "LlamafileManager: Graceful shutdown failed, killing process";
             process->kill();
+            qDebug() << "LlamafileManager::stop() - Waiting up to 3 seconds for kill to complete";
             process->waitForFinished(3000);
+        } else {
+            qDebug() << "LlamafileManager::stop() - Graceful shutdown successful";
         }
+    } else {
+        qDebug() << "LlamafileManager::stop() - No process or process not running";
     }
 
+    qDebug() << "LlamafileManager::stop() - Setting status to Stopped and emitting processStopped signal";
     setStatus(Status::Stopped);
     emit processStopped();
+    qDebug() << "LlamafileManager::stop() - Complete";
 }
 
 std::optional<qint64> LlamafileManager::processId() const noexcept {
@@ -282,9 +295,6 @@ void LlamafileManager::onProcessStarted() {
 }
 
 void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    qDebug() << "LlamafileManager: Process finished with exit code" << exitCode
-             << "status" << (exitStatus == QProcess::NormalExit ? "normal" : "crashed");
-
     // Capture any remaining output from the process
     QString stdoutOutput = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
     QString stderrOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
@@ -344,6 +354,11 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
 }
 
 void LlamafileManager::onProcessError(QProcess::ProcessError error) {
+    // Llama seems to have issues erroring when shutting down, squelch such messages
+    if (currentStatus == Status::Stopping) {
+        return;
+    }
+
     QString errorString;
     switch (error) {
         case QProcess::FailedToStart:
