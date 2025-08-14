@@ -95,41 +95,28 @@ bool LlamafileManager::start(const Config& newConfig) {
 }
 
 void LlamafileManager::stop() {
-    qDebug() << "LlamafileManager::stop() - Called, current status:" << static_cast<int>(currentStatus);
-    
     if (currentStatus == Status::Stopped || currentStatus == Status::Stopping) {
-        qDebug() << "LlamafileManager::stop() - Already stopped or stopping, returning early";
         return;
     }
 
-    qDebug() << "LlamafileManager::stop() - Setting status to Stopping";
     setStatus(Status::Stopping);
     healthCheckTimer->stop();
     healthy = false;
 
     if (process && process->state() != QProcess::NotRunning) {
-        qDebug() << "LlamafileManager::stop() - Process is running, attempting graceful termination";
         // Try graceful termination first
         process->terminate();
 
-        qDebug() << "LlamafileManager::stop() - Waiting up to 5 seconds for graceful shutdown";
         // Wait up to 5 seconds for graceful shutdown
         if (!process->waitForFinished(5000)) {
             qDebug() << "LlamafileManager: Graceful shutdown failed, killing process";
             process->kill();
-            qDebug() << "LlamafileManager::stop() - Waiting up to 3 seconds for kill to complete";
             process->waitForFinished(3000);
-        } else {
-            qDebug() << "LlamafileManager::stop() - Graceful shutdown successful";
         }
-    } else {
-        qDebug() << "LlamafileManager::stop() - No process or process not running";
     }
 
-    qDebug() << "LlamafileManager::stop() - Setting status to Stopped and emitting processStopped signal";
     setStatus(Status::Stopped);
     emit processStopped();
-    qDebug() << "LlamafileManager::stop() - Complete";
 }
 
 std::optional<qint64> LlamafileManager::processId() const noexcept {
