@@ -159,7 +159,6 @@ jobs:
       shell: msys2 {0}
       if: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
       env:
-        ARCH: ${{env.ARCH}}
         VERSION_STRING: ${{env.VERSION_STRING}}
         BUILD_COMMIT: ${{env.BUILD_COMMIT}}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
