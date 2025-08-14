@@ -188,14 +188,6 @@ public:
     void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
     void            setTimeout(const int seconds)    { mTimeout = seconds; }
-    bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
-    // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
-    // Is used to set preference dialog control directly:
-    Qt::CheckState  getWideAmbiguousEAsianGlyphsControlState() {
-                           return mAutoAmbigousWidthGlyphsSetting
-                                  ? Qt::PartiallyChecked
-                                  : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     void            setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool            getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void            setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
