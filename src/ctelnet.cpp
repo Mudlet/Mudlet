@@ -4084,6 +4084,9 @@ Some data loss is likely - please mention this problem to the game admins.)", co
                     // a beep every time the screen was refreshed!
                     // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
                     QApplication::alert(mudlet::self(), 3000);
+                    if (!mudlet::self()->muteGame()) {
+                        QApplication::beep();
+                    }
                 }
                 if (ch != '\r' && ch != '\0') {
                     cleandata += ch;
