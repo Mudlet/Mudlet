@@ -28,6 +28,7 @@
 
 #include "Announcer.h"
 #include "discord.h"
+#include "enums.h"
 #include "FontManager.h"
 #include "HostManager.h"
 #include "LlamaFileManager.h"

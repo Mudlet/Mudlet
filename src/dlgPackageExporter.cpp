@@ -640,7 +640,10 @@ void dlgPackageExporter::slot_exportPackage()
                         if (!installPath.isEmpty() && QFileInfo::exists(installPath)) {
                             // Avoid duplication on repeated exports by uninstalling existing module first
                             if (!mPackageName.isEmpty()) {
-                                mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI);
+                                const QString packageNameForUninstall = mpHost->sanitizePackageName(mPackageName);
+                                if (!packageNameForUninstall.isEmpty()) {
+                                    mpHost->uninstallPackage(packageNameForUninstall, enums::PackageModuleType::ModuleFromUI);
+                                }
                             }
                             if (auto [ok, message] = mpHost->installPackage(installPath, enums::PackageModuleType::ModuleFromUI); !ok) {
                                 // Show precise failure without altering exported file
