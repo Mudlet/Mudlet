@@ -95,6 +95,7 @@ public:
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void parseMSSP(const QString& string_data);
+    void handleIreComposerEdit(const QString& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
