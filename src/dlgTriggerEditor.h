@@ -54,6 +54,7 @@
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
+#include <QDesktopServices>
 #include "post_guard.h"
 
 // Edbee editor includes
