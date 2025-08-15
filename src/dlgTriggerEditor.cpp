@@ -2709,7 +2709,7 @@ void dlgTriggerEditor::delete_alias()
         QMessageBox msgBox;
         msgBox.setIcon(QMessageBox::Question);
         msgBox.setWindowTitle(tr("Confirm Multiple Deletion"));
-        msgBox.setText(tr("Are you sure you want to delete %n alias(es)?", "", selectedItems.size()));
+        msgBox.setText(tr("Are you sure you want to delete %n alias(es)?", nullptr, selectedItems.size()));
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
         msgBox.setDefaultButton(QMessageBox::No);
         if (msgBox.exec() != QMessageBox::Yes) {
