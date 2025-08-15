@@ -500,6 +500,7 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
+target_include_directories(mudlet PUBLIC Qt6::Core)
 
 # Copy discord-rpc DLLs to the build directory for Windows
 if(WIN32)
