@@ -35,6 +35,25 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.25.1)
 
+# Try to find Qt6 in common installation paths if not found by default
+if(NOT Qt6_FOUND)
+    set(QT_COMMON_PATHS
+        "/opt/Qt"
+        "/usr/local/Qt"
+        "$ENV{HOME}/Qt"
+        "C:/Qt"
+        "${CMAKE_SOURCE_DIR}/3rdparty/vcpkg/installed/x64-linux" # Example for vcpkg
+        "${CMAKE_SOURCE_DIR}/3rdparty/vcpkg/installed/x64-windows" # Example for vcpkg
+        "${CMAKE_SOURCE_DIR}/3rdparty/vcpkg/installed/arm64-osx" # Example for vcpkg
+        "${CMAKE_SOURCE_DIR}/3rdparty/vcpkg/installed/x64-osx" # Example for vcpkg
+    )
+    foreach(qt_path IN LISTS QT_COMMON_PATHS)
+        if(EXISTS "${qt_path}")
+            list(APPEND CMAKE_PREFIX_PATH "${qt_path}")
+        endif()
+    endforeach()
+endif()
+
 if(APPLE)
   # minimum supported version by Qt6
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")

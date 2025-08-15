@@ -501,9 +501,7 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # will fail to load with "undefined symbol" errors.
 set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
 target_include_directories(mudlet PUBLIC Qt6::Core)
-
-target_include_directories(mudlet PUBLIC Qt6::Core)
-target_include_directories(mudlet PUBLIC ${QT_INCLUDE_DIRS})
+target_include_directories(mudlet PUBLIC ${Qt6Core_INCLUDE_DIRS})
 
 # Copy discord-rpc DLLs to the build directory for Windows
 if(WIN32)
