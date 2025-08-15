@@ -521,7 +521,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="show_sent_text_checkbox">
+           <widget class="QCheckBox" name="checkBox_highlightHistory">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -529,10 +529,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Show the text you sent</string>
+             <string>Highlight history</string>
             </property>
            </widget>
           </item>
@@ -552,8 +552,18 @@
             </property>
            </widget>
           </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_show_sent_text">
+            <property name="text">
+             <string>Show sent commands:</string>
+            </property>
+            <property name="buddy">
+             <cstring>show_sent_text_combobox</cstring>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_highlightHistory">
+           <widget class="QComboBox" name="show_sent_text_combobox">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -561,11 +571,29 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Controls how sent commands are echoed in the display box:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;Never&lt;/b&gt;: Commands are never shown regardless of script settings&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Script controlled&lt;/b&gt;: Scripts can control visibility using send(cmd, true/false)&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Always&lt;/b&gt;: Commands are always shown regardless of script settings&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
-            <property name="text">
-             <string>Highlight history</string>
-            </property>
+            <item>
+             <property name="text">
+              <string>Never</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Script controlled</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Always</string>
+             </property>
+            </item>
            </widget>
           </item>
           <item row="3" column="0">
@@ -4417,10 +4445,10 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_whereToLog</tabstop>
   <tabstop>pushButton_resetLogDir</tabstop>
   <tabstop>USE_UNIX_EOL</tabstop>
-  <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>auto_clear_input_line_checkbox</tabstop>
-  <tabstop>checkBox_runAllKeyBindings</tabstop>
   <tabstop>checkBox_highlightHistory</tabstop>
+  <tabstop>checkBox_runAllKeyBindings</tabstop>
+  <tabstop>show_sent_text_combobox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
