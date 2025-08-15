@@ -1113,7 +1113,7 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
     if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
-        mpSystemMessageArea->notificationAreaMessageBox->setText(showIntro(URL));
+        showIntro(URL);
     }
 }
 
@@ -8280,7 +8280,7 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
 {
     if (!infoAddItem.contains(mCurrentView)) {
         qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view";
-        return(QString());
+        return;
     }
 
     infoTextParts infoAddCurrentItem = infoAddItem.value(mCurrentView);
