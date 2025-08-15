@@ -1,5 +1,5 @@
----
 name: Label Checker
+
 on:
   pull_request:
     types:
@@ -10,7 +10,6 @@ on:
       - unlabeled
 
 jobs:
-
   check_labels:
     name: Check labels
     runs-on: ubuntu-latest
