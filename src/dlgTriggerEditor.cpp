@@ -8174,39 +8174,39 @@ void dlgTriggerEditor::slot_showAliases()
     treeWidget_aliases->setFocus();
 }
 
-void dlgTriggerEditor::showError(const QString& error)
+void dlgTriggerEditor::showError(const QString& text)
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
     }
 }
 
-void dlgTriggerEditor::showWarning(const QString& error)
+void dlgTriggerEditor::showWarning(const QString& text)
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
     }
 }
 
-void dlgTriggerEditor::showInfo(const QString& error)
+void dlgTriggerEditor::showInfo(const QString& text)
 {
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
     }
 }
 
