@@ -134,6 +134,8 @@ fi
 echo "Running qmake to make MAKEFILE ..."
 echo ""
 
+export QT_QMAKE_ARGS="-qtconf ${MINGW_BASE_DIR}/bin/qt.conf"
+
 if [ "${MSYSTEM}" = "MINGW64" ]; then
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 else
