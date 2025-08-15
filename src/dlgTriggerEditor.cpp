@@ -79,7 +79,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
 
-    infoAddItem.insert(EditorViewType::cmAliasView, {
+    introAddItem.insert(EditorViewType::cmAliasView, {
         //: Headline for the Messagebox in the Mudlet Alias Editor
         tr("Alias react on user input."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Alias Editor
@@ -109,7 +109,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                            "<p>That's it! If you'd like to be able to create triggers from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>more information</a>.</p>");
 
-    infoAddItem.insert(EditorViewType::cmTriggerView, {
+    introAddItem.insert(EditorViewType::cmTriggerView, {
         //: Headline for the Messagebox in the Mudlet Trigger Editor
         tr("Triggers react on game output."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Trigger Editor
@@ -131,7 +131,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmScriptView, {
+    introAddItem.insert(EditorViewType::cmScriptView, {
         //: Headline for the Messagebox in the Mudlet Script Editor
         tr("Scripts organize code and can react to events."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Script Editor
@@ -166,7 +166,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<p>This will greet you exactly 3 seconds after it was made.</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>more information</a>.</p>");
 
-    infoAddItem.insert(EditorViewType::cmTimerView, {
+    introAddItem.insert(EditorViewType::cmTimerView, {
         //: Headline for the Messagebox in the Mudlet Timer Editor
         tr("Timers react after a timespan once or regularly."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Timer Editor
@@ -200,7 +200,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                           "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
                           "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>more information</a>.</p>");
 
-    infoAddItem.insert(EditorViewType::cmActionView, {
+    introAddItem.insert(EditorViewType::cmActionView, {
         //: Headline for the Messagebox in the Mudlet Button
         tr("Buttons react on mouse clicks."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
@@ -232,7 +232,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>Pressing F8 will make you jump.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>more information</a>.</p>");
 
-    infoAddItem.insert(EditorViewType::cmKeysView, {
+    introAddItem.insert(EditorViewType::cmKeysView, {
         //: Headline for the Messagebox in the Mudlet Keys Editor
         tr("Keys react on keyboard presses."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
@@ -267,7 +267,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>more information</a>.</p>");
 
-    infoAddItem.insert(EditorViewType::cmVarsView, {
+    introAddItem.insert(EditorViewType::cmVarsView, {
         //: Headline for the Messagebox in the Mudlet Variable Editor
         tr("Variables store information."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Variable Editor
@@ -8278,22 +8278,22 @@ void dlgTriggerEditor::showInfo(const QString& error)
 
 void dlgTriggerEditor::showIntro(const QString& desiredOption)
 {
-    if (!infoAddItem.contains(mCurrentView)) {
+    if (!introAddItem.contains(mCurrentView)) {
         qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view";
         return;
     }
 
-    infoTextParts infoAddCurrentItem = infoAddItem.value(mCurrentView);
-    QString infoTextOptions;
-    for (const auto &[name, headline, contents] : infoAddCurrentItem.options) {
-        infoTextOptions.append(
+    infoTextParts introAddCurrentItem = introAddItem.value(mCurrentView);
+    QString introTextOptions;
+    for (const auto &[name, headline, contents] : introAddCurrentItem.options) {
+        introTextOptions.append(
             (name != desiredOption)
             ? qsl("<li><a href='%1'>%2</a></li>").arg(name, headline)
             : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
 
     showInfo(qsl("<p>%1</p><ul>%2</ul>")
-        .arg(infoAddCurrentItem.summary, infoTextOptions));
+        .arg(introAddCurrentItem.summary, introTextOptions));
 }
 
 void dlgTriggerEditor::slot_showActions()

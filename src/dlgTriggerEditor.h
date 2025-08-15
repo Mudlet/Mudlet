@@ -604,18 +604,18 @@ private:
     QString msgInfoAddVar;
     QString msgInfoAddKey;
 
-    struct infoOption {
+    struct introOption {
         QString name;
         QString headline;
         QString contents;  
     };
 
-    struct infoTextParts {
+    struct introTextParts {
         QString summary;
-        QVector<infoOption> options;
+        QVector<introOption> options;
     };
 
-    QMap<EditorViewType, infoTextParts> infoAddItem;
+    QMap<EditorViewType, introTextParts> introAddItem;
 
     void showIntro(const QString& = QString());
     QString descActive;
