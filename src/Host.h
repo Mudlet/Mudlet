@@ -445,6 +445,7 @@ public:
     // Malformed MXP detection
     void onMalformedMxpDetected();
 signals:
+    void signal_editorThemeChanged();
     void signal_forceMXPProcessorOnChanged(bool enabled);
     void signal_malformedMxpDetected();
 
