@@ -163,7 +163,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     });
 
     introAddItem.insert(EditorViewType::cmActionView, {
-        //: Headline for the Messagebox in the Mudlet Button
+        //: Headline for the Messagebox in the Mudlet Button Editor
         tr("Buttons react on mouse clicks."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
         {qsl("button1"), tr("How to add a new button now"),
