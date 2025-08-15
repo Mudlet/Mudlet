@@ -71,7 +71,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // init generated dialog
     setupUi(this);
 
-    infoAddItem.insert(EditorViewType::cmAliasView, {
+    introAddItem.insert(EditorViewType::cmAliasView, {
         //: Headline for the Messagebox in the Mudlet Alias Editor
         tr("Alias react on user input."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Alias Editor
@@ -92,7 +92,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmTriggerView, {
+    introAddItem.insert(EditorViewType::cmTriggerView, {
         //: Headline for the Messagebox in the Mudlet Trigger Editor
         tr("Triggers react on game output."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Trigger Editor
@@ -114,7 +114,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmScriptView, {
+    introAddItem.insert(EditorViewType::cmScriptView, {
         //: Headline for the Messagebox in the Mudlet Script Editor
         tr("Scripts organize code and can react to events."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Script Editor
@@ -138,7 +138,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmTimerView, {
+    introAddItem.insert(EditorViewType::cmTimerView, {
         //: Headline for the Messagebox in the Mudlet Timer Editor
         tr("Timers react after a timespan once or regularly."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Timer Editor
@@ -162,7 +162,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmActionView, {
+    introAddItem.insert(EditorViewType::cmActionView, {
         //: Headline for the Messagebox in the Mudlet Button
         tr("Buttons react on mouse clicks."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
@@ -184,7 +184,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmKeysView, {
+    introAddItem.insert(EditorViewType::cmKeysView, {
         //: Headline for the Messagebox in the Mudlet Keys Editor
         tr("Keys react on keyboard presses."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
@@ -207,7 +207,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    infoAddItem.insert(EditorViewType::cmVarsView, {
+    introAddItem.insert(EditorViewType::cmVarsView, {
         //: Headline for the Messagebox in the Mudlet Variable Editor
         tr("Variables store information."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Variable Editor
@@ -1053,7 +1053,7 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
     if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
-        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(mCurrentView, URL));
+        showIntro(URL);
     }
 }
 
@@ -8210,38 +8210,24 @@ void dlgTriggerEditor::showInfo(const QString& error)
     }
 }
 
-void dlgTriggerEditor::showIntro()
+void dlgTriggerEditor::showIntro(const QString& desiredOption)
 {
-    QString text = createInfoText(mCurrentView);
-
-    mpSystemMessageArea->notificationAreaIconLabelError->hide();
-    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaIconLabelInformation->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
-    mpSystemMessageArea->show();
-
-    if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(text);
-    }
-}
-
-QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QString& desiredOption)
-{
-    if (!infoAddItem.contains(viewType)) {
-        qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view";
-        return(QString());
+    if (!introAddItem.contains(mCurrentView)) {
+        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view";
+        return;
     }
 
-    infoTextParts infoAddCurrentItem = infoAddItem.value(viewType);
-    QString infoTextOptions;
-    for (const auto &[name, headline, contents] : infoAddCurrentItem.options) {
-        infoTextOptions.append(
+    introTextParts introAddCurrentItem = introAddItem.value(mCurrentView);
+    QString introTextOptions;
+    for (const auto &[name, headline, contents] : introAddCurrentItem.options) {
+        introTextOptions.append(
             (name != desiredOption)
             ? qsl("<li><a href='%1'>%2</a></li>").arg(name, headline)
             : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
-    return qsl("<p>%1</p><ul>%2</ul>")
-        .arg(infoAddCurrentItem.summary, infoTextOptions);
+
+    showInfo(qsl("<p>%1</p><ul>%2</ul>")
+        .arg(introAddCurrentItem.summary, introTextOptions));
 }
 
 void dlgTriggerEditor::slot_showActions()

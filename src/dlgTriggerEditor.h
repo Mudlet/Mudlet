@@ -596,21 +596,20 @@ private:
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
 
-    struct infoOption {
+    struct introOption {
         QString name;
         QString headline;
         QString contents;  
     };
 
-    struct infoTextParts {
+    struct introTextParts {
         QString summary;
-        QVector<infoOption> options;
+        QVector<introOption> options;
     };
 
-    QMap<EditorViewType, infoTextParts> infoAddItem;
+    QMap<EditorViewType, introTextParts> introAddItem;
 
-    void showIntro();
-    QString createInfoText(const EditorViewType, const QString& = QString());
+    void showIntro(const QString& = QString());
     QString descActive;
     QString descInactive;
     QString descActiveFolder;
