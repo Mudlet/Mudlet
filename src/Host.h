@@ -751,24 +751,223 @@ public:
     // stops all triggers/aliases/everything from running
     bool mEmergencyStop = false;
 
-signals:
-    // Tells TTextEdit instances for this profile how to draw the ambiguous
-    // width characters:
-    void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
-    void profileSaveStarted();
-    void profileSaveFinished();
-    void signal_changeSpellDict(const QString&);
-    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
-    // problems as they arrive as well as a summary upon destruction:
-    void signal_changeDebugShowAllProblemCodepoints(const bool);
-    // Tells all consoles associated with this Host (but NOT the Central Debug
-    // one) to change the way they show  control characters:
-    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
-    // Tells all command lines to save their history:
-    void signal_saveCommandLinesHistory();
-    void signal_editorThemeChanged();
-    void signal_remoteEchoChanged(bool enabled);
+
     void signal_forceMXPProcessorOnChanged(bool enabled);
+    void onMalformedMxpDetected();
+    void signal_malformedMxpDetected();
+    void onMalformedMxpDetected();
+    void signal_malformedMxpDetected();
+
+private slots:
+    void slot_purgeTemps();
+    void onMalformedMxpDetected();
+
+private:
+    void installPackageFonts(const QString &packageName);
+    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
+    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
+    void loadSecuredPassword();
+    void removeAllNonPersistentStopWatches();
+    void updateConsolesFont();
+    void thankForUsingPTB();
+    void toggleMapperVisibility();
+    void createMapper(const bool);
+    void removePackageInfo(const QString &packageName, const bool);
+    static void createModuleBackup(const QString &filename, const QString& saveName);
+    void writeModule(const QString &moduleName, const QString &filename);
+    void waitForAsyncXmlSave();
+    void saveModules(bool backup = true);
+    void updateModuleZips(const QString &zipName, const QString &moduleName);
+    void reloadModules();
+    void startMapAutosave(const int interval);
+    void timerEvent(QTimerEvent *event) override;
+    void autoSaveMap();
+    QString sanitizePackageName(const QString packageName) const;
+    TCommandLine* activeCommandLine();
+    void closeChildren();
+    void setupSandboxedLuaState(lua_State* L);
+
+    QStringList mModulesToSync;
+    QScopedPointer<LuaInterface> mLuaInterface;
+
+    TriggerUnit mTriggerUnit;
+    TimerUnit mTimerUnit;
+    ScriptUnit mScriptUnit;
+    AliasUnit mAliasUnit;
+    ActionUnit mActionUnit;
+    KeyUnit mKeyUnit;
+    GifTracker mGifTracker;
+    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
+    std::optional<bool> mSaveTimer;
+
+    QFile mErrorLogFile;
+
+    QMap<QString, TEvent*> mEventMap;
+
+    int mHostID;
+    QString mHostName;
+    QString mDiscordGameName; // Discord self-reported game name
+    bool mIsClosingDown = false;
+
+    QString mLine;
+    QString mLogin;
+    QString mPass;
+
+    int mPort;
+
+    int mRetries;
+    bool mSaveProfileOnExit;
+
+    // To keep things simple for Lua the first stopwatch will be allocated a key
+    // of 1 - and anything less that that will be rejected - and we force
+    // createStopWatch() to return 0 during script loading so that we do not get
+    // superious stopwatches from being created then (when
+    // mIsProfileLoadingSequence is true):
+    QMap<int, stopWatch*> mStopWatchMap;
+
+    QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
+
+    QStringList mActiveModules;
+
+    bool mHaveMapperScript;
+    // This option makes the control on the preferences tristated so the value
+    // used depends - currently - on what the MUD Server encoding is (only set
+    // true for GBK, GB18030, Big5/Big-HKCS, EUC-KR ones) - however this was
+    // due for revision once locale/language support is brought in - when it
+    // could be made dependent on that instead.
+    bool mAutoAmbigousWidthGlyphsSetting;
+    // If above is true is the value deduced from the MUD server encoding, if
+    // the above is false is the user's direct setting - this is so that changes
+    // in the TTextEdit classes are only made when necessary:
+    bool mWideAmbigousWidthGlyphs;
+
+    // keeps track of all of the array writers we're currently operating with
+    QHash<QString, XMLexport*> writers;
+
+    QFuture<void> mModuleFuture;
+
+    // Will be null/empty if is to use Mudlet's default/own presence
+    QString mDiscordApplicationID;
+
+    // Will be null/empty if they have not set their own invite
+    QString mDiscordInviteURL;
+
+    // Will be null/empty if we are not concerned to check the use of Discord
+    // Rich Presence against the local user currently logged into Discord -
+    // these two will be checked against the values from the Discord instance
+    // with which we are linked to by the RPC library - and if they do not match
+    // we won't use Discord functions.
+    QString mRequiredDiscordUserName;
+    QString mRequiredDiscordUserDiscriminator;
+
+    // Handles whether to treat 16M-Colour ANSI SGR codes which only use
+    // semi-colons as separator have the initial Colour Space Id parameter
+    // (true) or not (false):
+    bool mSGRCodeHasColSpaceId;
+
+    // Flag whether the Server can use ANSI OSC "P#RRGGBB" to redefine the
+    // 16 basic colors (and OSC "R" to reset them).
+    bool mServerMayRedefineColors;
+
+    // Was public but hidden to prevent it being changed without going through
+    // the process to signal to users that they need to change dictionaries:
+    QString mSpellDic;
+    // These are hidden to prevent them being changed directly, they are also
+    // mirrored/cached in the main TConsole's instance so they do not need to be
+    // looked up directly by that class:
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
+
+    // These hold values that are needed in the TMap class which are saved with
+    // the profile - but which cannot be kept there as that class is not
+    // necessarily instantiated when the profile is read.
+    // Base color(s) for the player room in the mappers:
+    // Mode selected:
+    // 0 is closest to original style with adjustable outer diameter
+    // 1 is Fixed red color ring with adjustable outer/inner diameter
+    // 2 is fixed blue/yellow colors ring with adjustable outer/inner diameter
+    // 3 is adjustable outer(primary)/inner(secondary) colors ring with adjustable outer/inner diameter
+    quint8 mPlayerRoomStyle;
+    QColor mPlayerRoomOuterColor;
+    QColor mPlayerRoomInnerColor;
+    // Percentage of the room size (actually width) for the outer diameter of
+    // the circular marking, integer percentage clamped in the preferences
+    // between 200 and 50 - default 120:
+    quint8 mPlayerRoomOuterDiameterPercentage;
+    // Percentage of the outer size for the inner diameter of the circular
+    // marking, integer percentage clamped in the preferences between 83 and 0,
+    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
+    // one):
+    quint8 mPlayerRoomInnerDiameterPercentage;
+    // Whether the TTextEditor class should immediately report to debug output
+    // any dodgy codepoints that it has problems with - if false it only reports
+    // each codepoint the first time it encounters itL
+    bool mDebugShowAllProblemCodepoints;
+
+    // Now a per profile option this one represents the state of this profile:
+    bool mCompactInputLine;
+
+    QTimer purgeTimer;
+
+    // How to display (most) incoming control characters in TConsoles:
+    // ControlCharacterMode::AsIs (0x0) = as is, no replacement
+    // ControlCharacterMode::Picture (0x1) = as Unicode "Control
+    //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
+    // ControlCharacterMode::OEM (0x2) = as "OEM Font"
+    //   characters (most often seen as a part of CP437
+    //   encoding), see the corresponding Wikipedia page, e.g.
+    //   EN: https://en.wikipedia.org/wiki/Code_page_437
+    //   DE: https://de.wikipedia.org/wiki/Codepage_437
+    //   RU: https://ru.wikipedia.org/wiki/CP437
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
+
+    bool mLargeAreaExitArrows = false;
+    bool mEditorShowBidi = true;
+    // should focus should be on the main window with the caret enabled?
+    bool mCaretEnabled = false;
+
+    // Tracks which command line was last used for this profile so that we can
+    // return to it when switching between profiles:
+    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
+
+    QMargins mBorders;
+
+    // The range - applied to ALL command lines - is 0 to 10000, with the knob
+    // on the profile preferences having a log-step action with multiples
+    // of 10 to integer powers and steps of (0,) 10, 20, 50, 100. Prior to the
+    // introduction of this feature the control would effectively have been
+    // zero - and whilst the knob shows the special value of "None" then
+    // to reproduce that behavior there is little reason to not enable it
+    // by default:
+    int mCommandLineHistorySaveSize = 500;
+
+    // Whether to display each item's ID number in the editor:
+    bool mShowIDsInEditor = false;
+
+    // Whether F3 search functionality is enabled
+    bool mF3SearchEnabled = false;
+
+    // Whether to force the MXP processor to be on, even if not negotiated with the
+    // MUD Server
+    bool mForceMXPProcessorOn = false;
+
+    // Set when the mudlet singleton demands that we close - used to force an
+    // attempt to save the profile and map - without asking:
+    bool mForcedClose = false;
+
+    // Malformed MXP detection
+    int mMxpErrorCount = 0;
+    QDateTime mLastMxpErrorTime;
+};
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
+
+#endif // MUDLET_HOST_H
 
 private slots:
     void slot_purgeTemps();
@@ -970,6 +1169,10 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
+
+    // Malformed MXP detection
+    int mMxpErrorCount = 0;
+    QDateTime mLastMxpErrorTime;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

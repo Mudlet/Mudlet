@@ -4054,7 +4054,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         if (!mIncompleteSB) {
                             mIncompleteSB = true;
                             qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).
-Some data loss is likely - please mention this problem to the game admins.)", command[2]);
+Some data loss is likely - please mention this problem to the game admins)", command[2]);
+                            mpHost->signal_malformedMxpDetected();
                         }
 
 

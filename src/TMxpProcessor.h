@@ -74,6 +74,13 @@ private:
 
     // value of the last resolved entity:
     QString lastEntityValue;
+
+    // Malformed MXP detection
+    int mMalformedMxpCharCount = 0;
+    QDateTime mLastMalformedMxpTime;
 };
+
+#include <QDateTime>
+
 
 #endif //MUDLET_TMXPPROCESSOR_H

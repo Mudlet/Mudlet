@@ -152,8 +152,22 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
-    if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
+    const int MXP_MALFORMED_THRESHOLD = 100;
+
+    bool accepted = mMxpTagBuilder.accept(ch);
+
+    if (!accepted && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
+        mMalformedMxpCharCount++;
+        if (mMalformedMxpCharCount > MXP_MALFORMED_THRESHOLD) {
+            qDebug().noquote().nospace() << "TMxpProcessor::processMxpInput(...) WARNING - Malformed MXP detected. Resetting MXP tag builder.";
+            mMxpTagBuilder.reset();
+            mMalformedMxpCharCount = 0;
+            mpMxpClient->mpHost->onMalformedMxpDetected();
+            // TODO: Emit signal to Host for persistent malformed MXP
+        }
         return HANDLER_NEXT_CHAR;
+    } else {
+        mMalformedMxpCharCount = 0;
     }
 
     if (mMxpTagBuilder.hasTag()) {
@@ -189,6 +203,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
     return HANDLER_FALL_THROUGH;
 }
+
 
 void TMxpProcessor::processRawInput(char ch)
 {
