@@ -445,7 +445,22 @@ public:
     // Malformed MXP detection
     void onMalformedMxpDetected();
 signals:
+    // Tells TTextEdit instances for this profile how to draw the ambiguous
+    // width characters:
+    void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void profileSaveStarted();
+    void profileSaveFinished();
+    void signal_changeSpellDict(const QString&);
+    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
+    // problems as they arrive as well as a summary upon destruction:
+    void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
+    // Tells all command lines to save their history:
+    void signal_saveCommandLinesHistory();
     void signal_editorThemeChanged();
+    void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     void signal_malformedMxpDetected();
 

@@ -502,6 +502,9 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
 target_include_directories(mudlet PUBLIC Qt6::Core)
 
+target_include_directories(mudlet PUBLIC Qt6::Core)
+target_include_directories(mudlet PUBLIC ${QT_INCLUDE_DIRS})
+
 # Copy discord-rpc DLLs to the build directory for Windows
 if(WIN32)
   file(COPY "${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib/discord-rpc32.dll"

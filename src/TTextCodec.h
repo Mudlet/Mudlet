@@ -27,7 +27,7 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
-#include <QTextCodec>
+#include <QtCore/QTextCodec>
 #include <QVector>
 #include "post_guard.h"
 
