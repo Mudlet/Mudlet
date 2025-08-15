@@ -13382,12 +13382,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1331"/>
       <source>Display whenever a tab is connected or a disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Mostra quando una scheda è connessa o disconnessa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1334"/>
       <source>Show connection status on tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostra stato di connessione sulle schede</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1448"/>
