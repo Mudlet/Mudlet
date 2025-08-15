@@ -589,7 +589,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/TBuffer.cpp" line="2236"/>
       <source>Open browser to</source>
-      <translation type="unfinished"/>
+      <translation>Browser öffnen für</translation>
     </message>
   </context>
   <context>
@@ -1124,7 +1124,7 @@ Die &quot;[KARTENFEHLER:]&quot; Nachricht enthält den Grund.</translation>
       <location filename="../src/TCommandLine.cpp" line="68"/>
       <location filename="../src/TCommandLine.cpp" line="1784"/>
       <source>Show password</source>
-      <translation type="unfinished"/>
+      <translation>Passwort anzeigen</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
@@ -1229,7 +1229,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TCommandLine.cpp" line="1780"/>
       <source>Hide password</source>
-      <translation type="unfinished"/>
+      <translation>Passwort verbergen</translation>
     </message>
   </context>
   <context>
@@ -1264,7 +1264,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1049"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;⌘&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Split-Screen-Scrollback aktiviert. Presse &lt;⌘&gt;+&lt;ENTER&gt; , um abzubrechen.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1051"/>
@@ -1587,7 +1587,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="74"/>
       <location filename="../src/TDetachedWindow.cpp" line="962"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (abgetrennt)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="242"/>
