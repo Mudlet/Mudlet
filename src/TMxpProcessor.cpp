@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
+#include "Host.h"
 #include "pre_guard.h"
 #include <QDebug>
 #include "post_guard.h"
@@ -162,8 +163,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             qDebug().noquote().nospace() << "TMxpProcessor::processMxpInput(...) WARNING - Malformed MXP detected. Resetting MXP tag builder.";
             mMxpTagBuilder.reset();
             mMalformedMxpCharCount = 0;
-            mpMxpClient->mpHost->onMalformedMxpDetected();
-            // TODO: Emit signal to Host for persistent malformed MXP
+            mpHost->onMalformedMxpDetected();
         }
         return HANDLER_NEXT_CHAR;
     } else {

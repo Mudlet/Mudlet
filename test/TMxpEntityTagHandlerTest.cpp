@@ -134,7 +134,7 @@ private slots:
     void testInterpolation()
     {
         TMxpStubClient stub;
-        TMxpProcessor processor(&stub);
+        TMxpProcessor processor(nullptr, &stub);
 
         std::string input = "<!EN ob \"street lamp\" private><send href=\"kill &ob;\">kill</send>";
         processInput(processor, input);
@@ -165,7 +165,7 @@ private slots:
 
     void testEmpty() {
         TMxpStubClient stub;
-        TMxpProcessor mxpProcessor(&stub);
+        TMxpProcessor mxpProcessor(nullptr, &stub);
         TMxpTagProcessor processor;
 
         processor.getEntityResolver().registerEntity("&entity;", "v1");

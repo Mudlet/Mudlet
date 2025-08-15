@@ -37,8 +37,9 @@ enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COM
 class TMxpProcessor
 {
 public:
-    explicit TMxpProcessor(TMxpClient* pMxpClient)
-    : mMxpTagBuilder(true)
+    explicit TMxpProcessor(Host* pHost, TMxpClient* pMxpClient)
+    : mpHost(pHost)
+    , mMxpTagBuilder(true)
     , mEntityHandler(mMxpTagProcessor.getEntityResolver())
     , mpMxpClient(pMxpClient)
     {
@@ -59,6 +60,7 @@ public:
     inline QString getEntityValue() { return lastEntityValue;}
 
 private:
+    Host* mpHost;
     // State of MXP system:
     bool mMXP = false;
     TMXPMode mMXP_MODE = MXP_MODE_OPEN;

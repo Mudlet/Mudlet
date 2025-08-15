@@ -229,7 +229,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEchoLuaErrors(false)
 , mCommandSeparator(qsl(";;"))
 , mMxpClient(this)
-, mMxpProcessor(&mMxpClient)
+, mMxpProcessor(this, &mMxpClient)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(true)
@@ -437,6 +437,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
             qDebug() << "MXP disabled (forced)";
         }
     });
+
+    connect(this, &Host::signal_malformedMxpDetected, this, &Host::onMalformedMxpDetected);
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
