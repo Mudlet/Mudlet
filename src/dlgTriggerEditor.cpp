@@ -8283,7 +8283,7 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
         return;
     }
 
-    infoTextParts introAddCurrentItem = introAddItem.value(mCurrentView);
+    introTextParts introAddCurrentItem = introAddItem.value(mCurrentView);
     QString introTextOptions;
     for (const auto &[name, headline, contents] : introAddCurrentItem.options) {
         introTextOptions.append(
