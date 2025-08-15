@@ -71,14 +71,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // init generated dialog
     setupUi(this);
 
-    msgInfoAddAlias = tr("<p>Alias react on user input. To add a new alias:"
-                         "<ol><li>Click on the 'Add Item' icon above.</li>"
-                         "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
-                         "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
-                         "<li><strong>Activate</strong> the alias.</li></ol></p>"
-                         "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
-                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
-
     introAddItem.insert(EditorViewType::cmAliasView, {
         //: Headline for the Messagebox in the Mudlet Alias Editor
         tr("Alias react on user input."), {
@@ -99,15 +91,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")}
         }
     });
-
-    msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
-                           "<ol><li>Click on the 'Add Item' icon above.</li>"
-                           "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
-                           "<li>Select the appropriate pattern <strong>type</strong>.</li>"
-                           "<li>Define a clear text <strong>command</strong> that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
-                           "<li><strong>Activate</strong> the trigger.</li></ol></p>"
-                           "<p>That's it! If you'd like to be able to create triggers from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
-                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>more information</a>.</p>");
 
     introAddItem.insert(EditorViewType::cmTriggerView, {
         //: Headline for the Messagebox in the Mudlet Trigger Editor
@@ -155,17 +138,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    msgInfoAddTimer = tr("<p>Timers react after a timespan once or regularly. To add a new timer:"
-                         "<ol><li>Click on the 'Add Item' icon above.</li>"
-                         "<li>Define the <strong>timespan</strong> after which the timer should react in a this format: hours : minutes : seconds.</li>"
-                         "<li>Define a clear text <strong>command</strong> that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
-                         "<li><strong>Activate</strong> the timer.</li></ol></p>"
-                         "<p><strong>Note:</strong> If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.</p>"
-                         "<p><strong>Note:</strong> Timers can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
-                         "<p>This will greet you exactly 3 seconds after it was made.</p>"
-                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>more information</a>.</p>");
-
     introAddItem.insert(EditorViewType::cmTimerView, {
         //: Headline for the Messagebox in the Mudlet Timer Editor
         tr("Timers react after a timespan once or regularly."), {
@@ -190,18 +162,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         }
     });
 
-    msgInfoAddButton = tr("<p>Buttons react on mouse clicks. To add a new button:"
-                          "<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
-                          "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
-                          "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
-                          "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
-                          "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
-                          "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
-                          "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
-                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>more information</a>.</p>");
-
     introAddItem.insert(EditorViewType::cmActionView, {
-        //: Headline for the Messagebox in the Mudlet Button
+        //: Headline for the Messagebox in the Mudlet Button Editor
         tr("Buttons react on mouse clicks."), {
         //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
         {qsl("button1"), tr("How to add a new button now"),
@@ -221,16 +183,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.</p>")}
         }
     });
-
-    msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
-                       "<ol><li>Click on the 'Add Item' icon above.</li>"
-                       "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
-                       "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
-                       "<li><strong>Activate</strong> the new key binding.</li></ol></p>"
-                       "<p><strong>Note:</strong> Keys can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
-                       "<p>Pressing F8 will make you jump.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>more information</a>.</p>");
 
     introAddItem.insert(EditorViewType::cmKeysView, {
         //: Headline for the Messagebox in the Mudlet Keys Editor
@@ -254,18 +206,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.</p>")}
         }
     });
-
-    msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
-                       "<ol><li>Click on the 'Add Item' icon above. To add a table instead click 'Add Group'.</li>"
-                       "<li>Select type of variable value (can be a string, integer, boolean)</li>"
-                       "<li>Enter the value you want to store in this variable.</li>"
-                       "<li>If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.</li>"
-                       "<li>To remove a variable manually, set it to 'nil' or click on the 'Delete' icon above.</li></ol></p>"
-                       "<p><strong>Note:</strong> Variables created here won't be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.</p>"
-                       "<p><strong>Note:</strong> Variables and tables can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua foo = &quot;bar&quot;</code></p>"
-                       "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>more information</a>.</p>");
 
     introAddItem.insert(EditorViewType::cmVarsView, {
         //: Headline for the Messagebox in the Mudlet Variable Editor
@@ -4044,7 +3984,6 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
     mpCurrentTriggerItem = pNewItem;
     treeWidget_triggers->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddTrigger);
     slot_triggerSelected(treeWidget_triggers->currentItem());
 }
 
@@ -4135,7 +4074,6 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     clearDocument(mpSourceEditorEdbee); // New Timer
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddTimer);
     slot_timerSelected(treeWidget_timers->currentItem());
 }
 
@@ -4206,7 +4144,6 @@ void dlgTriggerEditor::addVar(bool isFolder)
 
     mpCurrentVarItem = pNewItem;
     treeWidget_variables->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddVar);
     slot_variableSelected(treeWidget_variables->currentItem());
 }
 
@@ -4293,7 +4230,6 @@ void dlgTriggerEditor::addKey(bool isFolder)
     clearDocument(mpSourceEditorEdbee); // New Key
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddKey);
     slot_keySelected(treeWidget_keys->currentItem());
 }
 
@@ -4391,7 +4327,6 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddAlias);
     slot_aliasSelected(treeWidget_aliases->currentItem());
 }
 
@@ -4480,7 +4415,6 @@ void dlgTriggerEditor::addAction(bool isFolder)
     mpHost->getActionUnit()->updateToolbar();
     mpCurrentActionItem = pNewItem;
     treeWidget_actions->setCurrentItem(pNewItem);
-    showInfo(msgInfoAddButton);
     slot_actionSelected(treeWidget_actions->currentItem());
 }
 
@@ -8240,39 +8174,39 @@ void dlgTriggerEditor::slot_showAliases()
     treeWidget_aliases->setFocus();
 }
 
-void dlgTriggerEditor::showError(const QString& error)
+void dlgTriggerEditor::showError(const QString& text)
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
     }
 }
 
-void dlgTriggerEditor::showWarning(const QString& error)
+void dlgTriggerEditor::showWarning(const QString& text)
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
     }
 }
 
-void dlgTriggerEditor::showInfo(const QString& error)
+void dlgTriggerEditor::showInfo(const QString& text)
 {
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(error);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
     if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(error);
+        mudlet::self()->announce(text);
     }
 }
 
