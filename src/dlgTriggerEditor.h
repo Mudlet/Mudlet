@@ -596,14 +596,6 @@ private:
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
 
-    QString msgInfoAddAlias;
-    QString msgInfoAddTrigger;
-    QString msgInfoAddScript;
-    QString msgInfoAddTimer;
-    QString msgInfoAddButton;
-    QString msgInfoAddVar;
-    QString msgInfoAddKey;
-
     struct infoOption {
         QString name;
         QString headline;
