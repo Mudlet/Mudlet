@@ -596,7 +596,7 @@ private:
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
-
+    
     struct introOption {
         QString name;
         QString headline;
