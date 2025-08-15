@@ -617,8 +617,7 @@ private:
 
     QMap<EditorViewType, infoTextParts> infoAddItem;
 
-    void showIntro();
-    QString createInfoText(const EditorViewType, const QString& = QString());
+    void showIntro(const QString& = QString());
     QString descActive;
     QString descInactive;
     QString descActiveFolder;

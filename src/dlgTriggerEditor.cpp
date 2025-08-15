@@ -1113,7 +1113,7 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
     if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
-        mpSystemMessageArea->notificationAreaMessageBox->setText(createInfoText(mCurrentView, URL));
+        mpSystemMessageArea->notificationAreaMessageBox->setText(showIntro(URL));
     }
 }
 
@@ -8276,29 +8276,14 @@ void dlgTriggerEditor::showInfo(const QString& error)
     }
 }
 
-void dlgTriggerEditor::showIntro()
+void dlgTriggerEditor::showIntro(const QString& desiredOption)
 {
-    QString text = createInfoText(mCurrentView);
-
-    mpSystemMessageArea->notificationAreaIconLabelError->hide();
-    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaIconLabelInformation->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
-    mpSystemMessageArea->show();
-
-    if (!mpHost->mIsProfileLoadingSequence) {
-        mudlet::self()->announce(text);
-    }
-}
-
-QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QString& desiredOption)
-{
-    if (!infoAddItem.contains(viewType)) {
-        qWarning() << "ERROR: dlgTriggerEditor::createInfoText() undefined view";
+    if (!infoAddItem.contains(mCurrentView)) {
+        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view";
         return(QString());
     }
 
-    infoTextParts infoAddCurrentItem = infoAddItem.value(viewType);
+    infoTextParts infoAddCurrentItem = infoAddItem.value(mCurrentView);
     QString infoTextOptions;
     for (const auto &[name, headline, contents] : infoAddCurrentItem.options) {
         infoTextOptions.append(
@@ -8306,8 +8291,9 @@ QString dlgTriggerEditor::createInfoText(const EditorViewType viewType, const QS
             ? qsl("<li><a href='%1'>%2</a></li>").arg(name, headline)
             : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
-    return qsl("<p>%1</p><ul>%2</ul>")
-        .arg(infoAddCurrentItem.summary, infoTextOptions);
+
+    showInfo(qsl("<p>%1</p><ul>%2</ul>")
+        .arg(infoAddCurrentItem.summary, infoTextOptions));
 }
 
 void dlgTriggerEditor::slot_showActions()
