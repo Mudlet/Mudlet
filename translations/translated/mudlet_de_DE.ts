@@ -58,13 +58,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Konnte sich nicht im Spiel anmelden, sind die Anmeldeinformationen korrekt?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Anmeldung im Spiel nicht möglich: %1</translation>
     </message>
   </context>
   <context>
@@ -77,7 +77,7 @@
     <message>
       <location filename="../src/Host.cpp" line="477"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Dieses Profil wird nun gespeichert und geschlossen.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="748"/>
@@ -579,12 +579,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/TBuffer.cpp" line="2223"/>
       <source>Send</source>
-      <translation type="unfinished"/>
+      <translation>Senden</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Prompt</source>
-      <translation type="unfinished"/>
+      <translation>Prompt</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2236"/>
