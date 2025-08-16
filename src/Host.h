@@ -769,9 +769,11 @@ signals:
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
+    void mxpErrorDetected();
 
 private slots:
     void slot_purgeTemps();
+    void disableMxpAndReconnect();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -970,6 +972,10 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
+
+    // Malformed MXP detection
+    int mMxpErrorCount = 0;
+    QDateTime mLastMxpErrorTime;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
