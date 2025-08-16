@@ -1286,3 +1286,7 @@ function getConfig(...)
 
   return oldgetConfig(args[1])
 end
+
+function openMudletHomeDir()
+  openUrl("file:" .. getMudletHomeDir())
+end

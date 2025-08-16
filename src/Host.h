@@ -533,9 +533,13 @@ public:
     QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad;
 
-    // This is set when we want commands we typed to be shown on the main
-    // TConsole:
-    bool mPrintCommand;
+    // Controls how sent commands are displayed on the main TConsole:
+    enum class CommandEchoMode {
+        Never = 0,       // Never show sent commands regardless of script preferences
+        ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
+        Always = 2       // Always show sent commands regardless of script preferences
+    };
+    CommandEchoMode mCommandEchoMode;
 
     /*
      * This is set when the Server is remote echoing what WE send to it,
@@ -548,6 +552,16 @@ public:
      * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive = false;
+
+    // Command echo mode getters and setters
+    CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
+    void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
+    
+    // Backward compatibility methods - for existing code that expects boolean behavior
+    bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
+    void setPrintCommand(bool print) { 
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    }
 
 public:
     void setRemoteEchoingActive(bool active);
@@ -721,7 +735,7 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
-    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
+    std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
     TConsole::SearchOptions mBufferSearchOptions;
@@ -760,6 +774,9 @@ public:
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
+
+    // stops all triggers/aliases/everything from running
+    bool mEmergencyStop = false;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -807,6 +824,7 @@ private:
     QString sanitizePackageName(const QString packageName) const;
     TCommandLine* activeCommandLine();
     void closeChildren();
+    void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;

@@ -126,6 +126,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
+    checkBox_showTabConnectionIndicators->setChecked(pMudlet->mShowTabConnectionIndicators);
+    connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked){
+        mudlet::self()->setShowTabConnectionIndicators(checked);
+    });
+
     // Set the properties of the log options
     lineEdit_logFileFolder->setToolTip(utils::richText(tr("Location which will be used to store log files - matching logs will be appended to.")));
     pushButton_whereToLog->setToolTip(utils::richText(tr("Select a directory where logs will be saved.")));
@@ -263,7 +268,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // the "Profile preferences" form/dialog when a *different* profile saves
     // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
-    // included in compliation:
+    // included in compilation:
     connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
     connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
     connect(pMudlet, &mudlet::signal_setToolBarIconSize, this, &dlgProfilePreferences::slot_setToolBarIconSize);
@@ -273,6 +278,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
+    connect(pMudlet, &mudlet::signal_showTabConnectionIndicatorsChanged, this, &dlgProfilePreferences::slot_changeShowTabConnectionIndicators);
     connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(enums::Appearance(index)); });
     connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=, this]() {
         emit signal_resetMainWindowShortcutsToDefaults();
@@ -798,7 +804,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
 
-    show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
+    show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
@@ -1445,7 +1451,7 @@ void dlgProfilePreferences::clearHostDetails()
     wrap_at_spinBox->clear();
     indent_wrapped_spinBox->clear();
 
-    show_sent_text_checkbox->setChecked(false);
+    show_sent_text_combobox->setCurrentIndex(static_cast<int>(Host::CommandEchoMode::ScriptControl));
     auto_clear_input_line_checkbox->setChecked(false);
     command_separator_lineedit->clear();
 
@@ -2852,7 +2858,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
-        pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
+        pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
@@ -4625,4 +4631,11 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
     updateDisplayFont();
+}
+
+void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
+{
+    if (checkBox_showTabConnectionIndicators->isChecked() != state) {
+        checkBox_showTabConnectionIndicators->setChecked(state);
+    }
 }

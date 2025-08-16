@@ -321,6 +321,10 @@ DEFINES+=DEBUG_TELNET=1
 # * Enable the features associated with reporting problems in processing Unicode
 # codepoints that cannot be displayed on screen in a `TConsole`:
 # DEFINES+=DEBUG_CODEPOINT_PROBLEMS
+#
+# * Produce qDebug() messages about window handling operations like dock widget
+# transfers, profile switching, and detached window management:
+# DEFINES+=DEBUG_WINDOW_HANDLING
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted

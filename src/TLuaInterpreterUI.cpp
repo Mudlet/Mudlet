@@ -2070,6 +2070,34 @@ int TLuaInterpreter::selectString(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setActiveProfile(lua_State* L)
+{
+    auto& hostManager = mudlet::self()->getHostManager();
+    const QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+
+    if (profileName.isEmpty()) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "setActiveProfile: profile name cannot be empty");
+        return 2;
+    }
+
+    if (!mudlet::self()->profileExists(profileName)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    if (!hostManager.hostLoaded(profileName)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "setActiveProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
+        return 2;
+    }
+
+    mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(profileName));
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
 int TLuaInterpreter::setAppStyleSheet(lua_State* L)
 {
