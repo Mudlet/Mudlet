@@ -21,9 +21,9 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
-#include "Host.h"
 #include "pre_guard.h"
 #include <QDebug>
+#include "Host.h"
 #include "post_guard.h"
 
 bool TMxpProcessor::setMode(const QString& code)
