@@ -20,6 +20,7 @@ find_package(Qt6 6.4.0 REQUIRED
     UiTools
     Widgets
     Concurrent
+    Core5Compat
     Test)
 
 link_libraries(
@@ -30,7 +31,8 @@ link_libraries(
     Qt6::Multimedia
     Qt6::MultimediaWidgets
     Qt6::UiTools
-    Qt6::Widgets)
+    Qt6::Widgets
+    Qt6::Core5Compat)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
