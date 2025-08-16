@@ -23,6 +23,8 @@ find_package(Qt6 6.4.0 REQUIRED
     Core5Compat
     Test)
 
+find_package(HUNSPELL REQUIRED)
+
 link_libraries(
     Qt6::Test
     Qt6::Concurrent
@@ -32,7 +34,8 @@ link_libraries(
     Qt6::MultimediaWidgets
     Qt6::UiTools
     Qt6::Widgets
-    Qt6::Core5Compat)
+    Qt6::Core5Compat
+    HUNSPELL::HUNSPELL)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
