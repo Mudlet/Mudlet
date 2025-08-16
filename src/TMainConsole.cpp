@@ -21,9 +21,7 @@
  ***************************************************************************/
 
 
-#include "TConsole.h"
-
-
+#include "TMainConsole.h"
 #include "Host.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
@@ -63,6 +61,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // is not fatal...
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
+    connect(mpHost, &Host::mxpErrorDetected, this, &TMainConsole::handleMxpError);
 
     // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
@@ -88,6 +87,19 @@ TMainConsole::~TMainConsole()
         // Need to commit any changes to personal dictionary
         qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
         mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+    }
+}
+
+void TMainConsole::handleMxpError()
+{
+    QMessageBox msgBox;
+    msgBox.setText("A malformed MXP tag was detected, which may be causing display issues.");
+    msgBox.setInformativeText("Do you want to disable MXP and reconnect?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::Yes);
+    int ret = msgBox.exec();
+    if (ret == QMessageBox::Yes) {
+        mpHost->disableMxpAndReconnect();
     }
 }
 

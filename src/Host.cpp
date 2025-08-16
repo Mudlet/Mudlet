@@ -4488,6 +4488,12 @@ void Host::editorThemeChanged()
     emit signal_editorThemeChanged();
 }
 
+void Host::disableMxpAndReconnect()
+{
+    mEnableMXP = false;
+    mTelnet.reconnect();
+}
+
 void Host::sendCmdLine(const QString& cmd)
 {
     if (!mpConsole || !mpConsole->mpCommandLine) {
