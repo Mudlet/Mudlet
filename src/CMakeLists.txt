@@ -567,6 +567,11 @@ set_target_properties(mudlet PROPERTIES
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
+# Ensure the AUTOUIC-generated headers (ui_*.h) are on the include path.
+# This points to: <binary_dir>/CMakeFiles/mudlet_autogen/include
+target_include_directories(mudlet PRIVATE
+  "$<BUILD_INTERFACE:$<TARGET_PROPERTY:mudlet,AUTOGEN_BUILD_DIR>/include>")
+
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
 endif()

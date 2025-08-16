@@ -29,6 +29,7 @@
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 
 
 void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
