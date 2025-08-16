@@ -88,21 +88,17 @@ bool SecureStringUtils::isEncryptedFormat(const QString& text)
         return false;
     }
     
-    try {
-        // Try to decode and check structure
-        QByteArray decoded = QByteArray::fromBase64(text.toLatin1());
+    // Try to decode and check structure
+    QByteArray decoded = QByteArray::fromBase64(text.toLatin1());
 
-        if (decoded.size() < MIN_ENCRYPTED_SIZE) {
-            return false;
-        }
-        
-        // Check version byte - only support current version
-        quint8 version = static_cast<quint8>(decoded[0]);
-
-        return (version == ENCRYPTION_VERSION_CURRENT);
-    } catch (...) {
+    if (decoded.size() < MIN_ENCRYPTED_SIZE) {
         return false;
     }
+    
+    // Check version byte - only support current version
+    quint8 version = static_cast<quint8>(decoded[0]);
+
+    return (version == ENCRYPTION_VERSION_CURRENT);
 }
 
 void SecureStringUtils::secureStringClear(QString& str)
@@ -173,65 +169,60 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
         return QString();
     }
     
-    try {
-        // Convert to UTF-8 bytes
-        QByteArray plaintextBytes = plaintext.toUtf8();
-        
-        // Generate random salt
-        QByteArray salt = generateSalt();
-        
-        // Get profile-specific encryption key
-        QByteArray profileKey = getProfileEncryptionKey(profileName);
+    // Convert to UTF-8 bytes
+    QByteArray plaintextBytes = plaintext.toUtf8();
+    
+    // Generate random salt
+    QByteArray salt = generateSalt();
+    
+    // Get profile-specific encryption key
+    QByteArray profileKey = getProfileEncryptionKey(profileName);
 
-        if (profileKey.isEmpty()) {
-            return QString();
-        }
-        
-        // Derive encryption key using PBKDF2
-        QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
+    if (profileKey.isEmpty()) {
+        return QString();
+    }
+    
+    // Derive encryption key using PBKDF2
+    QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
 
-        if (derivedKey.isEmpty()) {
-            return QString();
-        }
-        
-        // Use Qt crypto encryption
-        QByteArray nonce = generateNonce();
-        QByteArray hmac;
-        QByteArray encryptedData = encryptData(plaintextBytes, derivedKey, salt, nonce, hmac);
+    if (derivedKey.isEmpty()) {
+        return QString();
+    }
+    
+    // Use Qt crypto encryption
+    QByteArray nonce = generateNonce();
+    QByteArray hmac;
+    QByteArray encryptedData = encryptData(plaintextBytes, derivedKey, salt, nonce, hmac);
 
-        if (encryptedData.isEmpty()) {
-            // Securely clear sensitive data before returning
-            secureByteArrayClear(plaintextBytes);
-            secureByteArrayClear(derivedKey);
-            secureByteArrayClear(profileKey);
-            return QString();
-        }
-        
-        // Build encrypted format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
-        QByteArray result;
-
-        result.append(static_cast<char>(ENCRYPTION_VERSION_CURRENT));
-        result.append(salt);
-        result.append(nonce);
-        result.append(hmac);
-        result.append(encryptedData);
-        
-        // Securely clear sensitive data
+    if (encryptedData.isEmpty()) {
+        // Securely clear sensitive data before returning
         secureByteArrayClear(plaintextBytes);
         secureByteArrayClear(derivedKey);
         secureByteArrayClear(profileKey);
-        
-        // Encode as Base64 for safe text storage
-        QString base64Result = result.toBase64();
-        
-        // Clear result data
-        secureByteArrayClear(result);
-        
-        return base64Result;
-    } catch (...) {
-        // If encryption fails for any reason, return empty string
         return QString();
     }
+    
+    // Build encrypted format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
+    QByteArray result;
+
+    result.append(static_cast<char>(ENCRYPTION_VERSION_CURRENT));
+    result.append(salt);
+    result.append(nonce);
+    result.append(hmac);
+    result.append(encryptedData);
+    
+    // Securely clear sensitive data
+    secureByteArrayClear(plaintextBytes);
+    secureByteArrayClear(derivedKey);
+    secureByteArrayClear(profileKey);
+    
+    // Encode as Base64 for safe text storage
+    QString base64Result = result.toBase64();
+    
+    // Clear result data
+    secureByteArrayClear(result);
+    
+    return base64Result;
 }
 
 QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, const QString& profileName)
@@ -240,77 +231,72 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         return QString();
     }
     
-    try {
-        // Decode from Base64
-        QByteArray encrypted = QByteArray::fromBase64(ciphertext.toLatin1());
+    // Decode from Base64
+    QByteArray encrypted = QByteArray::fromBase64(ciphertext.toLatin1());
 
-        if (encrypted.size() < MIN_ENCRYPTED_SIZE) {
-            return QString(); // Invalid format
-        }
-        
-        // Extract version
-        quint8 version = static_cast<quint8>(encrypted[0]);
+    if (encrypted.size() < MIN_ENCRYPTED_SIZE) {
+        return QString(); // Invalid format
+    }
+    
+    // Extract version
+    quint8 version = static_cast<quint8>(encrypted[0]);
 
-        if (version != ENCRYPTION_VERSION_CURRENT) {
-            return QString(); // Unsupported version
-        }
-        
-        // Extract salt (bytes 1-16)
-        QByteArray salt = encrypted.mid(1, SALT_SIZE);
-        
-        // Get profile-specific encryption key
-        QByteArray profileKey = getProfileEncryptionKey(profileName);
+    if (version != ENCRYPTION_VERSION_CURRENT) {
+        return QString(); // Unsupported version
+    }
+    
+    // Extract salt (bytes 1-16)
+    QByteArray salt = encrypted.mid(1, SALT_SIZE);
+    
+    // Get profile-specific encryption key
+    QByteArray profileKey = getProfileEncryptionKey(profileName);
 
-        if (profileKey.isEmpty()) {
-            return QString();
-        }
-        
-        // Derive encryption key using PBKDF2
-        QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
-
-        if (derivedKey.isEmpty()) {
-            return QString();
-        }
-        
-        // Current format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
-        if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {
-            return QString(); // Invalid format
-        }
-        
-        // Extract nonce (bytes 17-32)
-        QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
-        
-        // Extract HMAC (bytes 33-64)
-        QByteArray hmac = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE, HMAC_SIZE);
-        
-        // Extract encrypted data (bytes 65+)
-        QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE);
-        
-        // Decrypt the data
-        QByteArray decrypted = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
-        
-        if (decrypted.isEmpty()) {
-            // Securely clear sensitive data before returning
-            secureByteArrayClear(derivedKey);
-            secureByteArrayClear(profileKey);
-            return QString();
-        }
-        
-        // Convert back to QString
-        QString result = QString::fromUtf8(decrypted);
-        
-        // Clear sensitive data
-        secureByteArrayClear(encrypted);
-        secureByteArrayClear(salt);
-        secureByteArrayClear(profileKey);
-        secureByteArrayClear(derivedKey);
-        secureByteArrayClear(decrypted);
-        
-        return result;
-    } catch (...) {
-        // If decryption fails for any reason, return empty string
+    if (profileKey.isEmpty()) {
         return QString();
     }
+    
+    // Derive encryption key using PBKDF2
+    QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
+
+    if (derivedKey.isEmpty()) {
+        return QString();
+    }
+    
+    // Current format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
+    if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {
+        return QString(); // Invalid format
+    }
+    
+    // Extract nonce (bytes 17-32)
+    QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
+    
+    // Extract HMAC (bytes 33-64)
+    QByteArray hmac = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE, HMAC_SIZE);
+    
+    // Extract encrypted data (bytes 65+)
+    QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE);
+    
+    // Decrypt the data
+    QByteArray decrypted = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
+    
+    if (decrypted.isEmpty()) {
+        // Securely clear sensitive data before returning
+        secureByteArrayClear(derivedKey);
+        secureByteArrayClear(profileKey);
+        return QString();
+    }
+    
+    // Convert back to QString
+    QString result = QString::fromUtf8(decrypted);
+    
+    // Clear sensitive data
+    secureByteArrayClear(encrypted);
+    secureByteArrayClear(salt);
+    secureByteArrayClear(profileKey);
+    secureByteArrayClear(derivedKey);
+    secureByteArrayClear(decrypted);
+    
+    return result;
 }
 
 QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName)
@@ -458,30 +444,26 @@ QByteArray SecureStringUtils::encryptData(const QByteArray& plaintext, const QBy
         return QByteArray();
     }
     
-    try {
-        // Create cipher key by combining derived key with nonce
-        QByteArray cipherKey = QCryptographicHash::hash(key + nonce, QCryptographicHash::Sha256);
-        
-        // XOR encryption (simple but authenticated via HMAC)
-        QByteArray encrypted = plaintext;
+    // Create cipher key by combining derived key with nonce
+    QByteArray cipherKey = QCryptographicHash::hash(key + nonce, QCryptographicHash::Sha256);
+    
+    // XOR encryption (simple but authenticated via HMAC)
+    QByteArray encrypted = plaintext;
 
-        for (int i = 0; i < encrypted.size(); ++i) {
-            encrypted[i] = encrypted[i] ^ cipherKey[i % cipherKey.size()];
-        }
-        
-        // Create HMAC-SHA256 for authentication
-        // HMAC covers: salt + nonce + encrypted_data
-        QByteArray macData = salt + nonce + encrypted;
-        hmac = QMessageAuthenticationCode::hash(macData, key, QCryptographicHash::Sha256);
-        
-        // Clear sensitive data
-        secureByteArrayClear(cipherKey);
-        secureByteArrayClear(macData);
-        
-        return encrypted;
-    } catch (...) {
-        return QByteArray();
+    for (int i = 0; i < encrypted.size(); ++i) {
+        encrypted[i] = encrypted[i] ^ cipherKey[i % cipherKey.size()];
     }
+    
+    // Create HMAC-SHA256 for authentication
+    // HMAC covers: salt + nonce + encrypted_data
+    QByteArray macData = salt + nonce + encrypted;
+    hmac = QMessageAuthenticationCode::hash(macData, key, QCryptographicHash::Sha256);
+    
+    // Clear sensitive data
+    secureByteArrayClear(cipherKey);
+    secureByteArrayClear(macData);
+    
+    return encrypted;
 }
 
 QByteArray SecureStringUtils::decryptData(const QByteArray& ciphertext, const QByteArray& key,
@@ -493,43 +475,39 @@ QByteArray SecureStringUtils::decryptData(const QByteArray& ciphertext, const QB
         return QByteArray();
     }
     
-    try {
-        // Verify HMAC first (authenticate before decrypt)
-        QByteArray macData = salt + nonce + ciphertext;
-        QByteArray expectedHmac = QMessageAuthenticationCode::hash(macData, key, QCryptographicHash::Sha256);
-        
-        // Constant-time comparison to prevent timing attacks
-        bool hmacValid = (hmac.size() == expectedHmac.size());
+    // Verify HMAC first (authenticate before decrypt)
+    QByteArray macData = salt + nonce + ciphertext;
+    QByteArray expectedHmac = QMessageAuthenticationCode::hash(macData, key, QCryptographicHash::Sha256);
+    
+    // Constant-time comparison to prevent timing attacks
+    bool hmacValid = (hmac.size() == expectedHmac.size());
 
-        for (int i = 0; i < qMin(hmac.size(), expectedHmac.size()); ++i) {
-            hmacValid &= (hmac[i] == expectedHmac[i]);
-        }
-        
-        if (!hmacValid) {
-            secureByteArrayClear(macData);
-            secureByteArrayClear(expectedHmac);
-            return QByteArray(); // Authentication failed
-        }
-        
-        // Create cipher key by combining derived key with nonce
-        QByteArray cipherKey = QCryptographicHash::hash(key + nonce, QCryptographicHash::Sha256);
-        
-        // XOR decryption (same operation as encryption)
-        QByteArray decrypted = ciphertext;
-
-        for (int i = 0; i < decrypted.size(); ++i) {
-            decrypted[i] = decrypted[i] ^ cipherKey[i % cipherKey.size()];
-        }
-        
-        // Clear sensitive data
-        secureByteArrayClear(cipherKey);
+    for (int i = 0; i < qMin(hmac.size(), expectedHmac.size()); ++i) {
+        hmacValid &= (hmac[i] == expectedHmac[i]);
+    }
+    
+    if (!hmacValid) {
         secureByteArrayClear(macData);
         secureByteArrayClear(expectedHmac);
-        
-        return decrypted; 
-    } catch (...) {
-        return QByteArray();
+        return QByteArray(); // Authentication failed
     }
+    
+    // Create cipher key by combining derived key with nonce
+    QByteArray cipherKey = QCryptographicHash::hash(key + nonce, QCryptographicHash::Sha256);
+    
+    // XOR decryption (same operation as encryption)
+    QByteArray decrypted = ciphertext;
+
+    for (int i = 0; i < decrypted.size(); ++i) {
+        decrypted[i] = decrypted[i] ^ cipherKey[i % cipherKey.size()];
+    }
+    
+    // Clear sensitive data
+    secureByteArrayClear(cipherKey);
+    secureByteArrayClear(macData);
+    secureByteArrayClear(expectedHmac);
+    
+    return decrypted;
 }
 
 // Convenience methods for password storage and retrieval
@@ -545,45 +523,40 @@ bool SecureStringUtils::storePassword(const QString& profileName, const QString&
         return removePassword(profileName, key);
     }
     
-    try {
-        QString filePath = getPasswordFilePath(profileName, key);
-        
-        // Ensure directory exists
-        QFileInfo fileInfo(filePath);
-        QDir dir = fileInfo.dir();
-        if (!dir.exists() && !dir.mkpath(dir.absolutePath())) {
-            qDebug() << "SecureStringUtils::storePassword() - Failed to create directory:" << dir.absolutePath();
-            return false;
-        }
-        
-        // Encrypt the password
-        QString encryptedPassword = encryptStringForProfile(password, profileName);
-        if (encryptedPassword.isEmpty()) {
-            qDebug() << "SecureStringUtils::storePassword() - Failed to encrypt password";
-            return false;
-        }
-        
-        // Save to file
-        QSaveFile file(filePath);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-            qDebug() << "SecureStringUtils::storePassword() - Failed to open file for writing:" << filePath << file.errorString();
-            return false;
-        }
-        
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << encryptedPassword;
-        
-        if (!file.commit()) {
-            qDebug() << "SecureStringUtils::storePassword() - Failed to commit file:" << filePath << file.errorString();
-            return false;
-        }
-        
-        return true;
-    } catch (...) {
-        qDebug() << "SecureStringUtils::storePassword() - Exception occurred";
+    QString filePath = getPasswordFilePath(profileName, key);
+    
+    // Ensure directory exists
+    QFileInfo fileInfo(filePath);
+    QDir dir = fileInfo.dir();
+    if (!dir.exists() && !dir.mkpath(dir.absolutePath())) {
+        qDebug() << "SecureStringUtils::storePassword() - Failed to create directory:" << dir.absolutePath();
         return false;
     }
+    
+    // Encrypt the password
+    QString encryptedPassword = encryptStringForProfile(password, profileName);
+    if (encryptedPassword.isEmpty()) {
+        qDebug() << "SecureStringUtils::storePassword() - Failed to encrypt password";
+        return false;
+    }
+    
+    // Save to file
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        qDebug() << "SecureStringUtils::storePassword() - Failed to open file for writing:" << filePath << file.errorString();
+        return false;
+    }
+    
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << encryptedPassword;
+    
+    if (!file.commit()) {
+        qDebug() << "SecureStringUtils::storePassword() - Failed to commit file:" << filePath << file.errorString();
+        return false;
+    }
+    
+    return true;
 }
 
 QString SecureStringUtils::retrievePassword(const QString& profileName, const QString& key)
@@ -592,32 +565,27 @@ QString SecureStringUtils::retrievePassword(const QString& profileName, const QS
         return QString();
     }
     
-    try {
-        QString filePath = getPasswordFilePath(profileName, key);
-        
-        QFile file(filePath);
-        if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
-            // File doesn't exist or can't be read - not an error, just no password stored
-            return QString();
-        }
-        
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        
-        QString encryptedPassword;
-        ifs >> encryptedPassword;
-        file.close();
-        
-        if (encryptedPassword.isEmpty()) {
-            return QString();
-        }
-        
-        // Decrypt the password
-        return decryptStringForProfile(encryptedPassword, profileName);
-    } catch (...) {
-        qDebug() << "SecureStringUtils::retrievePassword() - Exception occurred";
+    QString filePath = getPasswordFilePath(profileName, key);
+    
+    QFile file(filePath);
+    if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
+        // File doesn't exist or can't be read - not an error, just no password stored
         return QString();
     }
+    
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    
+    QString encryptedPassword;
+    ifs >> encryptedPassword;
+    file.close();
+    
+    if (encryptedPassword.isEmpty()) {
+        return QString();
+    }
+    
+    // Decrypt the password
+    return decryptStringForProfile(encryptedPassword, profileName);
 }
 
 bool SecureStringUtils::removePassword(const QString& profileName, const QString& key)
@@ -626,20 +594,15 @@ bool SecureStringUtils::removePassword(const QString& profileName, const QString
         return false;
     }
     
-    try {
-        QString filePath = getPasswordFilePath(profileName, key);
-        
-        QFile file(filePath);
-        if (!file.exists()) {
-            // File doesn't exist - consider it successfully removed
-            return true;
-        }
-        
-        return file.remove();
-    } catch (...) {
-        qDebug() << "SecureStringUtils::removePassword() - Exception occurred";
-        return false;
+    QString filePath = getPasswordFilePath(profileName, key);
+    
+    QFile file(filePath);
+    if (!file.exists()) {
+        // File doesn't exist - consider it successfully removed
+        return true;
     }
+    
+    return file.remove();
 }
 
 bool SecureStringUtils::hasPassword(const QString& profileName, const QString& key)

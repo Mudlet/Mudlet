@@ -351,9 +351,7 @@ unix:!macx {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua5.1 \
-            -lhunspell-1.7 \
-            -lssl \
-            -lcrypto
+            -lhunspell-1.7
         INCLUDEPATH += \
             /usr/local/include \
             /usr/local/include/lua-5.1
@@ -365,9 +363,7 @@ unix:!macx {
 # FreeBSD appends the version number to hunspell:
             -lhunspell-1.7 \
 # Needed for sysinfo(...) call in mudlet class:
-            -lsysinfo \
-            -lssl \
-            -lcrypto
+            -lsysinfo
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
@@ -375,18 +371,14 @@ unix:!macx {
     linux {
         LIBS += \
             -llua5.1 \
-            -lhunspell \
-            -lssl \
-            -lcrypto
+            -lhunspell
         INCLUDEPATH += /usr/include/lua5.1
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
         -lzip \
         -lz \
-        -lpugixml \
-        -lssl \
-        -lcrypto
+        -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
        LIBS += -lGLU
@@ -419,8 +411,6 @@ unix:!macx {
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lpugixml \
-        -lssl \
-        -lcrypto \
         -lws2_32 \
         -loleaut32
 

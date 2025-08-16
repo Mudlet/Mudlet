@@ -305,9 +305,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
-    // Mark this object as being destroyed to prevent callbacks from accessing invalid UI
-    setProperty("__destroying", true);
-    
     // Clear any pending operation flags
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
