@@ -45,7 +45,8 @@ link_libraries(
     ZIP::ZIP
     ZLIB::ZLIB
     PCRE::PCRE
-    PUGIXML::PUGIXML)
+    PUGIXML::PUGIXML
+    edbee-lib)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 

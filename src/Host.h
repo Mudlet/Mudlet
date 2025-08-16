@@ -775,7 +775,6 @@ signals:
 
 private slots:
     void slot_purgeTemps();
-    void handleMxpError();
     void disableMxpAndReconnect();
 
 private:

@@ -4486,20 +4486,6 @@ void Host::setCommandLineHistorySaveSize(const int lines)
     }
 }
 
-void Host::handleMxpError()
-{
-    if (mLastMxpErrorTime.isNull() || mLastMxpErrorTime.secsTo(QDateTime::currentDateTime()) > 10) {
-        mMxpErrorCount = 0;
-    }
-
-    mMxpErrorCount++;
-    mLastMxpErrorTime = QDateTime::currentDateTime();
-
-    if (mMxpErrorCount <= 3) {
-        emit mxpErrorDetected();
-    }
-}
-
 void Host::editorThemeChanged()
 {
     emit signal_editorThemeChanged();

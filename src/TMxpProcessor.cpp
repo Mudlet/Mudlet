@@ -157,7 +157,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         if (mMxpTagTimer.elapsed() > cMxpTagTimeout) {
             mMxpTagBuilder.reset();
             qWarning() << "MXP tag parsing timed out. Resetting MXP parser.";
-            mpMxpClient->mxpError();
+            static_cast<Host*>(mpMxpClient)->mxpErrorDetected();
             return HANDLER_NEXT_CHAR;
         }
     } else {
