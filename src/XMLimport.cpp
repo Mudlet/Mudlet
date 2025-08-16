@@ -2134,14 +2134,7 @@ void XMLimport::readProfileShortcut()
     auto key = attributes().value(qsl("key"));
     auto sequenceString = readElementText();
 
-    // Workaround for QKeySequence::fromString failing to parse "Ctrl++" and "Ctrl+-"
-    // Replace '+' with 'Plus' and '-' with 'Minus' when they appear after 'Ctrl'
-    if (sequenceString.contains(qsl("Ctrl++"))) {
-        sequenceString.replace(qsl("Ctrl++"), qsl("Ctrl+Plus"));
-    }
-    if (sequenceString.contains(qsl("Ctrl+-"))) {
-        sequenceString.replace(qsl("Ctrl+-"), qsl("Ctrl+Minus"));
-    }
+    
 
     if (mpHost->profileShortcuts.value(key.toString())) {
         QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();

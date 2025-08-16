@@ -404,6 +404,12 @@ void cTelnet::requestDiscordInfo()
     }
 }
 
+void cTelnet::disableMxp()
+{
+    sendTelnetOption(TN_DONT, OPT_MXP);
+}
+
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     if (mpHost) {
