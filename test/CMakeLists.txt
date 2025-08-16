@@ -23,6 +23,11 @@ find_package(Qt6 6.4.0 REQUIRED
     Core5Compat
     Test)
 
+find_package(Boost 1.44)
+find_package(ZIP REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(PCRE REQUIRED)
+find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 
 link_libraries(
@@ -35,7 +40,12 @@ link_libraries(
     Qt6::UiTools
     Qt6::Widgets
     Qt6::Core5Compat
-    HUNSPELL::HUNSPELL)
+    Boost::boost
+    HUNSPELL::HUNSPELL
+    ZIP::ZIP
+    ZLIB::ZLIB
+    PCRE::PCRE
+    PUGIXML::PUGIXML)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
