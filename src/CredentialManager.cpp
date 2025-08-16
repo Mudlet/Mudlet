@@ -42,27 +42,10 @@
 // Forward declaration to avoid including mudlet.h
 class mudlet;
 
-// Helper function to check if mudlet is shutting down without including mudlet.h
-static bool isMudletShuttingDown() {
-    // For testing/minimal builds, we can simply return false
-    // In the full application build, this can be replaced with actual mudlet checks
-#ifndef CREDENTIALMANAGER_MINIMAL_BUILD
-    // In the full build, we would include mudlet.h and use:
-    // mudlet* instance = mudlet::self();
-    // return instance ? instance->isGoingDown() : false;
-    
-    // For now, use a simple check - if QCoreApplication is closing, assume shutting down
-    return QCoreApplication::closingDown();
-#else
-    // In minimal/test builds, assume not shutting down
-    return false;
-#endif
-}
-
 CredentialManager::CredentialManager(QObject* parent)
     : QObject(parent)
-    , m_currentJob(nullptr)
-    , m_timeoutTimer(nullptr)
+    , mCurrentJob(nullptr)
+    , mTimeoutTimer(nullptr)
 {
 }
 
@@ -73,9 +56,9 @@ CredentialManager::~CredentialManager()
     qDebug() << "CredentialManager: Destructor called, cleaning up without callbacks";
     
     // Clear callbacks before cleanup to prevent them from being called
-    m_currentCallback = nullptr;
-    m_currentRetrievalCallback = nullptr;
-    m_currentAvailabilityCallback = nullptr;
+    mCurrentCallback = nullptr;
+    mCurrentRetrievalCallback = nullptr;
+    mCurrentAvailabilityCallback = nullptr;
     
     cleanupCurrentOperation();
 }
@@ -84,20 +67,20 @@ void CredentialManager::setupTimeout()
 {
     cleanupTimeout(); // Clean up any existing timer
     
-    m_timeoutTimer = new QTimer(this);
-    m_timeoutTimer->setSingleShot(true);
-    m_timeoutTimer->setInterval(OPERATION_TIMEOUT_MS);
+    mTimeoutTimer = new QTimer(this);
+    mTimeoutTimer->setSingleShot(true);
+    mTimeoutTimer->setInterval(OPERATION_TIMEOUT_MS);
     
-    connect(m_timeoutTimer, &QTimer::timeout, this, &CredentialManager::handleTimeout);
-    m_timeoutTimer->start();
+    connect(mTimeoutTimer, &QTimer::timeout, this, &CredentialManager::handleTimeout);
+    mTimeoutTimer->start();
 }
 
 void CredentialManager::cleanupTimeout()
 {
-    if (m_timeoutTimer) {
-        m_timeoutTimer->stop();
-        m_timeoutTimer->deleteLater();
-        m_timeoutTimer = nullptr;
+    if (mTimeoutTimer) {
+        mTimeoutTimer->stop();
+        mTimeoutTimer->deleteLater();
+        mTimeoutTimer = nullptr;
     }
 }
 
@@ -106,12 +89,12 @@ void CredentialManager::handleTimeout()
     qWarning() << "CredentialManager: Operation timed out";
     
     // Call appropriate callback with timeout error
-    if (m_currentCallback) {
-        m_currentCallback(false, "Operation timed out");
-    } else if (m_currentRetrievalCallback) {
-        m_currentRetrievalCallback(false, QString(), "Operation timed out");
-    } else if (m_currentAvailabilityCallback) {
-        m_currentAvailabilityCallback(false, "Operation timed out");
+    if (mCurrentCallback) {
+        mCurrentCallback(false, "Operation timed out");
+    } else if (mCurrentRetrievalCallback) {
+        mCurrentRetrievalCallback(false, QString(), "Operation timed out");
+    } else if (mCurrentAvailabilityCallback) {
+        mCurrentAvailabilityCallback(false, "Operation timed out");
     }
     
     cleanupCurrentOperation();
@@ -121,17 +104,17 @@ void CredentialManager::cleanupCurrentOperation()
 {
     cleanupTimeout();
     
-    if (m_currentJob) {
+    if (mCurrentJob) {
         // Disconnect all signals to prevent callbacks after cleanup
-        m_currentJob->disconnect();
-        m_currentJob->deleteLater();
-        m_currentJob = nullptr;
+        mCurrentJob->disconnect();
+        mCurrentJob->deleteLater();
+        mCurrentJob = nullptr;
     }
     
     // Clear callbacks
-    m_currentCallback = nullptr;
-    m_currentRetrievalCallback = nullptr;
-    m_currentAvailabilityCallback = nullptr;
+    mCurrentCallback = nullptr;
+    mCurrentRetrievalCallback = nullptr;
+    mCurrentAvailabilityCallback = nullptr;
 }
 
 // Additional safety method to check if we should proceed with keychain operations
@@ -145,9 +128,9 @@ bool CredentialManager::isOperationValid() const
         return false;
     }
     
-    // Check if mudlet is shutting down
-    if (isMudletShuttingDown()) {
-        qDebug() << "CredentialManager: Operation invalid - mudlet shutting down";
+    // Check if application is shutting down
+    if (QCoreApplication::closingDown()) {
+        qDebug() << "CredentialManager: Operation invalid - application shutting down";
         return false;
     }
     
@@ -158,7 +141,7 @@ bool CredentialManager::isOperationValid() const
     }
     
     // Check if we have valid callbacks
-    bool hasCallbacks = (m_currentCallback || m_currentRetrievalCallback || m_currentAvailabilityCallback);
+    bool hasCallbacks = (mCurrentCallback || mCurrentRetrievalCallback || mCurrentAvailabilityCallback);
     if (!hasCallbacks) {
         qDebug() << "CredentialManager: Operation invalid - no callbacks set";
     }
@@ -222,7 +205,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
     }
     
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting storePassword operation during shutdown";
         if (callback) {
             callback(false, "Application is shutting down");
@@ -254,7 +237,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     }
     
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting retrievePassword operation during shutdown";
         if (callback) {
             callback(false, QString(), "Application is shutting down");
@@ -350,7 +333,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
     }
     
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting removePassword operation during shutdown";
         if (callback) {
             callback(false, "Application is shutting down");
@@ -396,7 +379,7 @@ void CredentialManager::migratePassword(const QString& profileName, const QStrin
     }
     
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting migratePassword operation during shutdown";
         if (callback) {
             callback(false, "Application is shutting down");
@@ -422,7 +405,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     }
 
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting storeCredential operation during shutdown";
         if (callback) {
             callback(false, "Application is shutting down");
@@ -441,8 +424,8 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     writeJob->setTextData(password);
     writeJob->setAutoDelete(false);
     
-    m_currentJob = writeJob;
-    m_currentCallback = callback;
+    mCurrentJob = writeJob;
+    mCurrentCallback = callback;
     
     // Set up timeout
     setupTimeout();
@@ -478,10 +461,10 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
         }
         
         // Final validity check before calling callback
-        if (m_currentCallback && isOperationValid()) {
-            auto callback = m_currentCallback; // Copy callback to avoid use-after-free
-            m_currentCallback = nullptr;
-            m_currentJob = nullptr;
+        if (mCurrentCallback && isOperationValid()) {
+            auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
+            mCurrentCallback = nullptr;
+            mCurrentJob = nullptr;
             
             callback(success, errorMessage);
         }
@@ -503,7 +486,7 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
     }
 
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting retrieveCredential operation during shutdown";
 
         if (callback) {
@@ -520,8 +503,8 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
     readJob->setKey(account);
     readJob->setAutoDelete(false);
     
-    m_currentJob = readJob;
-    m_currentRetrievalCallback = callback;
+    mCurrentJob = readJob;
+    mCurrentRetrievalCallback = callback;
     
     // Set up timeout
     setupTimeout();
@@ -561,10 +544,10 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
         }
         
         // Final validity check before calling callback
-        if (m_currentRetrievalCallback && isOperationValid()) {
-            auto callback = m_currentRetrievalCallback; // Copy callback to avoid use-after-free
-            m_currentRetrievalCallback = nullptr;
-            m_currentJob = nullptr;
+        if (mCurrentRetrievalCallback && isOperationValid()) {
+            auto callback = mCurrentRetrievalCallback; // Copy callback to avoid use-after-free
+            mCurrentRetrievalCallback = nullptr;
+            mCurrentJob = nullptr;
             
             callback(success, password, errorMessage);
         }
@@ -587,7 +570,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
     }
 
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting removeCredential operation during shutdown";
         if (callback) {
             callback(false, "Application is shutting down");
@@ -603,8 +586,8 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
     deleteJob->setKey(account);
     deleteJob->setAutoDelete(false);
     
-    m_currentJob = deleteJob;
-    m_currentCallback = callback;
+    mCurrentJob = deleteJob;
+    mCurrentCallback = callback;
     
     // Set up timeout
     setupTimeout();
@@ -637,10 +620,10 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
         }
         
         // Final validity check before calling callback
-        if (m_currentCallback && isOperationValid()) {
-            auto callback = m_currentCallback; // Copy callback to avoid use-after-free
-            m_currentCallback = nullptr;
-            m_currentJob = nullptr;
+        if (mCurrentCallback && isOperationValid()) {
+            auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
+            mCurrentCallback = nullptr;
+            mCurrentJob = nullptr;
             
             callback(success, errorMessage);
         }
@@ -664,7 +647,7 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
     }
 
     // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown() || isMudletShuttingDown()) {
+    if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting isKeychainAvailable operation during shutdown";
         callback(false, "Application is shutting down");
         return;
@@ -678,8 +661,8 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
     testJob->setKey("availability_test");
     testJob->setAutoDelete(false);
     
-    m_currentJob = testJob;
-    m_currentAvailabilityCallback = callback;
+    mCurrentJob = testJob;
+    mCurrentAvailabilityCallback = callback;
     
     // Set up timeout
     setupTimeout();
@@ -706,10 +689,10 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
         }
         
         // Final validity check before calling callback
-        if (m_currentAvailabilityCallback && isOperationValid()) {
-            auto callback = m_currentAvailabilityCallback; // Copy callback to avoid use-after-free
-            m_currentAvailabilityCallback = nullptr;
-            m_currentJob = nullptr;
+        if (mCurrentAvailabilityCallback && isOperationValid()) {
+            auto callback = mCurrentAvailabilityCallback; // Copy callback to avoid use-after-free
+            mCurrentAvailabilityCallback = nullptr;
+            mCurrentJob = nullptr;
             
             callback(available, message);
         }

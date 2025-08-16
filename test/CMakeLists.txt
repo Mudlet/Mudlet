@@ -109,7 +109,6 @@ add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
 
 add_executable(CredentialManagerTest CredentialManagerTest.cpp ../src/CredentialManager.cpp ../src/SecureStringUtils.cpp)
 target_link_libraries(CredentialManagerTest ${KEYCHAIN_LIBRARY})
-target_compile_definitions(CredentialManagerTest PRIVATE CREDENTIALMANAGER_MINIMAL_BUILD)
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()

@@ -124,11 +124,11 @@ private:
     void deleteLegacyKeychainEntry(const QString& profileName);
     
     // Current operation state
-    QKeychain::Job* m_currentJob;
-    QTimer* m_timeoutTimer;
-    CredentialCallback m_currentCallback;
-    CredentialRetrievalCallback m_currentRetrievalCallback;
-    AvailabilityCallback m_currentAvailabilityCallback;
+    QKeychain::Job* mCurrentJob;
+    QTimer* mTimeoutTimer;
+    CredentialCallback mCurrentCallback;
+    CredentialRetrievalCallback mCurrentRetrievalCallback;
+    AvailabilityCallback mCurrentAvailabilityCallback;
 };
 
 #endif // MUDLET_CREDENTIALMANAGER_H
