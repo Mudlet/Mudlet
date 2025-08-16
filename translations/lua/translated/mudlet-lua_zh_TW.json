@@ -60,7 +60,7 @@
     "description": "label to minimize/restore the container"
   },
   "AdjustableContainer.connectTo": {
-    "message": "連線到：",
+    "message": "連線到： ",
     "description": "connect your container to a border to create a frame"
   },
   "AdjustableContainer.disconnect": {
