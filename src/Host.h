@@ -769,9 +769,11 @@ signals:
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
+    void mxpErrorDetected();
 
 private slots:
     void slot_purgeTemps();
+    void disableMxpAndReconnect();
 
 private:
     void installPackageFonts(const QString &packageName);
