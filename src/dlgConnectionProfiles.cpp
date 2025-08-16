@@ -929,7 +929,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
                                      mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
                                      QVariant(entry));
-        } else {
+        } else if (entry.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
             profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
     }
