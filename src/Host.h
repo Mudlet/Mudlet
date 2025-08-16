@@ -442,6 +442,28 @@ public:
     void sendCmdLine(const QString& cmd);
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
 
+    // Malformed MXP detection
+    void onMalformedMxpDetected();
+signals:
+    // Tells TTextEdit instances for this profile how to draw the ambiguous
+    // width characters:
+    void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void profileSaveStarted();
+    void profileSaveFinished();
+    void signal_changeSpellDict(const QString&);
+    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
+    // problems as they arrive as well as a summary upon destruction:
+    void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
+    // Tells all command lines to save their history:
+    void signal_saveCommandLinesHistory();
+    void signal_editorThemeChanged();
+    void signal_remoteEchoChanged(bool enabled);
+    void signal_forceMXPProcessorOnChanged(bool enabled);
+    void signal_malformedMxpDetected();
+
 private:
     bool mNoAntiAlias = false;
     // These are used only during profile initiation to provide faked details
@@ -521,9 +543,13 @@ public:
     QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad;
 
-    // This is set when we want commands we typed to be shown on the main
-    // TConsole:
-    bool mPrintCommand;
+    // Controls how sent commands are displayed on the main TConsole:
+    enum class CommandEchoMode {
+        Never = 0,       // Never show sent commands regardless of script preferences
+        ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
+        Always = 2       // Always show sent commands regardless of script preferences
+    };
+    CommandEchoMode mCommandEchoMode;
 
     /*
      * This is set when the Server is remote echoing what WE send to it,
@@ -536,6 +562,16 @@ public:
      * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive = false;
+
+    // Command echo mode getters and setters
+    CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
+    void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
+    
+    // Backward compatibility methods - for existing code that expects boolean behavior
+    bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
+    void setPrintCommand(bool print) { 
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    }
 
 public:
     void setRemoteEchoingActive(bool active);
@@ -878,8 +914,8 @@ private:
     // (true) or not (false):
     bool mSGRCodeHasColSpaceId;
 
-    // Flag whether the Server can use ANSI OSC "P#RRGGBB\" to redefine the
-    // 16 basic colors (and OSC "R\" to reset them).
+    // Flag whether the Server can use ANSI OSC "P#RRGGBB" to redefine the
+    // 16 basic colors (and OSC "R" to reset them).
     bool mServerMayRedefineColors;
 
     // Was public but hidden to prevent it being changed without going through
@@ -972,6 +1008,10 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
+
+    // Malformed MXP detection
+    int mMxpErrorCount = 0;
+    QDateTime mLastMxpErrorTime;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

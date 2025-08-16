@@ -153,19 +153,10 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
-    if (mMxpTagBuilder.isInsideTag()) {
-        if (mMxpTagTimer.elapsed() > cMxpTagTimeout) {
-            mMxpTagBuilder.reset();
-            qWarning() << "MXP tag parsing timed out. Resetting MXP parser.";
-            static_cast<Host*>(mpMxpClient)->mxpErrorDetected();
-            return HANDLER_NEXT_CHAR;
-        }
-    } else {
-        mMxpTagTimer.start();
-    }
-
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
+    } else {
+        mMalformedMxpCharCount = 0;
     }
 
     if (mMxpTagBuilder.hasTag()) {
@@ -201,6 +192,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
     return HANDLER_FALL_THROUGH;
 }
+
 
 void TMxpProcessor::processRawInput(char ch)
 {

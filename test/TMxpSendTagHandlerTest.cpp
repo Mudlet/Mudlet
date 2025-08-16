@@ -22,7 +22,7 @@ private slots:
     {
         // issue #4368
         TMxpStubClient stub;
-        TMxpProcessor processor(&stub);
+        TMxpProcessor processor(nullptr, &stub);
 
         std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
         for (char &ch : input) {

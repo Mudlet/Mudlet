@@ -40,8 +40,9 @@ class TMxpProcessor
 {
     static const int cMxpTagTimeout = 500; // ms
 public:
-    explicit TMxpProcessor(TMxpClient* pMxpClient)
-    : mMxpTagBuilder(true)
+    explicit TMxpProcessor(Host* pHost, TMxpClient* pMxpClient)
+    : mpHost(pHost)
+    , mMxpTagBuilder(true)
     , mEntityHandler(mMxpTagProcessor.getEntityResolver())
     , mpMxpClient(pMxpClient)
     {
@@ -62,6 +63,7 @@ public:
     inline QString getEntityValue() { return lastEntityValue;}
 
 private:
+    Host* mpHost;
     // State of MXP system:
     bool mMXP = false;
     TMXPMode mMXP_MODE = MXP_MODE_OPEN;
@@ -77,7 +79,17 @@ private:
 
     // value of the last resolved entity:
     QString lastEntityValue;
+
     QElapsedTimer mMxpTagTimer;
+
+
+    // Malformed MXP detection
+    int mMalformedMxpCharCount = 0;
+    QDateTime mLastMalformedMxpTime;
+
 };
+
+#include <QDateTime>
+
 
 #endif //MUDLET_TMXPPROCESSOR_H

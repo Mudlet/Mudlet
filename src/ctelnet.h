@@ -225,6 +225,7 @@ public:
     bool isChannel102Enabled() const { return enableChannel102; }
     void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
+    void disableMxp();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return mpSocket.state(); }
     std::tuple<QString, int, bool> getConnectionInfo() const;

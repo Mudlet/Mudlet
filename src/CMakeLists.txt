@@ -500,6 +500,16 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
+target_include_directories(mudlet PUBLIC Qt6::Core)
+target_include_directories(mudlet PUBLIC ${Qt6Core_INCLUDE_DIRS})
+
+# Copy discord-rpc DLLs to the build directory for Windows
+if(WIN32)
+  file(COPY "${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib/discord-rpc32.dll"
+       DESTINATION "$<TARGET_FILE_DIR:mudlet>")
+  file(COPY "${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib/discord-rpc64.dll"
+       DESTINATION "$<TARGET_FILE_DIR:mudlet>")
+endif()
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various

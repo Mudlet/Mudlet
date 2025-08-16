@@ -62,6 +62,8 @@
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
+#include <QMessageBox>
+#include <QTimer>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -227,7 +229,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEchoLuaErrors(false)
 , mCommandSeparator(qsl(";;"))
 , mMxpClient(this)
-, mMxpProcessor(&mMxpClient)
+, mMxpProcessor(this, &mMxpClient)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(true)
@@ -243,7 +245,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
-, mPrintCommand(true)
+, mCommandEchoMode(CommandEchoMode::ScriptControl)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
@@ -435,6 +437,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
             qDebug() << "MXP disabled (forced)";
         }
     });
+
+    connect(this, &Host::signal_malformedMxpDetected, this, &Host::onMalformedMxpDetected);
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
@@ -1298,12 +1302,27 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
+    // Determine if we should print the command based on the echo mode
+    bool shouldPrint = false;
+    switch (mCommandEchoMode) {
+    case CommandEchoMode::Never:
+        shouldPrint = false;
+        break;
+    case CommandEchoMode::Always:
+        shouldPrint = true;
+        break;
+    case CommandEchoMode::ScriptControl:
+        shouldPrint = wantPrint;
+        break;
+    }
+
+    if (shouldPrint && !mIsRemoteEchoingActive) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
+
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
         if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
@@ -1313,7 +1332,9 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->update();
         }
     }
+
     QStringList commandList;
+
     if (!mCommandSeparator.isEmpty()) {
         commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
     } else if (!cmd.isEmpty()) {
@@ -1321,8 +1342,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         commandList << cmd;
     }
 
-        // allow sending blank commands
-
+    // allow sending blank commands
     if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
@@ -4537,3 +4557,47 @@ QFont Host::getAndClearTempDisplayFont()
     mTempDisplayFontAttributes.reset();
     return tempFont;
 }
+
+void Host::onMalformedMxpDetected()
+     {
+         const int MXP_ERROR_THRESHOLD = 3;
+         const int MXP_ERROR_TIME_WINDOW_MS = 5000; // 5 seconds
+
+         QDateTime currentTime = QDateTime::currentDateTime();
+
+         // Increment error count
+         mMxpErrorCount++;
+
+         // Check if multiple errors occurred within the time window
+         if (mLastMxpErrorTime.isValid() && mLastMxpErrorTime.msecsTo(currentTime) < MXP_ERROR_TIME_WINDOW_MS) {
+             if (mMxpErrorCount >= MXP_ERROR_THRESHOLD) {
+                 // Persistent malformed MXP detected, prompt user
+                 postMessage(tr("[ ALERT ] - Persistent malformed MXP content detected. This may cause display issues."));
+
+                 QMessageBox msgBox;
+                 msgBox.setText(tr("Persistent malformed MXP content detected. This may cause display issues or freeze your client."));
+                 msgBox.setInformativeText(tr("Would you like to disable MXP for this connection and reconnect?"));
+                 msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                 msgBox.setDefaultButton(QMessageBox::Yes);
+                 int ret = msgBox.exec();
+
+                 if (ret == QMessageBox::Yes) {
+                     // Disable MXP and reconnect
+                     mTelnet.disableMxp(); // OPT_MXP is defined in ctelnet.h
+                     mMxpProcessor.disable(); // Ensure MXP processor is disabled
+                     postMessage(tr("[ INFO ] - MXP has been disabled. Reconnecting..."));
+                     mTelnet.reconnect();
+                 } else {
+                     postMessage(tr("[ INFO ] - MXP will remain enabled. You may continue to experience display issues."));
+                 }
+
+                 // Reset error count and time after prompting to avoid repeated prompts
+                 mMxpErrorCount = 0;
+                 mLastMxpErrorTime = QDateTime(); // Invalidate time
+             }
+         } else {
+             // First error in a new window, or window expired, reset count and set time
+             mMxpErrorCount = 1;
+             mLastMxpErrorTime = currentTime;
+         }
+     }
