@@ -4577,7 +4577,7 @@ void Host::onMalformedMxpDetected()
 
                  if (ret == QMessageBox::Yes) {
                      // Disable MXP and reconnect
-                     mTelnet.sendTelnetOption(TN_DONT, OPT_MXP); // OPT_MXP is defined in ctelnet.h
+                     mTelnet.disableMxp(); // OPT_MXP is defined in ctelnet.h
                      mMxpProcessor.disable(); // Ensure MXP processor is disabled
                      postMessage(tr("[ INFO ] - MXP has been disabled. Reconnecting..."));
                      mTelnet.reconnect();
