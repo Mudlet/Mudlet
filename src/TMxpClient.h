@@ -25,13 +25,18 @@
 #include "TMxpContext.h"
 #include "TMxpTagHandlerResult.h"
 #include "utils.h"
+#include <QObject>
 
 class TMediaData;
 
-class TMxpClient
+class TMxpClient : public QObject
 {
+    Q_OBJECT
 protected:
     TMxpContext* mpContext;
+
+signals:
+    void mxpError();
 
 public:
     TMxpClient()

@@ -437,6 +437,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     });
 
+    connect(&mMxpClient, &TMxpClient::mxpError, this, &Host::handleMxpError);
+
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
 
@@ -4481,6 +4483,20 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 {
     if (mCommandLineHistorySaveSize != lines) {
         mCommandLineHistorySaveSize = lines;
+    }
+}
+
+void Host::handleMxpError()
+{
+    if (mLastMxpErrorTime.isNull() || mLastMxpErrorTime.secsTo(QDateTime::currentDateTime()) > 10) {
+        mMxpErrorCount = 0;
+    }
+
+    mMxpErrorCount++;
+    mLastMxpErrorTime = QDateTime::currentDateTime();
+
+    if (mMxpErrorCount <= 3) {
+        emit mxpErrorDetected();
     }
 }
 
