@@ -34,7 +34,9 @@
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
-#include "TMainConsole.h"
+
+class TMainConsole;
+
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"

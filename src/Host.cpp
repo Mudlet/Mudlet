@@ -25,6 +25,7 @@
 
 #include "Host.h"
 
+#include "TMainConsole.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
