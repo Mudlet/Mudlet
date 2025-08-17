@@ -5,7 +5,7 @@
   "description": "A cross-platform, open source, and free MUD client with scripting in Lua",
   "homepage": "https://www.mudlet.org",
   "license": "GPL-2.0",
-  "builtin-baseline": "a9dc9a4b32bf05be3fcf9c65e996c98ba7eb2fd4",
+  "builtin-baseline": "4bb07a326d9b9bce3703272a509e5bc25dd9cfd5",
   "vcpkg-configuration": {
     "overlay-ports": [ "./3rdparty/our-vcpkg-dependencies" ]
   },
