@@ -257,19 +257,15 @@ jobs:
         echo "Environment variables:"
         env | grep -i vcpkg || echo "No VCPKG env vars found"
         
-        # Use the known vcpkg installation directory from manifest mode
-        # In manifest mode, vcpkg installs to a directory next to vcpkg.json
-        VCPKG_INSTALLED_DIR="${{github.workspace}}/vcpkg_installed"
-        VCPKG_TRIPLET_DIR="$VCPKG_INSTALLED_DIR/${{matrix.triplet}}"
-        echo "Using vcpkg triplet directory: $VCPKG_TRIPLET_DIR"
-        
-        # Verify the directory exists
-        if [ -d "$VCPKG_TRIPLET_DIR" ]; then
-          echo "Vcpkg triplet directory found successfully"
+        # Find the actual vcpkg installation directory (lukka/run-vcpkg uses a UUID directory)
+        VCPKG_INSTALLED_DIR=$(find ${{github.workspace}} -name "vcpkg_installed" -type d 2>/dev/null | head -1)
+        if [ -n "$VCPKG_INSTALLED_DIR" ]; then
+          VCPKG_TRIPLET_DIR="$VCPKG_INSTALLED_DIR/${{matrix.triplet}}"
+          echo "Found vcpkg installation at: $VCPKG_INSTALLED_DIR"
+          echo "Using vcpkg triplet directory: $VCPKG_TRIPLET_DIR"
         else
-          echo "Warning: Vcpkg triplet directory not found at $VCPKG_TRIPLET_DIR"
-          echo "Contents of vcpkg_installed:"
-          ls -la "$VCPKG_INSTALLED_DIR" 2>/dev/null || echo "vcpkg_installed directory not found"
+          echo "ERROR: Could not find vcpkg_installed directory"
+          exit 1
         fi
         
         # Update PATH to use the correct lua tools location
