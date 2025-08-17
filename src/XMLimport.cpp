@@ -709,6 +709,21 @@ void XMLimport::readHostPackage()
         } else if (isStartElement()) {
             if (name() == qsl("Host")) {
                 readHost(mpHost);
+            } else if (name() == qsl("TriggerPackage")) {
+                // Handle legacy profiles where packages were nested inside HostPackage
+                readTriggerPackage();
+            } else if (name() == qsl("TimerPackage")) {
+                readTimerPackage();
+            } else if (name() == qsl("AliasPackage")) {
+                readAliasPackage();
+            } else if (name() == qsl("ActionPackage")) {
+                readActionPackage();
+            } else if (name() == qsl("ScriptPackage")) {
+                readScriptPackage();
+            } else if (name() == qsl("KeyPackage")) {
+                readKeyPackage();
+            } else if (name() == qsl("VariablePackage")) {
+                readVariablePackage();
             } else {
                 readUnknownElement(qsl("HostPackage"));
             }
