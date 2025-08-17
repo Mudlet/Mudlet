@@ -35,7 +35,6 @@ jobs:
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-22.04
-            # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
             triplet: x64-linux
             compiler: gcc_64
