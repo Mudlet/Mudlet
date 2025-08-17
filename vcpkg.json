@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "mudlet",
+  "version": "4.18.2",
+  "description": "A cross-platform, open source, and free MUD client with scripting in Lua",
+  "homepage": "https://www.mudlet.org",
+  "license": "GPL-2.0",
+  "builtin-baseline": "a9dc9a4b32bf05be3fcf9c65e996c98ba7eb2fd4",
+  "vcpkg-configuration": {
+    "overlay-ports": [ "./3rdparty/our-vcpkg-dependencies" ]
+  },
+  "dependencies": [
+    "yajl",
+    {
+      "name": "hunspell",
+      "platform": "linux"
+    },
+    "pugixml",
+    {
+      "name": "lua",
+      "features": ["core"]
+    },
+    "sqlite3",
+    "pcre"
+  ]
+}
