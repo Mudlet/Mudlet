@@ -1607,8 +1607,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:
         pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
-        // Needed to ensure setting is correct on start-up:
-        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
 
         // This also writes the value out to the profile's base directory:
