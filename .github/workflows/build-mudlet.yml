@@ -155,18 +155,7 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        runVcpkgInstall: true
 
-    - name: Debug vcpkg installation
-      run: |
-        echo "=== Debugging vcpkg installation ==="
-        echo "VCPKG_ROOT: $VCPKG_ROOT"
-        echo "Listing vcpkg installed directory:"
-        find $VCPKG_ROOT/installed -name "*yajl*" -type f 2>/dev/null || echo "No yajl files found"
-        echo "Checking if x64-linux triplet exists:"
-        ls -la $VCPKG_ROOT/installed/ || echo "installed directory not found"
-        echo "Checking vcpkg list:"
-        $VCPKG_ROOT/vcpkg list || echo "vcpkg list failed"
 
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
@@ -195,15 +184,26 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+        # Find the actual vcpkg installation directory (lukka/run-vcpkg uses a UUID directory)
+        VCPKG_INSTALLED_DIR=$(find ${{github.workspace}} -name "vcpkg_installed" -type d 2>/dev/null | head -1)
+        if [ -n "$VCPKG_INSTALLED_DIR" ]; then
+          VCPKG_TRIPLET_DIR="$VCPKG_INSTALLED_DIR/${{matrix.triplet}}"
+          echo "Found vcpkg installation at: $VCPKG_INSTALLED_DIR"
+          echo "Using vcpkg triplet directory: $VCPKG_TRIPLET_DIR"
+        else
+          echo "ERROR: Could not find vcpkg_installed directory"
+          exit 1
+        fi
+        
+        export PATH="$VCPKG_TRIPLET_DIR/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+        export LIBRARY_PATH="$VCPKG_TRIPLET_DIR/lib:$LIBRARY_PATH"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+        luarocks --lua-dir "$VCPKG_TRIPLET_DIR/tools/lua" --lua-version "5.1" LUA_INCDIR="$VCPKG_TRIPLET_DIR/include" install YAJL_INCDIR="$VCPKG_TRIPLET_DIR/include" YAJL_LIBDIR="$VCPKG_TRIPLET_DIR/lib" LUA_INCDIR="$VCPKG_TRIPLET_DIR/include" --local lua-yajl
         # for some reason it gets installed in a place where lua-yajl can't find it after, fix that
-        mkdir -p /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_${{matrix.triplet}}/lib/
-        cp "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.2.dylib" "${{env.VCPKG_ROOT}}/packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
+        mkdir -p "$VCPKG_TRIPLET_DIR/../packages/yajl_${{matrix.triplet}}/lib/"
+        cp "$VCPKG_TRIPLET_DIR/lib/libyajl.2.dylib" "$VCPKG_TRIPLET_DIR/../packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
 
 
         # Allow stats generation script to see location of lua-yajl
@@ -244,19 +244,6 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
-        
-        # Debug: Find yajl files in all possible locations
-        echo "=== Looking for yajl files ==="
-        echo "Checking VCPKG_ROOT/installed:"
-        find ${{env.VCPKG_ROOT}}/installed -name "*yajl*" -type f 2>/dev/null || echo "No yajl files found in VCPKG_ROOT/installed"
-        echo "Searching entire workspace for vcpkg_installed:"
-        find ${{github.workspace}} -name "vcpkg_installed" -type d 2>/dev/null | head -5 || echo "No vcpkg_installed directory found"
-        echo "Searching for any yajl files in workspace:"
-        find ${{github.workspace}} -name "*yajl*" -type f 2>/dev/null | head -10 || echo "No yajl files found anywhere"
-        echo "Environment variables:"
-        env | grep -i vcpkg || echo "No VCPKG env vars found"
-        
         # Find the actual vcpkg installation directory (lukka/run-vcpkg uses a UUID directory)
         VCPKG_INSTALLED_DIR=$(find ${{github.workspace}} -name "vcpkg_installed" -type d 2>/dev/null | head -1)
         if [ -n "$VCPKG_INSTALLED_DIR" ]; then
@@ -274,28 +261,13 @@ jobs:
         # workaround https://github.com/lloyd/yajl/issues/209
         if [ -f "$VCPKG_TRIPLET_DIR/lib/libyajl_s.a" ]; then
           mv "$VCPKG_TRIPLET_DIR/lib/libyajl_s.a" "$VCPKG_TRIPLET_DIR/lib/libyajl.a"
-        else
-          echo "libyajl_s.a not found at expected location, checking alternatives..."
-          find "$VCPKG_TRIPLET_DIR" -name "libyajl*" -type f 2>/dev/null || echo "No libyajl files found"
         fi
         
         if [ -f "$VCPKG_TRIPLET_DIR/debug/lib/libyajl_s.a" ]; then
           mv "$VCPKG_TRIPLET_DIR/debug/lib/libyajl_s.a" "$VCPKG_TRIPLET_DIR/debug/lib/libyajl.a"
-        else
-          echo "Debug libyajl_s.a not found, checking alternatives..."
-          find "$VCPKG_TRIPLET_DIR/debug" -name "libyajl*" -type f 2>/dev/null || echo "No debug libyajl files found"
         fi
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
         export LIBRARY_PATH="$VCPKG_TRIPLET_DIR/lib:$LIBRARY_PATH"
-        
-        # Debug library directories before luarocks install
-        echo "=== Debug library and include directories ==="
-        echo "YAJL_INCDIR: $VCPKG_TRIPLET_DIR/include"
-        ls -la "$VCPKG_TRIPLET_DIR/include" | grep -i yajl || echo "No yajl headers found"
-        echo "YAJL_LIBDIR: $VCPKG_TRIPLET_DIR/lib"
-        ls -la "$VCPKG_TRIPLET_DIR/lib" | grep -i yajl || echo "No yajl libraries found"
-        echo "LUA_INCDIR: $VCPKG_TRIPLET_DIR/include"
-        ls -la "$VCPKG_TRIPLET_DIR/include" | grep -i lua || echo "No lua headers found"
         
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
         luarocks install YAJL_INCDIR="$VCPKG_TRIPLET_DIR/include" YAJL_LIBDIR="$VCPKG_TRIPLET_DIR/lib" LUA_INCDIR="$VCPKG_TRIPLET_DIR/include" --local lua-yajl
@@ -352,12 +324,9 @@ jobs:
       uses: lukka/run-cmake@v10
       with:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: >-
-          -G Ninja
-          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DVCPKG_APPLOCAL_DEPS=OFF
-          -DUSE_SANITIZER=""
+        configurePreset: 'ninja-multi-vcpkg-${{matrix.triplet == "x64-linux" && "linux" || (matrix.triplet == "x64-osx" && "macos-x64" || "macos-arm64")}}'
+        buildPreset: 'ninja-multi-vcpkg-${{matrix.triplet == "x64-linux" && "linux" || (matrix.triplet == "x64-osx" && "macos-x64" || "macos-arm64")}}'
+        configurePresetAdditionalArgs: "['-DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}']"
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
@@ -386,11 +355,22 @@ jobs:
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+        # Find the actual vcpkg installation directory (lukka/run-vcpkg uses a UUID directory)
+        VCPKG_INSTALLED_DIR=$(find ${{github.workspace}} -name "vcpkg_installed" -type d 2>/dev/null | head -1)
+        if [ -n "$VCPKG_INSTALLED_DIR" ]; then
+          VCPKG_TRIPLET_DIR="$VCPKG_INSTALLED_DIR/${{matrix.triplet}}"
+          echo "Found vcpkg installation at: $VCPKG_INSTALLED_DIR"
+          echo "Using vcpkg triplet directory: $VCPKG_TRIPLET_DIR"
+        else
+          echo "ERROR: Could not find vcpkg_installed directory"
+          exit 1
+        fi
+        
+        export PATH="$VCPKG_TRIPLET_DIR/tools/lua:$PATH"
 
         shopt -s expand_aliases
         if [ "${RUNNER_OS}" = "macOS" ]; then
-          alias run-luarocks="luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include""
+          alias run-luarocks="luarocks --lua-dir "$VCPKG_TRIPLET_DIR/tools/lua" --lua-version "5.1" LUA_INCDIR="$VCPKG_TRIPLET_DIR/include""
         else
           alias run-luarocks="luarocks"
         fi
@@ -398,8 +378,8 @@ jobs:
         run-luarocks install --local LuaFileSystem
         run-luarocks install --local luautf8
         run-luarocks install --local lua-zip
-        run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3 2.6.1
-        run-luarocks install PCRE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
+        run-luarocks install SQLITE_INCDIR="$VCPKG_TRIPLET_DIR/include" --local LuaSQL-SQLite3 2.6.1
+        run-luarocks install PCRE_INCDIR="$VCPKG_TRIPLET_DIR/include" --local lrexlib-pcre
 
         # CI changelog generation dependencies
         run-luarocks install --local argparse

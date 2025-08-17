@@ -1,0 +1,107 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "ninja-multi-vcpkg",
+      "displayName": "Ninja Multi-Config with vcpkg",
+      "description": "Configure with Ninja generator and vcpkg for cross-platform dependency management",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "${sourceDir}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "VCPKG_APPLOCAL_DEPS": "OFF",
+        "USE_SANITIZER": ""
+      },
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/3rdparty/vcpkg"
+      },
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "ninja-multi-vcpkg-linux",
+      "inherits": "ninja-multi-vcpkg",
+      "displayName": "Linux x64 with vcpkg",
+      "description": "Linux x64 build with vcpkg dependencies",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "ninja-multi-vcpkg-macos-x64",
+      "inherits": "ninja-multi-vcpkg",
+      "displayName": "macOS x64 with vcpkg",
+      "description": "macOS x64 build with vcpkg dependencies",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-osx",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "ninja-multi-vcpkg-macos-arm64",
+      "inherits": "ninja-multi-vcpkg",
+      "displayName": "macOS arm64 with vcpkg",
+      "description": "macOS arm64 build with vcpkg dependencies",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-multi-vcpkg",
+      "configurePreset": "ninja-multi-vcpkg",
+      "displayName": "Build with Ninja Multi-Config",
+      "description": "Build using Ninja with Release configuration"
+    },
+    {
+      "name": "ninja-multi-vcpkg-linux",
+      "configurePreset": "ninja-multi-vcpkg-linux",
+      "displayName": "Build Linux x64",
+      "description": "Build Linux x64 with Release configuration"
+    },
+    {
+      "name": "ninja-multi-vcpkg-macos-x64",
+      "configurePreset": "ninja-multi-vcpkg-macos-x64",
+      "displayName": "Build macOS x64",
+      "description": "Build macOS x64 with Release configuration"
+    },
+    {
+      "name": "ninja-multi-vcpkg-macos-arm64",
+      "configurePreset": "ninja-multi-vcpkg-macos-arm64",
+      "displayName": "Build macOS arm64",
+      "description": "Build macOS arm64 with Release configuration"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "ninja-multi-vcpkg",
+      "configurePreset": "ninja-multi-vcpkg",
+      "displayName": "Test with Ninja Multi-Config",
+      "description": "Run tests using the Ninja configuration",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
