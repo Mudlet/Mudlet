@@ -67,7 +67,7 @@ public:
 
     bool exportItem;
     bool mModuleMasterFolder;
-    bool isNew;
+    bool mIsNew = true;
 
 private:
     TScript() = default;

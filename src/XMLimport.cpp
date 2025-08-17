@@ -745,7 +745,17 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
-    setBoolAttribute(qsl("printCommand"), pHost->mPrintCommand);
+    
+    // Handle command echo mode with backward compatibility
+    if (attributes().hasAttribute(qsl("commandEchoMode"))) {
+        // New tri-state attribute
+        int echoMode = attributes().value(qsl("commandEchoMode")).toInt();
+        pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(qBound(0, echoMode, 2));
+    } else {
+        // Legacy boolean attribute - convert to new enum
+        bool legacyPrintCommand = getBoolValueFromLegacyAttributeOrDefault(qsl("printCommand"), true);
+        pHost->mCommandEchoMode = legacyPrintCommand ? Host::CommandEchoMode::ScriptControl : Host::CommandEchoMode::Never;
+    }
     setBoolAttribute(qsl("mUSE_FORCE_LF_AFTER_PROMPT"), pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     setBoolAttribute(qsl("mUSE_UNIX_EOL"), pHost->mUSE_UNIX_EOL);
     setBoolAttribute(qsl("runAllKeyMatches"), pHost->getKeyUnit()->mRunAllKeyMatches);

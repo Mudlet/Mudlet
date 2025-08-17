@@ -34,7 +34,6 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
 , mModuleMember(false)
-, isNew(true)
 {
 }
 
@@ -46,7 +45,6 @@ TScript::TScript(const QString& name, Host * pHost )
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
 , mModuleMember(false)
-, isNew(true)
 {
 }
 
@@ -222,10 +220,10 @@ QString TScript::moduleName(TScript* pScript)
 
 bool TScript::checkIfNew()
 {
-    return isNew;
+    return mIsNew;
 }
 
 void TScript::unmarkAsNew()
 {
-    isNew = false;
+    mIsNew = false;
 }
