@@ -51,6 +51,8 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -3023,28 +3025,22 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 
 void Host::loadSecuredPassword()
 {
-    auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(getName());
-
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
-        if (task->error()) {
-            const auto error = task->errorString();
-            if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager(this);
+    
+    credManager->retrieveCredential(getName(), "character", 
+        [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+            if (success && !password.isEmpty()) {
+                setPass(password);
+                QString passwordCopy = password; // Make a copy for secure clearing
+                SecureStringUtils::secureStringClear(passwordCopy);
+            } else if (!success && !errorMessage.isEmpty()) {
+                qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
             }
-
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-            setPass(readJob->textData());
-        }
-
-        task->deleteLater();
-    });
-
-    job->start();
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 // Only needed for places outside of this class:

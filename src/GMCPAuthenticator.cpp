@@ -20,6 +20,7 @@
 #include "GMCPAuthenticator.h"
 
 #include "Host.h"
+#include "SecureStringUtils.h"
 #include "ctelnet.h"
 #include <QDebug>
 
@@ -48,14 +49,23 @@ void GMCPAuthenticator::sendCredentials()
 {
     auto character = mpHost->getLogin();
     auto password = mpHost->getPass();
+    
     QJsonObject credentials;
+
     if (!character.isEmpty() && !password.isEmpty()) {
         credentials["account"] = character;
         credentials["password"] = password;
     }
+    
     QJsonDocument doc(credentials);
     QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
-
+    
+    // Clear sensitive data from memory as soon as possible
+    credentials = QJsonObject(); // Clear JSON object
+    doc = QJsonDocument();       // Clear document
+    SecureStringUtils::secureStringClear(password); // Clear password copy
+    
+    // Build and send the GMCP message
     std::string output;
     output += TN_IAC;
     output += TN_SB;
@@ -67,6 +77,10 @@ void GMCPAuthenticator::sendCredentials()
 
     // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
+    
+    // Clear message from memory
+    SecureStringUtils::secureStringClear(gmcpMessage);
+    
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP credentials";
 #endif
