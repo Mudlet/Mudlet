@@ -6316,18 +6316,6 @@ void mudlet::shutdownAI()
     if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
         qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
         mpLlamafileManager->stop();
-
-        // Wait a bit for graceful shutdown
-        QEventLoop loop;
-        QTimer timer;
-        timer.setSingleShot(true);
-        timer.setInterval(3000); // 3 second timeout
-
-        connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-        connect(mpLlamafileManager.get(), &LlamafileManager::processStopped, &loop, &QEventLoop::quit);
-
-        timer.start();
-        loop.exec();
     }
 }
 
