@@ -51,6 +51,8 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -2564,59 +2566,6 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
-{
-    bool localState = false;
-    bool needToEmit = false;
-    const QByteArray encoding(mTelnet.getEncoding());
-
-    if (state == Qt::PartiallyChecked) {
-        // Set things automatically
-        mAutoAmbigousWidthGlyphsSetting = true;
-
-        if (encoding == "GBK"
-            || encoding == "GB18030"
-            || encoding == "BIG5"
-            || encoding == "BIG5-HKSCS"
-            || encoding == "EUC-KR") {
-
-            // Need to use wide width for ambiguous characters
-            if (!mWideAmbigousWidthGlyphs) {
-                // But the last setting was narrow - so we need to change
-                mWideAmbigousWidthGlyphs = true;
-                localState = true;
-                needToEmit = true;
-            }
-
-        } else {
-            // Need to use narrow width for ambiguous characters
-            if (mWideAmbigousWidthGlyphs) {
-                // But the last setting was wide - so we need to change
-                mWideAmbigousWidthGlyphs = false;
-                localState = false;
-                needToEmit = true;
-            }
-
-        }
-
-    } else {
-        // Set things manually:
-        mAutoAmbigousWidthGlyphsSetting = false;
-        if (mWideAmbigousWidthGlyphs != (state == Qt::Checked)) {
-            // The last setting is the opposite to what we want:
-
-            mWideAmbigousWidthGlyphs = (state == Qt::Checked);
-            localState = (state == Qt::Checked);
-            needToEmit = true;
-        }
-
-    }
-
-    if (needToEmit) {
-        emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
-    }
-}
-
 QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
 {
     // clang-format off
@@ -3076,28 +3025,22 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 
 void Host::loadSecuredPassword()
 {
-    auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(getName());
-
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
-        if (task->error()) {
-            const auto error = task->errorString();
-            if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager(this);
+    
+    credManager->retrieveCredential(getName(), "character", 
+        [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+            if (success && !password.isEmpty()) {
+                setPass(password);
+                QString passwordCopy = password; // Make a copy for secure clearing
+                SecureStringUtils::secureStringClear(passwordCopy);
+            } else if (!success && !errorMessage.isEmpty()) {
+                qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
             }
-
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-            setPass(readJob->textData());
-        }
-
-        task->deleteLater();
-    });
-
-    job->start();
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 // Only needed for places outside of this class:

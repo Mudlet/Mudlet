@@ -25,6 +25,8 @@
 
 #include "dlgMapper.h"
 #include "LuaInterface.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -35,6 +37,7 @@
 #include "pre_guard.h"
 #include <QBuffer>
 #include <QtMath>
+#include <QVersionNumber>
 #include "post_guard.h"
 
 XMLimport::XMLimport(Host* pH)
@@ -804,7 +807,32 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
-    pHost->mProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+    
+    // Handle backward compatibility based on application version, not profile version
+    QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+    
+    // For version 4.20.0+, use secure storage; for older versions, maintain plaintext in XML
+    // Use current application version for consistency with XMLexport behavior
+    const QString currentAppVersion = QString(APP_VERSION);
+    const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
+    const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+    const bool useSecureStorage = appVersion >= secureStorageVersion;
+    
+    if (!storedProxyPassword.isEmpty()) {
+        if (useSecureStorage) {
+            // Modern application: migrate plaintext password to secure storage and clear from XML
+            CredentialManager::storeCredential(pHost->getName(), "proxy", storedProxyPassword);
+            pHost->mProxyPassword = storedProxyPassword;
+            SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
+        } else {
+            // Legacy application: keep plaintext password for backward compatibility
+            pHost->mProxyPassword = storedProxyPassword;
+        }
+    } else if (useSecureStorage) {
+        // Modern application: load from secure storage if available
+        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
+    }
+
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
     pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
@@ -825,21 +853,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
-        const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
-
-        if (ambiguousWidthSetting == YES) {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
-        } else if (ambiguousWidthSetting == qsl("auto")) {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
-        } else {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
-        }
-    } else {
-        // The encoding setting is stored as part of the profile details and NOT
-        // in the save file - probably because it is needed before the
-        // connection to the Server is initiated so it will already be in place
-        // which is just as well as it is needed for the automatic case...
-        pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        // this value has been dropped in 4.20
+        Q_UNUSED(readElementText())
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {

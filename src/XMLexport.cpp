@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "CredentialManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -37,6 +38,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QVersionNumber>
 #include <QtConcurrent>
 #include <QFile>
 #include <sstream>
@@ -452,7 +454,24 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
+    
+    // Handle proxy password based on application version for backward compatibility
+    // For version 4.20.0+, use secure storage and clear XML; for older versions, maintain plaintext in XML
+    const QString currentAppVersion = QString(APP_VERSION);
+    const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
+    const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+    const bool useSecureStorage = appVersion >= secureStorageVersion;
+    
+    if (useSecureStorage) {
+        // Modern versions: store in secure storage, clear from XML
+        if (!pHost->mProxyPassword.isEmpty()) {
+            CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword);
+        }
+        host.append_attribute("mProxyPassword") = "";
+    } else {
+        // Legacy versions: maintain plaintext password in XML for backward compatibility
+        host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
+    }
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
