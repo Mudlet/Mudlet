@@ -26,7 +26,7 @@ jobs:
         include:
           - language: cpp
             buildname: 'CodeQL'
-            qt: '5.14.1'
+            qt: '6.9.0'
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
@@ -54,6 +54,7 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73
         cache: true
+        modules: qt5compat qtmultimedia
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v4
@@ -62,6 +63,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
       uses: actions/cache@v4
@@ -159,7 +161,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
-          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
