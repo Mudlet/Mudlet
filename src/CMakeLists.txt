@@ -492,6 +492,8 @@ if(USE_3DMAPPER)
   find_package(OpenGL REQUIRED)
 endif()
 
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
@@ -571,6 +573,12 @@ set_target_properties(mudlet PROPERTIES
 # This points to: <binary_dir>/CMakeFiles/mudlet_autogen/include
 target_include_directories(mudlet PRIVATE
   "$<BUILD_INTERFACE:$<TARGET_PROPERTY:mudlet,AUTOGEN_BUILD_DIR>/include>")
+
+# Fallback for environments where generator expressions for AUTOGEN_BUILD_DIR
+# are not honored early enough (seen on some CI toolchains). Use the canonical
+# CMake autogen include path as an explicit include dir.
+target_include_directories(mudlet PRIVATE
+  "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/mudlet_autogen/include")
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
