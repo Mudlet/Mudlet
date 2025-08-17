@@ -214,6 +214,13 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 {
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
+    writeTriggerPackage(mpHost, mudletPackage, true);
+    writeTimerPackage(mpHost, mudletPackage, true);
+    writeAliasPackage(mpHost, mudletPackage, true);
+    writeActionPackage(mpHost, mudletPackage, true);
+    writeScriptPackage(mpHost, mudletPackage, true);
+    writeKeyPackage(mpHost, mudletPackage, true);
+    writeVariablePackage(mpHost, mudletPackage);
     auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
@@ -670,13 +677,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    writeTriggerPackage(pHost, mudletPackage, true);
-    writeTimerPackage(pHost, mudletPackage, true);
-    writeAliasPackage(pHost, mudletPackage, true);
-    writeActionPackage(pHost, mudletPackage, true);
-    writeScriptPackage(pHost, mudletPackage, true);
-    writeKeyPackage(pHost, mudletPackage, true);
-    writeVariablePackage(pHost, mudletPackage);
 }
 
 void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
