@@ -87,7 +87,7 @@ public:
     bool exportItem = true;
     bool mRegisteredAnonymousLuaFunction = false;
     QVector<NameGroupMatches> nameCaptures;
-    bool isNew;
+    bool mIsNew = true;
 
 private:
     bool mNeedsToBeCompiled = true;

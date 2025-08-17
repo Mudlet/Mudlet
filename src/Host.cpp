@@ -243,7 +243,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
-, mPrintCommand(true)
+, mCommandEchoMode(CommandEchoMode::ScriptControl)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
@@ -1298,12 +1298,27 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
+    // Determine if we should print the command based on the echo mode
+    bool shouldPrint = false;
+    switch (mCommandEchoMode) {
+    case CommandEchoMode::Never:
+        shouldPrint = false;
+        break;
+    case CommandEchoMode::Always:
+        shouldPrint = true;
+        break;
+    case CommandEchoMode::ScriptControl:
+        shouldPrint = wantPrint;
+        break;
+    }
+
+    if (shouldPrint && !mIsRemoteEchoingActive) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
+
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
         if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
@@ -1313,7 +1328,9 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->update();
         }
     }
+
     QStringList commandList;
+
     if (!mCommandSeparator.isEmpty()) {
         commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
     } else if (!cmd.isEmpty()) {
@@ -1321,8 +1338,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         commandList << cmd;
     }
 
-        // allow sending blank commands
-
+    // allow sending blank commands
     if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
@@ -2545,59 +2561,6 @@ void Host::refreshPackageFonts()
 {
     for (const auto& package : std::as_const(mInstalledPackages)) {
         installPackageFonts(package);
-    }
-}
-
-void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
-{
-    bool localState = false;
-    bool needToEmit = false;
-    const QByteArray encoding(mTelnet.getEncoding());
-
-    if (state == Qt::PartiallyChecked) {
-        // Set things automatically
-        mAutoAmbigousWidthGlyphsSetting = true;
-
-        if (encoding == "GBK"
-            || encoding == "GB18030"
-            || encoding == "BIG5"
-            || encoding == "BIG5-HKSCS"
-            || encoding == "EUC-KR") {
-
-            // Need to use wide width for ambiguous characters
-            if (!mWideAmbigousWidthGlyphs) {
-                // But the last setting was narrow - so we need to change
-                mWideAmbigousWidthGlyphs = true;
-                localState = true;
-                needToEmit = true;
-            }
-
-        } else {
-            // Need to use narrow width for ambiguous characters
-            if (mWideAmbigousWidthGlyphs) {
-                // But the last setting was wide - so we need to change
-                mWideAmbigousWidthGlyphs = false;
-                localState = false;
-                needToEmit = true;
-            }
-
-        }
-
-    } else {
-        // Set things manually:
-        mAutoAmbigousWidthGlyphsSetting = false;
-        if (mWideAmbigousWidthGlyphs != (state == Qt::Checked)) {
-            // The last setting is the opposite to what we want:
-
-            mWideAmbigousWidthGlyphs = (state == Qt::Checked);
-            localState = (state == Qt::Checked);
-            needToEmit = true;
-        }
-
-    }
-
-    if (needToEmit) {
-        emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
 }
 

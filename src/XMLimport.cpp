@@ -745,7 +745,17 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
-    setBoolAttribute(qsl("printCommand"), pHost->mPrintCommand);
+    
+    // Handle command echo mode with backward compatibility
+    if (attributes().hasAttribute(qsl("commandEchoMode"))) {
+        // New tri-state attribute
+        int echoMode = attributes().value(qsl("commandEchoMode")).toInt();
+        pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(qBound(0, echoMode, 2));
+    } else {
+        // Legacy boolean attribute - convert to new enum
+        bool legacyPrintCommand = getBoolValueFromLegacyAttributeOrDefault(qsl("printCommand"), true);
+        pHost->mCommandEchoMode = legacyPrintCommand ? Host::CommandEchoMode::ScriptControl : Host::CommandEchoMode::Never;
+    }
     setBoolAttribute(qsl("mUSE_FORCE_LF_AFTER_PROMPT"), pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     setBoolAttribute(qsl("mUSE_UNIX_EOL"), pHost->mUSE_UNIX_EOL);
     setBoolAttribute(qsl("runAllKeyMatches"), pHost->getKeyUnit()->mRunAllKeyMatches);
@@ -815,21 +825,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
-        const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
-
-        if (ambiguousWidthSetting == YES) {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
-        } else if (ambiguousWidthSetting == qsl("auto")) {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
-        } else {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
-        }
-    } else {
-        // The encoding setting is stored as part of the profile details and NOT
-        // in the save file - probably because it is needed before the
-        // connection to the Server is initiated so it will already be in place
-        // which is just as well as it is needed for the automatic case...
-        pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        // this value has been dropped in 4.20
+        Q_UNUSED(readElementText())
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {
