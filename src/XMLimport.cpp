@@ -282,10 +282,10 @@ void XMLimport::readVariable(TVar* pParent)
 
         if (isStartElement()) {
             if (name() == qsl("name")) {
-                keyName = readElementText();
+                keyName = readElementText(QXmlStreamReader::SkipChildElements);
                 continue;
             } else if (name() == qsl("value")) {
-                value = readElementText();
+                value = readElementText(QXmlStreamReader::SkipChildElements);
                 continue;
             } else if (name() == qsl("keyType")) {
                 keyType = readElementText().toInt();
@@ -321,7 +321,7 @@ void XMLimport::readHiddenVariables()
 
         if (isStartElement()) {
             if (name() == qsl("name")) {
-                const QString var = readElementText();
+                const QString var = readElementText(QXmlStreamReader::SkipChildElements);
                 vu->addHidden(var);
                 continue;
             }
@@ -662,7 +662,7 @@ void XMLimport::readHelpPackage()
             break;
         } else if (isStartElement()) {
             if (name() == qsl("helpURL")) {
-                const QString contents = readElementText();
+                const QString contents = readElementText(QXmlStreamReader::SkipChildElements);
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
             }
         }
@@ -854,7 +854,7 @@ void XMLimport::readHost(Host* pHost)
 
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         // this value has been dropped in 4.20
-        Q_UNUSED(readElementText())
+        Q_UNUSED(readElementText(QXmlStreamReader::SkipChildElements))
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {
@@ -1058,7 +1058,7 @@ void XMLimport::readHost(Host* pHost)
                 // needed (intended for use when importing a profile but not
                 // otherwise). In fact this detail is normally stored outside of
                 // the game save in the profile base directory:
-                pHost->mBackupHostName = readElementText();
+                pHost->mBackupHostName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("mInstalledModules")) {
                 QMap<QString, QStringList> entry;
 
@@ -1083,11 +1083,11 @@ void XMLimport::readHost(Host* pHost)
                 // needed (intended for use when importing a profile but not
                 // otherwise). In fact this detail is normally stored outside of
                 // the game save in the profile base directory:
-                pHost->mBackupUrl = readElementText();
+                pHost->mBackupUrl = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("serverPackageName")) {
-                pHost->mServerGUI_Package_name = readElementText();
+                pHost->mServerGUI_Package_name = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("serverPackageVersion")) {
-                pHost->mServerGUI_Package_version = readElementText();
+                pHost->mServerGUI_Package_version = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("port")) {
                 // Only read this detail into a backup location so that it can
                 // be imported without changing the main setting unless it is
@@ -1112,99 +1112,99 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("wrapHangingIndentCount")) {
                 pHost->mWrapHangingIndentCount = readElementText().toInt();
             } else if (name() == qsl("mCommandSeparator")) {
-                pHost->mCommandSeparator = readElementText();
+                pHost->mCommandSeparator = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("mCommandLineFgColor")) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                pHost->mCommandLineFgColor.setNamedColor(readElementText());
+                pHost->mCommandLineFgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCommandLineBgColor")) {
-                pHost->mCommandLineBgColor.setNamedColor(readElementText());
+                pHost->mCommandLineBgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mFgColor")) {
-                pHost->mFgColor.setNamedColor(readElementText());
+                pHost->mFgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor")) {
-                pHost->mBgColor.setNamedColor(readElementText());
+                pHost->mBgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCommandFgColor")) {
-                pHost->mCommandFgColor.setNamedColor(readElementText());
+                pHost->mCommandFgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCommandBgColor")) {
-                pHost->mCommandBgColor.setNamedColor(readElementText());
+                pHost->mCommandBgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBlack")) {
-                pHost->mBlack.setNamedColor(readElementText());
+                pHost->mBlack.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlack")) {
-                pHost->mLightBlack.setNamedColor(readElementText());
+                pHost->mLightBlack.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRed")) {
-                pHost->mRed.setNamedColor(readElementText());
+                pHost->mRed.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightRed")) {
-                pHost->mLightRed.setNamedColor(readElementText());
+                pHost->mLightRed.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBlue")) {
-                pHost->mBlue.setNamedColor(readElementText());
+                pHost->mBlue.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlue")) {
-                pHost->mLightBlue.setNamedColor(readElementText());
+                pHost->mLightBlue.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mGreen")) {
-                pHost->mGreen.setNamedColor(readElementText());
+                pHost->mGreen.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightGreen")) {
-                pHost->mLightGreen.setNamedColor(readElementText());
+                pHost->mLightGreen.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mYellow")) {
-                pHost->mYellow.setNamedColor(readElementText());
+                pHost->mYellow.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightYellow")) {
-                pHost->mLightYellow.setNamedColor(readElementText());
+                pHost->mLightYellow.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCyan")) {
-                pHost->mCyan.setNamedColor(readElementText());
+                pHost->mCyan.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightCyan")) {
-                pHost->mLightCyan.setNamedColor(readElementText());
+                pHost->mLightCyan.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mMagenta")) {
-                pHost->mMagenta.setNamedColor(readElementText());
+                pHost->mMagenta.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightMagenta")) {
-                pHost->mLightMagenta.setNamedColor(readElementText());
+                pHost->mLightMagenta.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mWhite")) {
-                pHost->mWhite.setNamedColor(readElementText());
+                pHost->mWhite.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightWhite")) {
-                pHost->mLightWhite.setNamedColor(readElementText());
+                pHost->mLightWhite.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
 #else
-                pHost->mCommandLineFgColor = QColor::fromString(readElementText());
+                pHost->mCommandLineFgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCommandLineBgColor")) {
-                pHost->mCommandLineBgColor = QColor::fromString(readElementText());
+                pHost->mCommandLineBgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mFgColor")) {
-                pHost->mFgColor = QColor::fromString(readElementText());
+                pHost->mFgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor")) {
-                pHost->mBgColor = QColor::fromString(readElementText());
+                pHost->mBgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCommandFgColor")) {
-                pHost->mCommandFgColor = QColor::fromString(readElementText());
+                pHost->mCommandFgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCommandBgColor")) {
-                pHost->mCommandBgColor = QColor::fromString(readElementText());
+                pHost->mCommandBgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBlack")) {
-                pHost->mBlack = QColor::fromString(readElementText());
+                pHost->mBlack = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlack")) {
-                pHost->mLightBlack = QColor::fromString(readElementText());
+                pHost->mLightBlack = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRed")) {
-                pHost->mRed = QColor::fromString(readElementText());
+                pHost->mRed = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightRed")) {
-                pHost->mLightRed = QColor::fromString(readElementText());
+                pHost->mLightRed = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBlue")) {
-                pHost->mBlue = QColor::fromString(readElementText());
+                pHost->mBlue = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlue")) {
-                pHost->mLightBlue = QColor::fromString(readElementText());
+                pHost->mLightBlue = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mGreen")) {
-                pHost->mGreen = QColor::fromString(readElementText());
+                pHost->mGreen = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightGreen")) {
-                pHost->mLightGreen = QColor::fromString(readElementText());
+                pHost->mLightGreen = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mYellow")) {
-                pHost->mYellow = QColor::fromString(readElementText());
+                pHost->mYellow = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightYellow")) {
-                pHost->mLightYellow = QColor::fromString(readElementText());
+                pHost->mLightYellow = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCyan")) {
-                pHost->mCyan = QColor::fromString(readElementText());
+                pHost->mCyan = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightCyan")) {
-                pHost->mLightCyan = QColor::fromString(readElementText());
+                pHost->mLightCyan = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mMagenta")) {
-                pHost->mMagenta = QColor::fromString(readElementText());
+                pHost->mMagenta = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightMagenta")) {
-                pHost->mLightMagenta = QColor::fromString(readElementText());
+                pHost->mLightMagenta = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mWhite")) {
-                pHost->mWhite = QColor::fromString(readElementText());
+                pHost->mWhite = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightWhite")) {
-                pHost->mLightWhite = QColor::fromString(readElementText());
+                pHost->mLightWhite = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
 #endif
             } else if (name() == qsl("mDisplayFont")) {
-                pHost->setDisplayFontFromString(readElementText());
+                pHost->setDisplayFontFromString(readElementText(QXmlStreamReader::SkipChildElements));
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
                 // On GNU/Linux and FreeBSD ensure that emojis are displayed in
                 // colour even if this font doesn't support it:
@@ -1213,113 +1213,113 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this
                 // one silently:
-                Q_UNUSED(readElementText())
+                Q_UNUSED(readElementText(QXmlStreamReader::SkipChildElements))
             } else if (name() == qsl("commandSeperator")) {
                 // Ignore this misspelled duplicate, it has been removed from
                 // the Xml format but will appear in older files and trip the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText())
+                Q_UNUSED(readElementText(QXmlStreamReader::SkipChildElements))
             } else if (name() == qsl("mFgColor2")) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                pHost->mFgColor_2.setNamedColor(readElementText());
+                pHost->mFgColor_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor2")) {
-                pHost->mBgColor_2.setNamedColor(readElementText());
+                pHost->mBgColor_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLowerLevelColor")) {
-                pHost->mLowerLevelColor.setNamedColor(readElementText());
+                pHost->mLowerLevelColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mUpperLevelColor")) {
-                pHost->mUpperLevelColor.setNamedColor(readElementText());
+                pHost->mUpperLevelColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRoomBorderColor")) {
-                pHost->mRoomBorderColor.setNamedColor(readElementText());
+                pHost->mRoomBorderColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
-                pHost->mRoomCollisionBorderColor.setNamedColor(readElementText());
+                pHost->mRoomCollisionBorderColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
-                pHost->mMapInfoBg.setNamedColor(readElementText());
+                pHost->mMapInfoBg.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
                 pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == qsl("mBlack2")) {
-                pHost->mBlack_2.setNamedColor(readElementText());
+                pHost->mBlack_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlack2")) {
-                pHost->mLightBlack_2.setNamedColor(readElementText());
+                pHost->mLightBlack_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRed2")) {
-                pHost->mRed_2.setNamedColor(readElementText());
+                pHost->mRed_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightRed2")) {
-                pHost->mLightRed_2.setNamedColor(readElementText());
+                pHost->mLightRed_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBlue2")) {
-                pHost->mBlue_2.setNamedColor(readElementText());
+                pHost->mBlue_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlue2")) {
-                pHost->mLightBlue_2.setNamedColor(readElementText());
+                pHost->mLightBlue_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mGreen2")) {
-                pHost->mGreen_2.setNamedColor(readElementText());
+                pHost->mGreen_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightGreen2")) {
-                pHost->mLightGreen_2.setNamedColor(readElementText());
+                pHost->mLightGreen_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mYellow2")) {
-                pHost->mYellow_2.setNamedColor(readElementText());
+                pHost->mYellow_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightYellow2")) {
-                pHost->mLightYellow_2.setNamedColor(readElementText());
+                pHost->mLightYellow_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCyan2")) {
-                pHost->mCyan_2.setNamedColor(readElementText());
+                pHost->mCyan_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightCyan2")) {
-                pHost->mLightCyan_2.setNamedColor(readElementText());
+                pHost->mLightCyan_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mMagenta2")) {
-                pHost->mMagenta_2.setNamedColor(readElementText());
+                pHost->mMagenta_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightMagenta2")) {
-                pHost->mLightMagenta_2.setNamedColor(readElementText());
+                pHost->mLightMagenta_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mWhite2")) {
-                pHost->mWhite_2.setNamedColor(readElementText());
+                pHost->mWhite_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightWhite2")) {
-                pHost->mLightWhite_2.setNamedColor(readElementText());
+                pHost->mLightWhite_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
 #else
-                pHost->mFgColor_2 = QColor::fromString(readElementText());
+                pHost->mFgColor_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor2")) {
-                pHost->mBgColor_2 = QColor::fromString(readElementText());
+                pHost->mBgColor_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLowerLevelColor")) {
-                pHost->mLowerLevelColor = QColor::fromString(readElementText());
+                pHost->mLowerLevelColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mUpperLevelColor")) {
-                pHost->mUpperLevelColor = QColor::fromString(readElementText());
+                pHost->mUpperLevelColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRoomBorderColor")) {
-                pHost->mRoomBorderColor = QColor::fromString(readElementText());
+                pHost->mRoomBorderColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
-                pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText());
+                pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
-                pHost->mMapInfoBg = QColor::fromString(readElementText());
+                pHost->mMapInfoBg = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
                 pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == qsl("mBlack2")) {
-                pHost->mBlack_2 = QColor::fromString(readElementText());
+                pHost->mBlack_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlack2")) {
-                pHost->mLightBlack_2 = QColor::fromString(readElementText());
+                pHost->mLightBlack_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mRed2")) {
-                pHost->mRed_2 = QColor::fromString(readElementText());
+                pHost->mRed_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightRed2")) {
-                pHost->mLightRed_2 = QColor::fromString(readElementText());
+                pHost->mLightRed_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBlue2")) {
-                pHost->mBlue_2 = QColor::fromString(readElementText());
+                pHost->mBlue_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightBlue2")) {
-                pHost->mLightBlue_2 = QColor::fromString(readElementText());
+                pHost->mLightBlue_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mGreen2")) {
-                pHost->mGreen_2 = QColor::fromString(readElementText());
+                pHost->mGreen_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightGreen2")) {
-                pHost->mLightGreen_2 = QColor::fromString(readElementText());
+                pHost->mLightGreen_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mYellow2")) {
-                pHost->mYellow_2 = QColor::fromString(readElementText());
+                pHost->mYellow_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightYellow2")) {
-                pHost->mLightYellow_2 = QColor::fromString(readElementText());
+                pHost->mLightYellow_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mCyan2")) {
-                pHost->mCyan_2 = QColor::fromString(readElementText());
+                pHost->mCyan_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightCyan2")) {
-                pHost->mLightCyan_2 = QColor::fromString(readElementText());
+                pHost->mLightCyan_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mMagenta2")) {
-                pHost->mMagenta_2 = QColor::fromString(readElementText());
+                pHost->mMagenta_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightMagenta2")) {
-                pHost->mLightMagenta_2 = QColor::fromString(readElementText());
+                pHost->mLightMagenta_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mWhite2")) {
-                pHost->mWhite_2 = QColor::fromString(readElementText());
+                pHost->mWhite_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLightWhite2")) {
-                pHost->mLightWhite_2 = QColor::fromString(readElementText());
+                pHost->mLightWhite_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
 #endif
             } else if (name() == qsl("mSpellDic")) {
-                pHost->setSpellDic(readElementText());
+                pHost->setSpellDic(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mLineSize") || name() == qsl("mRoomSize")) {
                 // These two have been dropped from the Xml format as these are
                 // duplicates of attributes that were being incorrected read in
@@ -1330,7 +1330,7 @@ void XMLimport::readHost(Host* pHost)
                 // We still check for them so that we avoid falling into the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText())
+                Q_UNUSED(readElementText(QXmlStreamReader::SkipChildElements))
             } else if (name() == qsl("mMapInfoContributors")) {
                 readLegacyMapInfoContributors();
             } else if (name() == qsl("mapInfoContributor")) {
@@ -1409,14 +1409,14 @@ int XMLimport::readTrigger(TTrigger* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->setName(readElementText());
+                pT->setName(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("script")) {
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                 }
             } else if (name() == qsl("packageName")) {
-                pT->mPackageName = readElementText();
+                pT->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("triggerType")) {
                 pT->mTriggerType = readElementText().toInt();
             } else if (name() == qsl("conditonLineDelta")) {
@@ -1424,27 +1424,27 @@ int XMLimport::readTrigger(TTrigger* pParent)
             } else if (name() == qsl("mStayOpen")) {
                 pT->mStayOpen = readElementText().toInt();
             } else if (name() == qsl("mCommand")) {
-                pT->mCommand = readElementText();
+                pT->mCommand = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("mFgColor")) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                pT->mFgColor.setNamedColor(readElementText());
+                pT->mFgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor")) {
-                pT->mBgColor.setNamedColor(readElementText());
+                pT->mBgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("colorTriggerFgColor")) {
-                pT->mColorTriggerFgColor.setNamedColor(readElementText());
+                pT->mColorTriggerFgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("colorTriggerBgColor")) {
-                pT->mColorTriggerBgColor.setNamedColor(readElementText());
+                pT->mColorTriggerBgColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
 #else
-                pT->mFgColor = QColor::fromString(readElementText());
+                pT->mFgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor")) {
-                pT->mBgColor = QColor::fromString(readElementText());
+                pT->mBgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("colorTriggerFgColor")) {
-                pT->mColorTriggerFgColor = QColor::fromString(readElementText());
+                pT->mColorTriggerFgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("colorTriggerBgColor")) {
-                pT->mColorTriggerBgColor = QColor::fromString(readElementText());
+                pT->mColorTriggerBgColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
 #endif
             } else if (name() == qsl("mSoundFile")) {
-                pT->mSoundFile = readElementText();
+                pT->mSoundFile = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("regexCodeList")) {
                 // This and the next one ought to be combined into a single element
                 // in the next revision - sample code for "RegexCode" elements
@@ -1529,18 +1529,18 @@ int XMLimport::readTimer(TTimer* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->setName(readElementText());
+                pT->setName(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("packageName")) {
-                pT->mPackageName = readElementText();
+                pT->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("script")) {
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
                 }
             } else if (name() == qsl("command")) {
-                pT->mCommand = readElementText();
+                pT->mCommand = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("time")) {
-                pT->setTime(QTime::fromString(readElementText(), "hh:mm:ss.zzz"));
+                pT->setTime(QTime::fromString(readElementText(QXmlStreamReader::SkipChildElements), "hh:mm:ss.zzz"));
             } else if (name() == qsl("TimerGroup") || name() == qsl("Timer")) {
                 readTimer(pT);
             } else {
@@ -1597,18 +1597,18 @@ int XMLimport::readAlias(TAlias* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->setName(readElementText());
+                pT->setName(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("packageName")) {
-                pT->mPackageName = readElementText();
+                pT->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("script")) {
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                 }
             } else if (name() == qsl("command")) {
-                pT->mCommand = readElementText();
+                pT->mCommand = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("regex")) {
-                pT->setRegexCode(readElementText());
+                pT->setRegexCode(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("AliasGroup") || name() == qsl("Alias")) {
                 readAlias(pT);
             } else {
@@ -1663,22 +1663,22 @@ int XMLimport::readAction(TAction* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->mName = readElementText();
+                pT->mName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("packageName")) {
-                pT->mPackageName = readElementText();
+                pT->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("script")) {
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
                 }
             } else if (name() == qsl("css")) {
-                pT->css = readElementText();
+                pT->css = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("commandButtonUp")) {
-                pT->mCommandButtonUp = readElementText();
+                pT->mCommandButtonUp = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("commandButtonDown")) {
-                pT->mCommandButtonDown = readElementText();
+                pT->mCommandButtonDown = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("icon")) {
-                pT->mIcon = readElementText();
+                pT->mIcon = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("orientation")) {
                 pT->mOrientation = readElementText().toInt();
             } else if (name() == qsl("location")) {
@@ -1753,9 +1753,9 @@ int XMLimport::readScript(TScript* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                script->mName = readElementText();
+                script->mName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("packageName")) {
-                script->mPackageName = readElementText();
+                script->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("script")) {
                 const QString tempScript = readScriptElement();
                 if (!script->setScript(tempScript)) {
@@ -1815,16 +1815,16 @@ int XMLimport::readKey(TKey* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->setName(readElementText());
+                pT->setName(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("packageName")) {
-                pT->mPackageName = readElementText();
+                pT->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("script")) {
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
                 }
             } else if (name() == qsl("command")) {
-                pT->mCommand = readElementText();
+                pT->mCommand = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("keyCode")) {
                 pT->setKeyCode(readElementText().toInt());
             } else if (name() == qsl("keyModifier")) {
@@ -1852,21 +1852,21 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("key")) {
-                key = readElementText();
+                key = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("filepath")) {
-                entry << readElementText();
+                entry << readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("zipSync")) {
-                entry << readElementText();
+                entry << readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("globalSave")) {
                 if (entry.size() < 2) {
-                    entry << readElementText();
+                    entry << readElementText(QXmlStreamReader::SkipChildElements);
                 } else {
                     skipCurrentElement();
                 }
             } else if (name() == qsl("priority")) {
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap
-                entry << readElementText();
+                entry << readElementText(QXmlStreamReader::SkipChildElements);
                 map[key] = entry;
                 entry.clear();
             } else {
@@ -1885,7 +1885,7 @@ void XMLimport::readStringList(QStringList& list, const QString& whatIsParent)
             break;
         } else if (isStartElement()) {
             if (name() == qsl("string")) {
-                list << readElementText();
+                list << readElementText(QXmlStreamReader::SkipChildElements);
             } else {
                 readUnknownElement(whatIsParent);
             }
@@ -1902,7 +1902,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
             break;
         } else if (isStartElement()) {
             if (name() == qsl("integer")) {
-                const QString numberText = readElementText();
+                const QString numberText = readElementText(QXmlStreamReader::SkipChildElements);
                 bool ok = false;
                 const int num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
@@ -1952,7 +1952,7 @@ void XMLimport::getVersionString(QString& versionString)
 
 QString XMLimport::readScriptElement()
 {
-    QString localScript = readElementText();
+    QString localScript = readElementText(QXmlStreamReader::SkipChildElements);
     if (Error() != NoError) {
         qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
     }
@@ -2115,7 +2115,7 @@ void XMLimport::readStopWatchMap()
                 }
                 mpHost->mStopWatchMap.insert(watchId, pStopWatch);
                 // A dummy read as there should not be any text for this element:
-                readElementText();
+                readElementText(QXmlStreamReader::SkipChildElements);
             } else {
                 readUnknownElement("stopwatches");
             }
@@ -2126,7 +2126,7 @@ void XMLimport::readStopWatchMap()
 
 void XMLimport::readMapInfoContributor()
 {
-    mpHost->mMapInfoContributors.insert(readElementText());
+    mpHost->mMapInfoContributors.insert(readElementText(QXmlStreamReader::SkipChildElements));
 }
 
 void XMLimport::readLegacyMapInfoContributors()
@@ -2138,7 +2138,7 @@ void XMLimport::readLegacyMapInfoContributors()
         }
         if (isStartElement()) {
             if (name() == qsl("mapInfoContributor")) {
-                mpHost->mMapInfoContributors.insert(readElementText());
+                mpHost->mMapInfoContributors.insert(readElementText(QXmlStreamReader::SkipChildElements));
             }
         }
     }
@@ -2147,7 +2147,7 @@ void XMLimport::readLegacyMapInfoContributors()
 void XMLimport::readProfileShortcut()
 {
     auto key = attributes().value(qsl("key"));
-    auto sequenceString = readElementText();
+    auto sequenceString = readElementText(QXmlStreamReader::SkipChildElements);
     if (mpHost->profileShortcuts.value(key.toString())) {
         QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
         mpHost->profileShortcuts.value(key.toString())->swap(*sequence);

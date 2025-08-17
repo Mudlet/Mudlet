@@ -346,7 +346,8 @@ bool XMLexport::saveXmlFile(QSaveFile& file)
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
     // instance - the save method needs a stream that implements the
     // std::ostream interface into which it can push the data:
-    mExportDoc.save(saveStringStream);
+    // Use format_default with proper indentation instead of compact format
+    mExportDoc.save(saveStringStream, "    ", pugi::format_default, pugi::encoding_utf8);
     // We need to do our own replacement of ASCII control characters that are
     // not valid in XML version 1.0 and that means we cannot use the pugixml
     // file methods as it does that in a different way which is not helpful
@@ -366,7 +367,7 @@ QString XMLexport::saveXml()
     std::stringstream saveStringStream(std::ios::out);
     std::string output;
 
-    mExportDoc.save(saveStringStream);
+    mExportDoc.save(saveStringStream, "    ", pugi::format_default, pugi::encoding_utf8);
     output = saveStringStream.str();
 
     sanitizeForQxml(output);
