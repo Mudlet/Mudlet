@@ -319,12 +319,24 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
+    - name: Set CMake preset name
+      run: |
+        if [ "${{matrix.triplet}}" = "x64-linux" ]; then
+          echo "CMAKE_PRESET=ninja-multi-vcpkg-linux" >> $GITHUB_ENV
+        elif [ "${{matrix.triplet}}" = "x64-osx" ]; then
+          echo "CMAKE_PRESET=ninja-multi-vcpkg-macos-x64" >> $GITHUB_ENV
+        elif [ "${{matrix.triplet}}" = "arm64-osx" ]; then
+          echo "CMAKE_PRESET=ninja-multi-vcpkg-macos-arm64" >> $GITHUB_ENV
+        else
+          echo "CMAKE_PRESET=ninja-multi-vcpkg" >> $GITHUB_ENV
+        fi
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v10
       with:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        configurePreset: 'ninja-multi-vcpkg-${{matrix.triplet == "x64-linux" && "linux" || (matrix.triplet == "x64-osx" && "macos-x64" || "macos-arm64")}}'
-        buildPreset: 'ninja-multi-vcpkg-${{matrix.triplet == "x64-linux" && "linux" || (matrix.triplet == "x64-osx" && "macos-x64" || "macos-arm64")}}'
+        configurePreset: '${{env.CMAKE_PRESET}}'
+        buildPreset: '${{env.CMAKE_PRESET}}'
         configurePresetAdditionalArgs: "['-DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}']"
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
