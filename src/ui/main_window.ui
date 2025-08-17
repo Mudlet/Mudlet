@@ -110,8 +110,6 @@
      <string>Options</string>
     </property>
     <addaction name="dactionOptions"/>
-    <addaction name="dactionMultiView"/>
-    <addaction name="dactionToggleFullScreen"/>
     <addaction name="dactionToggleTimeStamp"/>
     <addaction name="dactionToggleLogging"/>
     <addaction name="dactionToggleReplay"/>
@@ -142,6 +140,8 @@
     <property name="title">
      <string>Window</string>
     </property>
+    <addaction name="dactionToggleFullScreen"/>
+    <addaction name="dactionMultiView"/>
     <addaction name="dactionReattachDetachedWindows"/>
     <addaction name="separator"/>
     <addaction name="dactionToggleAlwaysOnTop"/>
