@@ -9578,6 +9578,8 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
+    slot_saveEdits();
+    
     auto [ok, filename, error] = mpHost->saveProfile(nullptr, nullptr, true);
 
     if (!ok) {
@@ -9604,7 +9606,8 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     if (!fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive) && !fileName.endsWith(qsl(".trigger"), Qt::CaseInsensitive)) {
         fileName.append(qsl(".xml"));
     }
-
+    slot_saveEdits();
+    
     mpHost->saveProfileAs(fileName);
     mSavingAs = false;
 }
