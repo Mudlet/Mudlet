@@ -36,6 +36,7 @@
 // No documentation available in wiki - internal function
 std::pair<bool, QString> TLuaInterpreter::aiEnabled(lua_State* L)
 {
+    Q_UNUSED(L)
     mudlet* pMudlet = mudlet::self();
 
     if (!pMudlet->aiModelAvailable()) {
