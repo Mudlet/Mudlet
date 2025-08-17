@@ -154,6 +154,7 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        runVcpkgInstall: true
 
 
     - name: (macOS) Install non-vcpkg dependencies (2/2)
