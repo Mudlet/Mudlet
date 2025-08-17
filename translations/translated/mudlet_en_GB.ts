@@ -1844,7 +1844,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="691"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Open Discord</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="696"/>
@@ -1859,7 +1859,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="703"/>
       <source>Open IRC</source>
-      <translation type="unfinished"/>
+      <translation>Open IRC</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="712"/>
@@ -13279,12 +13279,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1331"/>
       <source>Display whenever a tab is connected or a disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Display whenever a tab is connected or disconnected</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1334"/>
       <source>Show connection status on tabs</source>
-      <translation type="unfinished"/>
+      <translation>Show connection status on tabs</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1448"/>
