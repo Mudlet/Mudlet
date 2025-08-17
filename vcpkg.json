@@ -16,10 +16,7 @@
       "platform": "linux"
     },
     "pugixml",
-    {
-      "name": "lua",
-      "features": ["core"]
-    },
+    "lua",
     "sqlite3",
     "pcre"
   ]
