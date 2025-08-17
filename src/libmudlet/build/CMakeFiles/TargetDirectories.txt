@@ -1,7 +1,0 @@
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/mudlet.dir
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/edit_cache.dir
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/rebuild_cache.dir
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/list_install_components.dir
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/install.dir
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/install/local.dir
-/home/mavrick/Desktop/bounty/Mudlet/src/libmudlet/build/CMakeFiles/install/strip.dir
