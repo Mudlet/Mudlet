@@ -794,7 +794,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
 
-    show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
+    show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
@@ -1431,7 +1431,7 @@ void dlgProfilePreferences::clearHostDetails()
     wrap_at_spinBox->clear();
     indent_wrapped_spinBox->clear();
 
-    show_sent_text_checkbox->setChecked(false);
+    show_sent_text_combobox->setCurrentIndex(static_cast<int>(Host::CommandEchoMode::ScriptControl));
     auto_clear_input_line_checkbox->setChecked(false);
     command_separator_lineedit->clear();
 
@@ -2048,7 +2048,20 @@ void dlgProfilePreferences::slot_setMapBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
+// if 3D map, update transparency flags
+#if defined(INCLUDE_3DMAPPER)
+        if (pHost->mpMap->mpMapper->glWidget) {
+            GLWidget* map = pHost->mpMap->mpMapper->glWidget;
+            if (pHost->mBgColor_2.alpha() < 255) {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, false);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
+            } else {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, true);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
+            }
+        }
+#endif
     }
 }
 
@@ -2836,7 +2849,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
-        pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
+        pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();

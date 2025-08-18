@@ -168,7 +168,7 @@ public:
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction;
-    bool isNew;
+    bool mIsNew = true;
 
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
