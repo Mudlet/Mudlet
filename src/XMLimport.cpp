@@ -853,8 +853,21 @@ void XMLimport::readHost(Host* pHost)
     pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
-        // this value has been dropped in 4.20
-        Q_UNUSED(readElementText())
+        const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
+
+        if (ambiguousWidthSetting == YES) {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        } else if (ambiguousWidthSetting == qsl("auto")) {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        } else {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+        }
+    } else {
+        // The encoding setting is stored as part of the profile details and NOT
+        // in the save file - probably because it is needed before the
+        // connection to the Server is initiated so it will already be in place
+        // which is just as well as it is needed for the automatic case...
+        pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {

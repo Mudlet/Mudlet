@@ -2566,6 +2566,59 @@ void Host::refreshPackageFonts()
     }
 }
 
+void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
+{
+    bool localState = false;
+    bool needToEmit = false;
+    const QByteArray encoding(mTelnet.getEncoding());
+
+    if (state == Qt::PartiallyChecked) {
+        // Set things automatically
+        mAutoAmbigousWidthGlyphsSetting = true;
+
+        if (encoding == "GBK"
+            || encoding == "GB18030"
+            || encoding == "BIG5"
+            || encoding == "BIG5-HKSCS"
+            || encoding == "EUC-KR") {
+
+            // Need to use wide width for ambiguous characters
+            if (!mWideAmbigousWidthGlyphs) {
+                // But the last setting was narrow - so we need to change
+                mWideAmbigousWidthGlyphs = true;
+                localState = true;
+                needToEmit = true;
+            }
+
+        } else {
+            // Need to use narrow width for ambiguous characters
+            if (mWideAmbigousWidthGlyphs) {
+                // But the last setting was wide - so we need to change
+                mWideAmbigousWidthGlyphs = false;
+                localState = false;
+                needToEmit = true;
+            }
+
+        }
+
+    } else {
+        // Set things manually:
+        mAutoAmbigousWidthGlyphsSetting = false;
+        if (mWideAmbigousWidthGlyphs != (state == Qt::Checked)) {
+            // The last setting is the opposite to what we want:
+
+            mWideAmbigousWidthGlyphs = (state == Qt::Checked);
+            localState = (state == Qt::Checked);
+            needToEmit = true;
+        }
+
+    }
+
+    if (needToEmit) {
+        emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
+    }
+}
+
 QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
 {
     // clang-format off
