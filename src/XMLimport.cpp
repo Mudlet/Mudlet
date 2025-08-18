@@ -288,10 +288,10 @@ void XMLimport::readVariable(TVar* pParent)
                 value = readElementText(QXmlStreamReader::SkipChildElements);
                 continue;
             } else if (name() == qsl("keyType")) {
-                keyType = readElementText().toInt();
+                keyType = readElementText(QXmlStreamReader::SkipChildElements).toInt();
                 continue;
             } else if (name() == qsl("valueType")) {
-                valueType = readElementText().toInt();
+                valueType = readElementText(QXmlStreamReader::SkipChildElements).toInt();
                 var->setName(keyName, keyType);
                 var->setValue(value, valueType);
                 vu->addSavedVar(var);
@@ -871,18 +871,23 @@ void XMLimport::readHost(Host* pHost)
         const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
 
         if (ambiguousWidthSetting == YES) {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
+            pHost->mAutoAmbigousWidthGlyphsSetting = false;
+            pHost->mWideAmbigousWidthGlyphs = true;
+            emit pHost->signal_changeIsAmbigousWidthGlyphsToBeWide(true);
         } else if (ambiguousWidthSetting == qsl("auto")) {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+            pHost->mAutoAmbigousWidthGlyphsSetting = true;
+            // The actual value will be determined by encoding
         } else {
-            pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+            pHost->mAutoAmbigousWidthGlyphsSetting = false;
+            pHost->mWideAmbigousWidthGlyphs = false;
+            emit pHost->signal_changeIsAmbigousWidthGlyphsToBeWide(false);
         }
     } else {
         // The encoding setting is stored as part of the profile details and NOT
         // in the save file - probably because it is needed before the
         // connection to the Server is initiated so it will already be in place
         // which is just as well as it is needed for the automatic case...
-        pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        pHost->mAutoAmbigousWidthGlyphsSetting = true;
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {
@@ -1122,23 +1127,23 @@ void XMLimport::readHost(Host* pHost)
                 // needed (intended for use when importing a profile but not
                 // otherwise). In fact this detail is normally stored outside of
                 // the game save in the profile base directory:
-                pHost->mBackupPort = readElementText().toInt();
+                pHost->mBackupPort = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("borderTopHeight")) {
-                borders.setTop(readElementText().toInt());
+                borders.setTop(readElementText(QXmlStreamReader::SkipChildElements).toInt());
             } else if (name() == qsl("borderBottomHeight")) {
-                borders.setBottom(readElementText().toInt());
+                borders.setBottom(readElementText(QXmlStreamReader::SkipChildElements).toInt());
             } else if (name() == qsl("borderLeftWidth")) {
-                borders.setLeft(readElementText().toInt());
+                borders.setLeft(readElementText(QXmlStreamReader::SkipChildElements).toInt());
             } else if (name() == qsl("borderRightWidth")) {
-                borders.setRight(readElementText().toInt());
+                borders.setRight(readElementText(QXmlStreamReader::SkipChildElements).toInt());
             } else if (name() == qsl("commandLineMinimumHeight")) {
-                pHost->commandLineMinimumHeight = readElementText().toInt();
+                pHost->commandLineMinimumHeight = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("wrapAt")) {
-                pHost->mWrapAt = readElementText().toInt();
+                pHost->mWrapAt = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("wrapIndentCount")) {
-                pHost->mWrapIndentCount = readElementText().toInt();
+                pHost->mWrapIndentCount = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("wrapHangingIndentCount")) {
-                pHost->mWrapHangingIndentCount = readElementText().toInt();
+                pHost->mWrapHangingIndentCount = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("mCommandLineFgColor")) {
@@ -1252,7 +1257,9 @@ void XMLimport::readHost(Host* pHost)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 pHost->mFgColor_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor2")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor_2.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
+                pHost->mBgColor_2.setAlpha(alpha);
             } else if (name() == qsl("mLowerLevelColor")) {
                 pHost->mLowerLevelColor.setNamedColor(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mUpperLevelColor")) {
@@ -1446,11 +1453,11 @@ int XMLimport::readTrigger(TTrigger* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("triggerType")) {
-                pT->mTriggerType = readElementText().toInt();
+                pT->mTriggerType = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("conditonLineDelta")) {
-                pT->mConditionLineDelta = readElementText().toInt();
+                pT->mConditionLineDelta = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("mStayOpen")) {
-                pT->mStayOpen = readElementText().toInt();
+                pT->mStayOpen = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("mCommand")) {
                 pT->mCommand = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("mFgColor")) {
@@ -1708,28 +1715,28 @@ int XMLimport::readAction(TAction* pParent)
             } else if (name() == qsl("icon")) {
                 pT->mIcon = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("orientation")) {
-                pT->mOrientation = readElementText().toInt();
+                pT->mOrientation = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("location")) {
-                pT->mLocation = readElementText().toInt();
+                pT->mLocation = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("buttonRotation")) {
-                pT->mButtonRotation = readElementText().toInt();
+                pT->mButtonRotation = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("sizeX")) {
-                pT->mSizeX = readElementText().toInt();
+                pT->mSizeX = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("sizeY")) {
-                pT->mSizeY = readElementText().toInt();
+                pT->mSizeY = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("mButtonState")) {
                 // We now use a boolean but file must use original "1" (false)
                 // or "2" (true) for backward compatibility
-                pT->mButtonState = (readElementText().toInt() == 2);
+                pT->mButtonState = (readElementText(QXmlStreamReader::SkipChildElements).toInt() == 2);
             } else if (name() == qsl("buttonColor")) {
                 // Not longer present/used, skip over it if it is still in file:
                 skipCurrentElement();
             } else if (name() == qsl("buttonColumn")) {
-                pT->mButtonColumns = readElementText().toInt();
+                pT->mButtonColumns = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("posX")) {
-                pT->mPosX = readElementText().toInt();
+                pT->mPosX = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("posY")) {
-                pT->mPosY = readElementText().toInt();
+                pT->mPosY = readElementText(QXmlStreamReader::SkipChildElements).toInt();
             } else if (name() == qsl("ActionGroup") || name() == qsl("Action")) {
                 readAction(pT);
             } else {
@@ -1854,9 +1861,9 @@ int XMLimport::readKey(TKey* pParent)
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText(QXmlStreamReader::SkipChildElements);
             } else if (name() == qsl("keyCode")) {
-                pT->setKeyCode(readElementText().toInt());
+                pT->setKeyCode(readElementText(QXmlStreamReader::SkipChildElements).toInt());
             } else if (name() == qsl("keyModifier")) {
-                pT->setKeyModifiers(readElementText().toInt());
+                pT->setKeyModifiers(readElementText(QXmlStreamReader::SkipChildElements).toInt());
             } else if (name() == qsl("KeyGroup") || name() == qsl("Key")) {
                 readKey(pT);
             } else {
