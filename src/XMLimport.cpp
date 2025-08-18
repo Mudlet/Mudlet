@@ -1237,7 +1237,9 @@ void XMLimport::readHost(Host* pHost)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor_2.setNamedColor(readElementText());
+                pHost->mBgColor_2.setAlpha(alpha);
             } else if (name() == qsl("mLowerLevelColor")) {
                 pHost->mLowerLevelColor.setNamedColor(readElementText());
             } else if (name() == qsl("mUpperLevelColor")) {
@@ -1285,7 +1287,9 @@ void XMLimport::readHost(Host* pHost)
 #else
                 pHost->mFgColor_2 = QColor::fromString(readElementText());
             } else if (name() == qsl("mBgColor2")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor_2 = QColor::fromString(readElementText());
+                pHost->mBgColor_2.setAlpha(alpha);
             } else if (name() == qsl("mLowerLevelColor")) {
                 pHost->mLowerLevelColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mUpperLevelColor")) {
