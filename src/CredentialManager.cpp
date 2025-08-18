@@ -54,7 +54,6 @@ CredentialManager::~CredentialManager()
 {
     // During destruction, we should NOT call callbacks as they may reference
     // objects that are being destroyed. Instead, just clean up without callbacks.
-    qDebug() << "CredentialManager: Destructor called, cleaning up without callbacks";
     
     // Clear callbacks before cleanup to prevent them from being called
     mCurrentCallback = nullptr;
