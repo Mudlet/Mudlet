@@ -1,6 +1,7 @@
 #!/bin/bash
 ###########################################################################
-#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
+#   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         #
+#   Copyright (C) 2025 by Stephen Lyons - slysven@virginmedia.com         #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -22,17 +23,16 @@
 # BUILD_COMMIT and registers it with dblsqd. It will attempt this for up to
 # an hour, every minute until success.
 # GHA Env vars needed:
-#    ARCH - For registering wither 64 bit build with dblsqd
 #    BUILD_COMMIT - For listing the json feed
 #    PATH - For path of dblsqd
 #    VERSION_STRING - The version of Mudlet being released
 
 # Version: 1.0.0    Initial Release
+# Version: 1.1.0    Hard-code only for x86_64 architecture
 
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Timeout exceeded, failure
-# 2 - ARCH not properly set
 
 echo "=== Downloading JSON feed ==="
 json_url="https://make.mudlet.org/snapshots/json.php?commitid=${BUILD_COMMIT}"
@@ -60,13 +60,7 @@ FetchAndCheckURL() {
       return 1
     fi
 
-    if [ "${ARCH}" == "x86_64" ]; then
-      SEARCH_PATTERN="windows-64.exe"
-    else
-      echo "ARCH environment variable is not set to x86_64 as expected."
-      exit 2
-    fi
-
+    SEARCH_PATTERN="windows-64.exe"
     echo "Searching for ${SEARCH_PATTERN}"
 
     # Use jq to filter the JSON data
@@ -105,8 +99,8 @@ done
 
 
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
+echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64} \"${matching_url}\""
 
 PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
 export PATH
-dblsqd push -a mudlet -c public-test-build -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
+dblsqd push -a mudlet -c public-test-build -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${matching_url}"

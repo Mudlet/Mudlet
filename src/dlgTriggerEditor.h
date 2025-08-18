@@ -55,6 +55,7 @@
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
+#include <QDesktopServices>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -317,6 +318,7 @@ private slots:
     void slot_restoreEditorItemsToolbar();
     void slot_itemEdited();
     void slot_searchSplitterMoved(const int pos, const int index);
+    void slot_clickedMessageBox(const QString&);
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -596,14 +598,21 @@ private:
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
+    
+    struct introOption {
+        QString name;
+        QString headline;
+        QString contents;  
+    };
 
-    QString msgInfoAddAlias;
-    QString msgInfoAddTrigger;
-    QString msgInfoAddScript;
-    QString msgInfoAddTimer;
-    QString msgInfoAddButton;
-    QString msgInfoAddVar;
-    QString msgInfoAddKey;
+    struct introTextParts {
+        QString summary;
+        QVector<introOption> options;
+    };
+
+    QMap<EditorViewType, introTextParts> introAddItem;
+
+    void showIntro(const QString& = QString());
     QString descActive;
     QString descInactive;
     QString descActiveFolder;
