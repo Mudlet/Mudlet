@@ -966,7 +966,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mpHost->send(commandList.at(i));
         }
         // send command to your MiniConsole
-        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never){
             // This usage of commandList modifies the content!!!
             mpConsole->printCommand(commandList[i]);
         }

@@ -51,6 +51,8 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -243,7 +245,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
-, mPrintCommand(true)
+, mCommandEchoMode(CommandEchoMode::ScriptControl)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
@@ -1298,12 +1300,27 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
+    // Determine if we should print the command based on the echo mode
+    bool shouldPrint = false;
+    switch (mCommandEchoMode) {
+    case CommandEchoMode::Never:
+        shouldPrint = false;
+        break;
+    case CommandEchoMode::Always:
+        shouldPrint = true;
+        break;
+    case CommandEchoMode::ScriptControl:
+        shouldPrint = wantPrint;
+        break;
+    }
+
+    if (shouldPrint && !mIsRemoteEchoingActive) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
+
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
         if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
@@ -1313,7 +1330,9 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->update();
         }
     }
+
     QStringList commandList;
+
     if (!mCommandSeparator.isEmpty()) {
         commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
     } else if (!cmd.isEmpty()) {
@@ -1321,8 +1340,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         commandList << cmd;
     }
 
-        // allow sending blank commands
-
+    // allow sending blank commands
     if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
@@ -3060,28 +3078,22 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 
 void Host::loadSecuredPassword()
 {
-    auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(getName());
-
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
-        if (task->error()) {
-            const auto error = task->errorString();
-            if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager(this);
+    
+    credManager->retrieveCredential(getName(), "character", 
+        [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+            if (success && !password.isEmpty()) {
+                setPass(password);
+                QString passwordCopy = password; // Make a copy for secure clearing
+                SecureStringUtils::secureStringClear(passwordCopy);
+            } else if (!success && !errorMessage.isEmpty()) {
+                qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
             }
-
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-            setPass(readJob->textData());
-        }
-
-        task->deleteLater();
-    });
-
-    job->start();
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 // Only needed for places outside of this class:
