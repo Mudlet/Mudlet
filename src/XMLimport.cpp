@@ -868,26 +868,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
-        const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
-
-        if (ambiguousWidthSetting == YES) {
-            pHost->mAutoAmbigousWidthGlyphsSetting = false;
-            pHost->mWideAmbigousWidthGlyphs = true;
-            emit pHost->signal_changeIsAmbigousWidthGlyphsToBeWide(true);
-        } else if (ambiguousWidthSetting == qsl("auto")) {
-            pHost->mAutoAmbigousWidthGlyphsSetting = true;
-            // The actual value will be determined by encoding
-        } else {
-            pHost->mAutoAmbigousWidthGlyphsSetting = false;
-            pHost->mWideAmbigousWidthGlyphs = false;
-            emit pHost->signal_changeIsAmbigousWidthGlyphsToBeWide(false);
-        }
-    } else {
-        // The encoding setting is stored as part of the profile details and NOT
-        // in the save file - probably because it is needed before the
-        // connection to the Server is initiated so it will already be in place
-        // which is just as well as it is needed for the automatic case...
-        pHost->mAutoAmbigousWidthGlyphsSetting = true;
+        // this value has been dropped in 4.20
+        Q_UNUSED(readElementText(QXmlStreamReader::SkipChildElements))
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {
@@ -1307,7 +1289,9 @@ void XMLimport::readHost(Host* pHost)
 #else
                 pHost->mFgColor_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mBgColor2")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor_2 = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
+                pHost->mBgColor_2.setAlpha(alpha);
             } else if (name() == qsl("mLowerLevelColor")) {
                 pHost->mLowerLevelColor = QColor::fromString(readElementText(QXmlStreamReader::SkipChildElements));
             } else if (name() == qsl("mUpperLevelColor")) {
