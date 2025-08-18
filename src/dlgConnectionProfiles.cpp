@@ -1601,16 +1601,31 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
+    // Check if the host already exists before calling mudlet::loadProfile()
+    Host* pHostBeforeLoad = mudlet::self()->getHostManager().getHost(profile_name);
+    bool hostExistedBefore = (pHostBeforeLoad != nullptr);
+
     Host *pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
 
         Host* pActiveHost = mudlet::self()->getActiveHost();
+        
         if (pActiveHost && pActiveHost->getName() == profile_name) {
-            // The intention here is to do as little as possible if the same profile is chosen again
-            // this replicates function of mudlet::slot_reconnect to avoid #7395
+            // Skip reconnect if mudlet::loadProfile already connected for existing hosts
+            if (alsoConnect && hostExistedBefore) {
+                QDialog::accept();
+                return;
+            }
+            // Reconnect to the active profile
             pActiveHost->mTelnet.reconnect();
+            QDialog::accept();
+            return;
+        }
+        
+        // Skip signal emission if mudlet::loadProfile already handled the connection
+        if (alsoConnect && hostExistedBefore) {
             QDialog::accept();
             return;
         }
