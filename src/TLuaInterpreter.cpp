@@ -7363,7 +7363,26 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("showSentText")) {
-        host.mPrintCommand = getVerifiedBool(L, __func__, 2, "value");
+        // Handle both legacy boolean and new string values
+        if (lua_isboolean(L, 2)) {
+            bool value = getVerifiedBool(L, __func__, 2, "value");
+            host.mCommandEchoMode = value ? Host::CommandEchoMode::ScriptControl : Host::CommandEchoMode::Never;
+        } else if (lua_isstring(L, 2)) {
+            QString value = getVerifiedString(L, __func__, 2, "value");
+            if (value == "never") {
+                host.mCommandEchoMode = Host::CommandEchoMode::Never;
+            } else if (value == "always") {
+                host.mCommandEchoMode = Host::CommandEchoMode::Always;
+            } else if (value == "script") {
+                host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
+            } else {
+                lua_pushfstring(L, "setConfig: bad argument #2 value (expected 'never', 'always', or 'script', got '%s')", value.toUtf8().constData());
+                return warnArgumentValue(L, __func__, value);
+            }
+        } else {
+            lua_pushfstring(L, "setConfig: bad argument #2 type (expected boolean or string for 'showSentText', got %s)", luaL_typename(L, 2));
+            return warnArgumentValue(L, __func__, qsl("showSentText"));
+        }
         return success();
     }
     if (key == qsl("fixUnnecessaryLinebreaks")) {
@@ -7529,6 +7548,12 @@ int TLuaInterpreter::getConfig(lua_State *L)
         return warnArgumentValue(L, __func__, "you must provide a key");
     }
 
+    // Check if second parameter requests string format (for enhanced API)
+    bool useStringFormat = false;
+    if (lua_gettop(L) >= 2 && lua_isboolean(L, 2)) {
+        useStringFormat = lua_toboolean(L, 2);
+    }
+
     const std::unordered_map<QString, std::function<void()>> configMap = {
         { qsl("mapRoomSize"), [&](){ lua_pushnumber(L, host.mRoomSize); } },
         { qsl("mapExitSize"), [&](){ lua_pushnumber(L, host.mLineSize); } },
@@ -7570,7 +7595,34 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
-        { qsl("showSentText"), [&](){ lua_pushboolean(L, host.mPrintCommand); } },
+        { qsl("showSentText"), [&](){
+            if (useStringFormat) {
+                // Return string representation for new enhanced API
+                switch (host.mCommandEchoMode) {
+                case Host::CommandEchoMode::Never:
+                    lua_pushstring(L, "never");
+                    break;
+                case Host::CommandEchoMode::Always:
+                    lua_pushstring(L, "always");
+                    break;
+                case Host::CommandEchoMode::ScriptControl:
+                    lua_pushstring(L, "script");
+                    break;
+                }
+            } else {
+                // For backward compatibility, return boolean for legacy scripts
+                switch (host.mCommandEchoMode) {
+                case Host::CommandEchoMode::Never:
+                    lua_pushboolean(L, false);
+                    break;
+                case Host::CommandEchoMode::Always:
+                case Host::CommandEchoMode::ScriptControl:
+                    // Both modes map to true for backward compatibility
+                    lua_pushboolean(L, true);
+                    break;
+                }
+            }
+        } },
         { qsl("fixUnnecessaryLinebreaks"), [&](){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },

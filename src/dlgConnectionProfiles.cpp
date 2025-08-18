@@ -30,6 +30,8 @@
 #include "TGameDetails.h"
 #include "XMLimport.h"
 #include "mudlet.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 
 #include "pre_guard.h"
 #include <QtConcurrent>
@@ -232,7 +234,21 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
 #endif
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateLogin);
-    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updatePassword);
+    // Use textChanged with timer debouncing to avoid saving on every keystroke
+    connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
+
+    // Listen for password migration completion to refresh the form
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, this, [this]() {
+        // Refresh the current profile's password field after migration
+        slot_itemClicked(profiles_tree_widget->currentItem());
+    });
+    
+    // Listen for character password migration completion to refresh the form
+    connect(mudlet::self(), &mudlet::signal_characterPasswordsMigrated, this, [this]() {
+        // Refresh the current profile's password field after migration
+        slot_itemClicked(profiles_tree_widget->currentItem());
+    });
+
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
@@ -289,6 +305,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
 {
+    // Clear any pending operation flags
+    mKeychainOperationInProgress = false;
+    mPendingProfileLoad.clear();
+    
     QCoreApplication::instance()->removeEventFilter(this);
 }
 
@@ -300,9 +320,49 @@ void dlgConnectionProfiles::accept()
         setVisible(false);
         // This is needed to make the above take effect as fast as possible:
         qApp->processEvents();
-        loadProfile(true);
-        QDialog::accept();
+        
+        // Check if keychain authentication is pending - if so, wait for it
+        ensurePasswordLoadedThenConnect(true);
     }
+}
+
+void dlgConnectionProfiles::slot_load()
+{
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible:
+    qApp->processEvents();
+    
+    // Check if keychain authentication is pending - if so, wait for it
+    ensurePasswordLoadedThenConnect(false);
+}
+
+void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
+{
+    const QString profile_name = profile_name_entry->text().trimmed();
+    
+    if (profile_name.isEmpty()) {
+        QDialog::accept();
+        return;
+    }
+    
+    // Check if we have any pending keychain operations for this profile
+    if (hasPendingKeychainOperation(profile_name)) {
+        // Queue the profile loading until keychain completes
+        mPendingConnect = alsoConnect;
+        mPendingProfileLoad = profile_name;
+        return; // Will be handled by keychain callback
+    }
+    
+    // No pending keychain operations, proceed immediately
+    loadProfile(alsoConnect);
+    QDialog::accept();
+}
+
+bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
+{
+    Q_UNUSED(profile_name)
+    // Simply check if we have a keychain operation in progress
+    return mKeychainOperationInProgress;
 }
 
 void dlgConnectionProfiles::slot_updateDescription()
@@ -356,40 +416,61 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
         return;
     }
 
+    const QString profileName = pItem->data(csmNameRole).toString();
+    
     if (mudlet::self()->storingPasswordsSecurely()) {
-        writeSecurePassword(pItem->data(csmNameRole).toString(), pass);
+        if (pass.trimmed().isEmpty()) {
+            // If password is empty, remove it from secure storage
+            deleteSecurePassword(profileName);
+        } else {
+            // Store the password securely
+            writeSecurePassword(profileName, pass);
+        }
     } else {
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("password"), pass);
+        writeProfileData(profileName, qsl("password"), pass);
     }
 }
 
 void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
 {
-    auto* job = new QKeychain::WritePasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(profile);
-    job->setTextData(pass);
-    job->setProperty("profile", profile);
-
-    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_passwordSaved);
-
-    job->start();
+    // Validate that we have a password to store
+    if (pass.trimmed().isEmpty()) {
+        qDebug() << "dlgConnectionProfiles: Skipping storage of empty password for profile" << profile;
+        return;
+    }
+    
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
+    
+    credManager->storeCredential(profile, "character", pass, 
+        [credManager, profile](bool success, const QString& errorMessage) {
+            if (success) {
+                qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
+            } else {
+                qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
+            }
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
 {
-    auto* job = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(profile);
-    job->setProperty("profile", profile);
-
-    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_passwordDeleted);
-
-    job->start();
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
+    
+    credManager->removeCredential(profile, "character", 
+        [credManager, profile](bool success, const QString& errorMessage) {
+            if (success) {
+                qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
+            } else {
+                qWarning() << "dlgConnectionProfiles: Failed to remove password for profile" << profile << ":" << errorMessage;
+            }
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 void dlgConnectionProfiles::slot_updateLogin(const QString& login)
@@ -521,13 +602,6 @@ void dlgConnectionProfiles::slot_saveName()
     }
 
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
-    const int row = mProfileList.indexOf(currentProfileEditName);
-    if ((row >= 0) && (row < mProfileList.size())) {
-        mProfileList[row] = newProfileName;
-    } else {
-        mProfileList << newProfileName;
-    }
-
     // don't do anything if this was just a normal click, and not an edit of any sort
     if (currentProfileEditName == newProfileName) {
         return;
@@ -829,18 +903,12 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // by the copy method
     if (!mCopyingProfile) {
         character_password_entry->setText(QString());
-        if (mudlet::self()->storingPasswordsSecurely()) {
-            loadSecuredPassword(profile_name, [this, profile_name](const QString& password) {
-                if (!password.isEmpty()) {
-                    character_password_entry->setText(password);
-                } else {
-                    character_password_entry->setText(readProfileData(profile_name, qsl("password")));
-                }
-            });
-
-        } else {
-            character_password_entry->setText(readProfileData(profile_name, qsl("password")));
-        }
+        // Schedule password loading asynchronously to avoid event loop issues
+        auto* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        timer->setProperty("profileName", profile_name);
+        connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
+        timer->start(0);
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -918,7 +986,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
                 year = match.captured(3);
             }
 
-
             QDateTime datetime;
             datetime.setTime(QTime(hour.toInt(), minute.toInt(), second.toInt()));
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
@@ -929,7 +996,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
                                      mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
                                      QVariant(entry));
-        } else {
+        } else if (entry.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
             profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
     }
@@ -1186,36 +1253,35 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
     const auto& password = character_password_entry->text().trimmed();
 
     deleteSecurePassword(oldProfile);
-    writeSecurePassword(newProfile, password);
+    
+    // Only store the password if it's not empty
+    if (!password.isEmpty()) {
+        writeSecurePassword(newProfile, password);
+    }
 }
 
 template <typename L>
 void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
 {
-    // character_password_entry
-
-    auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(profile);
-
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
-        if (task->error()) {
-            const auto error = task->errorString();
-            if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager();
+    
+    credManager->retrieveCredential(profile, "character", 
+        [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
+            if (success) {
+                callback(password);
+                QString passwordCopy = password; // Make a copy for secure clearing
+                SecureStringUtils::secureStringClear(passwordCopy);
+            } else {
+                if (!errorMessage.isEmpty()) {
+                    qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
+                }
+                callback(QString()); // Call with empty string on failure
             }
-
-        }
-
-        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-        callback(readJob->textData());
-
-        task->deleteLater();
-    });
-
-    job->start();
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 std::optional<QColor> getCustomColor(const QString& profileName)
@@ -1324,24 +1390,6 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
     profiles_tree_widget->setCurrentRow(currentRow);
 }
 
-void dlgConnectionProfiles::slot_passwordSaved(QKeychain::Job* job)
-{
-    if (job->error()) {
-        qWarning().nospace().noquote() << "dlgslot_passwordSaved:slot_passwordSaved(...) ERROR - could not save password for \"" << job->property("profile").toString() << "\"; error was: \"" << job->errorString() << "\".";
-    }
-
-    job->deleteLater();
-}
-
-void dlgConnectionProfiles::slot_passwordDeleted(QKeychain::Job* job)
-{
-    if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_passwordDeleted(...) ERROR - could not delete password for: \"" << job->property("profile").toString() << "\"; error was: \"" << job->errorString() << "\".";
-    }
-
-    job->deleteLater();
-}
-
 void dlgConnectionProfiles::slot_cancel()
 {
     // QDialog::Rejected is the enum value (= 0) return value for a "cancelled"
@@ -1385,7 +1433,7 @@ void dlgConnectionProfiles::slot_copyProfile()
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         character_password_entry->setText(oldPassword);
-        if (mudlet::self()->storingPasswordsSecurely()) {
+        if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
         mCopyingProfile = false;
@@ -1545,15 +1593,6 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     }
 }
 
-void dlgConnectionProfiles::slot_load()
-{
-    setVisible(false);
-    // This is needed to make the above take effect as fast as possible:
-    qApp->processEvents();
-    loadProfile(false);
-    QDialog::accept();
-}
-
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     const QString profile_name = profile_name_entry->text().trimmed();
@@ -1607,8 +1646,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:
         pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
-        // Needed to ensure setting is correct on start-up:
-        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
 
         // This also writes the value out to the profile's base directory:
@@ -2067,4 +2104,142 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     }
 
     profiles_tree_widget->setCurrentRow(indexes.first());
+}
+
+void dlgConnectionProfiles::slot_loadPasswordAsync()
+{
+    if (!sender()) {
+        return;
+    }
+
+    // Get the profile name from the timer's property
+    QTimer* timer = qobject_cast<QTimer*>(sender());
+    if (!timer) {
+        return;
+    }
+
+    const QString profile_name = timer->property("profileName").toString();
+
+    if (profile_name.isEmpty()) {
+        return;
+    }
+
+    // Clean up the timer
+    timer->deleteLater();
+
+    // Check if this dialog is still valid and the profile is still selected
+    if (profiles_tree_widget->currentItem() == nullptr) {
+        return;
+    }
+
+    const QString currentProfileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+
+    if (currentProfileName != profile_name) {
+        // Selection has changed, ignore this async load
+        return;
+    }
+
+    // If secure storage is enabled, try keychain first, then fallback to QSettings
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        mKeychainOperationInProgress = true;
+        auto* credManager = new CredentialManager(this);
+        credManager->retrieveCredential(profile_name, "character", 
+            [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+                // Clear the operation flag first
+                mKeychainOperationInProgress = false;
+                
+                // Check if profile selection has changed while we were waiting
+                if (profiles_tree_widget->currentItem() && 
+                    profiles_tree_widget->currentItem()->data(csmNameRole).toString() == profile_name) {
+                    
+                    if (success) {
+                        // Keychain operation succeeded - set the password (even if empty)
+                        character_password_entry->setText(retrievedPassword);
+                        if (retrievedPassword.isEmpty()) {
+                            qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
+                        }
+                    } else {
+                        // Fallback to QSettings only if keychain operation failed
+                        loadPasswordFromSettings(profile_name);
+                        qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
+                    }
+                }
+                
+                // Check if there's a pending connection waiting for this password load
+                // (do this regardless of profile selection state to avoid hanging)
+                if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+                    qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
+                    
+                    // Clear pending state
+                    QString profileToLoad = mPendingProfileLoad;
+                    bool shouldConnect = mPendingConnect;
+                    mPendingProfileLoad.clear();
+                    
+                    // Proceed with the connection
+                    loadProfile(shouldConnect);
+                    QDialog::accept();
+                }
+                
+                credManager->deleteLater();
+            });
+    } else {
+        // Secure storage disabled, use QSettings directly
+        loadPasswordFromSettings(profile_name);
+        
+        // Check if there's a pending connection waiting
+        if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+            qDebug() << "dlgConnectionProfiles: Password loaded from settings, proceeding with pending connection for" << profile_name;
+            
+            // Clear pending state
+            QString profileToLoad = mPendingProfileLoad;
+            bool shouldConnect = mPendingConnect;
+            mPendingProfileLoad.clear();
+            
+            // Proceed with the connection
+            loadProfile(shouldConnect);
+            QDialog::accept();
+        }
+    }
+}
+
+void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
+{
+    auto& settings = *mudlet::self()->mpSettings;
+    settings.beginGroup(qsl("profiles/%1").arg(profile_name));
+
+    // Get password and handle migration
+    const QString password = settings.value(qsl("password"), QString()).toString();
+    const QString oldPassword = settings.value(qsl("login"), QString()).toString();
+
+    if (!password.isEmpty()) {
+        character_password_entry->setText(password);
+    } else if (!oldPassword.isEmpty()) {
+        // Migrate old password
+        character_password_entry->setText(oldPassword);
+        settings.setValue(qsl("password"), oldPassword);
+        settings.remove(qsl("login"));
+    } else {
+        character_password_entry->setText(QString());
+    }
+
+    settings.endGroup();
+}
+
+void dlgConnectionProfiles::slot_passwordTextChanged()
+{
+    // Cancel any pending password save
+    if (mPasswordSaveTimer) {
+        mPasswordSaveTimer->stop();
+    } else {
+        mPasswordSaveTimer = new QTimer(this);
+        mPasswordSaveTimer->setSingleShot(true);
+        mPasswordSaveTimer->setInterval(500); // 500ms debounce
+        connect(mPasswordSaveTimer, &QTimer::timeout, this, [this]() {
+            QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+            if (pItem) {
+                slot_updatePassword(character_password_entry->text());
+            }
+        });
+    }
+    mPasswordSaveTimer->start();
 }
