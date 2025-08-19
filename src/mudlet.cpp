@@ -29,6 +29,7 @@
 #include "mudlet.h"
 
 #include "AltFocusMenuBarDisable.h"
+#include "CredentialManager.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -1732,7 +1733,6 @@ void mudlet::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             // Add main window section
             for (const QString& profileName : mainWindowProfiles) {
-                Host* host = mHostManager.getHost(profileName);
                 QString actionText = tr("%1 (Main Window)").arg(profileName);
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
@@ -2860,6 +2860,7 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
+    connect(mpConnectionDialog, &QObject::destroyed, this, [=, this]() { mpConnectionDialog = nullptr; });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
     
     // Use a timer to ensure the main window is ready before showing the dialog
@@ -5087,63 +5088,87 @@ std::string mudlet::replaceString(std::string subject, const std::string& search
     return subject;
 }
 
+// Helper function to check if current version is >= specified version
+// Returns true if current version is >= minVersion, false otherwise
+bool mudlet::isVersionAtLeast(const QString& minVersion)
+{
+    const QString currentVersion = QString(APP_VERSION);
+    
+    // Parse version strings (format: major.minor.patch)
+    const QStringList currentParts = currentVersion.split('.');
+    const QStringList minParts = minVersion.split('.');
+    
+    // Ensure we have at least 3 parts for comparison
+    auto getCurrentPart = [&currentParts](int index) -> int {
+        return (index < currentParts.size()) ? currentParts[index].toInt() : 0;
+    };
+    
+    auto getMinPart = [&minParts](int index) -> int {
+        return (index < minParts.size()) ? minParts[index].toInt() : 0;
+    };
+    
+    for (int i = 0; i < 3; ++i) {
+        const int currentPart = getCurrentPart(i);
+        const int minPart = getMinPart(i);
+        
+        if (currentPart > minPart) {
+            return true;
+        } else if (currentPart < minPart) {
+            return false;
+        }
+        // If equal, continue to next part
+    }
+    
+    return true; // Versions are equal
+}
+
 bool mudlet::migratePasswordsToSecureStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
         qWarning() << "mudlet::migratePasswordsToSecureStorage() warning: password migration is already in progress, won't start another.";
         return false;
     }
+
     mStorePasswordsSecurely = true;
 
     const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
+    bool anyMigrationNeeded = false;
+
     for (const auto& profile : profiles) {
         const auto password = readProfileData(profile, qsl("password"));
-        if (password.isEmpty()) {
-            continue;
+        if (!password.isEmpty()) {
+            // Use CredentialManager to store the password securely
+            if (CredentialManager::storeCredential(profile, "character", password)) {
+                // Only remove from profile data if this version is >= 4.20.0
+                // This prevents breaking compatibility with older Mudlet versions
+                // that users may still have installed alongside development builds
+                if (isVersionAtLeast(qsl("4.20.0"))) {
+                    deleteProfileData(profile, qsl("password"));
+                    qDebug().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() INFO - migrated password for profile \"" << profile << "\" from old format and cleaned up legacy storage.";
+                } else {
+                    qDebug().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() INFO - migrated password for profile \"" << profile << "\" from old format (legacy storage preserved for compatibility).";
+                }
+                anyMigrationNeeded = true;
+            } else {
+                qWarning().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() ERROR - could not migrate password for profile \"" << profile << "\".";
+            }
         }
-
-        auto *job = new QKeychain::WritePasswordJob(qsl("Mudlet profile"));
-        job->setAutoDelete(false);
-        job->setInsecureFallback(false);
-
-        job->setKey(profile);
-        job->setTextData(password);
-        job->setProperty("profile", profile);
-
-        mProfilePasswordsToMigrate.append(profile);
-
-        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_passwordMigratedToSecureStorage);
-
-        job->start();
     }
 
-    if (mProfilePasswordsToMigrate.isEmpty()) {
-        QTimer::singleShot(0, this, [this]() {
-            emit signal_passwordsMigratedToProfiles();
-        });
+    if (!anyMigrationNeeded) {
+        qDebug() << "mudlet::migratePasswordsToSecureStorage() INFO - no migration needed.";
     }
+
+    // Always emit the signal (either immediately or after migrations complete)
+    QTimer::singleShot(0, this, [this]() {
+        emit signal_passwordsMigratedToSecure();
+    });
+
+    return anyMigrationNeeded;
 
     return true;
-}
-
-void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
-{
-    const auto profileName = job->property("profile").toString();
-    if (job->error()) {
-        qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage(...) ERROR - could not migrate for \"" << profileName << "\"; error was: \"" << job->errorString() << "\".";
-    } else {
-        deleteProfileData(profileName, qsl("password"));
-    }
-    mProfilePasswordsToMigrate.removeAll(profileName);
-    job->deleteLater();
-
-    if (mProfilePasswordsToMigrate.isEmpty()) {
-        emit signal_passwordsMigratedToSecure();
-    } else {
-        emit signal_passwordMigratedToSecure(profileName);
-    }
 }
 
 bool mudlet::migratePasswordsToProfileStorage()
@@ -5156,7 +5181,29 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
+    bool anyMigrationNeeded = false;
+
     for (const auto& profile : profiles) {
+        // Try to retrieve password from CredentialManager
+        QString password = CredentialManager::retrieveCredential(profile, "character");
+        
+        if (!password.isEmpty()) {
+            // Store in profile data
+            writeProfileData(profile, qsl("password"), password);
+            
+            // Only remove from secure storage if this version is >= 4.20.0
+            // This prevents breaking compatibility with older Mudlet versions
+            if (isVersionAtLeast(qsl("4.20.0"))) {
+                CredentialManager::removeCredential(profile, "character");
+                qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage and cleaned up secure storage.";
+            } else {
+                qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage (secure storage preserved for compatibility).";
+            }
+            anyMigrationNeeded = true;
+        }
+        
+        // Also check for old-format keychain entries (service: "Mudlet profile", key: profile name)
+        // and migrate them to profile storage
         auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
         job->setAutoDelete(false);
         job->setInsecureFallback(false);
@@ -5168,11 +5215,13 @@ bool mudlet::migratePasswordsToProfileStorage()
         job->start();
     }
 
+    // If no old-format entries need to be checked, emit signal immediately
     if (mProfilePasswordsToMigrate.isEmpty()) {
         QTimer::singleShot(0, this, [this]() {
             emit signal_passwordsMigratedToProfiles();
         });
     }
+
     return true;
 }
 
@@ -5190,18 +5239,65 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
         writeProfileData(profileName, qsl("password"), readJob->textData());
 
-        // delete from secure storage
-        auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
-        deleteJob->setAutoDelete(true);
-        deleteJob->setKey(profileName);
-        deleteJob->setProperty("profile", profileName);
-        deleteJob->start();
+        // Only delete from secure storage if this version is >= 4.20.0
+        // This prevents breaking compatibility with older Mudlet versions
+        if (isVersionAtLeast(qsl("4.20.0"))) {
+            auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
+            deleteJob->setAutoDelete(true);
+            deleteJob->setKey(profileName);
+            deleteJob->setProperty("profile", profileName);
+            deleteJob->start();
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage() INFO - migrated password for profile \"" << profileName << "\" and cleaned up legacy keychain storage.";
+        } else {
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage() INFO - migrated password for profile \"" << profileName << "\" (legacy keychain storage preserved for compatibility).";
+        }
     }
     mProfilePasswordsToMigrate.removeAll(profileName);
     job->deleteLater();
 
     if (mProfilePasswordsToMigrate.isEmpty()) {
         emit signal_passwordsMigratedToProfiles();
+        emit signal_passwordsMigratedToSecure(); // Also emit this for the connection profiles dialog
+    }
+}
+
+void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
+{
+    const auto profileName = job->property("profile").toString();
+    const auto characterName = job->property("character").toString();
+
+    if (job->error()) {
+        const auto error = job->errorString();
+        if (error != qsl("Entry not found") && error != qsl("No match")) {
+            qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage(...) ERROR - could not migrate character password for \"" << characterName << "\" in profile \"" << profileName << "\"; error was: " << error << ".";
+        }
+    } else {
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        const auto password = readJob->textData();
+        
+        // Store the password using CredentialManager
+        CredentialManager::storeCredential(profileName, characterName, password);
+        
+        // Only delete from QtKeychain if this version is >= 4.20.0
+        // This prevents breaking compatibility with older Mudlet versions
+        if (isVersionAtLeast(qsl("4.20.0"))) {
+            auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
+            deleteJob->setAutoDelete(true);
+            deleteJob->setKey(characterName);
+            deleteJob->setProperty("profile", profileName);
+            deleteJob->setProperty("character", characterName);
+            deleteJob->start();
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName << "\" and cleaned up legacy keychain storage.";
+        } else {
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName << "\" (legacy keychain storage preserved for compatibility).";
+        }
+    }
+    
+    mCharacterPasswordsToMigrate.removeAll(qMakePair(profileName, characterName));
+    job->deleteLater();
+
+    if (mCharacterPasswordsToMigrate.isEmpty()) {
+        emit signal_characterPasswordsMigrated();
     }
 }
 
@@ -6317,18 +6413,6 @@ void mudlet::shutdownAI()
     if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
         qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
         mpLlamafileManager->stop();
-
-        // Wait a bit for graceful shutdown
-        QEventLoop loop;
-        QTimer timer;
-        timer.setSingleShot(true);
-        timer.setInterval(3000); // 3 second timeout
-
-        connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-        connect(mpLlamafileManager.get(), &LlamafileManager::processStopped, &loop, &QEventLoop::quit);
-
-        timer.start();
-        loop.exec();
     }
 }
 
@@ -7097,10 +7181,6 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
     qDebug() << "mudlet: Moving profile" << profileName << "between detached windows";
 #endif
 
-    // Store console state before move
-    const QSize oldSize = console->size();
-    const bool wasVisible = console->isVisible();
-
     // Transfer any dock widgets from source to target window
     transferDockWidgetBetweenDetachedWindows(profileName, sourceWindow, targetWindow);
 
@@ -7229,7 +7309,6 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     // This prevents race conditions where socket processing tries to access the console
     // while we're moving it between windows
     auto* telnet = &pHost->mTelnet;
-    bool wasProcessingEnabled = true; // We'll assume it was enabled
 
     // Block the socket from processing new data temporarily
     if (telnet->getConnectionState() == QAbstractSocket::ConnectedState) {
@@ -7472,10 +7551,12 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 #endif
         }
     }
-    
+
+#if defined(DEBUG_WINDOW_HANDLING)
     // Track if we found and showed a dock widget for the current profile
     bool currentProfileHasVisibleDockWidget = false;
-    
+#endif
+
     // Process dock widgets without iterating over the map directly
     for (const auto& dockPair : dockWidgetsToProcess) {
         const QString& dockKey = dockPair.first;
@@ -7511,12 +7592,11 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 if (shouldBeVisible) {
                     dockWidget->show();
                     dockWidget->raise();
-                    
+
                     // Set this as the current map dock widget reference
                     mpCurrentMapDockWidget = dockWidget;
-                    currentProfileHasVisibleDockWidget = true;
-
 #if defined(DEBUG_WINDOW_HANDLING)
+                    currentProfileHasVisibleDockWidget = true;
                     qDebug() << "mudlet: Main window dock widget should be visible - showing and setting as active";
 #endif
                 } else {
@@ -7602,14 +7682,15 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetToDetachedWindow: Transferring dock widget for profile" << profileName;
-#endif
-    
+
     // Store the current visibility state and determine user preference
     bool wasVisible = mainDockWidget->isVisible();
+#endif
+
     // Use the stored user preference directly - current visibility may be misleading
     // due to profile switching or other system reasons
     bool intendedVisible = mMainWindowDockWidgetUserPreference.value(mapKey, false);
-    
+
     // Get the mapper widget from the main window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(mainDockWidget->widget());
 
@@ -7682,14 +7763,15 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: Transferring dock widget for profile" << profileName;
-#endif
-    
+
     // Store the current visibility state and determine user preference
     bool wasVisible = detachedDockWidget->isVisible();
+#endif
+
     // Use the stored user preference directly - current visibility may be misleading
     // due to profile switching or other system reasons
     bool intendedVisible = detachedWindow->getDockWidgetUserPreference(mapKey);
-    
+
     // Get the mapper widget from the detached window dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(detachedDockWidget->widget());
 
@@ -7817,9 +7899,10 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
 #if defined(DEBUG_WINDOW_HANDLING)  
     qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: Transferring dock widget for profile" << profileName;
 #endif
-    
+
     // Store the current visibility state and determine user preference
     bool wasVisible = sourceDockWidget->isVisible();
+
     // If the dock widget is currently visible, the user clearly wants it visible
     // If it's not visible, respect the stored user preference
     bool intendedVisible = wasVisible || sourceWindow->getDockWidgetUserPreference(mapKey);

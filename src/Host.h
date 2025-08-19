@@ -521,9 +521,13 @@ public:
     QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad;
 
-    // This is set when we want commands we typed to be shown on the main
-    // TConsole:
-    bool mPrintCommand;
+    // Controls how sent commands are displayed on the main TConsole:
+    enum class CommandEchoMode {
+        Never = 0,       // Never show sent commands regardless of script preferences
+        ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
+        Always = 2       // Always show sent commands regardless of script preferences
+    };
+    CommandEchoMode mCommandEchoMode;
 
     /*
      * This is set when the Server is remote echoing what WE send to it,
@@ -536,6 +540,16 @@ public:
      * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive = false;
+
+    // Command echo mode getters and setters
+    CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
+    void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
+    
+    // Backward compatibility methods - for existing code that expects boolean behavior
+    bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
+    void setPrintCommand(bool print) { 
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    }
 
 public:
     void setRemoteEchoingActive(bool active);
