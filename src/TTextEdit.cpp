@@ -80,6 +80,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpHost(pH)
 , mScreenOffset(0)
 , mMaxHRange(0)
+, mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mTabStopwidth(8)
 , mMouseWheelRemainder()
 {
