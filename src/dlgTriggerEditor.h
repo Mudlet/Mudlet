@@ -505,7 +505,7 @@ private:
     QTreeWidgetItem* mpCurrentTriggerItem = nullptr;
     QTreeWidgetItem* mpCurrentVarItem = nullptr;
 
-    EditorViewType mCurrentView = EditorViewType::cmUnknownView;
+    EditorViewType mCurrentView = EditorViewType::cmTriggerView;
 
     QScrollArea* mpScrollArea = nullptr;
     QWidget* mpWidget_triggerItems = nullptr;
