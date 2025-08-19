@@ -1,0 +1,20 @@
+name: Is documentation done?
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+jobs:
+  check_labels:
+    name: Check labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker://agilepathway/pull-request-label-checker:latest
+        with:
+          none_of: 'needs documentation'
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
