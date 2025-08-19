@@ -7046,7 +7046,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgProfilePreferences.cpp" line="692"/>
       <source>Enable spell check using System dictionary:</source>
       <extracomment>On *nix systems where we find the system ones we use them</extracomment>
-      <translation type="unfinished"/>
+      <translation>시스템 사전을 사용하여 맞춤법 검사 사용:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="885"/>
