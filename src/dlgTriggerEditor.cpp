@@ -8213,7 +8213,7 @@ void dlgTriggerEditor::showInfo(const QString& text)
 void dlgTriggerEditor::showIntro(const QString& desiredOption)
 {
     if (!introAddItem.contains(mCurrentView)) {
-        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view";
+        qWarning() << "ERROR: dlgTriggerEditor::showIntro() undefined view:" << mCurrentView;
         return;
     }
 
