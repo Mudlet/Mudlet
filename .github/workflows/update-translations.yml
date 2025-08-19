@@ -14,7 +14,7 @@ jobs:
       pull-requests: write  # for gr2m/create-or-update-pull-request-action to create a PR
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         ref: development
         submodules: true
