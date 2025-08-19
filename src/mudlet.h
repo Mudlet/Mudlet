@@ -533,6 +533,7 @@ signals:
     void signal_shortcutsChanged();
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
+    void signal_showTabConnectionIndicatorsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
