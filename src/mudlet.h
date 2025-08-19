@@ -28,7 +28,6 @@
 
 #include "Announcer.h"
 #include "discord.h"
-#include "enums.h"
 #include "FontManager.h"
 #include "HostManager.h"
 #include "LlamaFileManager.h"
@@ -539,7 +538,6 @@ signals:
     void signal_windowStateChanged(const Qt::WindowStates);
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
-    void signal_showTabConnectionIndicatorsChanged(bool);
 
 
 private slots:
@@ -718,7 +716,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    enums::controlsVisibility mToolbarVisibility = enums::visibleNever;
+    enums::controlsVisibility mToolbarVisibility = enums::visibleAlways;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
     // hold all the details:

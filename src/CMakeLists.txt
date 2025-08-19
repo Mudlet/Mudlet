@@ -39,9 +39,9 @@ endif()
 if(WIN32)
   # APP_BUILD should now be be available
 
-  if(APP_BUILD MATCHES "-ptb.+")
+  if(APP_BUILD matches "-ptb.+")
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD MATCHES "-dev.+") OR (APP_BUILD MATCHES "-test.+"))
+  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
     # The above test may not be correct as it won't pick up builds where
     # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
     # "Packagers" they will likely want the original icon anyhow for their
@@ -706,12 +706,7 @@ if(APPLE)
   endforeach()
 endif()
 
-# Suppress deprecation warnings across compilers
-if(MSVC)
-  target_compile_options(mudlet PRIVATE /wd4996)
-else()
-  target_compile_options(mudlet PRIVATE -Wno-deprecated)
-endif()
+target_compile_options(mudlet PRIVATE -Wno-deprecated)
 
 # *nix "make install" provision:
 if(UNIX AND NOT APPLE)
