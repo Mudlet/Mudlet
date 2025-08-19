@@ -264,6 +264,8 @@ public:
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
+    // Helper function to check if current version is >= specified version for backward compatibility
+    bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
     
@@ -526,6 +528,7 @@ signals:
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
+    void signal_characterPasswordsMigrated();
     void signal_profileActivated(Host *, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(int);
@@ -689,6 +692,8 @@ private:
     QPointer<QLabel> mpLabelReplayTime;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
+    // a list of character passwords currently being migrated to secure storage
+    QList<QPair<QString, QString>> mCharacterPasswordsToMigrate;
     QPointer<QShortcut> mpShortcutCloseProfile;
     QPointer<QShortcut> mpShortcutConnect;
     QPointer<QShortcut> mpShortcutDisconnect;
