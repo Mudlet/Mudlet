@@ -60,11 +60,14 @@ FetchAndCheckURL() {
       return 1
     fi
 
-    SEARCH_PATTERN="windows-64.exe"
-    echo "Searching for ${SEARCH_PATTERN}"
+    # The processing of this variable by the jq tool means that converting this
+    # variable name to SCREAMING_SNAKE_CASE was too hard to do and get correct
+    # so leave it alone in a form that "works":
+    search_pattern="windows-64.exe"
+    echo "Searching for ${search_pattern}"
 
     # Use jq to filter the JSON data
-    matching_url=$(echo "$json_data" | jq -r --arg search_pattern "${SEARCH_PATTERN}" '.data[] | select(.platform == "windows" and (.url | test(${SEARCH_PATTERN}))) | .url')
+    matching_url=$(echo "$json_data" | jq -r --arg search_pattern "$search_pattern" '.data[] | select(.platform == "windows" and (.url | test($search_pattern))) | .url')
 
     # Check if the URL was found
     if [ -z "$matching_url" ]; then
