@@ -1711,7 +1711,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="283"/>
       <source>Close this window and all profiles in it</source>
-      <translation type="unfinished"/>
+      <translation>이 창과 그 안의 모든 프로필 닫기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="290"/>
@@ -1731,7 +1731,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="570"/>
       <source>Reattach</source>
-      <translation type="unfinished"/>
+      <translation>다시 연결</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="601"/>
@@ -1840,12 +1840,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="696"/>
       <source>Mudlet chat</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 채팅</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="697"/>
       <source>Open a link to the Mudlet server on Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord의 Mudlet 서버 링크 열기</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="703"/>
