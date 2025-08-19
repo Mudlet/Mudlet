@@ -1269,7 +1269,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1051"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press &lt;CTRL&gt;+&lt;ENTER&gt; to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Split-Screen-Scrollback aktiviert. Drücke &lt;CTRL&gt;+&lt;ENTER&gt; zum Beenden.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2161"/>
@@ -1513,22 +1513,22 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="325"/>
       <source>Toggle time stamps</source>
-      <translation type="unfinished"/>
+      <translation>Zeitstempel umschalten</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="339"/>
       <source>Toggle recording of replays</source>
-      <translation type="unfinished"/>
+      <translation>Aufnahme von Wiederholungen umschalten</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="348"/>
       <source>Toggle logging</source>
-      <translation type="unfinished"/>
+      <translation>Protokollierung umschalten</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="403"/>
       <source>Emergency stop! Stop all scripts</source>
-      <translation type="unfinished"/>
+      <translation>Not-Aus! Stoppe alle Skripte</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2187"/>
@@ -1602,7 +1602,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="246"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Aktuelles Profil speichern</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="252"/>
@@ -1632,7 +1632,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="267"/>
       <source>Close the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Aktuelles Profil schließen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="271"/>
