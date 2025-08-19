@@ -89,6 +89,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("alias3"), tr("Check the Mudlet manual for more information"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
             tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")}
+        //: Video - https://youtu.be/Uz6EDvZYNvE
         }
     });
 
@@ -111,6 +112,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("trigger3"), tr("Check the Mudlet manual for more information"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor
             tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.</p>")}
+        //: Video - https://youtu.be/jYjop54-Y3I
         }
     });
 
@@ -135,6 +137,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("script3"), tr("Check the Mudlet manual for more information"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Script Editor
             tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.</p>")}
+        //: Video - https://youtu.be/10mJUh4Hq-A
         }
     });
 
@@ -201,9 +204,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
                "<p>Pressing F8 will make you jump.</p>")},
         //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
-        {qsl("key3"), tr("Check the Mudlet manual for more information"),
+        {qsl("key3"), tr("Where to find more information"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.</p>")}
+            qsl("<ul><li><p>%1</p><li><li><p>%2</p></li><li>%3</li></ul>").arg( // reduce clutter for translators
+                tr("Watch a <a href='https://youtu.be/ZYRPZ-8fJWA'>video demonstration</a> of the basic functionality."),
+                tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview."),
+                tr("<p>Do you maybe have any other suggestions, questions or doubts?</p>"
+                   "<p>Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!</p>"))}
         }
     });
 
