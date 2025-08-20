@@ -207,10 +207,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("key3"), tr("Where to find more information"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
             qsl("<ul><li><p>%1</p><li><li><p>%2</p></li><li><p>%3</p><p>%4</p></li></ul>").arg( // reduce clutter for translators
-                //: This %1 will be replaced by a clickable link with the text "video demonstration".
-                tr("Watch a %1 of the basic functionality.").arg(
-                    //: This is the text of the clickable link.
-                    qsl("<a href='https://youtu.be/ZYRPZ-8fJWA'>%1</a>").arg(tr("video demonstration"))),
+                tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/ZYRPZ-8fJWA")),
                 tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview."),
                 tr("Do you maybe have any other suggestions, questions or doubts?"),
                 tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!"))}
