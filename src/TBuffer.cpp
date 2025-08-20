@@ -2607,7 +2607,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
         const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
         // Safety check: during destruction, mpHost might be null
-        const int charWidth = graphemeInfo::getWidth(unicode, false);
+        const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) 
+                                     : graphemeInfo::getWidth(unicode, false);
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
             if (isNewline) {

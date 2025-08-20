@@ -265,7 +265,7 @@ void TDetachedWindow::createMenus()
     auto closeProfileAction = new QAction(QIcon(qsl(":/icons/profile-close.png")), tr("&Close Profile"), this);
     closeProfileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
     closeProfileAction->setStatusTip(tr("Close the current profile"));
-    connect(closeProfileAction, &QAction::triggered, mudlet::self(), &mudlet::slot_closeCurrentProfile);
+    connect(closeProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_closeCurrentProfile);
     profileMenu->addAction(closeProfileAction);
 
     mpWindowMenu = menuBar()->addMenu(tr("&Window"));
@@ -2151,9 +2151,9 @@ void TDetachedWindow::slot_reconnectProfile()
 
 void TDetachedWindow::slot_closeCurrentProfile()
 {
-    withCurrentProfileActive([this]() {
-        mudlet::self()->slot_closeCurrentProfile();
-    });
+    // Use the detached window's own close profile logic instead of 
+    // delegating to the main window, which would use the wrong tab bar
+    closeProfile();
 }
 
 void TDetachedWindow::slot_closeApplication()

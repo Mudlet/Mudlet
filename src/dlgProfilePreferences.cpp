@@ -2033,7 +2033,20 @@ void dlgProfilePreferences::slot_setMapBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
+// if 3D map, update transparency flags
+#if defined(INCLUDE_3DMAPPER)
+        if (pHost->mpMap->mpMapper->glWidget) {
+            GLWidget* map = pHost->mpMap->mpMapper->glWidget;
+            if (pHost->mBgColor_2.alpha() < 255) {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, false);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
+            } else {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, true);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
+            }
+        }
+#endif
     }
 }
 
@@ -3003,6 +3016,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3180,11 +3194,23 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
 void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
 {
     Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
+    if (pHost) {
+        pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
-    pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
+        // When this was a tri-state checkbox setting we would store the
+        // partially checked setting (only, not the checked or unchecked values)
+        // into the Host class in order to cause the encoding to be checked so
+        // that it would determine what the (bool) Host::mWideAmbigousWidthGlyphs
+        // value should be.
+        // Since the control has been removed we now need to examine the value
+        // stored and if THAT equates to "Qt::PartiallyChecked" then do the same:
+        if (pHost->getWideAmbiguousEAsianGlyphsControlState()  == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting but we only
+            // need to refresh the setting for this if it is set to be automatic
+            // changed as necessary:
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        }
+    }
 }
 
 // loads available Lua scripts from triggers, aliases, scripts, etc into the
