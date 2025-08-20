@@ -206,12 +206,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
         {qsl("key3"), tr("Where to find more information"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
-            qsl("<ul><li><p>%1</p><li><li><p>%2</p></li><li><p>%3</p><p>%4</p></li></ul>").arg( // reduce clutter for translators
-                tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
-                    .arg(qsl("https://youtu.be/ZYRPZ-8fJWA")),
-                tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview."),
-                tr("Do you maybe have any other suggestions, questions or doubts?"),
-                tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!"))}
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/ZYRPZ-8fJWA"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
     });
 
