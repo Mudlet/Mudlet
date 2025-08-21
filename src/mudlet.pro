@@ -86,9 +86,6 @@ qtHaveModule(texttospeech) {
     !build_pass : message("Using TextToSpeech module")
 }
 
-greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
-}
 
 TEMPLATE = app
 

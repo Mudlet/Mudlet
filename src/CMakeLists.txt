@@ -451,7 +451,6 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
-              Qt6::Core5Compat
               qt6keychain)
 
 if(Qt6TextToSpeech_FOUND)
