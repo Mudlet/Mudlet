@@ -399,3 +399,13 @@ QString TAlias::moduleName(TAlias* pAlias)
 
     return QString();
 }
+
+bool TAlias::checkIfNew()
+{
+    return mIsNew;
+}
+
+void TAlias::unmarkAsNew()
+{
+    mIsNew = false;
+}

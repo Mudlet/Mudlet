@@ -1239,6 +1239,7 @@ function getConfig(...)
   if #args == 0 then
     -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
     local list = {
+      "ambiguousEAsianWidthCharacters",
       "announceIncomingText",
       "askTlsAvailable",
       "autoClearInputLine",
@@ -1255,21 +1256,28 @@ function getConfig(...)
       "enableMSSP",
       "enableMTTS",
       "enableMXP",
+      "f3SearchEnabled",
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
+      "logDirectory",
       "logInHTML",
       "mapExitSize",
       "mapperPanelVisible",
       "mapRoomSize",
       "mapRoundRooms",
       "mapShowRoomBorders",
+      "promptForMXPProcessorOn",
+      "promptForVersionInTTYPE",
       "show3dMapView",
       "showRoomIdsOnMap",
       "showSentText",
+      "showTabConnectionIndicators",
       "specialForceCompressionOff",
       "specialForceCharsetNegotiationOff",
       "specialForceGAOff",
+      "specialForceMXPProcessorOn",
+      "versionInTTYPE",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)
@@ -1285,4 +1293,8 @@ function getConfig(...)
   end
 
   return oldgetConfig(args[1])
+end
+
+function openMudletHomeDir()
+  openUrl("file:" .. getMudletHomeDir())
 end

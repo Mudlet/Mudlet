@@ -321,6 +321,10 @@ DEFINES+=DEBUG_TELNET=1
 # * Enable the features associated with reporting problems in processing Unicode
 # codepoints that cannot be displayed on screen in a `TConsole`:
 # DEFINES+=DEBUG_CODEPOINT_PROBLEMS
+#
+# * Produce qDebug() messages about window handling operations like dock widget
+# transfers, profile switching, and detached window management:
+# DEFINES+=DEBUG_WINDOW_HANDLING
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -636,6 +640,8 @@ SOURCES += \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
+    SecureStringUtils.cpp \
+    CredentialManager.cpp \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
@@ -773,6 +779,8 @@ HEADERS += \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
+    SecureStringUtils.h \
+    CredentialManager.h \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
@@ -1689,6 +1697,8 @@ OTHER_FILES += \
     ../docker/Dockerfile \
     ../test/CMakeLists.txt \
     ../test/GUIConsoleTests.mpackage \
+    ../test/CredentialManagerTest.cpp \
+    ../test/SecureStringUtilsTest.cpp \
     ../test/TEntityHandlerTest.cpp \
     ../test/TEntityResolverTest.cpp \
     ../test/TLinkStoreTest.cpp \

@@ -1176,6 +1176,16 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
     return false;
 }
 
+bool TTrigger::checkIfNew()
+{
+    return mIsNew;
+}
+
+void TTrigger::unmarkAsNew()
+{
+    mIsNew = false;
+}
+
 
 // This NOW uses proper ANSI numbers
 // A TColorTable is a simple struct that stores four values, the two given ANSI

@@ -126,6 +126,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
+    checkBox_showTabConnectionIndicators->setChecked(pMudlet->mShowTabConnectionIndicators);
+    connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked){
+        mudlet::self()->setShowTabConnectionIndicators(checked);
+    });
+
     // Set the properties of the log options
     lineEdit_logFileFolder->setToolTip(utils::richText(tr("Location which will be used to store log files - matching logs will be appended to.")));
     pushButton_whereToLog->setToolTip(utils::richText(tr("Select a directory where logs will be saved.")));
@@ -210,18 +215,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                               "will be run.</p>"
                                               "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
                                               "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                            "<p>This control has three settings:"
-                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
-                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
-                                                            "full support for languages other than English.</i></p>"));
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
                                                "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
                                                "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
@@ -263,7 +256,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // the "Profile preferences" form/dialog when a *different* profile saves
     // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
-    // included in compliation:
+    // included in compilation:
     connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
     connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
     connect(pMudlet, &mudlet::signal_setToolBarIconSize, this, &dlgProfilePreferences::slot_setToolBarIconSize);
@@ -273,6 +266,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
+    connect(pMudlet, &mudlet::signal_showTabConnectionIndicatorsChanged, this, &dlgProfilePreferences::slot_changeShowTabConnectionIndicators);
     connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(enums::Appearance(index)); });
     connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=, this]() {
         emit signal_resetMainWindowShortcutsToDefaults();
@@ -429,7 +423,6 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
-    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     label_controlCharacterHandling->setEnabled(false);
     comboBox_controlCharacterHandling->setEnabled(false);
 
@@ -554,7 +547,6 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
-    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     label_controlCharacterHandling->setEnabled(true);
     comboBox_controlCharacterHandling->setEnabled(true);
 
@@ -677,7 +669,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         radioButton_userDictionary_common->setChecked(false);
     }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
-    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
@@ -798,7 +789,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
 
-    show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
+    show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
@@ -1445,7 +1436,7 @@ void dlgProfilePreferences::clearHostDetails()
     wrap_at_spinBox->clear();
     indent_wrapped_spinBox->clear();
 
-    show_sent_text_checkbox->setChecked(false);
+    show_sent_text_combobox->setCurrentIndex(static_cast<int>(Host::CommandEchoMode::ScriptControl));
     auto_clear_input_line_checkbox->setChecked(false);
     command_separator_lineedit->clear();
 
@@ -2064,7 +2055,20 @@ void dlgProfilePreferences::slot_setMapBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
+// if 3D map, update transparency flags
+#if defined(INCLUDE_3DMAPPER)
+        if (pHost->mpMap->mpMapper->glWidget) {
+            GLWidget* map = pHost->mpMap->mpMapper->glWidget;
+            if (pHost->mBgColor_2.alpha() < 255) {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, false);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
+            } else {
+            map->setAttribute(Qt::WA_OpaquePaintEvent, true);
+            map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
+            }
+        }
+#endif
     }
 }
 
@@ -2852,7 +2856,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
-        pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
+        pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
@@ -3034,7 +3038,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
+        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3229,12 +3233,17 @@ void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
     if (pHost) {
         pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
-        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
-            // We are linking the Server encoding to this setting currently
-            // - eventually it would move to the locale/language control when it
-            // goes in, but we only need to change the setting for this if it is
-            // set to be automatic changed as necessary:
-
+        // When this was a tri-state checkbox setting we would store the
+        // partially checked setting (only, not the checked or unchecked values)
+        // into the Host class in order to cause the encoding to be checked so
+        // that it would determine what the (bool) Host::mWideAmbigousWidthGlyphs
+        // value should be.
+        // Since the control has been removed we now need to examine the value
+        // stored and if THAT equates to "Qt::PartiallyChecked" then do the same:
+        if (pHost->getWideAmbiguousEAsianGlyphsControlState()  == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting but we only
+            // need to refresh the setting for this if it is set to be automatic
+            // changed as necessary:
             pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
         }
     }
@@ -4625,4 +4634,11 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
     updateDisplayFont();
+}
+
+void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
+{
+    if (checkBox_showTabConnectionIndicators->isChecked() != state) {
+        checkBox_showTabConnectionIndicators->setChecked(state);
+    }
 }

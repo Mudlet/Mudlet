@@ -217,3 +217,13 @@ QString TScript::moduleName(TScript* pScript)
 
     return QString();
 }
+
+bool TScript::checkIfNew()
+{
+    return mIsNew;
+}
+
+void TScript::unmarkAsNew()
+{
+    mIsNew = false;
+}
