@@ -85,11 +85,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("alias2"), tr("How to add a new alias from the command line"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
             tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Alias Editor
-        {qsl("alias3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")}
-        //: Video - https://youtu.be/Uz6EDvZYNvE
+        {qsl("alias3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/Uz6EDvZYNvE"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
     });
 
@@ -108,12 +110,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         {qsl("trigger2"), tr("How to add a new trigger from the command line"),
         //: Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor
             tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Trigger Editor
-        {qsl("trigger3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.</p>")}
-        //: Video - https://youtu.be/jYjop54-Y3I
+        {qsl("trigger3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/jYjop54-Y3I"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
+
     });
 
     introAddItem.insert(EditorViewType::cmScriptView, {
@@ -133,11 +138,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>You can register a list of <strong>events</strong> with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</p>"
                "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
                "<p><code>lua registerAnonymousEventHandler(&quot;nameOfTheMudletEvent&quot;, &quot;nameOfYourFunctionToBeCalled&quot;)</code></p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Script Editor
-        {qsl("script3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Script Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.</p>")}
-        //: Video - https://youtu.be/10mJUh4Hq-A
+        {qsl("script3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/10mJUh4Hq-A"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
     });
 
@@ -158,10 +165,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>Timers can also be defined from the input line in the main profile window like this:</p>"
                "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
                "<p>This will greet you exactly 3 seconds after it was made.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Timer Editor
-        {qsl("timer3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>Introduction to Timers</a> for a detailed overview.</p>")}
+        {qsl("timer3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>Introduction to Timers</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
     });
 
@@ -180,10 +188,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>")},
 //        {qsl("button2"), tr("How to add a new button from the command line"),
 //            tr("")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
-        {qsl("button3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Button Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.</p>")}
+        {qsl("button3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
     });
 
@@ -203,9 +212,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>Keys can be defined from the input line in the main profile window like this:</p>"
                "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
                "<p>Pressing F8 will make you jump.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
         {qsl("key3"), tr("Where to find more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
             qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
                 qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
                     .arg(qsl("https://youtu.be/ZYRPZ-8fJWA"))),
@@ -233,11 +240,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr("<p>Variables and tables can also be defined from the input line in the main profile window like this:</p>"
                "<p><code>lua foo = &quot;bar&quot;</code></p>"
                "<p>This will create a string called 'foo' with 'bar' as its value.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Variable Editor
-        {qsl("variable3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>Introduction to Variables</a> for a detailed overview.</p>")}
+        {qsl("variable3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>Introduction to Variables</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}
         }
+
     });
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
