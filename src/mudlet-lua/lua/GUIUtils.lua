@@ -563,8 +563,8 @@ end
 ---   </pre>
 function setGauge(gaugeName, currentValue, maxValue, gaugeText)
   assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-  assert(tonumber(currentValue) ~= nil, 'setGauge: bad argument #2 type (unable to convert to a number!)')
-  assert(tonumber(maxValue) ~= nil, 'setGauge: bad argument #3 type (unable to convert to a number!)')
+  assert(tonumber(currentValue) ~= nil, 'setGauge: bad argument #2 type (unable to convert '..type(currentValue)..' to a number!)')
+  assert(tonumber(maxValue) ~= nil, 'setGauge: bad argument #3 type (unable to convert '..type(maxValue)..' to a number!)')
   local value = currentValue / maxValue
   -- save new values in table
   gaugesTable[gaugeName].value = value
