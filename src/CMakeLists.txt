@@ -435,8 +435,7 @@ find_package(Qt6 6.4.0 REQUIRED
                OpenGL
                UiTools
                Widgets
-               Concurrent
-               Core5Compat)
+               Concurrent)
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
