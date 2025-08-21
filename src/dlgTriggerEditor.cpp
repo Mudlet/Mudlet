@@ -39,6 +39,7 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
+#include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
@@ -628,6 +629,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpExportAction->setEnabled(true);
     connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
+    mpCreateModuleAction = new QAction(QIcon(qsl(":/icons/package-exporter.png")), tr("Create Module"), this);
+    mpCreateModuleAction->setEnabled(true);
+    mpCreateModuleAction->setToolTip(tr("<p>Create a module from selected items</p>"));
+    connect(mpCreateModuleAction, &QAction::triggered, this, &dlgTriggerEditor::slot_createModule);
+
     mProfileSaveAction = new QAction(QIcon(qsl(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setToolTip(tr("<p>Saves your profile. (Ctrl+Shift+S)</p>"
                                       "<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and "
@@ -687,6 +693,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mDeleteItem);
     toolBar->addAction(importAction);
     toolBar->addAction(mpExportAction);
+    toolBar->addAction(mpCreateModuleAction);
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
@@ -9248,6 +9255,56 @@ void dlgTriggerEditor::slot_export()
         // indeed be:
         Q_UNREACHABLE();
     }
+}
+
+void dlgTriggerEditor::slot_createModule()
+{
+    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
+        return;
+    }
+
+    // Open the package exporter dialog with module creation mode
+    auto* packageExporter = new dlgPackageExporter(this, mpHost);
+    
+    // Pre-select the current item for export
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        if (mpCurrentTriggerItem) {
+            packageExporter->preselectTrigger(mpCurrentTriggerItem);
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (mpCurrentTimerItem) {
+            packageExporter->preselectTimer(mpCurrentTimerItem);
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (mpCurrentAliasItem) {
+            packageExporter->preselectAlias(mpCurrentAliasItem);
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (mpCurrentScriptItem) {
+            packageExporter->preselectScript(mpCurrentScriptItem);
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (mpCurrentActionItem) {
+            packageExporter->preselectAction(mpCurrentActionItem);
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (mpCurrentKeyItem) {
+            packageExporter->preselectKey(mpCurrentKeyItem);
+        }
+        break;
+    default:
+        break;
+    }
+    
+    // Set module creation mode
+    packageExporter->setModuleCreationMode(true);
+    packageExporter->show();
 }
 
 void dlgTriggerEditor::slot_copyXml()

@@ -1087,6 +1087,10 @@ void XMLimport::readHost(Host* pHost)
                     moduleList << entryList.at(1);
                     pHost->mInstalledModules[it.key()] = moduleList;
                     pHost->mModulePriorities[it.key()] = entryList.at(2).toInt();
+                    // Also add to active modules list to match runtime state
+                    if (!pHost->mActiveModules.contains(it.key())) {
+                        pHost->mActiveModules.append(it.key());
+                    }
                 }
             } else if (name() == qsl("mInstalledPackages")) {
                 readStringList(pHost->mInstalledPackages, qsl("Host"));
