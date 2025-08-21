@@ -7297,12 +7297,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         if (key == qsl("showUpperLowerLevels")) {
             mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
-            // Save the setting to make it persistent
-            QSettings settings;
-            settings.setValue(qsl("drawUpperLowerLevels"), mudlet::self()->mDrawUpperLowerLevels);
+
             if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->update();
             }
+
             return success();
         }
     }
