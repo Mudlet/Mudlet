@@ -830,13 +830,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
     lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
+
+    /* Possible inclusion in 4.20.1
     checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
     checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
+    */
+    
     checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
     checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
-    checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
-
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
     auto originalBorders = pHost->borders();
@@ -3108,13 +3111,20 @@ void dlgProfilePreferences::slot_saveAndClose()
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
         
+        /* Possible inclusion in 4020.1
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
+        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        */
+        // remove these when the above is restored
+        pHost->mMMCPAutostartServer = false;
+        pHost->mMMCPAutoAcceptCalls = false;
+        pHost->mMMCPAllowPeekRequests = false;
+        
         pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
         pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
-        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
+        
         pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
-
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
         pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();

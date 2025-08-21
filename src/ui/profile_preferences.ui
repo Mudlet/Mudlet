@@ -3365,6 +3365,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <!-->
           <item row="3" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
             <property name="toolTip">
@@ -3375,6 +3376,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          -->
           <item row="2" column="2">
            <widget class="QLineEdit" name="lineEdit_mmcpPort">
             <property name="toolTip">
@@ -3382,6 +3384,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <!-- Possible inclusion in 4.21.1
           <item row="0" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpAutostartServer">
             <property name="toolTip">
@@ -3392,6 +3395,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          -->
           <item row="0" column="7">
            <spacer name="horizontalSpacer_2">
             <property name="orientation">
@@ -3468,6 +3472,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <!-->
           <item row="2" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpAutoAcceptCalls">
             <property name="toolTip">
@@ -3481,6 +3486,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          -->
          </layout>
         </widget>
        </item>
@@ -4703,9 +4709,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_mmcpChatName</tabstop>
   <tabstop>lineEdit_mmcpPort</tabstop>
   <tabstop>lineEdit_mmcpChatMessagePrefix</tabstop>
+  <!-->
   <tabstop>checkBox_mmcpAutostartServer</tabstop>
   <tabstop>checkBox_mmcpAutoAcceptCalls</tabstop>
   <tabstop>checkBox_mmcpAllowPeekReq</tabstop>
+  -->
   <tabstop>checkBox_mmcpAddChatMessageNewline</tabstop>
   <tabstop>checkBox_mmcpPrefixEmotes</tabstop>
   <tabstop>checkBox_mmcpSnoopInMainConsole</tabstop>

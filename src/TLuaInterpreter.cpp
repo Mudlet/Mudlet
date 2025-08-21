@@ -5568,18 +5568,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_newtable(pGlobalLua);
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatTo);
     lua_setfield(pGlobalLua, -2, "chatTo");
-    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpAccept);
-    lua_setfield(pGlobalLua, -2, "accept");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatAll);
     lua_setfield(pGlobalLua, -2, "chatAll");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpAllowSnoop);
     lua_setfield(pGlobalLua, -2, "allowSnoop");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpCall);
     lua_setfield(pGlobalLua, -2, "call");
-    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDeny);
-    lua_setfield(pGlobalLua, -2, "deny");
-    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDoNotDisturb);
-    lua_setfield(pGlobalLua, -2, "setDoNotDisturb");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpEmoteAll);
     lua_setfield(pGlobalLua, -2, "emoteAll");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatGroup);
@@ -5590,14 +5584,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "displayClientList");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpChatName);
     lua_setfield(pGlobalLua, -2, "chatName");
-    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPeekConnections);
-    lua_setfield(pGlobalLua, -2, "peek");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPing);
     lua_setfield(pGlobalLua, -2, "ping");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPrivate);
     lua_setfield(pGlobalLua, -2, "setPrivate");
-    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpRequestConnections);
-    lua_setfield(pGlobalLua, -2, "request");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpServe);
     lua_setfield(pGlobalLua, -2, "serve");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpSetGroup);
@@ -5606,10 +5596,23 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "sendSideChannel");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpSnoop);
     lua_setfield(pGlobalLua, -2, "snoop");
+    // Tagging for possible 4.21.1 inclusion
+    /*
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpAccept);
+    lua_setfield(pGlobalLua, -2, "accept");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDeny);
+    lua_setfield(pGlobalLua, -2, "deny");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDoNotDisturb);
+    lua_setfield(pGlobalLua, -2, "setDoNotDisturb");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpStartServer);
     lua_setfield(pGlobalLua, -2, "startServer");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpStopServer);
     lua_setfield(pGlobalLua, -2, "stopServer");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpRequestConnections);
+    lua_setfield(pGlobalLua, -2, "request");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpPeekConnections);
+    lua_setfield(pGlobalLua, -2, "peek");
+    */
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpDisconnect);
     lua_setfield(pGlobalLua, -2, "disconnect");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpGetClientFlags);
