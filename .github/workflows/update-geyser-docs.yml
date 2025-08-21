@@ -11,7 +11,7 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       name: Checkout source code
 
     - uses: leafo/gh-actions-lua@v11
