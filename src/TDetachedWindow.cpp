@@ -265,7 +265,7 @@ void TDetachedWindow::createMenus()
     auto closeProfileAction = new QAction(QIcon(qsl(":/icons/profile-close.png")), tr("&Close Profile"), this);
     closeProfileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
     closeProfileAction->setStatusTip(tr("Close the current profile"));
-    connect(closeProfileAction, &QAction::triggered, mudlet::self(), &mudlet::slot_closeCurrentProfile);
+    connect(closeProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_closeCurrentProfile);
     profileMenu->addAction(closeProfileAction);
 
     mpWindowMenu = menuBar()->addMenu(tr("&Window"));
@@ -872,9 +872,6 @@ void TDetachedWindow::updateToolBarActions()
 
     // Connection-related actions
     if (hasActiveProfile) {
-        bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-        bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-
         // Enable/disable individual actions based on connection state
         // All actions should always be enabled to match main window behavior
         mpActionConnect->setEnabled(true);
@@ -942,6 +939,7 @@ void TDetachedWindow::updateDiscordNamedIcon()
 
 void TDetachedWindow::updateToolbarForProfile(Host* pHost)
 {
+    Q_UNUSED(pHost)
     // Update toolbar actions based on the provided host/profile
     // This method is called from mudlet's updateDetachedWindowToolbars()
     updateToolBarActions();
@@ -1065,6 +1063,9 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "TDetachedWindow::updateDockWidgetVisibilityForProfile: Starting for profile" << profileName
              << "- mDockWidgetMap.size():" << mDockWidgetMap.size();
+
+    // Track if we found and showed a dock widget for the current profile
+    bool currentProfileHasVisibleDockWidget = false;
 #endif
     
     // Collect dock widgets to process to avoid iterator invalidation
@@ -1082,10 +1083,7 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
 #endif
         }
     }
-    
-    // Track if we found and showed a dock widget for the current profile
-    bool currentProfileHasVisibleDockWidget = false;
-    
+
     // Process dock widgets without iterating over the map directly
     for (const auto& dockPair : dockWidgetsToProcess) {
         const QString& dockKey = dockPair.first;
@@ -1124,9 +1122,8 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                     
                     // Set this as the global map dock widget reference
                     mpMapDockWidget = dockWidget;
-                    currentProfileHasVisibleDockWidget = true;
-                    
 #if defined(DEBUG_WINDOW_HANDLING)
+                    currentProfileHasVisibleDockWidget = true;
                     qDebug() << "TDetachedWindow: Dock widget should be visible - showing and setting as active";
 #endif
                 } else {
@@ -2093,6 +2090,7 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
 
 void TDetachedWindow::logWindowState(const QString& context)
 {
+    Q_UNUSED(context)
     // Simplified debug output for critical state information only
     if (mShouldStayVisible && mpTabBar && mpTabBar->count() > 0 && !isVisible()) {
 #if defined(DEBUG_WINDOW_HANDLING)
@@ -2153,9 +2151,9 @@ void TDetachedWindow::slot_reconnectProfile()
 
 void TDetachedWindow::slot_closeCurrentProfile()
 {
-    withCurrentProfileActive([this]() {
-        mudlet::self()->slot_closeCurrentProfile();
-    });
+    // Use the detached window's own close profile logic instead of 
+    // delegating to the main window, which would use the wrong tab bar
+    closeProfile();
 }
 
 void TDetachedWindow::slot_closeApplication()
@@ -2538,8 +2536,6 @@ void TDetachedWindow::changeEvent(QEvent* event)
     }
     
     if (event->type() == QEvent::WindowStateChange) {
-        auto stateChangeEvent = static_cast<QWindowStateChangeEvent*>(event);
-
         // Check if window is being minimized
         if (windowState() & Qt::WindowMinimized) {
             mIsBeingMinimized = true;

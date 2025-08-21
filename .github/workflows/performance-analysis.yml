@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - buildname: 'pi'
-            qt: '5.14.2'
+            qt: '6.9.0'
             triplet: arm64-linux
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
@@ -37,7 +37,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install build-essential git liblua5.1-dev zlib1g-dev libhunspell-dev libpcre3-dev \
           libzip-dev libboost-graph-dev libyajl-dev libpulse-dev lua-rex-pcre lua-filesystem lua-zip \
-          lua-sql-sqlite3 qtmultimedia5-dev qttools5-dev luarocks ccache libpugixml-dev cmake ninja-build \
+          lua-sql-sqlite3 qt6-multimedia-dev qt6-tools-dev luarocks ccache libpugixml-dev cmake ninja-build \
           xvfb -y
 
         sudo luarocks install luautf8
