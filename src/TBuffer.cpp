@@ -658,7 +658,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // because we already know that the localBuffer extends backwards
             // that far (it will be the ']' character!)
             while (spanEnd < localBufferLength
-                   && (localBuffer[spanEnd-1] != '\033')
+                   && (spanEnd == 0 || localBuffer[spanEnd-1] != '\033')
                    && (localBuffer[spanEnd] != '\\')) {
                 ++spanEnd;
             }
