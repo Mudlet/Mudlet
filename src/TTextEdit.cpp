@@ -31,9 +31,6 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
-#if defined(Q_OS_WINDOWS)
-#include "uiawrapper.h"
-#endif
 #include "widechar_width.h"
 #include "TTextProperties.h"
 

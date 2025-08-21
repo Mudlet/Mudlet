@@ -370,9 +370,6 @@ set(mudlet_HDRS
     XMLimport.h
     enums.h)
 
-if(WIN32)
-  list(APPEND mudlet_HDRS uiawrapper.h)
-endif()
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
