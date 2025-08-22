@@ -6858,38 +6858,38 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="949"/>
       <source>Do you want to overwrite the existing module?</source>
-      <translation type="unfinished"/>
+      <translation>Вы хотите перезаписать существующий модуль?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="961"/>
       <source>Module Overwritten</source>
-      <translation type="unfinished"/>
+      <translation>Модуль перезаписан</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="962"/>
       <source>Module &quot;%1&quot; overwritten successfully!</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; успешно перезаписан!</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="963"/>
       <source>The existing module has been replaced.</source>
-      <translation type="unfinished"/>
+      <translation>Существующий модуль был заменён.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="971"/>
       <location filename="../src/dlgPackageExporter.cpp" line="987"/>
       <source>Module &quot;%1&quot; exported but installation failed: %2</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; экспортирован, но установка не удалась: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="976"/>
       <source>Module &quot;%1&quot; exported but failed to uninstall existing version</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; экспортирован, но не удалось удалить существующую версию</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Module &quot;%1&quot; exported successfully but not installed (already exists)</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; успешно экспортирован, но не установлен (уже существует)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1316"/>
@@ -8450,12 +8450,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Создать модуль</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>&lt;p&gt;Create a module from selected items&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Создать модуль из выбранных элементов&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
@@ -9057,13 +9057,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="77"/>
       <source>Alias react on user input.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Алиасы реагируют на ввод пользователя.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="79"/>
       <source>How to add a new alias now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как добавить новый алиас сейчас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="81"/>
@@ -9075,7 +9075,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="86"/>
       <source>How to add a new alias from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как добавить новый алиас из командной строки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="88"/>
@@ -9108,7 +9108,7 @@ Name of a selectable option for the Messagebox in the Mudlet Button Editor
 Name of a selectable option for the Messagebox in the Mudlet Keys Editor
 ----------
 Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Проверьте руководство Mudlet для получения дополнительной информации</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="92"/>
@@ -9120,13 +9120,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="98"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Триггеры реагируют на выход игры.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
       <source>How to add a new trigger now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как добавить новый триггер сейчас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
@@ -9138,7 +9138,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>How to add a new trigger from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как добавить новый триггер из командной строки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="114"/>
@@ -9150,13 +9150,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
       <source>Scripts organize code and can react to events.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Скрипты организуют код и могут реагировать на события.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
       <source>How to add a new script now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как добавить новый скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
@@ -9168,7 +9168,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
       <source>How to have a script react to events</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как заставить скрипт реагировать на события</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
@@ -9186,7 +9186,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>Timers react after a timespan once or regularly.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Таймеры реагируют через определенный промежуток времени один раз или регулярно.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
