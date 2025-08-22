@@ -1695,7 +1695,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <location filename="../src/TDetachedWindow.cpp" line="1253"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Profil-Symbolleiste</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="580"/>
@@ -1723,33 +1723,33 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="283"/>
       <source>Close this window and all profiles in it</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Fenster und alle darin enthaltenen Profile schließen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="290"/>
       <source>Show &amp;Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Symbolleiste anzeigen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="293"/>
       <source>Show or hide the toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Symbolleiste anzeigen oder ausblenden</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="510"/>
       <source>Show Connection Indicators on Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Verbindungsindikatoren auf Tabs anzeigen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="570"/>
       <source>Reattach</source>
-      <translation type="unfinished"/>
+      <translation>Erneut anhängen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="601"/>
       <location filename="../src/TDetachedWindow.cpp" line="603"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet schließen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="613"/>
@@ -1948,7 +1948,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="780"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>Vollbild</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="781"/>
@@ -1958,12 +1958,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1349"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Hauptfenster)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1380"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (abgetrennt)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="2302"/>
@@ -1978,12 +1978,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="962"/>
       <source>Mudlet (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (abgetrennt)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="970"/>
       <source> - Connected</source>
-      <translation type="unfinished"/>
+      <translation> - Verbunden</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="973"/>
@@ -1998,12 +1998,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="978"/>
       <source> - Disconnected</source>
-      <translation type="unfinished"/>
+      <translation> - Verbindung getrennt</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="983"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (%1 Profile) - %2 (abgetrennt)</translation>
     </message>
   </context>
   <context>
@@ -2840,52 +2840,52 @@ in main console!</source>
     <message>
       <location filename="../src/TMedia.cpp" line="332"/>
       <source>fades</source>
-      <translation type="unfinished"/>
+      <translation>klingt ab</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1082"/>
       <source>Too many stopped media players. Purging stopped players.</source>
-      <translation type="unfinished"/>
+      <translation>Zu viele gestoppte Media-Player. Bereinige gestoppte Player.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1090"/>
       <source>Too many stopped media players. Removed oldest active player.</source>
-      <translation type="unfinished"/>
+      <translation>Zu viele gestoppte Media-Player. Der älteste aktive Player wurde entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1187"/>
       <source>Maximum allowed active media players reached for media type. Cannot play additional media.</source>
-      <translation type="unfinished"/>
+      <translation>Höchstzahl erlaubter aktiver Media-Player für den Medientyp erreicht. Kann keine zusätzlichen Medien abspielen.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1264"/>
       <source>stops</source>
-      <translation type="unfinished"/>
+      <translation>stoppt</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1281"/>
       <source>plays</source>
-      <translation type="unfinished"/>
+      <translation>spielt</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1298"/>
       <source>pauses</source>
-      <translation type="unfinished"/>
+      <translation>pausiert</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2051"/>
       <source>music</source>
-      <translation type="unfinished"/>
+      <translation>Musik</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>video</source>
-      <translation type="unfinished"/>
+      <translation>Video</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>sound</source>
-      <translation type="unfinished"/>
+      <translation>Ton</translation>
     </message>
   </context>
   <context>
@@ -4420,7 +4420,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="235"/>
       <source>Floating Toolbar</source>
-      <translation>Schwebende Werkzeugleiste</translation>
+      <translation>Schwebende Symbolleiste</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="258"/>
@@ -5829,7 +5829,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1133"/>
       <source>This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows.</source>
-      <translation type="unfinished"/>
+      <translation>Dies ist eine 32-Bit Version von Mudlet, die auf einer 64-Bit Version von Windows läuft.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1146"/>
@@ -5860,13 +5860,13 @@ Nutzungen</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="1200"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-      <translation type="unfinished"/>
+      <translation>CPU (WoW64)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1161"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1207"/>
       <source>CPU (%1-bits)</source>
-      <translation type="unfinished"/>
+      <translation>CPU (%1-bits)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1166"/>
@@ -5882,21 +5882,21 @@ Nutzungen</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="1245"/>
       <source>Qt version (compilation)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt-Version (Kompilierung)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1178"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1251"/>
       <source>Qt version (run-time)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt-Version (Laufzeit)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1218"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1274"/>
       <source>Qt version</source>
       <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Qt-Version</translation>
     </message>
   </context>
   <context>
@@ -6405,7 +6405,7 @@ Nutzungen</translation>
       <location filename="../src/dlgMapLabel.cpp" line="140"/>
       <source>Text outline color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Textumrandungsfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="162"/>
@@ -6504,7 +6504,7 @@ Nutzungen</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="333"/>
       <source>(recommended)</source>
-      <translation type="unfinished"/>
+      <translation>(empfohlen)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
@@ -6520,13 +6520,14 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>one-line description (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>einzeilige Beschreibung (empfohlen)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
       <source>Description
 (e.g. how to use)</source>
-      <translation type="unfinished"/>
+      <translation>Beschreibung
+(z.B. wie man es benutzt)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="289"/>
@@ -6713,42 +6714,42 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Module description</source>
-      <translation type="unfinished"/>
+      <translation>Modulbeschreibung</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="197"/>
       <source>Brief description of your module</source>
-      <translation type="unfinished"/>
+      <translation>Kurze Beschreibung des Moduls</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="198"/>
       <source>Module author (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Autor des Moduls (empfohlen)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="199"/>
       <source>Module version (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Version des Moduls (empfohlen)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="202"/>
       <source>Module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Modul-Abhängigkeiten</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="203"/>
       <source>Include module assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Medien hinzufügen (Bilder, Töne, Schriftarten)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="204"/>
       <source>Select files to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Dateien, die in das Modul aufgenommen werden sollen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="212"/>
       <source>Select module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Modul-Abhängigkeiten auswählen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="223"/>
@@ -6774,7 +6775,28 @@ If this module uses aliases, show a few examples and expected output.
 Further reading material, e.g., links to documentation or forum posts.
 
 * https://wiki.mudlet.org/w/Manual:Modules</source>
-      <translation type="unfinished"/>
+      <translation>(optional)
+
+Diese Modulbeschreibung wird im Modul-Manager angezeigt. Der Editor unterstützt Commonmark-Markdown.
+
+### Beschreibung
+
+Eine vollständige Beschreibung dessen, was dieses Modul tut. Wenn das Modul spielspezifisch ist, bitte hier erwähnen.
+
+### Verwendung
+
+Wenn dieses Modul Aliase verwendet, einige Beispiele und die erwartete Ausgabe zeigen.
+
+`&gt; alias_1`
+
+    Ausgabe von alias_1 -- mit vier Leerzeichen eingerückt
+    weitere Ausgabe     -- für Codeblöcke
+
+### Siehe auch
+
+Weiteres Lesematerial, z.B. Links zu Dokumentation oder Forumbeiträgen.
+
+* https://wiki.mudlet.org/w/Manual:Modulen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="416"/>
@@ -6792,32 +6814,32 @@ Further reading material, e.g., links to documentation or forum posts.
       <location filename="../src/dlgPackageExporter.cpp" line="582"/>
       <source>package name</source>
       <extracomment>package name will be added to other fields in the &apos;required fields missing: ...&apos; tooltip when it&apos;s missing</extracomment>
-      <translation type="unfinished"/>
+      <translation>Paketname</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="604"/>
       <source>Required field missing: %1</source>
-      <translation type="unfinished"/>
+      <translation>Pflichtfeld fehlt: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="607"/>
       <source>Export package</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="822"/>
       <source>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</source>
-      <translation type="unfinished"/>
+      <translation>Leeres Modul kann nicht erstellt werden. Bitte mindestens eine/n Trigger, Timer, Alias, Skript, Aktion oder Taste auswählen, die in das Modul eingebunden werden sollen.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="824"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation type="unfinished"/>
+      <translation>Leeres Paket kann nicht erstellt werden. Bitte mindestens ein Element auswählen, das im Paket enthalten sein soll.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="936"/>
       <source>Module &quot;%1&quot; created and installed successfully! You can now close this dialog.</source>
-      <translation type="unfinished"/>
+      <translation>Modul &quot;%1&quot; erfolgreich erstellt und installiert! Dieser Dialog kann nun geschlossen werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="947"/>
@@ -7224,42 +7246,42 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="870"/>
       <source>Protocols</source>
-      <translation type="unfinished"/>
+      <translation>Protokolle</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="874"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP: Generisches Mud-Kommunikationsprotokoll</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="879"/>
       <source>MSDP: Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP: Mud Server-Datenprotokoll</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="884"/>
       <source>MSSP: Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP: Mud Server Status-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="889"/>
       <source>MSP: Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP: Mud Sound Protocol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="894"/>
       <source>MXP: Mud eXtension Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MXP: Mud eXtensions-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="899"/>
       <source>MTTS: Mud Terminal Type Standard</source>
-      <translation type="unfinished"/>
+      <translation>MTTS: Mud Terminal Typ Standard</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="904"/>
       <source>MNES: Mud New-Environ Standard</source>
-      <translation type="unfinished"/>
+      <translation>MNES: Mud New-Environ-Standard</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1781"/>
@@ -7750,7 +7772,7 @@ Grund: %2.</translation>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>Einige Mapper-Skripte erfordern möglicherweise das Schlüsselwort &quot;script:&quot; voranzustellen).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
@@ -8206,12 +8228,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="257"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>neuer Ordner</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="258"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>neues Element</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
@@ -8388,7 +8410,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="6724"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="10607"/>
       <source>While loading the profile, this script had an error that has since been fixed, possibly by another script. The error was:%2%3</source>
-      <translation type="unfinished"/>
+      <translation>Beim Laden des Profils hatte dieses Skript einen Fehler, der seitdem behoben wurde, möglicherweise durch ein anderes Skript. Der Fehler war:%2%3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5683"/>
@@ -8433,29 +8455,31 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="577"/>
       <source>Add Group (Control+Shift+N)</source>
-      <translation type="unfinished"/>
+      <translation>Gruppe hinzufügen (Strg+Umschalt+N)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Modul erstellen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>&lt;p&gt;Create a module from selected items&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein Modul aus den ausgewählten Elementen erstellen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Konnte &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; nicht aktivieren: %2&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Dies muss erneut aktiviert werden, nachdem das Problem behoben wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3248"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Konnte &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; nicht aktivieren: %2&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Dies muss erneut aktiviert werden, nachdem das Problem behoben wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3385"/>
@@ -8464,7 +8488,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="3819"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Konnte &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; nicht aktivieren: %2&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Dies muss erneut aktiviert werden, nachdem das Problem behoben wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4719"/>
@@ -9045,13 +9070,13 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="77"/>
       <source>Alias react on user input.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aliase reagieren auf Benutzereingaben.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="79"/>
       <source>How to add a new alias now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man ein neues Alias jetzt hinzufügt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="81"/>
@@ -9063,7 +9088,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="86"/>
       <source>How to add a new alias from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man ein neues Alias von der Kommandozeile hinzufügt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="88"/>
@@ -9096,7 +9121,7 @@ Name of a selectable option for the Messagebox in the Mudlet Button Editor
 Name of a selectable option for the Messagebox in the Mudlet Keys Editor
 ----------
 Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Weitere Informationen finden sich im Mudlet-Handbuch</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="92"/>
@@ -11136,7 +11161,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="433"/>
       <source>Show Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Hauptsymbolleiste anzeigen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="489"/>
@@ -11711,7 +11736,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="4230"/>
       <location filename="../src/mudlet.cpp" line="4294"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Profil-Symbolleiste</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4283"/>
