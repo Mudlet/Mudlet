@@ -106,7 +106,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1916"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>Modul &quot;%1&quot; ist bereits installiert. Bitte zuerst deinstallieren oder einen anderen Namen wählen.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1956"/>
@@ -1612,27 +1612,27 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="252"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil e&amp;xportieren</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="253"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>Profil als Paket exportieren</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="257"/>
       <source>Profile &amp;Settings</source>
-      <translation type="unfinished"/>
+      <translation>Profil&amp;einstellungen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="259"/>
       <source>Open profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Profileinstellungen öffnen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="265"/>
       <source>&amp;Close Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil &amp;schließen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="267"/>
@@ -1642,18 +1642,18 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="271"/>
       <source>&amp;Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Fenster</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="273"/>
       <source>&amp;Reattach to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Wieder ans Hauptfenster anhängen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="275"/>
       <location filename="../src/TDetachedWindow.cpp" line="571"/>
       <source>Reattach this profile window to the main Mudlet window</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Profilfenster wieder an das Hauptfenster von Mudlet anhängen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="281"/>
@@ -1663,32 +1663,32 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="297"/>
       <source>Always on &amp;Top</source>
-      <translation type="unfinished"/>
+      <translation>Immer im &amp;Vordergrund</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="300"/>
       <source>Keep this window always on top of other windows</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Fenster immer über anderen Fenstern halten</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="308"/>
       <source>&amp;Minimize</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Minimieren</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="478"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>&apos;%1&apos; wieder ans Hauptfenster anhängen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="488"/>
       <source>Close Profile &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Profil &apos;%1&apos; schließen</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="497"/>
       <source>Close Window (All Profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Fenster schließen (Alle Profile)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="504"/>
@@ -2315,7 +2315,7 @@ Diese Orte wurden ausprobiert:
       <location filename="../src/TMainConsole.cpp" line="1485"/>
       <source>MXP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>MXP-Ereignisse:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1490"/>
@@ -2378,12 +2378,12 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1602"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>Konnte Profil nicht speichern</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1603"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Leider konnte das Profil nicht gespeichert werden als &quot;%1&quot; - hat folgenden Fehler erhalten: &quot;%2&quot;.</translation>
     </message>
   </context>
   <context>
@@ -2569,7 +2569,7 @@ the file:
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Es wurde versucht eine XML-Karte herunterzuladen, obwohl bereits eine angefordert wurde oder aus einer lokalen Datei importiert wird - Bitte das Ende dieses Vorgangs abwarten (falls er nicht abgebrochen werden kann) vor einem erneuten Versuch!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2477"/>
@@ -4476,12 +4476,12 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="316"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn er gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Falls dies ein &lt;i&gt;einrastender&lt;/i&gt; Button ist, dann wird dies nur gesendet, sobald der Button den Status von &lt;i&gt;oben&lt;/i&gt; nach &lt;i&gt;unten&lt;/i&gt; wechselt.&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="336"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn der Button vom &lt;i&gt;unten&lt;/i&gt; in den &lt;i&gt;oben&lt;/i&gt; Status wechselt.&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="358"/>
@@ -4584,12 +4584,12 @@ Grund: </translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
       <source>User Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerverbindung getrennt</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>Connection/login attempt rejected by server</source>
-      <translation type="unfinished"/>
+      <translation>Verbindungs-/Anmeldeversuch vom Server abgelehnt</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="592"/>
@@ -4600,7 +4600,8 @@ Grund: </translation>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Verbindung wurde getrennt.
+Grund: %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="644"/>
