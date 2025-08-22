@@ -41,36 +41,9 @@ This directory contains GitHub-specific configuration files and templates that h
 
 ### Developer Tools
 
-- **`copilot-instructions.md`** - GitHub Copilot instructions (symlinked from `../.ai/ai-instructions.md`)
+- **`copilot-instructions.md`** - GitHub Copilot AI assistant instructions (symlinked from centralized source)
 - **`codeql/`** - CodeQL security analysis configuration
 
-## AI Assistant Instructions
+## AI Assistant Integration
 
-Multiple AI tools can access centralized project guidance through symlinks to a single source file.
-
-### Centralized AI Instructions
-
-All AI assistant instructions are centralized in the `.ai/ai-instructions.md` file, with tool-specific symlinks:
-
-- **`.github/copilot-instructions.md`** → `.ai/ai-instructions.md` (GitHub Copilot)
-- **`.claude-instructions.md`** → `.ai/ai-instructions.md` (Claude Code)
-- **`.cursorrules`** → `.ai/ai-instructions.md` (Cursor IDE)
-
-This approach provides:
-
-- **Single source of truth**: One file to maintain for all AI assistants
-- **Consistency**: All AI tools receive the same project guidance
-- **Easy maintenance**: Updates are automatically reflected across all tools
-
-### Windows Users: Symlink Support
-
-Windows users may need to enable symlink support for Git. For detailed setup instructions, see the [AI Assistant Integration Guide](../AI-ASSISTANTS.md#3-windows-users-symlink-setup).
-
-### What's Included
-
-The centralized instructions cover:
-
-- C++17/Qt6/Lua 5.1 coding standards  
-- Key architectural patterns
-- Common development pitfalls
-- Build system basics (CMake primary, QMake legacy)
+This directory includes `copilot-instructions.md` which is part of Mudlet's centralized AI assistant system. For complete information about AI assistant setup, supported tools, and Windows symlink configuration, see **[AI-ASSISTANTS.md](../AI-ASSISTANTS.md)** in the project root.
