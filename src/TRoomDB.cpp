@@ -72,7 +72,6 @@ TRoomDB::~TRoomDB()
         delete area;
     }
 
-    mBulkDeletionMode = false;
 }
 
 TRoom* TRoomDB::getRoom(int id)
