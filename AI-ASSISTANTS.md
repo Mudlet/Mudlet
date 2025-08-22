@@ -42,29 +42,20 @@ The project uses a **centralized approach** where all AI assistants read from a 
 The centralized instructions provide AI tools with essential knowledge about:
 
 - **Core Technologies**: C++17, Qt6, Lua 5.1, CMake build system
-- **Architecture**: Key classes like `TConsole`, `Host`, `ctelnet`, `TLuaInterpreter`
-- **Coding Standards**: Naming conventions, memory management, Qt patterns
-- **Common Patterns**: Error handling, string handling, UI component structure
-- **Build System**: CMake primary, QMake legacy support
-- **Critical Guidelines**: Thread safety, Lua stack management, cross-platform considerations
+- **Project Structure**: Directory layout (`src/`, `test/`, `3rdparty/`, etc.)
+- **Architecture**: Key classes like `mudlet`, `Host`, `ctelnet`, `TConsole`, `TLuaInterpreter`, `TMap`
+- **Coding Standards**: Naming conventions, memory management patterns, smart pointer usage
+- **Build System**: Cross-platform commands for macOS, Linux, Windows
+- **Debugging**: Available debug flags in both CMake and QMake systems
+- **Critical Guidelines**: Thread safety, Lua stack management, GPL headers, communication style
 
 ## Getting Started
 
-### 1. Choose Your AI Tool
+Choose any supported AI assistant - they all receive the same project guidance through symlinks to `.ai/ai-instructions.md`.
 
-Pick any supported AI assistant - they all receive the same project guidance.
+**Windows Users**: May need to enable symlink support - see Windows setup section below.
 
-### 2. Verify Setup
-
-Check that your AI tool can access its instruction file:
-
-- **GitHub Copilot**: `.github/copilot-instructions.md`
-- **Claude Code**: `.claude-instructions.md`  
-- **Cursor IDE**: `.cursorrules`
-
-### 3. Windows Users: Symlink Setup
-
-Windows users may need to enable symlink support for Git to properly handle the AI instruction files:
+### Windows Symlink Setup
 
 #### Option 1: Enable Developer Mode (Recommended)
 
@@ -80,7 +71,7 @@ git checkout HEAD -- .github/copilot-instructions.md .claude-instructions.md .cu
 
 #### Option 2: Manual Copy (Fallback)
 
-If symlinks don't work on your system, manually copy the instructions:
+If symlinks don't work:
 
 ```bash
 # Copy to all AI tool locations
@@ -89,7 +80,7 @@ cp .ai/ai-instructions.md .claude-instructions.md
 cp .ai/ai-instructions.md .cursorrules
 ```
 
-*Note: With manual copy, you'll need to manually update all copies when `.ai/ai-instructions.md` changes.*
+*Note: With manual copy, you must manually update all copies when `.ai/ai-instructions.md` changes.*
 
 ## How It Works
 
@@ -112,20 +103,21 @@ The AI instructions are designed to help you write code that fits Mudlet's patte
 
 With the centralized instructions, AI assistants can help with:
 
-- **Code Generation**: Creates code following Mudlet's naming conventions
-- **Error Handling**: Suggests Qt-style error patterns
-- **Lua API Functions**: Provides templates for new Lua scripting functions
-- **Memory Management**: Recommends Qt parent-child relationships
-- **Cross-Platform Code**: Considers Windows, macOS, and Linux compatibility
+- **Code Generation**: Creates code following Mudlet's naming conventions and smart pointer patterns
+- **Error Handling**: Suggests Qt-style error patterns with proper `qWarning()` usage
+- **Lua API Functions**: Provides templates for new Lua scripting functions with proper stack management
+- **Memory Management**: Recommends appropriate smart pointers (Qt vs STL) and parent-child relationships
+- **Cross-Platform Code**: Provides build commands and considers Windows, macOS, and Linux compatibility
+- **GPL Compliance**: Includes proper copyright headers for new files
 
 ## Technical Details
 
 ### File Structure
 
-```
+```text
 /Mudlet/
 ├── .ai/
-│   └── ai-instructions.md              # Master instructions (75+ lines)
+│   └── ai-instructions.md              # Master instructions (189 lines)
 ├── .github/
 │   └── copilot-instructions.md         # → ../.ai/ai-instructions.md
 ├── .claude-instructions.md             # → .ai/ai-instructions.md
