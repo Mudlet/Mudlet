@@ -97,9 +97,6 @@
     <addaction name="dactionScriptEditor"/>
     <addaction name="dactionShowErrors"/>
     <addaction name="dactionShowMap"/>
-    <addaction name="dactionToggleLogging"/>
-    <addaction name="dactionToggleReplay"/>
-    <addaction name="dactionToggleEmergencyStop"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
     <addaction name="dactionIRC"/>
@@ -107,6 +104,9 @@
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionToggleReplay"/>
+    <addaction name="dactionToggleLogging"/>
+    <addaction name="dactionToggleEmergencyStop"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
