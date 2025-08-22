@@ -105,7 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                     .arg(qsl("https://youtu.be/Uz6EDvZYNvE"))),
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmTriggerView, {
         //: Headline for the Trigger intro
@@ -140,7 +140,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                     .arg(qsl("https://youtu.be/jYjop54-Y3I"))),
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmScriptView, {
         //: Headline for the Script intro
@@ -165,7 +165,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                     .arg(qsl("https://youtu.be/10mJUh4Hq-A"))),
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmTimerView, {
         //: Headline for the Timer intro
@@ -188,7 +188,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>Introduction to Timers</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmActionView, {
         //: Headline for the Button intro
@@ -209,7 +209,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}});
 
     introAddItem.insert(EditorViewType::cmKeysView, {
         //: Headline for the Keys intro
@@ -233,7 +233,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                     .arg(qsl("https://youtu.be/ZYRPZ-8fJWA"))),
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmVarsView, {
         //: Headline for the Variable intro
@@ -257,7 +257,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
                 qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>Introduction to Variables</a> for a detailed overview.")),
                 qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
-                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://discord.gg/73M8NbG'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
     //: Item is currently on, short enough to be spoken
