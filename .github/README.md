@@ -41,34 +41,36 @@ This directory contains GitHub-specific configuration files and templates that h
 
 ### Developer Tools
 
-- **`copilot-instructions.template.md`** - Template for GitHub Copilot instructions
-- **`copilot-instructions.md`** - Personal GitHub Copilot instructions (git-ignored)
+- **`copilot-instructions.md`** - GitHub Copilot instructions (symlinked from `../.ai/ai-instructions.md`)
 - **`codeql/`** - CodeQL security analysis configuration
 
-## GitHub Copilot Instructions
+## AI Assistant Instructions
 
-The `copilot-instructions.md` file provides context-aware guidance to GitHub Copilot about Mudlet's architecture, coding standards, and best practices. This helps Copilot generate more accurate and project-appropriate suggestions.
+Multiple AI tools can access centralized project guidance through symlinks to a single source file.
 
-### Setting Up Your Personal Copilot Instructions
+### Centralized AI Instructions
 
-1. Copy the template: `cp copilot-instructions.template.md copilot-instructions.md`
-2. Customize the instructions based on your development focus areas
-3. The file is git-ignored, so your personal customizations won't be committed
+All AI assistant instructions are centralized in the `.ai/ai-instructions.md` file, with tool-specific symlinks:
 
-### Why It's Git-Ignored
+- **`.github/copilot-instructions.md`** → `.ai/ai-instructions.md` (GitHub Copilot)
+- **`.claude-instructions.md`** → `.ai/ai-instructions.md` (Claude Code)
+- **`.cursorrules`** → `.ai/ai-instructions.md` (Cursor IDE)
 
-- **Personal preferences**: Different developers may want to emphasize different aspects
-- **Multiple contributors**: Avoids conflicts when multiple people modify instructions
-- **Flexibility**: Allows experimentation without affecting others
-- **Template preservation**: Keeps the base template clean and up-to-date
+This approach provides:
 
-The template file (`copilot-instructions.template.md`) contains comprehensive guidance about:
+- **Single source of truth**: One file to maintain for all AI assistants
+- **Consistency**: All AI tools receive the same project guidance
+- **Easy maintenance**: Updates are automatically reflected across all tools
 
-- Project architecture and design philosophy
-- Coding standards and conventions
-- Common patterns and best practices
-- Build system usage
-- Testing approaches
-- Platform-specific considerations
+### Windows Users: Symlink Support
 
-Feel free to modify your personal copy to better suit your development workflow and areas of focus within the Mudlet codebase.
+Windows users may need to enable symlink support for Git. For detailed setup instructions, see the [AI Assistant Integration Guide](../AI-ASSISTANTS.md#3-windows-users-symlink-setup).
+
+### What's Included
+
+The centralized instructions cover:
+
+- C++17/Qt6/Lua 5.1 coding standards  
+- Key architectural patterns
+- Common development pitfalls
+- Build system basics (CMake primary, QMake legacy)
