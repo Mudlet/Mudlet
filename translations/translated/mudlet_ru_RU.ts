@@ -108,7 +108,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1916"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; уже установлен. Пожалуйста, сначала удалите его или выберите другое имя.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1956"/>
@@ -6704,77 +6704,77 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="167"/>
       <source>Create Module - %1</source>
-      <translation type="unfinished"/>
+      <translation>Создать модуль - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="170"/>
       <source>Enter module name</source>
-      <translation type="unfinished"/>
+      <translation>Имя модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="173"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Создать модуль</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="176"/>
       <source>Select where to save module</source>
-      <translation type="unfinished"/>
+      <translation>Выберите, где сохранить модуль</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
       <source>Select items to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Выберите элементы для включения в модуль</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Добавить описание модуля, значок и медиафайлы (опционально)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="190"/>
       <source>Module location</source>
-      <translation type="unfinished"/>
+      <translation>Расположение модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Module description</source>
-      <translation type="unfinished"/>
+      <translation>Описание модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="197"/>
       <source>Brief description of your module</source>
-      <translation type="unfinished"/>
+      <translation>Краткое описание модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="198"/>
       <source>Module author (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Автор модуля (рекомендуется)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="199"/>
       <source>Module version (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Версия модуля (рекомендуется)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="202"/>
       <source>Module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Зависимости модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="203"/>
       <source>Include module assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Добавить ресурсы (изображения, звуки, шрифты)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="204"/>
       <source>Select files to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Выберите элементы для включения в модуль</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="212"/>
       <source>Select module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Зависимости модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="223"/>
@@ -6833,27 +6833,27 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="822"/>
       <source>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно создать пустой модуль. Пожалуйста, выберите хотя бы один триггер, таймер, алиас, скрипт, кнопку или клавишу для включения в модуль.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="824"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно создать пустой пакет. Пожалуйста, выберите хотя бы один элемент для включения в пакет.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="936"/>
       <source>Module &quot;%1&quot; created and installed successfully! You can now close this dialog.</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; успешно создан и установлен! Теперь вы можете закрыть диалог.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="947"/>
       <source>Module Already Exists</source>
-      <translation type="unfinished"/>
+      <translation>Модуль уже существует</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="948"/>
       <source>A module named &quot;%1&quot; is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Модуль &quot;%1&quot; уже установлен.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="949"/>
