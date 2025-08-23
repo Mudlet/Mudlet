@@ -282,9 +282,6 @@ void LlamafileManager::onProcessStarted() {
 }
 
 void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    qDebug() << "LlamafileManager: Process finished with exit code" << exitCode
-             << "status" << (exitStatus == QProcess::NormalExit ? "normal" : "crashed");
-
     // Capture any remaining output from the process
     QString stdoutOutput = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
     QString stderrOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
@@ -344,6 +341,11 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
 }
 
 void LlamafileManager::onProcessError(QProcess::ProcessError error) {
+    // Llama seems to have issues erroring when shutting down, squelch such messages
+    if (currentStatus == Status::Stopping) {
+        return;
+    }
+
     QString errorString;
     switch (error) {
         case QProcess::FailedToStart:

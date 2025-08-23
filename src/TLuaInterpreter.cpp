@@ -7118,12 +7118,14 @@ int TLuaInterpreter::getMapBackgroundColor(lua_State* L)
     lua_pushnumber(L, color.red());
     lua_pushnumber(L, color.green());
     lua_pushnumber(L, color.blue());
-    return 3;
+    lua_pushnumber(L, color.alpha());
+    return 4;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapBackgroundColor
 int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
 {
+    int a = 255;
     const int r = getVerifiedInt(L, __func__, 1, "red component");
     if (r < 0 || r > 255) {
         return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
@@ -7139,8 +7141,15 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
     }
 
+    if (lua_gettop(L) > 3) {
+        a = getVerifiedInt(L, __func__, 4, "alpha", true);
+        if (a < 0 || a > 255) {
+            return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
+        }
+    }
+
     auto& host = getHostFromLua(L);
-    host.mBgColor_2 = QColor(r, g, b);
+    host.mBgColor_2 = QColor(r, g, b, a);
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -7510,6 +7519,26 @@ int TLuaInterpreter::setConfig(lua_State * L)
         mudlet::self()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("ambiguousEAsianWidthCharacters")) {
+        static const QStringList values{"narrow", "wide", "auto"};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+
+        if (!values.contains(value)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"",
+                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            return 2;
+        }
+
+        if (value == qsl("narrow")) {
+            host.setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+        } else if (value == qsl("wide")) {
+            host.setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        } else {
+            host.setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        }
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7674,6 +7703,19 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
         { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } },
         { qsl("showTabConnectionIndicators"), [&](){ lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators); } },
+        { qsl("ambiguousEAsianWidthCharacters"), [&]() {
+            const auto ambiguousEAsianGlyphWidth = host.getWideAmbiguousEAsianGlyphsControlState();
+            switch (ambiguousEAsianGlyphWidth) {
+            case Qt::Unchecked:
+                lua_pushstring(L, "narrow");
+                break;
+            case Qt::Checked:
+                lua_pushstring(L, "wide");
+            break;
+            default:
+                lua_pushstring(L, "auto");
+            }
+        } }
     };
 
     auto it = configMap.find(key);

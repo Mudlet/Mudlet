@@ -25,6 +25,8 @@
 
 #include "dlgMapper.h"
 #include "LuaInterface.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -35,6 +37,7 @@
 #include "pre_guard.h"
 #include <QBuffer>
 #include <QtMath>
+#include <QVersionNumber>
 #include "post_guard.h"
 
 XMLimport::XMLimport(Host* pH)
@@ -804,7 +807,32 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
-    pHost->mProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+    
+    // Handle backward compatibility based on application version, not profile version
+    QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
+    
+    // For version 4.20.0+, use secure storage; for older versions, maintain plaintext in XML
+    // Use current application version for consistency with XMLexport behavior
+    const QString currentAppVersion = QString(APP_VERSION);
+    const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
+    const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+    const bool useSecureStorage = appVersion >= secureStorageVersion;
+    
+    if (!storedProxyPassword.isEmpty()) {
+        if (useSecureStorage) {
+            // Modern application: migrate plaintext password to secure storage and clear from XML
+            CredentialManager::storeCredential(pHost->getName(), "proxy", storedProxyPassword);
+            pHost->mProxyPassword = storedProxyPassword;
+            SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
+        } else {
+            // Legacy application: keep plaintext password for backward compatibility
+            pHost->mProxyPassword = storedProxyPassword;
+        }
+    } else if (useSecureStorage) {
+        // Modern application: load from secure storage if available
+        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
+    }
+
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
     pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
@@ -1059,6 +1087,10 @@ void XMLimport::readHost(Host* pHost)
                     moduleList << entryList.at(1);
                     pHost->mInstalledModules[it.key()] = moduleList;
                     pHost->mModulePriorities[it.key()] = entryList.at(2).toInt();
+                    // Also add to active modules list to match runtime state
+                    if (!pHost->mActiveModules.contains(it.key())) {
+                        pHost->mActiveModules.append(it.key());
+                    }
                 }
             } else if (name() == qsl("mInstalledPackages")) {
                 readStringList(pHost->mInstalledPackages, qsl("Host"));
@@ -1209,7 +1241,9 @@ void XMLimport::readHost(Host* pHost)
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor_2.setNamedColor(readElementText());
+                pHost->mBgColor_2.setAlpha(alpha);
             } else if (name() == qsl("mLowerLevelColor")) {
                 pHost->mLowerLevelColor.setNamedColor(readElementText());
             } else if (name() == qsl("mUpperLevelColor")) {
@@ -1257,7 +1291,9 @@ void XMLimport::readHost(Host* pHost)
 #else
                 pHost->mFgColor_2 = QColor::fromString(readElementText());
             } else if (name() == qsl("mBgColor2")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor_2 = QColor::fromString(readElementText());
+                pHost->mBgColor_2.setAlpha(alpha);
             } else if (name() == qsl("mLowerLevelColor")) {
                 pHost->mLowerLevelColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mUpperLevelColor")) {

@@ -41,34 +41,9 @@ This directory contains GitHub-specific configuration files and templates that h
 
 ### Developer Tools
 
-- **`copilot-instructions.template.md`** - Template for GitHub Copilot instructions
-- **`copilot-instructions.md`** - Personal GitHub Copilot instructions (git-ignored)
+- **`copilot-instructions.md`** - GitHub Copilot AI assistant instructions (symlinked from centralized source)
 - **`codeql/`** - CodeQL security analysis configuration
 
-## GitHub Copilot Instructions
+## AI Assistant Integration
 
-The `copilot-instructions.md` file provides context-aware guidance to GitHub Copilot about Mudlet's architecture, coding standards, and best practices. This helps Copilot generate more accurate and project-appropriate suggestions.
-
-### Setting Up Your Personal Copilot Instructions
-
-1. Copy the template: `cp copilot-instructions.template.md copilot-instructions.md`
-2. Customize the instructions based on your development focus areas
-3. The file is git-ignored, so your personal customizations won't be committed
-
-### Why It's Git-Ignored
-
-- **Personal preferences**: Different developers may want to emphasize different aspects
-- **Multiple contributors**: Avoids conflicts when multiple people modify instructions
-- **Flexibility**: Allows experimentation without affecting others
-- **Template preservation**: Keeps the base template clean and up-to-date
-
-The template file (`copilot-instructions.template.md`) contains comprehensive guidance about:
-
-- Project architecture and design philosophy
-- Coding standards and conventions
-- Common patterns and best practices
-- Build system usage
-- Testing approaches
-- Platform-specific considerations
-
-Feel free to modify your personal copy to better suit your development workflow and areas of focus within the Mudlet codebase.
+This directory includes `copilot-instructions.md` which is part of Mudlet's centralized AI assistant system. For complete information about AI assistant setup, supported tools, and Windows symlink configuration, see **[AI-ASSISTANTS.md](../AI-ASSISTANTS.md)** in the project root.

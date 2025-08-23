@@ -49,6 +49,3 @@ CMakeSettings.json
 # flatpak builder
 CI/.flatpak-builder
 CI/build-dir
-
-# Developer-specific GitHub Copilot instructions
-.github/copilot-instructions.md
