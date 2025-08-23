@@ -1,23 +1,24 @@
-# AI Assistant Instructions for Mudlet
+# AI Assistant instructions for Mudlet
 
-## Project Overview
+## Project overview
 
-Mudlet is a cross-platform MUD client built with Qt6 and C++17, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
+Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
 
-## Core Technologies
+## Core technologies
 
-- **C++17** with Qt6 (minimum 6.4.0)
+- **C++20** with Qt6 (minimum 6.4.0)
 - **CMake** build system (minimum 3.25.1)  
 - **Lua 5.1** scripting engine
 - **Cross-platform**: Windows, macOS, Linux
 
-## Project Structure
+## Project structure
 
-- `src/` - Main application source code
-- `test/` - Unit tests and test utilities  
+- `src/` - main application source code
+- `test/` - Qt Test unit tests for C++ core
+- `src/mudlet-lua/tests/` - Busted unit tests for Lua functionality
 - `3rdparty/` - External dependencies and libraries
 - `translations/` - Internationalization files
-- `templates/` - Code templates and examples
+- `.github/workflows/` - Github Actions workflows
 
 ## Essential Coding Standards
 
