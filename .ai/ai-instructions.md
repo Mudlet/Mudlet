@@ -1,27 +1,31 @@
-# AI Assistant Instructions for Mudlet
+# AI Assistant instructions for Mudlet
 
-## Project Overview
+## Project overview
 
-Mudlet is a cross-platform MUD client built with Qt6 and C++17, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
+Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
 
-## Core Technologies
+## Core technologies
 
-- **C++17** with Qt6 (minimum 6.4.0)
+- **C++20** with Qt6 (minimum 6.4.0)
 - **CMake** build system (minimum 3.25.1)  
 - **Lua 5.1** scripting engine
 - **Cross-platform**: Windows, macOS, Linux
 
-## Project Structure
+## Project structure
 
-- `src/` - Main application source code
-- `test/` - Unit tests and test utilities  
+- `src/` - main application source code
+- `test/` - Qt Test unit tests for C++ core
+- `src/mudlet-lua/tests/` - Busted unit tests for Lua functionality
 - `3rdparty/` - External dependencies and libraries
 - `translations/` - Internationalization files
-- `templates/` - Code templates and examples
+- `.github/workflows/` - Github Actions workflows
 
-## Essential Coding Standards
+## Coding standards
+All files should end with a newline character at the end of the file.
 
 ### C++ Conventions
+
+See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
 
 ```cpp
 // Class names: PascalCase with 'T' prefix for main classes
@@ -35,7 +39,7 @@ signals:
     void profileChanged(const QString& name);
 ```
 
-### String Handling
+### String handling
 
 ```cpp
 // Use qsl() macro for string literals (defined as QStringLiteral)
@@ -45,37 +49,24 @@ QString objectName = qsl("timer(Host:%1)(TTimerId:%2)").arg(hostName, timerName)
 QString displayText = tr("Connection failed: %1").arg(errorMessage);
 ```
 
-### Memory Management
+### Memory management
 
 - Use Qt's parent-child system for automatic cleanup
-- Use smart pointers (QSharedPointer, QScopedPointer) when ownership is unclear
-- Follow RAII principles
+- Use C++ smart pointers (shared_ptr, unique_ptr) when ownership is unclear
 
-**Smart Pointer Patterns:**
+## Key architecture points
+Mmudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
 
-```cpp
-// Qt smart pointers for Qt objects
-QSharedPointer<Host> host;              // Shared ownership
-QScopedPointer<VarUnit> varUnit;        // Single ownership, auto-delete
-
-// STL smart pointers for cross-platform code
-std::shared_ptr<TMediaPlayer> player;   // Shared ownership
-std::unique_ptr<QTimer> timer;          // Single ownership
-std::weak_ptr<TMediaPlayer> weakRef;    // Non-owning reference
-```
-
-## Key Architecture Points
-
-### Core Classes (src/ directory)
+### Core classes (src/ directory)
 
 - `mudlet.h/cpp` - Main application
-- `Host.h/cpp` - Game connection management
+- `Host.h/cpp` - Game connection management using profiles
 - `ctelnet.h/cpp` - Telnet protocol handling
 - `TConsole.h/cpp` - Text display and input
 - `TLuaInterpreter.h/cpp` - Lua scripting engine
 - `TMap.h/cpp` - Mapping system
 
-### Lua API Development
+### Lua API development
 
 ```cpp
 // Standard Lua function template
@@ -89,9 +80,9 @@ int TLuaInterpreter::functionName(lua_State* L)
 }
 ```
 
-## Common Patterns
+## Common patterns
 
-### Error Handling
+### Error handling
 
 ```cpp
 // Qt-style error handling
@@ -101,30 +92,21 @@ if (!file.open(QIODevice::ReadOnly)) {
 }
 ```
 
-### UI Components
+### UI components
 
 - Dialog classes use `dlg*.h/cpp` naming
 - Follow Qt's Model-View pattern
 - Use Qt's signal/slot mechanism for communication
 
-## Critical Guidelines
-
-1. **Qt Object Lifetime** - Remember parent-child relationships
-2. **Thread Safety** - UI operations must happen on main thread
-3. **Lua Stack Management** - Balance pushes/pops in Lua API functions
-4. **Cross-platform** - Test on Windows, macOS, Linux when possible
-5. **Internationalization** - Use `tr()` for all user-visible strings
-6. **Testing** - Tests located in `test/` directory, follow Qt Test framework patterns
-7. **Communication** - Provide concise, structured responses; prioritize code examples over lengthy explanations
-8. **File Headers** - New `.h/.cpp` files require GNU General Public License copyright headers (see existing files for format)
-
-## Build System Notes
+## Build system notes
 
 - **Primary**: CMake (handles platform-specific configurations)
-- **Legacy**: QMake in `src/mudlet.pro` (for version management)
-- Use `.clang-format` configuration in `src/` for code style
+- **Legacy**: QMake in `src/mudlet.pro` 
+- Use `.clang-format` configuration in `src/` for C++ code style
+- Check code quality with clang-tidy using `.clang-tidy` configuration file 
+- Allow up to 10mins for a build - it can take a while
 
-### Debugging Options
+### Debugging options
 
 Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defines for development (search "Debugging code inclusions"):
 
@@ -140,7 +122,7 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
 
-**Essential Build Commands:**
+**Essential build commands:**
 
 ```bash
 # Build
@@ -155,15 +137,15 @@ cd /path/to/Mudlet/build
 
 ### Building on Linux
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Linux
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet
 
 **Essential Build Commands:**
 
 ```bash
 # Build
 cd /path/to/Mudlet/build
-cmake ../../Mudlet
-make -j $(nproc)
+cmake ../ -G Ninja
+cmake --build .
 
 # Run
 cd /path/to/Mudlet/build
@@ -174,15 +156,3 @@ cd /path/to/Mudlet/build
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
 
-**Essential Build Commands:**
-
-```cmd
-REM Build
-cd \path\to\Mudlet\build
-cmake ..\..\Mudlet -G "Visual Studio 17 2022"
-cmake --build . --config Release --parallel
-
-REM Run
-cd \path\to\Mudlet\build
-.\src\Release\mudlet.exe
-```
