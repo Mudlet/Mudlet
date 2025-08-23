@@ -21,6 +21,7 @@ Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing script
 - `.github/workflows/` - Github Actions workflows
 
 ## Coding standards
+All files should end with a newline character at the end of the file.
 
 ### C++ Conventions
 
