@@ -319,11 +319,7 @@ void TTextEdit::showNewLines()
 
 
     if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
-        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost
-#if defined (Q_OS_WINDOWS)
-            && UiaWrapper::self()->clientsAreListening()
-#endif
-            ) {
+        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
         // content has been deleted
