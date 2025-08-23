@@ -245,6 +245,7 @@ public slots:
     void slot_saveSelectedItem(QTreeWidgetItem* pItem);
     void slot_export();
     void slot_import();
+    void slot_createModule();
     void slot_viewStatsAction();
     void slot_toggleCentralDebugConsole();
     void slot_nextSection();
@@ -568,6 +569,7 @@ private:
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:
     QAction* mpExportAction = nullptr;
+    QAction* mpCreateModuleAction = nullptr;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
