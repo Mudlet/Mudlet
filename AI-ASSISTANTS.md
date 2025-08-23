@@ -9,8 +9,8 @@ The project uses a **centralized approach** where all AI assistants read from a 
 ```
 .ai/ai-instructions.md          # Source of truth
 ├── .github/copilot-instructions.md → symlink (GitHub Copilot)
-├── .claude-instructions.md         → symlink (Claude Code)  
-└── .cursorrules                    → symlink (Cursor IDE)
+├── CLAUDE.md                        → symlink (Claude Code)  
+└── .cursorrules                     → symlink (Cursor IDE)
 ```
 
 ## Supported AI Tools
@@ -35,6 +35,6 @@ Choose any supported AI assistant - they all receive the same project guidance t
 
 ```cmd
 git config core.symlinks true
-rm .github/copilot-instructions.md .claude-instructions.md .cursorrules
-git checkout HEAD -- .github/copilot-instructions.md .claude-instructions.md .cursorrules
+rm .github/copilot-instructions.md CLAUDE.md .cursorrules
+git checkout HEAD -- .github/copilot-instructions.md CLAUDE.md .cursorrules
 ```
