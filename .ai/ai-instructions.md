@@ -20,7 +20,7 @@ Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing script
 - `translations/` - Internationalization files
 - `.github/workflows/` - Github Actions workflows
 
-## Essential Coding Standards
+## Coding standards
 
 ### C++ Conventions
 
@@ -54,6 +54,7 @@ QString displayText = tr("Connection failed: %1").arg(errorMessage);
 - Use C++ smart pointers (shared_ptr, unique_ptr) when ownership is unclear
 
 ## Key architecture points
+Mmudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
 
 ### Core classes (src/ directory)
 
@@ -102,6 +103,7 @@ if (!file.open(QIODevice::ReadOnly)) {
 - **Legacy**: QMake in `src/mudlet.pro` 
 - Use `.clang-format` configuration in `src/` for C++ code style
 - Check code quality with clang-tidy using `.clang-tidy` configuration file 
+- Allow up to 10mins for a build - it can take a while
 
 ### Debugging options
 
@@ -152,3 +154,4 @@ cd /path/to/Mudlet/build
 ### Building on Windows
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
+
