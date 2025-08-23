@@ -9114,13 +9114,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="98"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>트리거는 게임 출력에 반응합니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
       <source>How to add a new trigger now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>지금 새 트리거를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
@@ -9144,13 +9144,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
       <source>Scripts organize code and can react to events.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>스크립트는 코드를 구성하고 이벤트에 반응할 수 있습니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
       <source>How to add a new script now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>지금 새 트리거를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
@@ -9162,7 +9162,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
       <source>How to have a script react to events</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>스크립트가 이벤트에 반응하도록 하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
@@ -9180,13 +9180,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>Timers react after a timespan once or regularly.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>타이머는 일정 기간 후에 한 번 또는 정기적으로 반응합니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
       <source>How to add a new timer now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>지금 새 트리거를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
@@ -9198,7 +9198,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>How to add a new timer from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>명령줄에서 새 타이머를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
@@ -9217,13 +9217,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
       <source>Buttons react on mouse clicks.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Button Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>버튼은 마우스 클릭에 반응합니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="170"/>
       <source>How to add a new button now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Button Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>지금 새 트리거를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="172"/>
@@ -9277,13 +9277,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="213"/>
       <source>Variables store information.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>변수는 정보를 저장합니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="215"/>
       <source>How to add a new variable now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>지금 새 트리거를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="217"/>
@@ -9295,7 +9295,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="224"/>
       <source>How to add a new variable from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>명령줄에서 새 타이머를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="226"/>
@@ -13704,7 +13704,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="558"/>
       <source>Show sent commands:</source>
-      <translation type="unfinished"/>
+      <translation>보낸 명령 표시:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="574"/>
@@ -13720,7 +13720,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="589"/>
       <source>Script controlled</source>
-      <translation type="unfinished"/>
+      <translation>스크립트 제어</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="852"/>
