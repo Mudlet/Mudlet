@@ -566,7 +566,6 @@ private slots:
 
 
 private:
-    static bool desktopInDarkMode();
 
 
     void assignKeySequences();
