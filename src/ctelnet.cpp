@@ -1641,6 +1641,12 @@ void cTelnet::autoEnableMXPProcessor()
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
+    // Ensure telnetCommand has sufficient length before accessing indices
+    if (telnetCommand.size() < 2) {
+        qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring";
+        return;
+    }
+    
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
     QString commandType;
@@ -1723,6 +1729,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
+        if (telnetCommand.size() < 3) {
+            qDebug() << "WARNING: TN_WILL command too short (size:" << telnetCommand.size() << "), ignoring";
+            return;
+        }
         option = telnetCommand[2];
         trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
@@ -2039,6 +2049,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
     case TN_WONT: {
         //server refuses to enable some option
+        if (telnetCommand.size() < 3) {
+            qDebug() << "WARNING: TN_WONT command too short (size:" << telnetCommand.size() << "), ignoring";
+            return;
+        }
         option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
@@ -2134,6 +2148,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
     case TN_DO: {
         //server wants us to enable some option
+        if (telnetCommand.size() < 3) {
+            qDebug() << "WARNING: TN_DO command too short (size:" << telnetCommand.size() << "), ignoring";
+            return;
+        }
         option = telnetCommand[2];
         trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
@@ -2338,6 +2356,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
     case TN_DONT: {
         //only respond if value changed or if this option has not been announced yet
+        if (telnetCommand.size() < 3) {
+            qDebug() << "WARNING: TN_DONT command too short (size:" << telnetCommand.size() << "), ignoring";
+            return;
+        }
         option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
@@ -2412,6 +2434,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
 
     case TN_SB: {
+        if (telnetCommand.size() < 3) {
+            qDebug() << "WARNING: TN_SB command too short (size:" << telnetCommand.size() << "), ignoring";
+            return;
+        }
         option = telnetCommand[2];
 
         // NEW_ENVIRON
@@ -2805,7 +2831,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reasons
     if (telnetCommand[1] != TN_GA && telnetCommand[1] != TN_EOR) {
         auto type = static_cast<unsigned char>(telnetCommand[1]);
-        auto telnetOption = static_cast<unsigned char>(telnetCommand[2]);
+        // Only access telnetCommand[2] if it exists
+        auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(telnetCommand[2]) : 0;
         QString msg = telnetCommand.c_str();
         if (telnetCommand.size() >= 6) {
             msg = msg.mid(3, telnetCommand.size() - 5);
