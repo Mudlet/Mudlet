@@ -78,7 +78,7 @@ class TTabBar : public QTabBar
     Q_OBJECT
 
 public:
-    TTabBar(QWidget* parent)
+    explicit TTabBar(QWidget* parent)
     : QTabBar(parent)
     , mStyle(qobject_cast<QTabBar*>(this))
     {
