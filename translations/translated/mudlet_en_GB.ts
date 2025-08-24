@@ -106,7 +106,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1916"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1956"/>
@@ -6672,77 +6672,77 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="167"/>
       <source>Create Module - %1</source>
-      <translation type="unfinished"/>
+      <translation>Create Module - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="170"/>
       <source>Enter module name</source>
-      <translation type="unfinished"/>
+      <translation>Enter module name</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="173"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Create Module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="176"/>
       <source>Select where to save module</source>
-      <translation type="unfinished"/>
+      <translation>Select where to save module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
       <source>Select items to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Select items to include in module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Add module description, icon, and assets (optional)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="190"/>
       <source>Module location</source>
-      <translation type="unfinished"/>
+      <translation>Module location</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Module description</source>
-      <translation type="unfinished"/>
+      <translation>Module description</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="197"/>
       <source>Brief description of your module</source>
-      <translation type="unfinished"/>
+      <translation>Brief description of your module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="198"/>
       <source>Module author (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Module author (recommended)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="199"/>
       <source>Module version (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Module version (recommended)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="202"/>
       <source>Module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Module dependencies</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="203"/>
       <source>Include module assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Include module assets (images, sounds, fonts)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="204"/>
       <source>Select files to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Select files to include in module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="212"/>
       <source>Select module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Select module dependencies</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="223"/>
@@ -6768,7 +6768,28 @@ If this module uses aliases, show a few examples and expected output.
 Further reading material, e.g., links to documentation or forum posts.
 
 * https://wiki.mudlet.org/w/Manual:Modules</source>
-      <translation type="unfinished"/>
+      <translation>(optional)
+
+This module description is shown in the Module Manager. The editor supports Commonmark markdown.
+
+### Description
+
+A full description of what this module does. If the module is game-specific, mention that here.
+
+### Usage
+
+If this module uses aliases, show a few examples and expected output.
+
+`&gt; alias_1`
+
+    output of alias_1  -- indent by four spaces
+    more output        -- for code blocks
+
+### See Also
+
+Further reading material, e.g., links to documentation or forum posts.
+
+* https://wiki.mudlet.org/w/Manual:Modules</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="416"/>
@@ -6801,63 +6822,63 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="822"/>
       <source>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="824"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot create empty package. Please select at least one item to include in the package.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="936"/>
       <source>Module &quot;%1&quot; created and installed successfully! You can now close this dialog.</source>
-      <translation type="unfinished"/>
+      <translation>Module &quot;%1&quot; created and installed successfully! You can now close this dialog.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="947"/>
       <source>Module Already Exists</source>
-      <translation type="unfinished"/>
+      <translation>Module Already Exists</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="948"/>
       <source>A module named &quot;%1&quot; is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>A module named &quot;%1&quot; is already installed.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="949"/>
       <source>Do you want to overwrite the existing module?</source>
-      <translation type="unfinished"/>
+      <translation>Do you want to overwrite the existing module?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="961"/>
       <source>Module Overwritten</source>
-      <translation type="unfinished"/>
+      <translation>Module Overwritten</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="962"/>
       <source>Module &quot;%1&quot; overwritten successfully!</source>
-      <translation type="unfinished"/>
+      <translation>Module &quot;%1&quot; overwritten successfully!</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="963"/>
       <source>The existing module has been replaced.</source>
-      <translation type="unfinished"/>
+      <translation>The existing module has been replaced.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="971"/>
       <location filename="../src/dlgPackageExporter.cpp" line="987"/>
       <source>Module &quot;%1&quot; exported but installation failed: %2</source>
-      <translation type="unfinished"/>
+      <translation>Module &quot;%1&quot; exported but installation failed: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="976"/>
       <source>Module &quot;%1&quot; exported but failed to uninstall existing version</source>
-      <translation type="unfinished"/>
+      <translation>Module &quot;%1&quot; exported but failed to uninstall existing version</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Module &quot;%1&quot; exported successfully but not installed (already exists)</source>
-      <translation type="unfinished"/>
+      <translation>Module &quot;%1&quot; exported successfully but not installed (already exists)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1316"/>
@@ -8424,7 +8445,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Create Module</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
@@ -9127,7 +9148,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
       <source>Scripts organize code and can react to events.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Scripts organise code and can react to events.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
