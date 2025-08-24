@@ -202,7 +202,7 @@ Por favor, espere...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="192"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</source>
       <extracomment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</extracomment>
-      <translation>Sala%1ID:%1%2 Posición%1on%1Mapa: (%3,%4,%5) Sala seleccionada%1s</translation>
+      <translation>Sala%1ID:%1%2 Posición%1on%1Mapa: (%3,%4,%5) Sala seleccionada%1</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mapInfoContributorManager.cpp" line="220"/>
@@ -1219,13 +1219,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TCommandLine.cpp" line="1471"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
-      <translation>Línea de entrada de &quot;%1&quot; ventana de &quot;%2&quot; perfil.</translation>
+      <translation>Línea de entrada de &quot;%1&quot; ventana de perfil &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1485"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</extracomment>
-      <translation>Línea de entrada de &quot;%1&quot;  ventana.</translation>
+      <translation>Línea de entrada de &quot;%1&quot; ventana.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1780"/>
@@ -1293,7 +1293,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2169"/>
       <source>Central debug console.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</extracomment>
-      <translation>Consola de depuración.</translation>
+      <translation>Consola de depuración central.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2178"/>
@@ -1838,27 +1838,27 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="670"/>
       <location filename="../src/TDetachedWindow.cpp" line="672"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar sonidos del juego (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="691"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Abrir Discord</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="696"/>
       <source>Mudlet chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="697"/>
       <source>Open a link to the Mudlet server on Discord</source>
-      <translation type="unfinished"/>
+      <translation>Abrir un enlace al servidor Mudlet en Discord</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="703"/>
       <source>Open IRC</source>
-      <translation type="unfinished"/>
+      <translation>Abrir IRC</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="712"/>
@@ -1904,7 +1904,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="734"/>
       <location filename="../src/TDetachedWindow.cpp" line="744"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>Paquetes</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="742"/>
@@ -1944,22 +1944,22 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="780"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>Pantalla completa</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="781"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Cambiar a pantalla completa</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1349"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Ventana principal)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1380"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Separado)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="2302"/>
@@ -1974,17 +1974,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="962"/>
       <source>Mudlet (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (Separado)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="970"/>
       <source> - Connected</source>
-      <translation type="unfinished"/>
+      <translation> - Conectado</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="973"/>
       <source> to %1</source>
-      <translation type="unfinished"/>
+      <translation> a %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="976"/>
@@ -1994,12 +1994,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="978"/>
       <source> - Disconnected</source>
-      <translation type="unfinished"/>
+      <translation> - Desconectado</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="983"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (Perfiles%1) - %2 (Separado)</translation>
     </message>
   </context>
   <context>
@@ -2071,12 +2071,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5648"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Las funciones de Lua ganadas estarán disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5654"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.* Las funciones de Lua ganadas estarán disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5842"/>
@@ -2148,7 +2148,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="218"/>
       <source>Logging has started. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>El registro ha comenzado. El archivo de registro es %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="182"/>
@@ -2259,12 +2259,13 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1401"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: mal argumento en el valor #1 (nombre del archivo usado: 
+&quot;%1&quot; no fue encontrado).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1425"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[ INFO ] - Solicitud de recarga de mapa recibida del sistema...</translation>
+      <translation>[ INFO ] - Solicitud de recarga del mapa recibida en el sistema...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1430"/>
@@ -2290,31 +2291,31 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1470"/>
       <source>GMCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos GMCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1475"/>
       <source>ATCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos ATCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1480"/>
       <source>Channel102 events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos del canal 102:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1485"/>
       <source>MXP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos MXP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1490"/>
       <source>MSSP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eventos MSSP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1496"/>
@@ -2326,31 +2327,31 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1508"/>
       <source>Trigger Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Informe del disparador:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1513"/>
       <source>Timer Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Informe del temporizador:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1518"/>
       <source>Alias Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Informe del alias:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Keybinding Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Informe de la combinación de teclas:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1528"/>
       <source>Script Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Informe del script:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1533"/>
@@ -2376,7 +2377,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1603"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Lo sentimos, no se pudo guardar tu perfil como &quot;%1&quot; - Se ha producido el siguiente error: &quot;%2&quot;.</translation>
     </message>
   </context>
   <context>
@@ -2409,7 +2410,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="566"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - CONVERTIR: no se puede convertir la etiqueta de estilo antiguo con id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="593"/>
@@ -2462,13 +2463,14 @@ mejor empezar de nuevo...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="1624"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ignorando este archivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1795"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Área predeterminada (restablecida para salas que no han sido asignadas a un área
+) no encontrada, agregando el reservado id -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1874"/>
@@ -2555,7 +2557,12 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - El equivalente a la información anterior sobre ese último mapa
+operación ha sido guardado para su revisión como el informe más reciente en
+el archivo:
+&quot;%1&quot;
+- busque el (último) informe con el título:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2456"/>
@@ -2621,12 +2628,12 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3069"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>importar o exportar ya en progreso</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3077"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>no se pudo abrir archivo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3087"/>
@@ -2636,7 +2643,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3096"/>
       <source>empty Json file, no map data detected</source>
-      <translation>el archivo Json vacío, no se detectaron datos de mapa</translation>
+      <translation>el archivo JSON vacío, no se detectaron datos del mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3111"/>
@@ -2859,32 +2866,32 @@ Se eliminó al jugador activo más antiguo.</translation>
     <message>
       <location filename="../src/TMedia.cpp" line="1264"/>
       <source>stops</source>
-      <translation type="unfinished"/>
+      <translation>paradas</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1281"/>
       <source>plays</source>
-      <translation type="unfinished"/>
+      <translation>reproducciones</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1298"/>
       <source>pauses</source>
-      <translation type="unfinished"/>
+      <translation>pausas</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2051"/>
       <source>music</source>
-      <translation type="unfinished"/>
+      <translation>música</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>video</source>
-      <translation type="unfinished"/>
+      <translation>vídeo</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>sound</source>
-      <translation type="unfinished"/>
+      <translation>sonido</translation>
     </message>
   </context>
   <context>
@@ -2970,7 +2977,7 @@ Se eliminó al jugador activo más antiguo.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="310"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>¡No se ha creado ningún área! ID de área solicitada =%1. Nota: ID de área debe ser &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="332"/>
@@ -3000,24 +3007,26 @@ Se eliminó al jugador activo más antiguo.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1144"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - En la sala id:%1 eliminar la salida no válida (especial) a %2 {sin nombre!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1148"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - ¡La sala tenía una salida inválida (especial) a %1 {sin nombre!} y fue eliminada.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1157"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Sala con id: %1  se ha corrigido la salida especial &quot;%2&quot; que
+iba a tener una salida a una sala inválida: %3 para ahora ir
+a: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1167"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Se necesita una sala para corregir la salida especial &quot;%1&quot; que iba a tener una salida a una sala inválida: %2 para ir ahora a: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1192"/>
@@ -3026,7 +3035,11 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - Sala con id: %1 tiene una salida especial &quot;%2&quot; con una salida
+a: %3 pero esa sala no existe. La salida se eliminará
+(pero el id de la sala de destino se almacenará en
+los datos del usuario de la sala bajo una clave:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1205"/>
@@ -3486,7 +3499,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1815"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Copiar como imagen</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
@@ -3501,7 +3514,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1842"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Analizar caracteres</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1851"/>
@@ -3531,60 +3544,60 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1874"/>
       <source>Clear console</source>
-      <translation type="unfinished"/>
+      <translation>Limpiar consola</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1877"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** iniciando nueva sesión ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2083"/>
       <source>{tab}</source>
       <extracomment>Unicode U+0009 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2085"/>
       <source>{line-feed}</source>
       <extracomment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{line-feed}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2087"/>
       <source>{carriage-return}</source>
       <extracomment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{carriage-return}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2089"/>
       <source>{space}</source>
       <extracomment>Unicode U+0020 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2091"/>
       <source>{non-breaking space}</source>
       <extracomment>Unicode U+00A0 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2093"/>
       <source>{soft hyphen}</source>
       <extracomment>Unicode U+00AD codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{soft hyphen}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2095"/>
       <source>{combining grapheme joiner}</source>
       <extracomment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</extracomment>
-      <translation type="unfinished"/>
+      <translation>{combining grapheme joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2097"/>
       <source>{ogham space mark}</source>
       <extracomment>Unicode U+1680 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{ogham space mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2099"/>
@@ -3626,145 +3639,145 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2111"/>
       <source>{6-per-em space}</source>
       <extracomment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{6-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2113"/>
       <source>{digit space}</source>
       <extracomment>Unicode U+2007 codepoint - figure (digit) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{digit space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2115"/>
       <source>{punctuation wide space}</source>
       <extracomment>Unicode U+2008 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{punctuation wide space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2117"/>
       <source>{5-per-em space}</source>
       <extracomment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{5-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2119"/>
       <source>{hair width space}</source>
       <extracomment>Unicode U+200A codepoint - thinnest space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{hair width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2121"/>
       <source>{zero width space}</source>
       <extracomment>Unicode U+200B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2123"/>
       <source>{Zero width non-joiner}</source>
       <extracomment>Unicode U+200C codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{Zero width non-joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2125"/>
       <source>{zero width joiner}</source>
       <extracomment>Unicode U+200D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2127"/>
       <source>{left-to-right mark}</source>
       <extracomment>Unicode U+200E codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2129"/>
       <source>{right-to-left mark}</source>
       <extracomment>Unicode U+200F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2131"/>
       <source>{line separator}</source>
       <extracomment>Unicode 0x2028 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{line separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2133"/>
       <source>{paragraph separator}</source>
       <extracomment>Unicode U+2029 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{paragraph separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2135"/>
       <source>{Left-to-right embedding}</source>
       <extracomment>Unicode U+202A codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2137"/>
       <source>{right-to-left embedding}</source>
       <extracomment>Unicode U+202B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2139"/>
       <source>{pop directional formatting}</source>
       <extracomment>Unicode U+202C codepoint - pop (undo last) directional formatting.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{pop directional formatting}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2141"/>
       <source>{Left-to-right override}</source>
       <extracomment>Unicode U+202D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2143"/>
       <source>{right-to-left override}</source>
       <extracomment>Unicode U+202E codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2145"/>
       <source>{narrow width no-break space}</source>
       <extracomment>Unicode U+202F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{narrow width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2147"/>
       <source>{medium width mathematical space}</source>
       <extracomment>Unicode U+205F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{medium width mathematical space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2149"/>
       <source>{zero width non-breaking space}</source>
       <extracomment>Unicode U+2060 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2151"/>
       <source>{function application}</source>
       <extracomment>Unicode U+2061 codepoint - function application (whatever that means!)</extracomment>
-      <translation type="unfinished"/>
+      <translation>{function application}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2153"/>
       <source>{invisible times}</source>
       <extracomment>Unicode U+2062 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{invisible times}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2155"/>
       <source>{invisible separator}</source>
       <extracomment>Unicode U+2063 codepoint - invisible separator or comma.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{invisible separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2157"/>
       <source>{invisible plus}</source>
       <extracomment>Unicode U+2064 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{invisible plus}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2159"/>
@@ -3902,61 +3915,61 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2203"/>
       <source>{variation selector 12}</source>
       <extracomment>Unicode U+FE0B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2205"/>
       <source>{variation selector 13}</source>
       <extracomment>Unicode U+FE0C codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2207"/>
       <source>{variation selector 14}</source>
       <extracomment>Unicode U+FE0D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2209"/>
       <source>{variation selector 15}</source>
       <extracomment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2211"/>
       <source>{variation selector 16}</source>
       <extracomment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2213"/>
       <source>{zero width no-break space}</source>
       <extracomment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</extracomment>
-      <translation type="unfinished"/>
+      <translation>{zero width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2221"/>
       <source>{interlinear annotation anchor}</source>
       <extracomment>Unicode U+FFF9 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation anchor}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2223"/>
       <source>{interlinear annotation separator}</source>
       <extracomment>Unicode U+FFFA codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2225"/>
       <source>{interlinear annotation terminator}</source>
       <extracomment>Unicode U+FFFB codepoint</extracomment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation terminator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2227"/>
       <source>{object replacement character}</source>
       <extracomment>Unicode U+FFFC codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{object replacement character}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2240"/>
@@ -3968,7 +3981,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 Unicode codepoint in range U+FFFx - not a character.
 ----------
 Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2253"/>
@@ -3992,20 +4005,20 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2259"/>
       <source>{FitzPatrick modifier 5}</source>
       <extracomment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2261"/>
       <source>{FitzPatrick modifier 6}</source>
       <extracomment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2559"/>
       <location filename="../src/TTextEdit.cpp" line="2625"/>
       <source>Index (UTF-16)</source>
       <extracomment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Índice (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2564"/>
@@ -4026,7 +4039,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2640"/>
       <source>Index (UTF-8)</source>
       <extracomment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Índice (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2579"/>
@@ -4040,12 +4053,12 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2651"/>
       <source>Lua character or code</source>
       <extracomment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Carácter o código Lua</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1443"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, extraer consola de depuración</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1445"/>
@@ -4120,48 +4133,49 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>Actualización %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>Cargando información de actualización …</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>¡Una nueva versión de %APPNAME% está disponible!</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="113"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% %UPDATE_VERSION% está disponible (usted tiene %CURRENT_VERSION%).
+¿Desea actualizar ahora?</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="151"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>Registro de cambios para %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="161"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Estás usando la versión %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="192"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>No hay actualizaciones disponibles.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="208"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Estás utilizando %APPNAME% %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="321"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Descargar actualizaciones futuras automáticamente</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="368"/>
@@ -4171,7 +4185,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="388"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Instalar actualización ahora</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
@@ -4181,17 +4195,17 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="405"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Recordármelo más tarde</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="410"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Omitir esta versión</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo abrir el archivo descargado %1</translation>
     </message>
   </context>
   <context>
@@ -4214,7 +4228,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/VarUnit.cpp" line="90"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Las variables marcadas serán guardadas y cargadas con tu perfil.</translation>
     </message>
   </context>
   <context>
@@ -4230,27 +4244,27 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="362"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Analizando datos de área...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="366"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>Analizando datos de la sala...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="370"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Analizando datos del entorno...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="378"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Asignando salas a sus zonas...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="587"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Analizando datos de la sala [cuenta: %1]...</translation>
     </message>
   </context>
   <context>
@@ -4581,12 +4595,12 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="3249"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>Para la protección y la privacidad de los datos, esta conexión anuncia un puerto seguro.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3250"/>
       <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <translation>¿Actualizar al puerto %1 y conectar con el cifrado?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3401"/>
@@ -4623,7 +4637,8 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="3714"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Cargando archivo de repetición:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3738"/>
@@ -4633,12 +4648,12 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="3740"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - La repetición ha sido abortada ya que el archivo parece estar corrupto.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3749"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede realizar la repetición, es posible que ya haya otra en curso. Inténtalo de nuevo cuando haya terminado.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3751"/>
@@ -4668,7 +4683,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="17"/>
       <source>ANSI 256 Color chooser</source>
-      <translation type="unfinished"/>
+      <translation>Selector de color ANSI 256</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="40"/>
@@ -4692,22 +4707,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="253"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Rojo (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="263"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Verde (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="273"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Azul (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="283"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x V + A =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="344"/>
@@ -4717,17 +4732,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="354"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>Establecer como valor RGB</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="364"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>Escala de grises ANSI 24 [232-255] - ajuste el gris y haga clic en el botón para seleccionar el número de color coincidente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="376"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Gris (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="383"/>
@@ -4737,12 +4752,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="415"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="425"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>Establecer en valor de escala de grises</translation>
     </message>
   </context>
   <context>
@@ -4750,7 +4765,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>Compositor de noticias y mensajes</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="86"/>
@@ -4778,7 +4793,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="106"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>lista de perfiles</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="367"/>
@@ -4798,7 +4813,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="466"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>mensaje de bienvenida</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="492"/>
@@ -4824,12 +4839,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="541"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>URL del servidor del juego</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="544"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>El nombre del host de Internet o la dirección IP</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="551"/>
@@ -4839,12 +4854,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="578"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>Puerto del servidor del juego</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="486"/>
       <source>Connect to</source>
-      <translation type="unfinished"/>
+      <translation>Conectar a</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="581"/>
@@ -4854,7 +4869,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="600"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>Conectar a través de un protocolo seguro</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="603"/>
@@ -4864,7 +4879,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="609"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Seguridad:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
@@ -4879,12 +4894,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="711"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>cargar el nuevo perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="716"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>cargar el perfil más antiguo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="636"/>
@@ -4894,7 +4909,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="646"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de los personajes</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="649"/>
@@ -4909,7 +4924,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="763"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>Abrir el perfil automáticamente</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="766"/>
@@ -4919,7 +4934,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="779"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Reconexión automática</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="782"/>
@@ -4949,13 +4964,13 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="811"/>
       <source>Information</source>
-      <translation type="unfinished"/>
+      <translation>Información</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
       <location filename="../src/ui/connection_profiles.ui" line="871"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Descripción del juego o tus notas</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="662"/>
@@ -4975,7 +4990,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="772"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Abrir perfil al iniciar Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="788"/>
@@ -5749,13 +5764,13 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1200"/>
       <source>CPU (WoW64)</source>
       <extracomment>This is shown for 32-Bit Windows builds when run on a *64-Bit OS. &quot;WoW64&quot; stands for WindowOnWindows64.</extracomment>
-      <translation type="unfinished"/>
+      <translation>CPU (WoW64)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1161"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1207"/>
       <source>CPU (%1-bits)</source>
-      <translation type="unfinished"/>
+      <translation>CPU (%1-bits)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1166"/>
@@ -5771,21 +5786,21 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="1245"/>
       <source>Qt version (compilation)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versión Qt (compilación)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1178"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1251"/>
       <source>Qt version (run-time)</source>
       <extracomment>This is shown when the Qt version used at run-time *is different to that used during compilation - it not *the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versión Qt (tiempo de ejecución)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1218"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1274"/>
       <source>Qt version</source>
       <extracomment>This is shown when the same Qt version is used at run-time *as was used during compilation - it is the usual case.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versión de Qt</translation>
     </message>
   </context>
   <context>
@@ -5802,12 +5817,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation type="unfinished"/>
+      <translation>Más colores</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
       <source>Click to access all 256 ANSI colors.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para acceder a los 256 colores ANSI.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -14372,17 +14387,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3930"/>
       <source>hide them</source>
-      <translation type="unfinished"/>
+      <translation>ocultarlos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3935"/>
       <source>replace with a space</source>
-      <translation type="unfinished"/>
+      <translation>reemplazar con un espacio</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3914"/>
       <source>When the game sends blank lines:</source>
-      <translation type="unfinished"/>
+      <translation>Cuando el juego envía líneas en blanco:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3943"/>
@@ -14402,7 +14417,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3964"/>
       <source>Ctrl+Tab</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3969"/>
@@ -14945,7 +14960,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>1 (default)</source>
-      <translation type="unfinished"/>
+      <translation>1 (por defecto)</translation>
     </message>
   </context>
   <context>
@@ -15080,7 +15095,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="171"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;segundos&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
@@ -15279,7 +15294,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto para enviar al juego (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="211"/>
@@ -15351,7 +15366,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="81"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Establece aquí la variable &lt;i&gt;global&lt;/i&gt; o la entrada &lt;i&gt;de la tabla&lt;/i&gt;. El nombre debe comenzar con una letra, pero puede contener una mezcla de letras y números.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="114"/>
