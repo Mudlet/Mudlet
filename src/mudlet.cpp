@@ -78,6 +78,7 @@
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
+#include <QStyleHints>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QTimer>
