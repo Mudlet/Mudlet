@@ -743,6 +743,8 @@ void mudlet::init()
 
     // load bundled fonts
     mFontManager.addFonts();
+    // Configure emoji font support
+    mFontManager.addEmojiFont();
 
     // Initialise a couple of QMaps and some other elements that must be
     // translated into the current GUI Language
