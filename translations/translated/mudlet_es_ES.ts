@@ -103,7 +103,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1916"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>El módulo &quot;%1&quot; ya está instalado. Por favor, desinstálalo primero o elija un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1956"/>
@@ -185,7 +185,7 @@ Por favor, espere...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="130"/>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</source>
       <extracomment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</extracomment>
-      <translation type="unfinished"/>
+      <translation>Área:%1%2 ID:%1%3 x:%1%4%1&lt;‐&gt;%1%5 y:%1%6%1&lt;‐&gt;%1%7z:%1%8%1&lt;‐&gt;%1%9</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="146"/>
@@ -558,7 +558,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="458"/>
       <source> | scope: </source>
-      <translation type="unfinished"/>
+      <translation> | Ámbito de aplicación: </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="468"/>
@@ -578,12 +578,12 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/TBuffer.cpp" line="2223"/>
       <source>Send</source>
-      <translation type="unfinished"/>
+      <translation>Enviar</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Prompt</source>
-      <translation type="unfinished"/>
+      <translation>Instrucción</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2236"/>
@@ -1125,7 +1125,7 @@ Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
       <location filename="../src/TCommandLine.cpp" line="68"/>
       <location filename="../src/TCommandLine.cpp" line="1784"/>
       <source>Show password</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar contraseña</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
@@ -1230,7 +1230,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TCommandLine.cpp" line="1780"/>
       <source>Hide password</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar contraseña</translation>
     </message>
   </context>
   <context>
@@ -1456,55 +1456,55 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2247"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana incrustada del perfil &quot;%1&quot; contenido en vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2252"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; ventana incrustada &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2255"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana incrustada del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2270"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; ventana del usuario &quot;%2&quot; contenido pasado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2272"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; ventana de usuario &quot;%2&quot; contenido en vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2275"/>
       <source>Profile user window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana de usuario del perfil &quot;%1&quot; contenido pasado.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2277"/>
       <source>Profile user window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana de usuario del perfil &quot;%1&quot; contenido en vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2282"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Perfil &quot;%1&quot; ventana del usuario &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2285"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ventana de usuario del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2174"/>
@@ -1524,12 +1524,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="348"/>
       <source>Toggle logging</source>
-      <translation type="unfinished"/>
+      <translation>Cambiar el registro</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="403"/>
       <source>Emergency stop! Stop all scripts</source>
-      <translation type="unfinished"/>
+      <translation>¡Parada de emergencia! Detener todos los scripts</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2187"/>
@@ -1588,7 +1588,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="74"/>
       <location filename="../src/TDetachedWindow.cpp" line="960"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (Separado)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="242"/>
@@ -1603,53 +1603,53 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="246"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Guardar el perfil actual</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="252"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Exportar Perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="253"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>Exportar el perfil como paquete</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="257"/>
       <source>Profile &amp;Settings</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Ajustes del perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="259"/>
       <source>Open profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Abrir configuración de perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="265"/>
       <source>&amp;Close Profile</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Cerrar Perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="267"/>
       <source>Close the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar el perfil actual</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="271"/>
       <source>&amp;Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Ventana</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="273"/>
       <source>&amp;Reattach to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Volver a la ventana principal</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="275"/>
       <location filename="../src/TDetachedWindow.cpp" line="571"/>
       <source>Reattach this profile window to the main Mudlet window</source>
-      <translation type="unfinished"/>
+      <translation>Volver a conectar esta ventana de perfil a la ventana principal de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="281"/>
@@ -1659,39 +1659,39 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="297"/>
       <source>Always on &amp;Top</source>
-      <translation type="unfinished"/>
+      <translation>Siempre por &amp;encima</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="300"/>
       <source>Keep this window always on top of other windows</source>
-      <translation type="unfinished"/>
+      <translation>Mantener esta ventana siempre por encima de las otras ventanas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="308"/>
       <source>&amp;Minimize</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Minimizar</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="478"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Volver a conectar &apos;%1&apos; a la ventana principal</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="488"/>
       <source>Close Profile &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar perfil &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="497"/>
       <source>Close Window (All Profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar ventana (todos los perfiles)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="504"/>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <location filename="../src/TDetachedWindow.cpp" line="1253"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Barra de herramientas del perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="580"/>
@@ -1714,38 +1714,38 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="596"/>
       <location filename="../src/TDetachedWindow.cpp" line="598"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar perfil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="283"/>
       <source>Close this window and all profiles in it</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar esta ventana y todos los perfiles que contiene</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="290"/>
       <source>Show &amp;Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar &amp;barra_de_herramientas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="293"/>
       <source>Show or hide the toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar u ocultar la barra de herramientas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="510"/>
       <source>Show Connection Indicators on Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar indicadores de conexión en las pestañas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="570"/>
       <source>Reattach</source>
-      <translation type="unfinished"/>
+      <translation>Vuelva a adjuntar</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="601"/>
       <location filename="../src/TDetachedWindow.cpp" line="603"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="613"/>
@@ -1785,7 +1785,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="629"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar botones fáciles</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="633"/>
@@ -1805,7 +1805,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="639"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar las claves</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="643"/>
@@ -1820,19 +1820,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="650"/>
       <source>Mute</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="658"/>
       <location filename="../src/TDetachedWindow.cpp" line="660"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar todos los medios</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="664"/>
       <location filename="../src/TDetachedWindow.cpp" line="666"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar sonidos de Mudlet (disparadores, scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="670"/>
@@ -2678,68 +2678,77 @@ para esta versión de Mudlet. Soportado solo formatos hasta la versión %2.</tra
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Guardando mapa en formato versión &quot;%1&quot; que es diferente de la versión &quot;%2&quot; que fue cargada. Esto puede ser un problema si quieres compartir el mapa resultante con otros que utilizan el formato original.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1141"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - Guardando mapa en formato versión &quot;%1&quot; diferente de la
+versión del mapa recomendada %2 para esta versión de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1496"/>
       <location filename="../src/TMap.cpp" line="1933"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede abrir el archivo de mapa para leer: ¡&quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1518"/>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - El archivo no parece ser un archivo Mudlet Map. La parte que indica
+su versión de formato parece ser &quot;%1&quot; y eso no tiene sentido&apos;. El archivo es:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1533"/>
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Archivo de mapa es demasiado nuevo. ¡Su versión de formato &quot;%1&quot; es mayor que esta versión de
+Mudlet que puede manejar (%2)! El archivo es:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1540"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Necesitará actualizar su Mudlet para leer el archivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1549"/>
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - El archivo del mapa es realmente viejo. Su versión de formato &quot;%1&quot; es tan antigua que
+esta versión de Mudlet puede no obtener suficiente información... ¡Pero lo intentará! 
+El archivo es: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1563"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Leyendo mapa. Versión de formato: %1. Archivo:
+&quot;%2&quot;,
+espere...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Leyendo mapa. Versión de formato: %1. Archivo: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1949"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Comprobando archivo de mapa &quot;%1&quot;, formato de versión &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2526"/>
       <source>Downloading map file for use in %1...</source>
       <extracomment>%1 is the name of the current Mudlet profile</extracomment>
-      <translation type="unfinished"/>
+      <translation>Descargando archivo de mapa para su uso en %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2527"/>
@@ -2751,7 +2760,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1525"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ignorando este improbable archivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2529"/>
@@ -2769,7 +2778,7 @@ importado a petición del usuario.</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2585"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Importando archivo de mapa XML para su uso en %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2587"/>
@@ -2782,7 +2791,8 @@ importado a petición del usuario.</translation>
       <location filename="../src/TMap.cpp" line="2622"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: ¡Falla al importar el archivo de mapa XML, puede que haya más información disponible
+en la consola principal!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2659"/>
@@ -2793,13 +2803,15 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2717"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Error al descargar el mapa, imposible abrir el archivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2724"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Error al descargar el mapa, imposible escribir el archivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2740"/>
@@ -2817,7 +2829,8 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2756"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Problema de descarga del mapa, no se puede leer el archivo de destino:
+%1.</translation>
     </message>
   </context>
   <context>
@@ -2825,22 +2838,23 @@ in main console!</source>
     <message>
       <location filename="../src/TMedia.cpp" line="332"/>
       <source>fades</source>
-      <translation type="unfinished"/>
+      <translation>se desvanece</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1082"/>
       <source>Too many stopped media players. Purging stopped players.</source>
-      <translation type="unfinished"/>
+      <translation>Demasiados reproductores multimedia detenidos. La purga detuvo a los jugadores.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1090"/>
       <source>Too many stopped media players. Removed oldest active player.</source>
-      <translation type="unfinished"/>
+      <translation>Demasiados reproductores multimedia detenidos.
+Se eliminó al jugador activo más antiguo.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1187"/>
       <source>Maximum allowed active media players reached for media type. Cannot play additional media.</source>
-      <translation type="unfinished"/>
+      <translation>Máximo permitido de reproductores de medios activos alcanzado para el tipo de medio. No se puede reproducir medios adicionales.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1264"/>
