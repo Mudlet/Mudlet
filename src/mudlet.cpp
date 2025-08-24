@@ -6411,7 +6411,7 @@ void mudlet::initializeAI()
 
 void mudlet::shutdownAI()
 {
-    if (mpLlamafileManager && mpLlthrough all detached windowsamafileManager->isRunning()) {
+    if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
         qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
         mpLlamafileManager->stop();
     }
