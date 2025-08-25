@@ -3100,56 +3100,60 @@ La salida se eliminará (el id de la sala de destino incorrecta se almacenará e
       <location filename="../src/TRoom.cpp" line="1306"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - En la sala con id: %1 se encontró uno o más elementos de puerta excedentes que fueron eliminados:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1313"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La sala tenía uno o más elementos de puerta sobrantes que se eliminaron:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1329"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - En la sala con identificación: %1 se encontró uno o más artículos de peso sobrante que se eliminaron:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1336"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La sala tenía uno o más artículos de peso excedentes que fueron eliminados: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1352"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - En sala con id: %1 se encontró uno o más elementos de bloqueo de salida excedentes que fueron eliminados:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1359"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La sala tenía uno o más elementos de bloqueo de salida excedentes que fueron eliminados: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1438"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - En la sala con id: %1 se encontró uno o más elementos personalizados sobrantes que
+fueron eliminados: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1444"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La sala tenía uno o más elementos personalizados sobrantes que fueron eliminados: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1467"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - En la sala con id: %1 se ha corregido la salida &quot;%2&quot; que daba a una sala con una salida a una sala inválida: %3 para ahora ir a: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1476"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Corrección de la salida &quot;%1&quot; Se identificó la sala no válida: %2 para ir ahora a: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1487"/>
@@ -3158,12 +3162,15 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - La sala con id: %1 tiene una salida a &quot;%2&quot; para: %3 pero esa sala
+no existe.  Se eliminará la salida (pero la sala  de destino el identificador se almacenará en los datos del usuario de la sala bajo una clave:
+&quot;%4&quot;)
+y la salida se convertirá en un talón.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1500"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - La sala tiene una salida &quot;%1&quot; a: %2 , pero no existe esa sala. La salida se eliminará (pero el id de la sala de destino se almacenará en los datos de usuario de la habitación bajo una clave: &quot;%4&quot;) y la salida se convertirá en un talón.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1544"/>
@@ -3550,7 +3557,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1866"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Utilice esta opción para restaurar el menú principal y poder obtener acceso a los controles.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1874"/>
@@ -3614,25 +3621,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2099"/>
       <source>{&apos;n&apos; quad}</source>
       <extracomment>Unicode U+2000 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; cuadrado}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2101"/>
       <source>{&apos;m&apos; quad}</source>
       <extracomment>Unicode U+2001 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; cuadrado}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2103"/>
       <source>{&apos;n&apos; space}</source>
       <extracomment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; espacio}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2105"/>
       <source>{&apos;m&apos; space}</source>
       <extracomment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; espacio}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2107"/>
@@ -3794,67 +3801,67 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2159"/>
       <source>{left-to-right isolate}</source>
       <extracomment>Unicode U+2066 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2161"/>
       <source>{right-to-left isolate}</source>
       <extracomment>Unicode U+2067 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2163"/>
       <source>{first strong isolate}</source>
       <extracomment>Unicode U+2068 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{first strong isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2165"/>
       <source>{pop directional isolate}</source>
       <extracomment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{pop directional isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2167"/>
       <source>{inhibit symmetrical swapping}</source>
       <extracomment>Unicode U+206A codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{inhibit symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2169"/>
       <source>{activate symmetrical swapping}</source>
       <extracomment>Unicode U+206B codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{activate symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2171"/>
       <source>{inhibit arabic form-shaping}</source>
       <extracomment>Unicode U+206C codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{inhibit arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2173"/>
       <source>{activate arabic form-shaping}</source>
       <extracomment>Unicode U+206D codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{activate arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2175"/>
       <source>{national digit shapes}</source>
       <extracomment>Unicode U+206E codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{national digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2177"/>
       <source>{nominal Digit shapes}</source>
       <extracomment>Unicode U+206F codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{nominal Digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2179"/>
       <source>{ideographic space}</source>
       <extracomment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</extracomment>
-      <translation type="unfinished"/>
+      <translation>{ideographic space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2181"/>
@@ -3884,43 +3891,43 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2189"/>
       <source>{variation selector 5}</source>
       <extracomment>Unicode U+FE04 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2191"/>
       <source>{variation selector 6}</source>
       <extracomment>Unicode U+FE05 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2193"/>
       <source>{variation selector 7}</source>
       <extracomment>Unicode U+FE06 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2195"/>
       <source>{variation selector 8}</source>
       <extracomment>Unicode U+FE07 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2197"/>
       <source>{variation selector 9}</source>
       <extracomment>Unicode U+FE08 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2199"/>
       <source>{variation selector 10}</source>
       <extracomment>Unicode U+FE09 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2201"/>
       <source>{variation selector 11}</source>
       <extracomment>Unicode U+FE0A codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2203"/>
@@ -4092,7 +4099,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TToolBar.cpp" line="78"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Barra de herramientas - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -4100,7 +4107,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="194"/>
       <source>error: this trigger has no patterns defined</source>
-      <translation type="unfinished"/>
+      <translation>error: este disparador no tiene patrones definidos</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="226"/>
@@ -4293,7 +4300,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="164"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Colaboradores</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="193"/>
@@ -4341,17 +4348,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="220"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation/>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="225"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>Área de base izquierda</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="230"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>Área de base derecha</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="235"/>
@@ -4386,7 +4393,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="299"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>Pulsar botón abajo</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="306"/>
@@ -4397,12 +4404,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ui/actions_main_area.ui" line="319"/>
       <location filename="../src/ui/actions_main_area.ui" line="339"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto a enviar al juego tal como es (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="326"/>
       <source>Command (up):</source>
-      <translation type="unfinished"/>
+      <translation>Comando (arriba):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
@@ -4455,7 +4462,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="195"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^mycommand$ (ejemplo)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="148"/>
