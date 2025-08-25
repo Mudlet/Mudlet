@@ -65,6 +65,8 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    void shiftCamera(float, float, float);
+    void setCameraPosition(float, float, float);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;

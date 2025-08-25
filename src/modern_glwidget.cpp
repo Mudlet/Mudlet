@@ -46,7 +46,7 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     } else {
         setAttribute(Qt::WA_OpaquePaintEvent);
     }
-    
+
     // Initialize smooth camera animation
     mCameraAnimationTimer = new QTimer(this);
     mCameraAnimationTimer->setInterval(17); // ~60fps updates for smoother animation
@@ -166,7 +166,7 @@ void ModernGLWidget::updateMatrices()
 {
     // Update camera controller with current state, but skip position updates during smooth animation
     if (!mCameraSmoothAnimating) {
-        mCameraController.setPosition(static_cast<float>(mMapCenterX), static_cast<float>(mMapCenterY), static_cast<float>(mMapCenterZ));
+        mCameraController.setTarget(static_cast<float>(mMapCenterX), static_cast<float>(mMapCenterY), static_cast<float>(mMapCenterZ));
     }
     mCameraController.setViewportSize(width(), height());
     mCameraController.updateMatrices();
@@ -427,8 +427,8 @@ void ModernGLWidget::renderRooms()
 
         // 2. Render thin environment color overlay on top
         // Disable depth testing like the original to prevent clipping
-        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+        //auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+        //mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
 
         QColor envColor = getEnvironmentColor(pR);
         float overlayZ = rz + 0.25f; // Slightly above the main cube
@@ -646,8 +646,8 @@ void ModernGLWidget::renderConnections()
                 renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
-                auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(disableDepthCommand2));
+                //auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+                //mRenderCommandQueue.addCommand(std::move(disableDepthCommand2));
                 QColor envColor = getEnvironmentColor(pExit);
                 float overlayZ = dz + 0.25f;
                 float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
@@ -693,6 +693,20 @@ void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, 
                                                       mCameraController.getViewMatrix(), 
                                                       mCameraController.getModelMatrix());
     mRenderCommandQueue.addCommand(std::move(command));
+}
+
+// New camera position control
+void ModernGLWidget::shiftCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
+{
+    mCameraController.shiftPerspective(verticalAngle, horizontalAngle, rotationAngle);
+    update();
+}
+
+// New camera position control
+void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
+{
+    mCameraController.setPosition(r, theta, phi);
+    update();
 }
 
 // Implement slot methods (same interface as original)
@@ -846,32 +860,30 @@ void ModernGLWidget::slot_setScale(int angle)
     update();
 }
 
+// these aren't working atm, but should be soon deprecated anyway
 void ModernGLWidget::slot_setCameraPositionX(int angle)
 {
-    angle /= 10; // qNormalizeAngle equivalent
-    float currentY = mCameraController.getYRot();
-    float currentZ = mCameraController.getZRot();
-    mCameraController.setRotation(angle, currentY, currentZ);
+    angle *= 2.0f * std::numbers::pi / 360.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
     update();
 }
 
 void ModernGLWidget::slot_setCameraPositionY(int angle)
 {
-    angle /= 10; // qNormalizeAngle equivalent
-    float currentX = mCameraController.getXRot();
-    float currentZ = mCameraController.getZRot();
-    mCameraController.setRotation(currentX, angle, currentZ);
+    angle *= 2.0f * std::numbers::pi / 360.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
     update();
 }
 
 void ModernGLWidget::slot_setCameraPositionZ(int angle)
 {
-    angle /= 10; // qNormalizeAngle equivalent
-    float currentX = mCameraController.getXRot();
-    float currentY = mCameraController.getYRot();
-    mCameraController.setRotation(currentX, currentY, angle);
+    angle *= 2.0f * std::numbers::pi / 360.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
     update();
 }

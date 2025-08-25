@@ -25,35 +25,46 @@
 
 CameraController::CameraController()
 {
-    // Initialize with default view parameters (matching original)
-    mXRot = 1.0f;
-    mYRot = 5.0f; 
-    mZRot = 10.0f;
-    mScale = 1.0f;
-    
+    mDistance = 15.0f;
+    mPositionVector = QVector3D(0.0f, 0.0f, 1.0f);
+    mUpVector = QVector3D(1.0f, 0.0f, 0.0f);
+    mRightVector = QVector3D(0.0f, 1.0f, 0.0f);
+    mTarget = QVector3D(0.0f, 0.0f, 0.0f);
+    //setDefaultView();
     calculateModelMatrix();
 }
 
 CameraController::~CameraController() = default;
 
-void CameraController::setRotation(float xRot, float yRot, float zRot)
+void CameraController::setPosition(float r, float theta, float phi)
 {
-    mXRot = xRot;
-    mYRot = yRot;
-    mZRot = zRot;
+    // convert from degrees into radians
+    const double pi = std::numbers::pi;
+    theta = theta/360 * 2 * pi;
+    phi = phi/360 * 2 * pi;
+
+    mDistance = r;
+    mPositionVector.setX( std::sin(theta) * std::cos(phi));
+    mPositionVector.setY( std::sin(theta) * std::sin(phi));
+    mPositionVector.setZ( std::cos(theta));
+    mUpVector.setX( std::sin(theta + pi/2) * std::cos(phi));
+    mUpVector.setY( std::sin(theta + pi/2) * std::sin(phi));
+    mUpVector.setZ( std::cos(theta + pi/2));
+    mRightVector = QVector3D::crossProduct(mPositionVector, mUpVector);
 }
 
-void CameraController::setPosition(float centerX, float centerY, float centerZ)
+void CameraController::setTarget(float x, float y, float z)
 {
-    mCenterX = centerX;
-    mCenterY = centerY;
-    mCenterZ = centerZ;
+    mTarget.setX(x);
+    mTarget.setY(y);
+    mTarget.setZ(z);
 }
 
 void CameraController::setScale(float scale)
 {
+    // TODO: change this to setDistance once old mapper is obsolete
     // Clamp scale to reasonable bounds to prevent zoom issues
-    mScale = qBound(0.01f, scale, 100.0f);
+    mDistance = qBound(0.01f, scale, 100.0f);
 }
 
 void CameraController::setViewportSize(int width, int height)
@@ -62,38 +73,70 @@ void CameraController::setViewportSize(int width, int height)
     mViewportHeight = height;
 }
 
+void CameraController::shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle)
+{
+    if (verticalAngle != 0) {
+        mPositionVector = rotateAround(mPositionVector, mRightVector, verticalAngle);
+        mUpVector = QVector3D::normal(mRightVector, mPositionVector);
+    }
+    if (horizontalAngle != 0) {
+        mPositionVector = rotateAround(mPositionVector, mUpVector, horizontalAngle);
+        mRightVector = QVector3D::normal(mPositionVector, mUpVector);
+    }
+    if (rotationAngle != 0) {
+        mUpVector = rotateAround(mUpVector, mPositionVector, rotationAngle);
+        mUpVector /= mUpVector.length();
+        mRightVector = QVector3D::normal(mPositionVector, mUpVector);
+    }
+}
+
+QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rotationAxis, float rotationAngle)
+{
+    // convert degrees to radians
+    rotationAngle = rotationAngle / 360 * 2 * std::numbers::pi;
+    // Apply Rodrigues rotation formula
+    return std::cos(rotationAngle) * currentVector 
+        + std::sin(rotationAngle) * QVector3D::crossProduct(rotationAxis, currentVector)
+        + QVector3D::dotProduct(rotationAxis, currentVector) * ( 1 - std::cos(rotationAngle)) * rotationAxis;
+}
+
+
+QVector3D CameraController::getPosition()
+{
+    const float r = mDistance;
+    const float x = mPositionVector.x();
+    const float y = mPositionVector.y();
+    const float z = mPositionVector[2];
+    const int sgn_y = 1 ? y > 0 : -1;
+    return QVector3D(r, std::acos(z), sgn_y * std::acos(x / (std::sqrt(x*x*y*y))));
+}
+
+// TODO: set these things to use spherical coord method
 void CameraController::setDefaultView()
 {
-    mXRot = 1.0f;
-    mYRot = 5.0f;
-    mZRot = 10.0f;
-    mScale = 1.0f;
+    // default camera position 15 degrees from directly above, and 15 degrees rotated to the left
+    setPosition(15.0f, 15.0f, -15.0f);
 }
 
 void CameraController::setSideView()
 {
-    mXRot = 7.0f;
-    mYRot = -10.0f;
-    mZRot = 0.0f;
-    mScale = 1.0f;
+    mPositionVector = QVector3D(1.0f, 0.0f, 0.0f);
+    mRightVector = QVector3D(0.0f, 1.0f, 0.0f);
+    mUpVector = QVector3D(0.0f, 0.0f, 1.0f);
 }
 
 void CameraController::setTopView()
 {
-    mXRot = 0.0f;
-    mYRot = 0.0f;
-    mZRot = 15.0f;
-    mScale = 1.0f;
+    mPositionVector = QVector3D(0.0f, 0.0f, 1.0f);
+    mRightVector = QVector3D(0.0f, 1.0f, 0.0f);
+    mUpVector = QVector3D(1.0f, 0.0f, 0.0f);
 }
 
 void CameraController::setGridMode(bool enabled)
 {
     mGridMode = enabled;
     if (enabled) {
-        // Grid mode uses top view camera position
-        mXRot = 0.0f;
-        mYRot = 0.0f;
-        mZRot = 15.0f;
+        setTopView();
     }
 }
 
@@ -106,7 +149,7 @@ void CameraController::updateMatrices()
 
 void CameraController::setViewCenter(float x, float y, float z)
 {
-    setPosition(x, y, z);
+    setTarget(x, y, z);
 }
 
 void CameraController::calculateProjectionMatrix()
@@ -123,28 +166,14 @@ void CameraController::calculateViewMatrix()
     // Set up view matrix (camera)
     mViewMatrix.setToIdentity();
 
+    // We shrink the coordinate system by a factor of 10, why? No idea
+    const QVector3D target = mTarget / 10;
+
     // Original uses xRot, yRot, zRot as camera position offsets, not rotation angles
     // gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
 
-    // Calculate camera position with offsets (scale appropriately for our coordinate system)
-    const float px = mCenterX * 0.1f;
-    const float py = mCenterY * 0.1f;
-    const float pz = mCenterZ * 0.1f;
-
-    // Camera position with offsets, scaled by mScale for zoom
-    // The original offsets are scaled by the zoom factor to maintain proper distance
-    const float scaleMultiplier = 1.0f / mScale;
-    const float cameraX = px + (mXRot * scaleMultiplier);
-    const float cameraY = py + (mYRot * scaleMultiplier);
-    const float cameraZ = pz + (mZRot * scaleMultiplier);
-
-    // Target position (map center)
-    const float targetX = px;
-    const float targetY = py;
-    const float targetZ = pz;
-
     // Create view matrix to look at target from camera position
-    mViewMatrix.lookAt(QVector3D(cameraX, cameraY, cameraZ), QVector3D(targetX, targetY, targetZ), QVector3D(0.0f, 1.0f, 0.0f));
+    mViewMatrix.lookAt(target + (mPositionVector * mDistance), target, mUpVector);
 
     // Scale the world to match original rendering
     mViewMatrix.scale(0.1f, 0.1f, 0.1f);
