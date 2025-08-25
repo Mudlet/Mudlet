@@ -863,7 +863,7 @@ void ModernGLWidget::slot_setScale(int angle)
 // these aren't working atm, but should be soon deprecated anyway
 void ModernGLWidget::slot_setCameraPositionX(int angle)
 {
-    angle *= 2.0f * std::numbers::pi / 360.0f;
+    angle *= 10;
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
@@ -872,7 +872,7 @@ void ModernGLWidget::slot_setCameraPositionX(int angle)
 
 void ModernGLWidget::slot_setCameraPositionY(int angle)
 {
-    angle *= 2.0f * std::numbers::pi / 360.0f;
+    angle *= 10;
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
@@ -881,9 +881,10 @@ void ModernGLWidget::slot_setCameraPositionY(int angle)
 
 void ModernGLWidget::slot_setCameraPositionZ(int angle)
 {
-    angle *= 2.0f * std::numbers::pi / 360.0f;
+    angle *= 10;
+    angle = qBound(0, angle, 180);
     QVector3D currentPosition = mCameraController.getPosition();
-    mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
+    mCameraController.setPosition(currentPosition[0], angle, currentPosition[2]);
     is2DView = false;
     update();
 }

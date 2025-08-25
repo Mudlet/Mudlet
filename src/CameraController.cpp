@@ -39,6 +39,7 @@ CameraController::~CameraController() = default;
 void CameraController::setPosition(float r, float theta, float phi)
 {
     // convert from degrees into radians
+    theta = qBound(2.0f, theta, 178.0f);
     const double pi = std::numbers::pi;
     theta = theta/360 * 2 * pi;
     phi = phi/360 * 2 * pi;
@@ -47,9 +48,9 @@ void CameraController::setPosition(float r, float theta, float phi)
     mPositionVector.setX( std::sin(theta) * std::cos(phi));
     mPositionVector.setY( std::sin(theta) * std::sin(phi));
     mPositionVector.setZ( std::cos(theta));
-    mUpVector.setX( std::sin(theta + pi/2) * std::cos(phi));
-    mUpVector.setY( std::sin(theta + pi/2) * std::sin(phi));
-    mUpVector.setZ( std::cos(theta + pi/2));
+    mUpVector.setX( std::sin(theta - pi/2) * std::cos(phi));
+    mUpVector.setY( std::sin(theta - pi/2) * std::sin(phi));
+    mUpVector.setZ( std::cos(theta - pi/2));
     mRightVector = QVector3D::crossProduct(mPositionVector, mUpVector);
 }
 
@@ -103,12 +104,17 @@ QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rota
 
 QVector3D CameraController::getPosition()
 {
-    const float r = mDistance;
+    if (mPositionVector.x() == 0 && mPositionVector.y() == 0) {
+        return QVector3D(mDistance, 0.0f, 0.0f);
+    } else {
+    const float toDegrees = 180.0f/std::numbers::pi;
     const float x = mPositionVector.x();
     const float y = mPositionVector.y();
-    const float z = mPositionVector[2];
-    const int sgn_y = 1 ? y > 0 : -1;
-    return QVector3D(r, std::acos(z), sgn_y * std::acos(x / (std::sqrt(x*x*y*y))));
+    const float z = mPositionVector.z();
+    const float theta = toDegrees * std::acos(mPositionVector.z());
+    const float phi = toDegrees * std::atan2(mPositionVector.y() , mPositionVector.x());
+    return QVector3D(mDistance, theta, phi);
+    }
 }
 
 // TODO: set these things to use spherical coord method
