@@ -2091,41 +2091,43 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5846"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede cargar el formateador de código, la funcionalidad de sangría no estará disponible.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5928"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (no existe)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5933"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (no es un archivo ni un enlace simbólico a un archivo)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5946"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (no es un archivo legible o un enlace simbólico a un archivo legible)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5968"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (no se pudo leer el archivo)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5974"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - API Mudlet-lua y Gestor de Diseño Geyser cargado.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5981"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se pudo encontrar, cargar ni ejecutar con éxito LuaGlobal.lua - ¡Tu Mudlet está roto!
+Intentó estas ubicaciones:
+%1</translation>
     </message>
   </context>
   <context>
@@ -2569,14 +2571,17 @@ el archivo:
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - Intento de descargar un mapa XML cuando ya se ha solicitado
+o se está importando desde un archivo local - espere a que la operación se complete (si no se puede cancelar) antes de reintentar!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2477"/>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - Intento de descargar un XML desde una URL no válida. La URL era:
+%1
+y el mensaje de error (puede contener detalles técnicos) era:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2491"/>
@@ -2584,7 +2589,10 @@ and the error message (may contain technical details) was:&quot;%2&quot;.</sourc
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede usar o crear un directorio para almacenar el mapa.
+Compruebe que tiene permisos i/o acceso a:
+&quot;%1&quot;
+y si hay suficiente espacio. Se ha producido un error en la operación de descarga.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2517"/>
@@ -2638,7 +2646,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3087"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>no se pudo analizar el archivo, razón: &quot;%1&quot; en el desplazamiento %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3096"/>
@@ -2648,7 +2656,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3111"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>versión de formato no válido &quot;%1&quot; detectado</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3117"/>
@@ -3044,7 +3052,7 @@ los datos del usuario de la sala bajo una clave:
     <message>
       <location filename="../src/TRoom.cpp" line="1205"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - Sala con id: &quot;%1&quot; tiene una salida especial a: %2 pero esa sala no existe.  Se eliminará la salida (pero el ID de la sala de destino se almacenará en los datos del usuario de la sala bajo una clave:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1244"/>
@@ -3053,12 +3061,15 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] En la sala con id: %1 y salida especial a &quot;%2&quot;
+que dirigía a una sala, con una sala inválida: %3, que no existe.
+La salida se eliminará (el id de la sala de destino incorrecta se almacenará en los datos del usuario de la sala con la clave:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1257"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La sala tenía una salida especial &quot;%1&quot; que debía alojar con una sala inválida: %2 que no existe. La salida se eliminará (el identificador de la sala de destino se almacenará en los datos del usuario de la sala bajo una clave:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1290"/>
