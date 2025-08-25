@@ -106,7 +106,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1916"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>Il modulo &quot;%1&quot; è già installato. Disinstallalo prima o scegli un nome diverso.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1956"/>
@@ -6748,77 +6748,77 @@ Inserisci altro materiale utile, per esempio un link alla wiki di mudlet, al for
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="167"/>
       <source>Create Module - %1</source>
-      <translation type="unfinished"/>
+      <translation>Crea Modulo - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="170"/>
       <source>Enter module name</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci il nome del modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="173"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Crea modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="176"/>
       <source>Select where to save module</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona dove salvare il modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
       <source>Select items to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona gli elementi da includere nel modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi descrizione, icona e risorse del modulo (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="190"/>
       <source>Module location</source>
-      <translation type="unfinished"/>
+      <translation>Percorso modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Module description</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="197"/>
       <source>Brief description of your module</source>
-      <translation type="unfinished"/>
+      <translation>Breve descrizione del tuo modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="198"/>
       <source>Module author (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Autore del modulo (raccomandato)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="199"/>
       <source>Module version (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Versione modulo (raccomandato)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="202"/>
       <source>Module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Dipendenze modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="203"/>
       <source>Include module assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Includi risorse del modulo (immagini, suoni, caratteri)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="204"/>
       <source>Select files to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona gli elementi da includere nel modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="212"/>
       <source>Select module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona le dipendenze del modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="223"/>
@@ -6844,7 +6844,28 @@ If this module uses aliases, show a few examples and expected output.
 Further reading material, e.g., links to documentation or forum posts.
 
 * https://wiki.mudlet.org/w/Manual:Modules</source>
-      <translation type="unfinished"/>
+      <translation>(opzionale)
+
+Questa descrizione del modulo è mostrata nel gestore dei moduli. L'editor supporta il markdown di Commonmark.
+
+### Descrizione
+
+Una descrizione completa di ciò che fa questo modulo. Se il modulo è specifico per un gioco, va menzionato qui.
+
+### Utilizzo
+
+Se questo modulo utilizza alias, mostrare alcuni esempi e l'azione eseguita
+
+`&gt; alias_1`
+
+    azione di alias_1 -- indentata con quattro spazi
+    altre azioni -- altri codici indentati
+
+### Informazioni
+
+Altro materiale utile come link alla documentazione ai post dei forum:
+
+* https://wiki.mudlet.org/w/Manual:Modules</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="416"/>
@@ -6877,63 +6898,63 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="822"/>
       <source>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile creare un modulo vuoto. Seleziona almeno un trigger, timer, alias, script, bottone o tasto da includere nel modulo.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="824"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile creare un pacchetto vuoto. Seleziona almeno un elemento da includere nel pacchetto.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="936"/>
       <source>Module &quot;%1&quot; created and installed successfully! You can now close this dialog.</source>
-      <translation type="unfinished"/>
+      <translation>Modulo &quot;%1&quot; creato e installato con successo! Ora puoi chiudere questa finestra.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="947"/>
       <source>Module Already Exists</source>
-      <translation type="unfinished"/>
+      <translation>Modulo già esistente</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="948"/>
       <source>A module named &quot;%1&quot; is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Un modulo &quot;%1&quot; è già installato.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="949"/>
       <source>Do you want to overwrite the existing module?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi sovrascrivere il modulo esistente?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="961"/>
       <source>Module Overwritten</source>
-      <translation type="unfinished"/>
+      <translation>Modulo sovrascritto</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="962"/>
       <source>Module &quot;%1&quot; overwritten successfully!</source>
-      <translation type="unfinished"/>
+      <translation>Modulo &quot;%1&quot; sovrascritto con successo!</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="963"/>
       <source>The existing module has been replaced.</source>
-      <translation type="unfinished"/>
+      <translation>Il modulo esistente è stato sostituito.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="971"/>
       <location filename="../src/dlgPackageExporter.cpp" line="987"/>
       <source>Module &quot;%1&quot; exported but installation failed: %2</source>
-      <translation type="unfinished"/>
+      <translation>Modulo &quot;%1&quot; esportato, ma installazione non è riuscita: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="976"/>
       <source>Module &quot;%1&quot; exported but failed to uninstall existing version</source>
-      <translation type="unfinished"/>
+      <translation>Modulo &quot;%1&quot; esportato ma non è stato possibile disinstallare la versione corrente</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Module &quot;%1&quot; exported successfully but not installed (already exists)</source>
-      <translation type="unfinished"/>
+      <translation>Modulo &quot;%1&quot; esportato con successo ma non è stato installato (già esistente)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1316"/>
@@ -8507,12 +8528,12 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Crea modulo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>&lt;p&gt;Create a module from selected items&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Crea un modulo dagli elementi selezionati&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
@@ -9117,7 +9138,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="77"/>
       <source>Alias react on user input.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>L'alias viene attivato all'input dell'utente.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="79"/>
