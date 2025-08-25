@@ -9144,7 +9144,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="79"/>
       <source>How to add a new alias now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="81"/>
@@ -9156,7 +9156,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="86"/>
       <source>How to add a new alias from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo alias dalla riga di comando</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="88"/>
@@ -9189,7 +9189,7 @@ Name of a selectable option for the Messagebox in the Mudlet Button Editor
 Name of a selectable option for the Messagebox in the Mudlet Keys Editor
 ----------
 Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Controlla il manuale di Mudlet per maggiori informazioni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="92"/>
@@ -9201,13 +9201,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="98"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>I trigger si attivano quando arrivano dati dal gioco.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
       <source>How to add a new trigger now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
@@ -9219,7 +9219,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>How to add a new trigger from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo trigger dalla riga di comando</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="114"/>
@@ -9231,13 +9231,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
       <source>Scripts organize code and can react to events.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Gli script permettono di organizzare il codice e possono esser attivati da eventi.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
       <source>How to add a new script now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
@@ -9249,7 +9249,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
       <source>How to have a script react to events</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come uno script viene attivato dagli eventi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
@@ -9267,13 +9267,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>Timers react after a timespan once or regularly.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>I timer si attivano quando una volta o periodicamente quando scade il tempo impostato.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
       <source>How to add a new timer now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
@@ -9285,7 +9285,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>How to add a new timer from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo timer dalla riga di comando</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
@@ -9370,7 +9370,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="215"/>
       <source>How to add a new variable now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere una nuova variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="217"/>
@@ -9382,7 +9382,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="224"/>
       <source>How to add a new variable from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere una nuova variabile dalla riga di comando</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="226"/>
@@ -13755,7 +13755,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="558"/>
       <source>Show sent commands:</source>
-      <translation type="unfinished"/>
+      <translation>Mostra comandi inviati:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="574"/>
