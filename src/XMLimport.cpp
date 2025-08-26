@@ -1223,9 +1223,12 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mDisplayFont")) {
                 pHost->setDisplayFontFromString(readElementText());
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
                 // On GNU/Linux and FreeBSD ensure that emojis are displayed in
                 // colour even if this font doesn't support it:
                 QFont::insertSubstitution(pHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
+#endif
+                // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this
