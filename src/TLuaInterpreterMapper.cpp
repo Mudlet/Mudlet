@@ -25,7 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// mapper-specific functions of TLuaInterpreter, split out separately
+// Mapper-specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
 // any call that that modifies the map visually needs to call host.mpMap->update();

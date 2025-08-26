@@ -24,6 +24,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+// Networking-specific functions of TLuaInterpreter, split out separately
+// for convenience and to keep TLuaInterpreter.cpp size reasonable
+
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
