@@ -50,7 +50,12 @@ GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget *parent)
 , mpMap(pMap)
 , mpHost(pHost)
 {
+    if (mpHost->mBgColor_2.alpha() < 255) {
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
+    setAttribute(Qt::WA_AlwaysStackOnTop);
+    } else {
     setAttribute(Qt::WA_OpaquePaintEvent);
+    }
 }
 
 QSize GLWidget::minimumSizeHint() const
@@ -223,7 +228,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-    const QColor color(QColorConstants::Black);
+    const QColor color(mpHost->mBgColor_2);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -323,7 +328,8 @@ void GLWidget::paintGL()
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
 
-    glClearColor(0.0, 0.0, 0.0, 1.0);
+    const QColor color(mpHost->mBgColor_2);
+    glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     GLfloat diffuseLight[] = {0.507, 0.507, 0.507, 1.0};

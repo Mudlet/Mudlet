@@ -15,11 +15,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             buildname: 'clang-tidy'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '6.9.0'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -27,7 +27,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         submodules: true
         fetch-depth: 0
@@ -44,6 +44,7 @@ jobs:
         dir: ${{github.workspace}}
         arch: win64_mingw73
         cache: true
+        modules: qt5compat qtmultimedia
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v4
@@ -52,6 +53,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{github.workspace}}
         cache: true
+        modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
       uses: actions/cache@v4
@@ -115,14 +117,14 @@ jobs:
         cmakeAppendedArgs: >-
           -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
           -G Ninja
-          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         buildWithCMakeArgs: >-
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.20.1
+      uses: ZedThree/clang-tidy-review@v0.21.0
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
@@ -133,4 +135,4 @@ jobs:
         split_workflow: true
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.20.1
+      uses: ZedThree/clang-tidy-review/upload@v0.21.0

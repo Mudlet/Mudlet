@@ -54,6 +54,7 @@
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
+#include <QDesktopServices>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -244,6 +245,7 @@ public slots:
     void slot_saveSelectedItem(QTreeWidgetItem* pItem);
     void slot_export();
     void slot_import();
+    void slot_createModule();
     void slot_viewStatsAction();
     void slot_toggleCentralDebugConsole();
     void slot_nextSection();
@@ -315,6 +317,7 @@ private slots:
     void slot_restoreEditorItemsToolbar();
     void slot_itemEdited();
     void slot_searchSplitterMoved(const int pos, const int index);
+    void slot_clickedMessageBox(const QString&);
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -379,6 +382,14 @@ private:
     void exportActionToClipboard();
     void exportScriptToClipboard();
     void exportKeyToClipboard();
+
+    // Multi-selection export functions
+    void exportMultipleTriggersToClipboard(const QList<TTrigger*>& triggers);
+    void exportMultipleTimersToClipboard(const QList<TTimer*>& timers);
+    void exportMultipleAliasesToClipboard(const QList<TAlias*>& aliases);
+    void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
+    void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
+    void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
@@ -449,6 +460,7 @@ private:
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
+    bool showDeleteConfirmation(const QString& title, const QString& message);
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
     void checkForMoreThanOneTriggerItem();
@@ -566,6 +578,7 @@ private:
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:
     QAction* mpExportAction = nullptr;
+    QAction* mpCreateModuleAction = nullptr;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
@@ -594,14 +607,21 @@ private:
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
+    
+    struct introOption {
+        QString name;
+        QString headline;
+        QString contents;  
+    };
 
-    QString msgInfoAddAlias;
-    QString msgInfoAddTrigger;
-    QString msgInfoAddScript;
-    QString msgInfoAddTimer;
-    QString msgInfoAddButton;
-    QString msgInfoAddVar;
-    QString msgInfoAddKey;
+    struct introTextParts {
+        QString summary;
+        QVector<introOption> options;
+    };
+
+    QMap<EditorViewType, introTextParts> introAddItem;
+
+    void showIntro(const QString& = QString());
     QString descActive;
     QString descInactive;
     QString descActiveFolder;

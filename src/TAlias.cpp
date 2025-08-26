@@ -32,7 +32,6 @@
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
 , mpHost(pHost)
-, isNew(true)
 {
 }
 
@@ -40,7 +39,6 @@ TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(nullptr)
 , mName(name)
 , mpHost(pHost)
-, isNew(true)
 {
 }
 
@@ -404,10 +402,10 @@ QString TAlias::moduleName(TAlias* pAlias)
 
 bool TAlias::checkIfNew()
 {
-    return isNew;
+    return mIsNew;
 }
 
 void TAlias::unmarkAsNew()
 {
-    isNew = false;
+    mIsNew = false;
 }
