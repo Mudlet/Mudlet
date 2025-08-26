@@ -47,6 +47,7 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -2711,4 +2712,99 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 1;
     }
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createComposer
+int TLuaInterpreter::createComposer(lua_State* L)
+{
+    Host& host = getHostFromLua(pGlobalLua);
+    const QString title;
+    const QString text;
+    const int function;
+
+    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+        return;
+    }
+
+    if (lua_gettop(L) == 0) {
+        title = QString;
+        text = QString;
+        function = -1;
+    } else if lua_gettop(L) >= 1) {
+        title = getVerifiedString(L, __func__, 1, "title");
+    } else if lua_gettop(L) >= 2) {
+        text = getVerifiedString(L, __func__, 1, "text");
+    } else if lua_gettop(L) >= 3) {
+        if (!lua_isfunction(L, 3)) {
+            lua_pushfstring(L, "createComposer: bad argument #3 type (callback as function expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+
+        lua_pushfstring(L, "createComposer: callback function not implemented, yet!)");
+        return lua_error(L);
+        // compare callback function implemented in (Mapper file of) TLuaInterpreter::registerMapInfo
+    }
+
+    host.mTelnet.mpComposer = new dlgComposer(&host);
+    host.mTelnet.mpComposer->init(title, text);
+    host.mTelnet.mpComposer->raise();
+    host.mTelnet.mpComposer->show();
+
+    // When "save" or "cancel" is clicked, hide the window again. Maybe part of the callback, then?
+    if (1 == 0) {
+        host.mTelnet.mpComposer->close();
+        host.mTelnet.mpComposer = nullptr;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getComposerText
+int TLuaInterpreter::getComposerText(lua_State* L)
+{
+    Host& host = getHostFromLua(pGlobalLua);
+
+    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+        return warnArgumentValue(L, __func__, "no composer present or loaded");
+    }
+
+    lua_pushstring(L, host.mTelnet.mpComposer.edit->toPlainText());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getComposerTitle
+int TLuaInterpreter::getComposerTitle(lua_State* L)
+{
+    Host& host = getHostFromLua(pGlobalLua);
+
+    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+        return warnArgumentValue(L, __func__, "no composer present or loaded");
+    }
+
+    lua_pushstring(L, host.mTelnet.mpComposer->title->toPlainText());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setComposerText
+int TLuaInterpreter::setComposerText(lua_State* L)
+{
+    Host& host = getHostFromLua(pGlobalLua);
+
+    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+        return warnArgumentValue(L, __func__, "no composer present or loaded");
+    }
+
+    const QString text = getVerifiedString(L, __func__, 1, "text");
+    host.mTelnet.mpComposer.edit->setPlainText(text);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setComposerTitle
+int TLuaInterpreter::setComposerTitle(lua_State* L)
+{
+    Host& host = getHostFromLua(pGlobalLua);
+
+    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+        return warnArgumentValue(L, __func__, "no composer present or loaded");
+    }
+
+    const QString title = getVerifiedString(L, __func__, 1, "title");
+    host.mTelnet.mpComposer.title->setText(title);
 }

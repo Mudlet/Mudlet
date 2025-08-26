@@ -700,6 +700,12 @@ public:
     static int aiPrompt(lua_State*);
     static int aiPromptStream(lua_State*);
     static int setActiveProfile(lua_State*);
+    static int createComposer(lua_State*);
+    static int getComposerText(lua_State*);
+    static int getComposerTitle(lua_State*);
+    static int setComposerText(lua_State*);
+    static int setComposerTitle(lua_State*);
+    
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

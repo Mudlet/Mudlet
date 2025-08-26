@@ -5561,6 +5561,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
     lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
+    lua_register(pGlobalLua, "createComposer", TLuaInterpreter::createComposer);
+    lua_register(pGlobalLua, "getComposerText", TLuaInterpreter::getComposerText);
+    lua_register(pGlobalLua, "getComposerTitle", TLuaInterpreter::getComposerTitle);
+    lua_register(pGlobalLua, "setComposerText", TLuaInterpreter::setComposerText);
+    lua_register(pGlobalLua, "setComposerTitle", TLuaInterpreter::setComposerTitle);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
