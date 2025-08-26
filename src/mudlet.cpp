@@ -61,6 +61,8 @@
 #include "VarUnit.h"
 
 #include "pre_guard.h"
+#include <QAccessible>
+#include <QAccessibleAnnouncementEvent>
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
@@ -752,9 +754,8 @@ void mudlet::init()
 
     setupTrayIcon();
 
-    // initialize Announcer after the window is loaded, as UIA on Windows requires it
+    // emit the signal for adjusting accessible names
     QTimer::singleShot(0, this, [this]() {
-        mpAnnouncer = new Announcer(this);
         emit signal_adjustAccessibleNames();
     });
 
@@ -6202,13 +6203,25 @@ bool mudlet::desktopInDarkMode()
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
-    if (isPlain){
-        mpAnnouncer->announce(text, processing);
+    QString textToAnnounce;
+    if (isPlain) {
+        textToAnnounce = text;
     } else {
         QTextDocument convertor;
         convertor.setHtml(text);
-        mpAnnouncer->announce(convertor.toPlainText(), processing);
+        textToAnnounce = convertor.toPlainText();
     }
+
+    QAccessibleAnnouncementEvent event(this, textToAnnounce);
+    
+    // Set politeness based on processing parameter
+    if (processing == QLatin1String("importantall") || processing == QLatin1String("importantmostrecent")) {
+        event.setPoliteness(QAccessible::AnnouncementPoliteness::Assertive);
+    } else {
+        event.setPoliteness(QAccessible::AnnouncementPoliteness::Polite);
+    }
+    
+    QAccessible::updateAccessibility(&event);
 }
 
 void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
