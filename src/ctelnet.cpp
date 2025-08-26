@@ -884,7 +884,10 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         }
 
         QSaveFile file(mServerPackage);
-        file.open(QFile::WriteOnly);
+        if (!file.open(QFile::WriteOnly)) {
+            qWarning() << "ctelnet: failed to open file for writing:" << file.errorString();
+            return;
+        }
         file.write(reply->readAll());
         if (!file.commit()) {
             qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();

@@ -151,7 +151,9 @@ void mudlet::init()
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
 
     QFile gitShaFile(":/app-build.txt");
-    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "mudlet: failed to open app-build.txt for reading:" << gitShaFile.errorString();
+    }
     const QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     mAppBuild = gitSha;
@@ -802,7 +804,10 @@ static QString readMarkerFile(const QString& path)
 {
     QString line;
     QFile file(path);
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open file for reading:" << path << file.errorString();
+        return QString();
+    }
     QTextStream(&file).readLineInto(&line);
     file.close();
     return line;
@@ -3668,7 +3673,10 @@ void mudlet::slot_replay()
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
+        return QString();
+    }
     if (!file.exists()) {
         return QString();
     }
@@ -4979,7 +4987,10 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         pHost->mLoadedOk = true;
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
-        file.open(QFile::ReadOnly | QFile::Text);
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
+            return nullptr;
+        }
         XMLimport importer(pHost);
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
