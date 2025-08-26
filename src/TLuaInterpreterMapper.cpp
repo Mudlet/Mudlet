@@ -49,7 +49,6 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
