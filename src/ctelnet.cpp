@@ -909,6 +909,22 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
     mpProgressDialog->setValue(static_cast<int>(got));
 }
 
+// Helper to format short telnet commands for debugging
+QString cTelnet::formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const
+{
+    QByteArray cmdBytes(telnetCommand.data(), telnetCommand.size());
+    QString hexStr = cmdBytes.toHex(' ');
+    QString decoded = QString(" (IAC %1").arg(commandName);
+    
+    if (telnetCommand.size() == 2 && !commandName.isEmpty()) {
+        decoded += " <missing option>)";
+    } else {
+        decoded += ")";
+    }
+    
+    return QString("hex: %1%2").arg(hexStr, decoded);
+}
+
 // Helper to identify which protocol is being negotiated!
 QString cTelnet::decodeOption(const unsigned char ch) const
 {
@@ -1643,7 +1659,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     // Ensure telnetCommand has sufficient length before accessing indices
     if (telnetCommand.size() < 2) {
-        qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring";
+        QString debugInfo = formatShortTelnetCommand(telnetCommand, QString());
+        qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
         return;
     }
     
@@ -1730,7 +1747,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         if (telnetCommand.size() < 3) {
-            qDebug() << "WARNING: TN_WILL command too short (size:" << telnetCommand.size() << "), ignoring";
+            QString debugInfo = formatShortTelnetCommand(telnetCommand, "WILL");
+            qDebug() << "WARNING: TN_WILL command too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
             return;
         }
         option = telnetCommand[2];
@@ -2050,7 +2068,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_WONT: {
         //server refuses to enable some option
         if (telnetCommand.size() < 3) {
-            qDebug() << "WARNING: TN_WONT command too short (size:" << telnetCommand.size() << "), ignoring";
+            QString debugInfo = formatShortTelnetCommand(telnetCommand, "WONT");
+            qDebug() << "WARNING: TN_WONT command too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
             return;
         }
         option = telnetCommand[2];
@@ -2149,7 +2168,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_DO: {
         //server wants us to enable some option
         if (telnetCommand.size() < 3) {
-            qDebug() << "WARNING: TN_DO command too short (size:" << telnetCommand.size() << "), ignoring";
+            QString debugInfo = formatShortTelnetCommand(telnetCommand, "DO");
+            qDebug() << "WARNING: TN_DO command too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
             return;
         }
         option = telnetCommand[2];
@@ -2357,7 +2377,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_DONT: {
         //only respond if value changed or if this option has not been announced yet
         if (telnetCommand.size() < 3) {
-            qDebug() << "WARNING: TN_DONT command too short (size:" << telnetCommand.size() << "), ignoring";
+            QString debugInfo = formatShortTelnetCommand(telnetCommand, "DONT");
+            qDebug() << "WARNING: TN_DONT command too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
             return;
         }
         option = telnetCommand[2];
