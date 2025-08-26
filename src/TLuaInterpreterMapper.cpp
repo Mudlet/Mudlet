@@ -2609,7 +2609,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openMapWidget
 int TLuaInterpreter::openMapWidget(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -2640,7 +2640,7 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMainWindowSize
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
 int TLuaInterpreter::registerMapInfo(lua_State* L)
 {
