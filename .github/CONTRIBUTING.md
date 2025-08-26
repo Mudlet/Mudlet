@@ -16,6 +16,21 @@ If you're a first-timer, don't worry about conforming to all of these! We'll sho
 Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
 
 ### C++
+
+Style conventions:
+
+```cpp
+// Class names: PascalCase with 'T' prefix for main classes
+class TConsole : public QWidget
+
+// Member variables: camelCase with 'm' prefix
+QString mProfileName;
+
+// Qt signals/slots: camelCase
+signals:
+    void profileChanged(const QString& name);
+```    
+
 * use clang-format for formatting your code with [src/.clang-format](https://github.com/Mudlet/Mudlet/blob/development/src/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
 * use clang-tidy linting with [.clang-tidy](https://github.com/Mudlet/Mudlet/blob/development/.clang-tidy) settings. To get started, check out Clang Tidy in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section
 * additionally, use [clazy]([url](https://github.com/KDE/clazy)) for linting as well
@@ -27,7 +42,12 @@ Check https://www.linguistic-antipatterns.com when naming anything to help ensur
 # Internationalization do's and don'ts
 
 Do:
-* enable strings visible in the Mudlet GUI to be translateable
+* enable strings visible in the Mudlet GUI to be translateable using `tr()`, e.g.:
+```cpp
+//: Add context for the translator here
+QString displayText = tr("Connection failed: %1").arg(errorMessage);
+```
+
 * minimise use of HTML styling tags in strings to be translated
 * enable users to use language-specific Mudlet object names (triggers, aliases, labels, etc)
 
