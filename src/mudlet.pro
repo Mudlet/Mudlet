@@ -1637,7 +1637,6 @@ OTHER_FILES += \
     ../.ai/ai-instructions.md \
     ../.cursorrules \
     ../.github/CONTRIBUTING.md \
-    ../.github/README.md \
     ../.github/copilot-instructions.md \
     ../AGENTS.md \
     ../AI-ASSISTANTS.md \
