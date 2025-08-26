@@ -76,6 +76,10 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
+    void slot_shiftCameraUp();
+    void slot_shiftCameraDown();
+    void slot_shiftCameraLeft();
+    void slot_shiftCameraRight();
     void slot_shiftZup();
     void slot_shiftZdown();
     void slot_setCameraPositionX(int angle);

@@ -854,7 +854,6 @@ void ModernGLWidget::slot_setScale(int angle)
     update();
 }
 
-// these aren't working atm, but should be soon deprecated anyway
 void ModernGLWidget::slot_setCameraPositionX(int angle)
 {
     angle *= 10;
@@ -879,6 +878,42 @@ void ModernGLWidget::slot_setCameraPositionZ(int angle)
     angle = qBound(0, angle, 180);
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], angle, currentPosition[2]);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraDown()
+{
+    const float angle = 1.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1]+angle, currentPosition[2]);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraUp()
+{
+    const float angle = 1.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1]-angle, currentPosition[2]);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraLeft()
+{
+    const float angle = 1.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], currentPosition[2]-angle);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraRight()
+{
+    const float angle = 1.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], currentPosition[2]+angle);
     is2DView = false;
     update();
 }
@@ -918,18 +953,69 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
 void ModernGLWidget::mousePressEvent(QMouseEvent* event)
 {
     // Implement mouse handling (placeholder)
-    QOpenGLWidget::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
+    if (!mpMap||!mpMap->mpRoomDB) {
+        return;
+    }
+    if (event->buttons() & Qt::LeftButton) {        // translation on xy-plane
+        // TODO: allow user to click on rooms
+        auto eventPos = event->position().toPoint();
+        const int x = eventPos.x();
+        const int y = height() - eventPos.y(); // the opengl origin is at bottom left
+        mPanMode = true;
+        mPanXStart = x;
+        mPanYStart = y;
+    } 
 }
 
 void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 {
     // Implement mouse handling (placeholder)
-    QOpenGLWidget::mouseMoveEvent(event);
+    //QOpenGLWidget::mouseMoveEvent(event);
+    if (!mpMap||!mpMap->mpRoomDB) {
+        return;
+    }
+    if (mPanMode) {
+        auto eventPos = event->position();
+        auto x = static_cast<float>(eventPos.x());
+        auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
+        if ((mPanXStart - x) > 1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraRight();
+            } else {
+                slot_shiftRight();
+            }
+            mPanXStart = x;
+        } else if ((mPanXStart - x) < -1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraLeft();
+            } else {
+                slot_shiftLeft();
+            }
+            mPanXStart = x;
+        }
+        if ((mPanYStart - y) > 1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraUp();
+            } else {
+                slot_shiftUp();
+            }
+            mPanYStart = y;
+        } else if ((mPanYStart - y) < -1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraDown();
+            } else {
+                slot_shiftDown();
+            }
+            mPanYStart = y;
+        }
+    }
 }
 
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     // Implement mouse handling (placeholder)
+    mPanMode = false;
     QOpenGLWidget::mouseReleaseEvent(event);
 }
 
