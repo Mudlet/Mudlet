@@ -2501,10 +2501,13 @@ int TLuaInterpreter::setFont(lua_State* L)
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
     QFont::insertSubstitution(fontName, qsl("Noto Color Emoji"));
     // TODO issue #4159: a nonexisting font breaks the console
+#endif
+    // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
     auto console = CONSOLE(L, windowName);

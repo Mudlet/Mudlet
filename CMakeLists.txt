@@ -148,7 +148,7 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
 
-find_package(Qt6 6.4.0 REQUIRED)
+find_package(Qt6 6.8.2 REQUIRED)
 
 find_package(Lua 5.1 EXACT)
 

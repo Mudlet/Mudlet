@@ -99,6 +99,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #if defined(INCLUDE_3DMAPPER)
     connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
+    if (mpHost->mShow3DView) {
+        slot_toggle3DView(true);
+    }
 #else
     pushButton_3D->hide();
 #endif
@@ -287,7 +290,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
             widget_2DControls->setVisible(true);
         });
     }
-
+    mpHost->mShow3DView = is3DMode;
 #else
     Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);

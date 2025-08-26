@@ -275,6 +275,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
+, mShow3DView(false)
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)

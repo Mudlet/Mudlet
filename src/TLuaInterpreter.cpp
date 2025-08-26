@@ -7316,10 +7316,12 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
-            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");;
-            if (host.mpMap->mpMapper->mp2dMap) {
+            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
+
+            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->update();
             }
+
             return success();
         }
     }
@@ -7731,6 +7733,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
         { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } },
         { qsl("showTabConnectionIndicators"), [&](){ lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators); } },
+        { qsl("advertiseScreenReader"), [&](){ lua_pushboolean(L, host.mAdvertiseScreenReader); } },
         { qsl("ambiguousEAsianWidthCharacters"), [&]() {
             const auto ambiguousEAsianGlyphWidth = host.getWideAmbiguousEAsianGlyphsControlState();
             switch (ambiguousEAsianGlyphWidth) {
@@ -7743,7 +7746,9 @@ int TLuaInterpreter::getConfig(lua_State *L)
             default:
                 lua_pushstring(L, "auto");
             }
-        } }
+        } },
+        { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
     };
 
     auto it = configMap.find(key);
