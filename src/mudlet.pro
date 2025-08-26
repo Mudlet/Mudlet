@@ -37,7 +37,13 @@
 ############################################################################
 
 if(lessThan(QT_MAJOR_VERSION,6)) {
-    error("Mudlet requires Qt 6.0 or later")
+    error("Mudlet requires Qt 6.8.2 or later")
+}
+if(equals(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION,8)) {
+    error("Mudlet requires Qt 6.8.2 or later")
+}
+if(equals(QT_MAJOR_VERSION,6):equals(QT_MINOR_VERSION,8):lessThan(QT_PATCH_VERSION,2)) {
+    error("Mudlet requires Qt 6.8.2 or later")
 }
 
 # Including IRC Library
@@ -722,7 +728,6 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
-    Announcer.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
     ctelnet.h \
@@ -860,22 +865,6 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
-macx|win32 {
-    macx {
-        SOURCES += AnnouncerMac.mm
-    }
-
-    win32 {
-        SOURCES += AnnouncerWindows.cpp \
-            uiawrapper.cpp
-
-        HEADERS += uiawrapper.h
-    }
-} else {
-    # Everything else
-    SOURCES += \
-        AnnouncerUnix.cpp
-}
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -1634,7 +1623,13 @@ OTHER_FILES += \
     ../.github/CODEOWNERS \
     ../.github/codeql/codeql-config.yml \
     ../.github/codespell-wordlist.txt \
+    ../.ai/ai-instructions.md \
+    ../.cursorrules \
     ../.github/CONTRIBUTING.md \
+    ../.github/copilot-instructions.md \
+    ../AGENTS.md \
+    ../AI-ASSISTANTS.md \
+    ../CLAUDE.md \
     ../.github/dependabot.yml \
     ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
