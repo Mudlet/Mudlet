@@ -71,6 +71,7 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     }
 
     // Set window properties
+    //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
     setWindowTitle(tr("Mudlet - %1 (Detached)").arg(profileName));
     setWindowIcon(parent ? parent->windowIcon() : QIcon());
     setAttribute(Qt::WA_DeleteOnClose);
@@ -239,47 +240,62 @@ void TDetachedWindow::setupUI()
 void TDetachedWindow::createMenus()
 {
     // Profile menu with quick actions
+
+    //: This is the name of a menu in the toolbar of a detached Mudlet window.
     auto profileMenu = menuBar()->addMenu(tr("&Profile"));
 
+    //: This is an item in the "Profile" menu in the toolbar of a detached Mudlet window.
     auto saveProfileAction = new QAction(QIcon(qsl(":/icons/document-save.png")), tr("&Save Profile"), this);
     saveProfileAction->setShortcut(QKeySequence::Save);
+    //: This explains the "Save Profile" item in the "Profile" menu in the toolbar of a detached Mudlet window.
     saveProfileAction->setStatusTip(tr("Save the current profile"));
     connect(saveProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_saveProfile);
     profileMenu->addAction(saveProfileAction);
 
     profileMenu->addSeparator();
 
+    //: This is an item in the "Profile" menu in the toolbar of a detached Mudlet window.
     auto exportProfileAction = new QAction(QIcon(qsl(":/icons/document-export.png")), tr("&Export Profile"), this);
+    //: This explains the "Export Profile" item in the "Profile" menu in the toolbar of a detached Mudlet window.
     exportProfileAction->setStatusTip(tr("Export profile as package"));
     connect(exportProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_exportProfile);
     profileMenu->addAction(exportProfileAction);
 
+    //: This is an item in the "Profile" menu in the toolbar of a detached Mudlet window.
     auto profileSettingsAction = new QAction(QIcon(qsl(":/icons/configure.png")), tr("Profile &Settings"), this);
     profileSettingsAction->setShortcut(QKeySequence::Preferences);
+    //: This explains the "Profile Settings" item in the "Profile" menu in the toolbar of a detached Mudlet window.
     profileSettingsAction->setStatusTip(tr("Open profile settings"));
     connect(profileSettingsAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showPreferencesDialog);
     profileMenu->addAction(profileSettingsAction);
 
     profileMenu->addSeparator();
 
+    //: This is an item in the "Profile" menu in the toolbar of a detached Mudlet window.
     auto closeProfileAction = new QAction(QIcon(qsl(":/icons/profile-close.png")), tr("&Close Profile"), this);
     closeProfileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
+    //: This explains the "Close Profile" item in the "Profile" menu in the toolbar of a detached Mudlet window.
     closeProfileAction->setStatusTip(tr("Close the current profile"));
     connect(closeProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_closeCurrentProfile);
     profileMenu->addAction(closeProfileAction);
 
+    //: This is the name of a menu in the toolbar of a detached Mudlet window.
     mpWindowMenu = menuBar()->addMenu(tr("&Window"));
 
+    //: This is an item in the "Window" menu in the toolbar of a detached Mudlet window.
     auto reattachAction = new QAction(tr("&Reattach to Main Window"), this);
     reattachAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
+    //: This explains the "Reattach to Main Window" item in the "Window" menu in the toolbar of a detached Mudlet window.
     reattachAction->setStatusTip(tr("Reattach this profile window to the main Mudlet window"));
     connect(reattachAction, &QAction::triggered, this, &TDetachedWindow::onReattachAction);
     mpWindowMenu->addAction(reattachAction);
 
     mpWindowMenu->addSeparator();
 
+    //: This is an item in the "Window" menu in the toolbar of a detached Mudlet window.
     auto closeAction = new QAction(tr("&Close"), this);
     closeAction->setShortcut(QKeySequence::Close);
+    //: This explains the "Close" item in the "Window" menu in the toolbar of a detached Mudlet window.
     closeAction->setStatusTip(tr("Close this window and all profiles in it"));
     connect(closeAction, &QAction::triggered, this, &TDetachedWindow::slot_closeAllProfiles);
     mpWindowMenu->addAction(closeAction);
@@ -287,16 +303,20 @@ void TDetachedWindow::createMenus()
     mpWindowMenu->addSeparator();
 
     // Toolbar visibility toggle
+    //: This is an item in the "Window" menu in the toolbar of a detached Mudlet window.
     mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
     mpActionToggleToolBar->setCheckable(true);
     mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
+    //: This explains the "Show Toolbar" item in the "Window" menu in the toolbar of a detached Mudlet window.
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
     // Always on top toggle
+    //: This is an item in the "Window" menu in the toolbar of a detached Mudlet window.
     auto alwaysOnTopAction = new QAction(tr("Always on &Top"), this);
     alwaysOnTopAction->setCheckable(true);
     alwaysOnTopAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
+    //: This explains the "Always on Top" item in the "Window" menu in the toolbar of a detached Mudlet window.
     alwaysOnTopAction->setStatusTip(tr("Keep this window always on top of other windows"));
     connect(alwaysOnTopAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleAlwaysOnTop);
     mpWindowMenu->addAction(alwaysOnTopAction);
@@ -305,6 +325,7 @@ void TDetachedWindow::createMenus()
     connect(mpWindowMenu, &QMenu::aboutToShow, this, &TDetachedWindow::updateWindowMenu);
 
     // Minimize action
+    //: This is an item in the "Window" menu in the toolbar of a detached Mudlet window.
     auto minimizeAction = new QAction(tr("&Minimize"), this);
     minimizeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
     connect(minimizeAction, &QAction::triggered, this, &QWidget::showMinimized);
@@ -475,6 +496,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     QMenu contextMenu(this);
 
     auto reattachAction = contextMenu.addAction(QIcon(qsl(":/icons/view-restore.png")),
+    //: This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.
                                                tr("Reattach '%1' to Main Window").arg(profileName));
     connect(reattachAction, &QAction::triggered, [this, profileName] {
         // Switch to this profile first, then reattach
@@ -485,6 +507,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     contextMenu.addSeparator();
 
     auto closeTabAction = contextMenu.addAction(QIcon(qsl(":/icons/profile-close.png")),
+    //: This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.
                                                tr("Close Profile '%1'").arg(profileName));
     connect(closeTabAction, &QAction::triggered, [this, tabIndex] {
         closeProfileByIndex(tabIndex);
@@ -494,6 +517,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
         contextMenu.addSeparator();
 
         auto closeWindowAction = contextMenu.addAction(QIcon(qsl(":/icons/dialog-close.png")),
+    //: This is an item in the context menu when clicked on a detached tab.
                                                       tr("Close Window (All Profiles)"));
         connect(closeWindowAction, &QAction::triggered, this, &QWidget::close);
     }
@@ -501,12 +525,14 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     contextMenu.addSeparator();
 
     // Add toolbar visibility toggle to the context menu
+    //: This is an item in the context menu when clicked on a detached tab.
     auto toolbarToggleAction = contextMenu.addAction(tr("Profile Toolbar"));
     toolbarToggleAction->setCheckable(true);
     toolbarToggleAction->setChecked(mpToolBar && mpToolBar->isVisible());
     connect(toolbarToggleAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
 
     // Add connection indicator toggle
+    //: This is an item in the context menu when clicked on a detached tab.
     auto connectionIndicatorToggleAction = contextMenu.addAction(tr("Show Connection Indicators on Tabs"));
     connectionIndicatorToggleAction->setCheckable(true);
     connectionIndicatorToggleAction->setChecked(mudlet::self()->showTabConnectionIndicators());
@@ -567,7 +593,9 @@ void TDetachedWindow::createToolBar()
     mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 
     // Reattach action - placed first in the toolbar for prominence
+    //: This is an item in the toolbar of a detached Mudlet window. It will reattach the profile to the main Mudlet window.
     mpActionReattach = new QAction(QIcon(qsl(":/icons/mudlet_main_48px.png")), tr("Reattach"), this);
+    //: This explains the "Reattach" item in the toolbar of a detached Mudlet window.
     mpActionReattach->setToolTip(utils::richText(tr("Reattach this profile window to the main Mudlet window")));
     mpActionReattach->setObjectName(qsl("reattach_action"));
     mpToolBar->addAction(mpActionReattach);
@@ -577,6 +605,7 @@ void TDetachedWindow::createToolBar()
 
     // Connect button with dropdown actions
     mpButtonConnect = new QToolButton(this);
+    //: This is an item in the toolbar of a detached Mudlet window.
     mpButtonConnect->setText(tr("Connect"));
     mpButtonConnect->setObjectName(qsl("connect"));
     mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -585,19 +614,23 @@ void TDetachedWindow::createToolBar()
     mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonConnect);
 
+    //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionConnect = new QAction(tr("Connect"), this);
     mpActionConnect->setIcon(QIcon(qsl(":/icons/preferences-web-browser-cache.png")));
     mpActionConnect->setIconText(tr("Connect"));
     mpActionConnect->setObjectName(qsl("connect"));
 
+    //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
+    //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionCloseProfile = new QAction(tr("Close profile"), this);
     mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
+    //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
     mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
     mpActionCloseApplication->setIconText(tr("Close Mudlet"));
@@ -957,31 +990,40 @@ void TDetachedWindow::updateWindowTitle()
 
         if (!mCurrentProfileName.isEmpty()) {
             pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+            //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
             title = tr("Mudlet - %1 (Detached)").arg(mCurrentProfileName);
         } else {
+            //: This is the title of a Mudlet window which was detached from the main Mudlet window, but has no profile loaded.
             title = tr("Mudlet (Detached)");
         }
 
         if (pHost) {
+            title += qsl(" - ");
             bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
             bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
 
             if (isConnected) {
-                title += tr(" - Connected");
-
                 if (!pHost->getUrl().isEmpty()) {
-                    title += tr(" to %1").arg(pHost->getUrl());
+                    //: This text will be added to the title of a detached Mudlet window, if it is currently connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Connected to GAMENAME"
+                    title += tr("Connected to %1").arg(pHost->getUrl());
+                } else {
+                    //: This text will be part of to the title of a detached Mudlet window, if it is currently connected but we don't know to where. The whole title will be like "Mudlet PROFILENAME (Detached) - Connected"
+                    title += tr("Connected");                    
                 }
             } else if (isConnecting) {
-                title += tr(" - Connecting...");
+                //: This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Connecting..."
+                title += tr("Connecting...");
             } else {
-                title += tr(" - Disconnected");
+                //: This text will be part of the title of a detached Mudlet window, if it is not connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Disconnected"
+                title += tr("Disconnected");
             }
         }
     } else {
         // Multiple profiles - show count and current
+        //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %1 is the number of profiles, %2 is the name of the profile currently shown.
         title = tr("Mudlet (%1 profiles) - %2 (Detached)")
                 .arg(mProfileConsoleMap.size())
+                //: This text will be part of the title of a detached Mudlet window with multiple profiles opened, but the profile currently shown has no name, so show "None" instead. The whole title will be like "Mudlet (3 profiles) - None (Detached)"
                 .arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName);
     }
 
@@ -1346,6 +1388,8 @@ void TDetachedWindow::updateWindowMenu()
         // Add main window profiles
         if (!mainWindowProfiles.isEmpty()) {
             for (const QString& profileName : mainWindowProfiles) {
+
+                //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in the detached window, but in Mudlet's main window.
                 QString actionText = tr("%1 (Main Window)").arg(profileName);
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
@@ -1377,6 +1421,7 @@ void TDetachedWindow::updateWindowMenu()
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
             for (const QString& windowProfileName : profilesInWindow) {
+                //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in Mudlet's main window, but in the detached window.
                 QString actionText = tr("%1 (Detached)").arg(windowProfileName);
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
@@ -2299,6 +2344,7 @@ void TDetachedWindow::slot_showMapperDialog()
     }
 
     // Create a new docked mapper widget for this profile
+    //: This is to create a new docked mapper widget for a profile in a detached Mudlet window. %1 is the name of the profile.
     auto newMapDockWidget = new QDockWidget(tr("Map - %1").arg(mCurrentProfileName), this);
     newMapDockWidget->setObjectName(qsl("dockMap_%1_detached").arg(mCurrentProfileName));
     

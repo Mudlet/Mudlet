@@ -74,102 +74,130 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     setupUi(this);
 
     introAddItem.insert(EditorViewType::cmAliasView, {
-        //: Headline for the Messagebox in the Mudlet Alias Editor
+        //: Headline for the Alias intro
         tr("Alias react on user input."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Alias Editor
+        //: Name of a selectable option for the Alias intro
         {qsl("alias1"), tr("How to add a new alias now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
+        //: Help contents of a selectable option for the Alias intro
             tr("<ol><li>Click on the 'Add Item' icon above.</li>"
                "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
                "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
                "<li><strong>Activate</strong> the alias.</li></ol>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Alias Editor
-        {qsl("alias2"), tr("How to add a new alias from the command line"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
-            tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Alias Editor
-        {qsl("alias3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.</p>")}
-        }
-    });
+        //: Name of a selectable option for the Alias intro
+        {qsl("alias2"), tr("How to add a new alias from the input line"),
+            qsl("%1%2%3%4").arg(
+                //: Help contents of a selectable option for the Alias intro
+                qsl("<p>%1</p>").arg(tr("There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.")),
+                //: Part of the Alias intro - This introductory text will be followed by a Lua code example for a trigger.
+                qsl("<p>%1</p>").arg(tr("Alias can also be defined from the input line in the main profile window like this:")),
+                qsl("<p><code>%1</code></p>").arg(qsl("lua permAlias(&quot;%1&quot;, &quot;&quot;, &quot;%2&quot;, function() send(&quot;%3&quot;) echo(&quot;%4&quot;) end)").arg(
+                    //: Part of the Alias intro, code example for an alias - This is the name of the alias which reacts on the player typing "hi" by saying "Greetings, traveller!" in game.
+                    tr("My greetings"),
+                    //: Part of the Alias intro, code example for an alias - This is the text input from the player which will be reacted on by saying "Greetings, traveller!" in game.
+                    tr("hi"),
+                    //: Part of the Alias intro, code example for an alias - This is the command that Mudlet will send to the game after the player typed "hi".
+                    tr("say Greetings, traveller!"),
+                    //: Part of the Alias intro, code example for an alias - This is the confirmation text shown to the player after they typed "hi" and we said "Greetings, traveller!" in game.
+                    tr("We said hi!"))),
+                //: Part of the Alias intro - This is the conclusion after the code example for an alias which reacts on the player typing "hi" by saying "Greetings, traveller!" in game.
+                qsl("<p>%1</p>").arg("You can now greet by typing 'hi'"))},
+        {qsl("alias3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/Uz6EDvZYNvE"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>Introduction to Aliases</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmTriggerView, {
-        //: Headline for the Messagebox in the Mudlet Trigger Editor
+        //: Headline for the Trigger intro
         tr("Triggers react on game output."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Trigger Editor
+        //: Name of a selectable option for the Trigger intro
         {qsl("trigger1"), tr("How to add a new trigger now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor
+        //: Help contents of a selectable option for the Trigger intro
             tr("<ol><li>Click on the 'Add Item' icon above.</li>"
                "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
                "<li>Select the appropriate pattern <strong>type</strong>.</li>"
                "<li>Define a clear text <strong>command</strong> that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
                "<li><strong>Activate</strong> the trigger.</li></ol>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Trigger Editor
-        {qsl("trigger2"), tr("How to add a new trigger from the command line"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor
-            tr("<p>There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Trigger Editor
-        {qsl("trigger3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.</p>")}
-        }
-    });
+        //: Name of a selectable option for the Trigger intro
+        {qsl("trigger2"), tr("How to add a new trigger from the input line"),
+            qsl("%1%2%3%4").arg(
+                //: Help contents of a selectable option for the Trigger intro
+                qsl("<p>%1</p>").arg(tr("There are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you.")),
+                //: Part of the Trigger intro - This introductory text will be followed by a Lua code example for a trigger.
+                qsl("<p>%1</p>").arg(tr("Triggers can also be defined from the input line in the main profile window like this:")),
+                qsl("<p><code>%1</code></p>").arg(qsl("lua permSubstringTrigger(&quot;%1&quot;, &quot;&quot;, &quot;%2&quot;, function() send(&quot;%3&quot;) end)").arg(
+                    //: Part of the Trigger intro, code example for a trigger - This is the name of the trigger which reacts on "You are thirsty" with "drink water".
+                    tr("My drink trigger"),
+                    //: Part of the Trigger intro, code example for a trigger - This is the text from game which will be triggered on, and reacted to with "drink water".
+                    tr("You are thirsty."),
+                    //: Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text "You are thirsty." from game.
+                    tr("drink water"))),
+                //: Part of the Trigger intro - This is the conclusion after the code example for a trigger which reacts on "You are thirsty" with "drink water".
+                qsl("<p>%1</p>").arg("This will keep you refreshed."))},
+        {qsl("trigger3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/jYjop54-Y3I"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>Introduction to Triggers</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmScriptView, {
-        //: Headline for the Messagebox in the Mudlet Script Editor
+        //: Headline for the Script intro
         tr("Scripts organize code and can react to events."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Script Editor
+        //: Name of a selectable option for the Script intro
         {qsl("script1"), tr("How to add a new script now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Script Editor
+        //: Help contents of a selectable option for the Script intro
             tr("<ol><li>Click on the 'Add Item' icon above.</li>"
                "<li>Enter a script in the box below. You can for example define <strong>functions</strong> to be called by other triggers, aliases, etc.</li>"
                "<li>If you write lua <strong>commands</strong> without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
                "<li><strong>Activate</strong> the script.</li></ol>"
                "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Script Editor
+        //: Name of a selectable option for the Script intro
         {qsl("script2"), tr("How to have a script react to events"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Script Editor
+        //: Help contents of a selectable option for the Script intro
             tr("<p>You can register a list of <strong>events</strong> with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</p>"
                "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
                "<p><code>lua registerAnonymousEventHandler(&quot;nameOfTheMudletEvent&quot;, &quot;nameOfYourFunctionToBeCalled&quot;)</code></p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Script Editor
-        {qsl("script3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Script Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.</p>")}
-        }
-    });
+        {qsl("script3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/10mJUh4Hq-A"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Scripts'>Introduction to Scripts</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmTimerView, {
-        //: Headline for the Messagebox in the Mudlet Timer Editor
+        //: Headline for the Timer intro
         tr("Timers react after a timespan once or regularly."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Timer Editor
+        //: Name of a selectable option for the Timer intro
         {qsl("timer1"), tr("How to add a new timer now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor
+        //: Help contents of a selectable option for the Timer intro
             tr("<ol><li>Click on the 'Add Item' icon above.</li>"
                "<li>Define the <strong>timespan</strong> after which the timer should react in a this format: hours : minutes : seconds.</li>"
                "<li>Define a clear text <strong>command</strong> that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
                "<li><strong>Activate</strong> the timer.</li></ol>"
                "<p><strong>Note:</strong> If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Timer Editor
-        {qsl("timer2"), tr("How to add a new timer from the command line"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor
+        //: Name of a selectable option for the Timer intro
+        {qsl("timer2"), tr("How to add a new timer from the input line"),
+        //: Help contents of a selectable option for the Timer intro
             tr("<p>Timers can also be defined from the input line in the main profile window like this:</p>"
                "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
                "<p>This will greet you exactly 3 seconds after it was made.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Timer Editor
-        {qsl("timer3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>Introduction to Timers</a> for a detailed overview.</p>")}
-        }
-    });
+        {qsl("timer3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Timers'>Introduction to Timers</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmActionView, {
-        //: Headline for the Messagebox in the Mudlet Button Editor
+        //: Headline for the Button intro
         tr("Buttons react on mouse clicks."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
+        //: Name of a selectable option for the Button intro
         {qsl("button1"), tr("How to add a new button now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Button Editor
+        //: Help contents of a selectable option for the Button intro
             tr("<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
                "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
                "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
@@ -177,62 +205,61 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
                "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
                "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>")},
-//        {qsl("button2"), tr("How to add a new button from the command line"),
+//        {qsl("button2"), tr("How to add a new button from the input line"),
 //            tr("")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Button Editor
-        {qsl("button3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Button Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.</p>")}
-        }
-    });
+        {qsl("button3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Buttons'>Introduction to Buttons</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmKeysView, {
-        //: Headline for the Messagebox in the Mudlet Keys Editor
+        //: Headline for the Keys intro
         tr("Keys react on keyboard presses."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
+        //: Name of a selectable option for the Keys intro
         {qsl("key1"), tr("How to add a new keybinding now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
+        //: Help contents of a selectable option for the Keys intro
             tr("<ol><li>Click on the 'Add Item' icon above.</li>"
                "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
                "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
                "<li><strong>Activate</strong> the new key binding.</li></ol>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
-        {qsl("key2"), tr("How to add a new keybinding from the command line"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
+        //: Name of a selectable option for the Keys intro
+        {qsl("key2"), tr("How to add a new keybinding from the input line"),
+        //: Help contents of a selectable option for the Keys intro
             tr("<p>Keys can be defined from the input line in the main profile window like this:</p>"
                "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
                "<p>Pressing F8 will make you jump.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Keys Editor
-        {qsl("key3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.</p>")}
-        }
-    });
+        {qsl("key3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3%4</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p><li>").arg(tr("Watch a <a href='%1'>video demonstration</a> of the basic functionality.")
+                    .arg(qsl("https://youtu.be/ZYRPZ-8fJWA"))),
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Introduction to Keybindings</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     introAddItem.insert(EditorViewType::cmVarsView, {
-        //: Headline for the Messagebox in the Mudlet Variable Editor
+        //: Headline for the Variable intro
         tr("Variables store information."), {
-        //: Name of a selectable option for the Messagebox in the Mudlet Variable Editor
+        //: Name of a selectable option for the Variable intro
         {qsl("variable1"), tr("How to add a new variable now"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor
+        //: Help contents of a selectable option for the Variable intro
             tr("<ol><li>Click on the 'Add Item' icon above. To add a table instead click 'Add Group'.</li>"
                "<li>Select type of variable value (can be a string, integer, boolean)</li>"
                "<li>Enter the value you want to store in this variable.</li>"
                "<li>If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.</li>"
                "<li>To remove a variable manually, set it to 'nil' or click on the 'Delete' icon above.</li></ol>"
                "<p><strong>Note:</strong> Variables created here won't be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Variable Editor
-        {qsl("variable2"), tr("How to add a new variable from the command line"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor
+        //: Name of a selectable option for the Variable intro
+        {qsl("variable2"), tr("How to add a new variable from the input line"),
+        //: Help contents of a selectable option for the Variable intro
             tr("<p>Variables and tables can also be defined from the input line in the main profile window like this:</p>"
                "<p><code>lua foo = &quot;bar&quot;</code></p>"
                "<p>This will create a string called 'foo' with 'bar' as its value.</p>")},
-        //: Name of a selectable option for the Messagebox in the Mudlet Variable Editor
-        {qsl("variable3"), tr("Check the Mudlet manual for more information"),
-        //: Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor
-            tr("<p>Start at the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>Introduction to Variables</a> for a detailed overview.</p>")}
-        }
-    });
+        {qsl("variable3"), tr("Where to find more information"),
+            qsl("<ul>%1%2%3</ul>").arg( // reduce clutter for translators
+                qsl("<li><p>%1</p></li>").arg(tr("Read the <a href='http://wiki.mudlet.org/w/Manual:Introduction#Variables'>Introduction to Variables</a> for a detailed overview.")),
+                qsl("<li><p>%1</p>").arg(tr("Do you maybe have any other suggestions, questions or doubts?")),
+                qsl("<p>%1</p></li>").arg(tr("Join our community on <a href='https://www.mudlet.org/chat'>Discord</a> or in <a href='https://forums.mudlet.org/'>Mudlet forums</a> - See you there!")))}}});
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
     //: Item is currently on, short enough to be spoken
