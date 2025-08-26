@@ -3,7 +3,7 @@
  <class>main_window</class>
  <widget class="QMainWindow" name="main_window">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="dockOptions">
-   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::VerticalTabs</set>
+   <set>QMainWindow::DockOption::AllowNestedDocks|QMainWindow::DockOption::AllowTabbedDocks|QMainWindow::DockOption::AnimatedDocks|QMainWindow::DockOption::VerticalTabs</set>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
@@ -63,19 +63,19 @@
        <number>0</number>
       </property>
       <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAsNeeded</enum>
+       <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
       </property>
       <property name="horizontalScrollBarPolicy">
-       <enum>Qt::ScrollBarAsNeeded</enum>
+       <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
       </property>
       <property name="viewMode">
-       <enum>QMdiArea::TabbedView</enum>
+       <enum>QMdiArea::ViewMode::TabbedView</enum>
       </property>
       <property name="tabShape">
-       <enum>QTabWidget::Rounded</enum>
+       <enum>QTabWidget::TabShape::Rounded</enum>
       </property>
       <property name="tabPosition">
-       <enum>QTabWidget::North</enum>
+       <enum>QTabWidget::TabPosition::North</enum>
       </property>
      </widget>
     </item>
@@ -87,7 +87,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -104,7 +104,6 @@
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
-    <addaction name="dactionToggleTimeStamp"/>
     <addaction name="dactionToggleReplay"/>
     <addaction name="dactionToggleLogging"/>
     <addaction name="dactionToggleEmergencyStop"/>
@@ -114,15 +113,8 @@
      <string>Options</string>
     </property>
     <addaction name="dactionOptions"/>
-    <addaction name="dactionMultiView"/>
-    <addaction name="dactionToggleFullScreen"/>
+    <addaction name="dactionToggleTimeStamp"/>
     <addaction name="separator"/>
-    <addaction name="menuMute"/>
-   </widget>
-   <widget class="QMenu" name="menuMute">
-    <property name="title">
-     <string>Mute media</string>
-    </property>
     <addaction name="dactionMuteMedia"/>
     <addaction name="dactionMuteAPI"/>
     <addaction name="dactionMuteGame"/>
@@ -151,6 +143,8 @@
     <property name="title">
      <string>Window</string>
     </property>
+    <addaction name="dactionToggleFullScreen"/>
+    <addaction name="dactionMultiView"/>
     <addaction name="dactionReattachDetachedWindows"/>
     <addaction name="separator"/>
     <addaction name="dactionToggleAlwaysOnTop"/>
@@ -237,7 +231,7 @@
     <string>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</string>
    </property>
    <property name="menuRole">
-    <enum>QAction::PreferencesRole</enum>
+    <enum>QAction::MenuRole::PreferencesRole</enum>
    </property>
   </action>
   <action name="dactionScriptEditor">
@@ -280,7 +274,7 @@
     <string comment="Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).">&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</string>
    </property>
    <property name="menuRole">
-    <enum>QAction::AboutRole</enum>
+    <enum>QAction::MenuRole::AboutRole</enum>
    </property>
   </action>
   <action name="dactionIRC">
@@ -296,7 +290,7 @@
     <string>Video tutorials</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens an (on-line) collection of "Educational Mudlet screencasts" in your system web-browser.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReplay">
@@ -368,7 +362,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>MultiView</string>
+    <string>Multiview</string>
    </property>
    <property name="toolTip">
     <string comment="Same text is used in 2 places.">&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</string>
@@ -382,7 +376,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Full Screen</string>
+    <string>Fullscreen</string>
    </property>
   </action>
   <action name="dactionMuteMedia">
@@ -481,7 +475,7 @@
     <string>Close Mudlet</string>
    </property>
    <property name="menuRole">
-    <enum>QAction::QuitRole</enum>
+    <enum>QAction::MenuRole::QuitRole</enum>
    </property>
   </action>
   <action name="dactionChangelog">
@@ -491,7 +485,7 @@
   </action>
   <action name="dactionToggleTimeStamp">
    <property name="text">
-    <string>Time Stamps</string>
+    <string>Timestamps</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</string>
@@ -499,7 +493,7 @@
   </action>
   <action name="dactionToggleReplay">
    <property name="text">
-    <string>Replay</string>
+    <string>Record replay</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</string>
@@ -507,7 +501,7 @@
   </action>
   <action name="dactionToggleLogging">
    <property name="text">
-    <string>Logging</string>
+    <string>Record log</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</string>
@@ -515,10 +509,10 @@
   </action>
   <action name="dactionToggleEmergencyStop">
    <property name="text">
-    <string>Emergency Stop</string>
+    <string>Emergency stop</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Toggle all scripting on or off..&lt;/p&gt;</string>
+    <string>&lt;p&gt;Toggle all triggers, aliases, timers, etc. on or off&lt;/p&gt;</string>
    </property>
   </action>
  </widget>
