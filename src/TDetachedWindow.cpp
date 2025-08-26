@@ -998,23 +998,24 @@ void TDetachedWindow::updateWindowTitle()
         }
 
         if (pHost) {
+            title += qsl(" - ");
             bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
             bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
 
             if (isConnected) {
-                //: This text will be part of to the title of a detached Mudlet window, if it is currently connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Connected to GAMENAME" (or maybe the last two words)
-                title += tr(" - Connected");
-
                 if (!pHost->getUrl().isEmpty()) {
                     //: This text will be added to the title of a detached Mudlet window, if it is currently connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Connected to GAMENAME"
-                    title += tr(" to %1").arg(pHost->getUrl());
+                    title += tr("Connected to %1").arg(pHost->getUrl());
+                } else {
+                    //: This text will be part of to the title of a detached Mudlet window, if it is currently connected but we don't know to where. The whole title will be like "Mudlet PROFILENAME (Detached) - Connected"
+                    title += tr("Connected");                    
                 }
             } else if (isConnecting) {
                 //: This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Connecting..."
-                title += tr(" - Connecting...");
+                title += tr("Connecting...");
             } else {
                 //: This text will be part of the title of a detached Mudlet window, if it is not connected. The whole title will be like "Mudlet PROFILENAME (Detached) - Disconnected"
-                title += tr(" - Disconnected");
+                title += tr("Disconnected");
             }
         }
     } else {
