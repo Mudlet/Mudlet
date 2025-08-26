@@ -4576,19 +4576,15 @@ QFont Host::getAndClearTempDisplayFont()
     return tempFont;
 }
 
-void Host::setUseModern3DMapper(const bool enabled)
-{
-    mUseModern3DMapper = enabled;
-}
-
 // Static whitelist of valid experiments
 const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.originalish"),
     qsl("experiment.rendering.more-transparent"),
-    qsl("experiment.rendering.smooth-camera"),
+    qsl("experiment.rendering-movement.smooth"),
+    qsl("experiment.3dmap.modernmapper"),
 };
 
-bool Host::isExperimentEnabled(const QString& experimentKey) const
+bool Host::experimentEnabled(const QString& experimentKey) const
 {
     return mExperiments.value(experimentKey, false);
 }
@@ -4607,12 +4603,10 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
             QString group = experimentKey.section('.', 0, 1);
             
             // Disable all other experiments in the same group
-            auto it = mExperiments.begin();
-            while (it != mExperiments.end()) {
+            for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
                 if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
                     it.value() = false;
                 }
-                ++it;
             }
         }
         mExperiments[experimentKey] = true;
@@ -4620,12 +4614,15 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
         mExperiments[experimentKey] = false;
     }
     
-    // Refresh 3D map if rendering experiments changed
-    if (experimentKey.startsWith(qsl("experiment.rendering."))) {
-        if (mpMap && mpMap->mpM) {
-            mpMap->mpM->update();
-        }
+#if defined(INCLUDE_3DMAPPER)
+    // Refresh maps if any experiments changed the 3D map
+    if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+        mpMap->mpMapper->mp2dMap->update();
     }
+    if (mpMap && mpMap->mpM) {
+        mpMap->mpM->update();
+    }
+#endif
     
     return {true, QString()};
 }

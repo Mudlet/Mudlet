@@ -842,7 +842,6 @@ void XMLimport::readHost(Host* pHost)
     const bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
-    pHost->setUseModern3DMapper(attributes().value(qsl("mUseModern3DMapper")) == YES);
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     if (pHost->mEditorTheme.isEmpty() || pHost->mEditorThemeFile.isEmpty()) {

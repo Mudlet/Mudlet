@@ -963,7 +963,6 @@ linux|macx|win32 {
 
 
 contains( DEFINES, INCLUDE_3DMAPPER ) {
-    # Always compile both widget implementations for runtime selection
     HEADERS += glwidget.h \
                modern_glwidget.h \
                glwidget_integration.h \

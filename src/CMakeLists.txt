@@ -377,7 +377,6 @@ if(USE_UPDATER)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
-  # Always compile both widget implementations for runtime selection
   list(APPEND mudlet_SRCS glwidget.cpp)
   list(APPEND mudlet_HDRS glwidget.h)
   list(APPEND mudlet_SRCS modern_glwidget.cpp)

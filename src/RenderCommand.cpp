@@ -39,13 +39,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& vertexBuffer,
                                QOpenGLBuffer& colorBuffer,
                                QOpenGLBuffer& normalBuffer)
-{
-    // Skip rendering if fully transparent
-    if (mA <= 0.0f) {
-        return;
-    }
-    
-    // Generate cube geometry
+{    
     GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
     
     // Set uniforms
@@ -77,7 +71,6 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
                                 QOpenGLBuffer& colorBuffer,
                                 QOpenGLBuffer& normalBuffer)
 {
-    // Generate line geometry
     GeometryData lineGeometry = geometryManager->generateLineGeometry(mVertices, mColors);
     
     if (lineGeometry.isEmpty()) {
@@ -112,7 +105,6 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                     QOpenGLBuffer& colorBuffer,
                                     QOpenGLBuffer& normalBuffer)
 {
-    // Generate triangle geometry
     GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
     
     if (triangleGeometry.isEmpty()) {

@@ -60,7 +60,6 @@ private:
     QString loadShaderSource(const QString& shaderName);
     bool createShaderProgram();
     bool detectDevelopmentMode();
-    QString getEmbeddedShaderSource(const QString& shaderName);
 
     std::unique_ptr<QOpenGLShaderProgram> mShaderProgram;
     QFileSystemWatcher* mFileWatcher;

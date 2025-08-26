@@ -156,8 +156,6 @@ find_package(Lua 5.1 EXACT)
 option(BUILD_WITH_QT5 "" OFF)
 # Set Qt version for qtkeychain
 option(BUILD_WITH_QT6 "" ON)
-# Use modern shader-based GLWidget implementation
-option(USE_MODERN_GLWIDGET "Use modern OpenGL shader-based GLWidget implementation" ON)
 
 include(InitGitSubmodule)
 
