@@ -4544,9 +4544,12 @@ bool dlgProfilePreferences::updateDisplayFont()
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
     QFont::insertSubstitution(mpHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
+#endif
+    // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
     // update the display properly when font or size or antiAliasing selections

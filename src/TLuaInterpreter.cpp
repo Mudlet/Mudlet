@@ -7118,12 +7118,14 @@ int TLuaInterpreter::getMapBackgroundColor(lua_State* L)
     lua_pushnumber(L, color.red());
     lua_pushnumber(L, color.green());
     lua_pushnumber(L, color.blue());
-    return 3;
+    lua_pushnumber(L, color.alpha());
+    return 4;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapBackgroundColor
 int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
 {
+    int a = 255;
     const int r = getVerifiedInt(L, __func__, 1, "red component");
     if (r < 0 || r > 255) {
         return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
@@ -7139,8 +7141,15 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
     }
 
+    if (lua_gettop(L) > 3) {
+        a = getVerifiedInt(L, __func__, 4, "alpha", true);
+        if (a < 0 || a > 255) {
+            return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
+        }
+    }
+
     auto& host = getHostFromLua(L);
-    host.mBgColor_2 = QColor(r, g, b);
+    host.mBgColor_2 = QColor(r, g, b, a);
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -7296,10 +7305,12 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
-            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");;
-            if (host.mpMap->mpMapper->mp2dMap) {
+            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
+
+            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->update();
             }
+
             return success();
         }
     }
@@ -7694,6 +7705,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
         { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } },
         { qsl("showTabConnectionIndicators"), [&](){ lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators); } },
+        { qsl("advertiseScreenReader"), [&](){ lua_pushboolean(L, host.mAdvertiseScreenReader); } },
         { qsl("ambiguousEAsianWidthCharacters"), [&]() {
             const auto ambiguousEAsianGlyphWidth = host.getWideAmbiguousEAsianGlyphsControlState();
             switch (ambiguousEAsianGlyphWidth) {
@@ -7706,7 +7718,9 @@ int TLuaInterpreter::getConfig(lua_State *L)
             default:
                 lua_pushstring(L, "auto");
             }
-        } }
+        } },
+        { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
     };
 
     auto it = configMap.find(key);

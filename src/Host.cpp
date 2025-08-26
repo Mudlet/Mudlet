@@ -1901,6 +1901,20 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
+        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
+            // Check if this is just a stale reference by verifying if module files actually exist
+            QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+            QString moduleFile = mInstalledModules.value(packageName).value(0); // Get the actual file path from stored reference
+            
+            bool moduleExists = QDir(modulePath).exists() || QFile::exists(moduleFile);
+            if (!moduleExists) {
+                // Module files don't exist, clean up stale references
+                mInstalledModules.remove(packageName);
+                mActiveModules.removeAll(packageName);
+            } else {
+                // Module actually exists, show duplicate error
+                return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
+            }
         } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
             return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
         }
@@ -1925,35 +1939,41 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return {false, qsl("could not create destination folder")};
         }
 
-        QUiLoader loader(this);
-        QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
-        uiFile.open(QFile::ReadOnly);
-        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
-        uiFile.close();
-        if (!pUnzipDialog) {
-            return {false, qsl("could not load unpacking progress dialog")};
-        }
-
-        auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
-        if (pLabel) {
-            if (thing != enums::PackageModuleType::Package) {
-                pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
-            } else {
-                pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
+        // Skip the unpacking dialog for modules created from UI to avoid unwanted popups
+        if (thing != enums::PackageModuleType::ModuleFromUI) {
+            QUiLoader loader(this);
+            QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
+            uiFile.open(QFile::ReadOnly);
+            pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
+            uiFile.close();
+            if (!pUnzipDialog) {
+                return {false, qsl("could not load unpacking progress dialog")};
             }
+
+            auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
+            if (pLabel) {
+                if (thing != enums::PackageModuleType::Package) {
+                    pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
+                } else {
+                    pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
+                }
+            }
+            pUnzipDialog->hide(); // Must hide to change WindowModality
+            pUnzipDialog->setWindowTitle(tr("Unpacking"));
+            pUnzipDialog->setWindowModality(Qt::ApplicationModal);
+            pUnzipDialog->show();
+            qApp->processEvents();
+            pUnzipDialog->raise();
+            pUnzipDialog->repaint(); // Force a redraw
+            qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
         }
-        pUnzipDialog->hide(); // Must hide to change WindowModality
-        pUnzipDialog->setWindowTitle(tr("Unpacking"));
-        pUnzipDialog->setWindowModality(Qt::ApplicationModal);
-        pUnzipDialog->show();
-        qApp->processEvents();
-        pUnzipDialog->raise();
-        pUnzipDialog->repaint(); // Force a redraw
-        qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
         auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
-        pUnzipDialog->deleteLater();
-        pUnzipDialog = nullptr;
+        
+        if (pUnzipDialog) {
+            pUnzipDialog->deleteLater();
+            pUnzipDialog = nullptr;
+        }
         if (!unzipSuccessful) {
             return {false, qsl("could not unzip package")};
         }
@@ -2070,6 +2090,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
     if (mpPackageManager) {
         mpPackageManager->resetPackageTable();
+    }
+    if (mpModuleManager) {
+        mpModuleManager->layoutModules();
+    }
+    
+    // Save profile to ensure modules persist and appear in module manager
+    if (thing != enums::PackageModuleType::Package) {
+        // Use a timer to save profile after module installation completes
+        QTimer::singleShot(100, this, [this]() {
+            saveProfile();
+        });
     }
 
     return {true, QString()};

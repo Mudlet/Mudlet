@@ -1087,6 +1087,10 @@ void XMLimport::readHost(Host* pHost)
                     moduleList << entryList.at(1);
                     pHost->mInstalledModules[it.key()] = moduleList;
                     pHost->mModulePriorities[it.key()] = entryList.at(2).toInt();
+                    // Also add to active modules list to match runtime state
+                    if (!pHost->mActiveModules.contains(it.key())) {
+                        pHost->mActiveModules.append(it.key());
+                    }
                 }
             } else if (name() == qsl("mInstalledPackages")) {
                 readStringList(pHost->mInstalledPackages, qsl("Host"));
@@ -1219,9 +1223,12 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mDisplayFont")) {
                 pHost->setDisplayFontFromString(readElementText());
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
                 // On GNU/Linux and FreeBSD ensure that emojis are displayed in
                 // colour even if this font doesn't support it:
                 QFont::insertSubstitution(pHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
+#endif
+                // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this
