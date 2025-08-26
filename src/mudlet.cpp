@@ -4989,7 +4989,6 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         if (!file.open(QFile::ReadOnly | QFile::Text)) {
             qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
-            return nullptr;
         }
         XMLimport importer(pHost);
 
