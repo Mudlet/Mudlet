@@ -2717,24 +2717,24 @@ int TLuaInterpreter::closeProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createComposer
 int TLuaInterpreter::createComposer(lua_State* L)
 {
-    Host& host = getHostFromLua(pGlobalLua);
-    const QString title;
-    const QString text;
-    const int function;
+    Host& host = getHostFromLua(L);
+    QString title;
+    QString text;
+    // int function;
 
-    if (!host.mTelnet || !host.mTelnet.mpComposer) {
-        return;
+    if (host.mTelnet.mpComposer ) {
+        return warnArgumentValue(L, __func__, "composer already present");
     }
 
     if (lua_gettop(L) == 0) {
-        title = QString;
-        text = QString;
-        function = -1;
-    } else if lua_gettop(L) >= 1) {
+        title = QString();
+        text = QString();
+        // function = -1;
+    } else if (lua_gettop(L) >= 1) {
         title = getVerifiedString(L, __func__, 1, "title");
-    } else if lua_gettop(L) >= 2) {
-        text = getVerifiedString(L, __func__, 1, "text");
-    } else if lua_gettop(L) >= 3) {
+    } else if (lua_gettop(L) >= 2) {
+        text = getVerifiedString(L, __func__, 2, "text");
+    } else if (lua_gettop(L) >= 3) {
         if (!lua_isfunction(L, 3)) {
             lua_pushfstring(L, "createComposer: bad argument #3 type (callback as function expected, got %s!)", luaL_typename(L, 3));
             return lua_error(L);
@@ -2755,56 +2755,59 @@ int TLuaInterpreter::createComposer(lua_State* L)
         host.mTelnet.mpComposer->close();
         host.mTelnet.mpComposer = nullptr;
     }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getComposerText
 int TLuaInterpreter::getComposerText(lua_State* L)
 {
-    Host& host = getHostFromLua(pGlobalLua);
+    Host& host = getHostFromLua(L);
 
-    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+    if (!host.mTelnet.mpComposer) {
         return warnArgumentValue(L, __func__, "no composer present or loaded");
     }
 
-    lua_pushstring(L, host.mTelnet.mpComposer.edit->toPlainText());
+    lua_pushstring(L, host.mTelnet.mpComposer->edit->toPlainText().toUtf8().constData());
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getComposerTitle
 int TLuaInterpreter::getComposerTitle(lua_State* L)
 {
-    Host& host = getHostFromLua(pGlobalLua);
+    Host& host = getHostFromLua(L);
 
-    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+    if (!host.mTelnet.mpComposer) {
         return warnArgumentValue(L, __func__, "no composer present or loaded");
     }
 
-    lua_pushstring(L, host.mTelnet.mpComposer->title->toPlainText());
+    lua_pushstring(L, host.mTelnet.mpComposer->title->text().toUtf8().constData());
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setComposerText
 int TLuaInterpreter::setComposerText(lua_State* L)
 {
-    Host& host = getHostFromLua(pGlobalLua);
+    Host& host = getHostFromLua(L);
 
-    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+    if (!host.mTelnet.mpComposer) {
         return warnArgumentValue(L, __func__, "no composer present or loaded");
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "text");
-    host.mTelnet.mpComposer.edit->setPlainText(text);
+    host.mTelnet.mpComposer->edit->setPlainText(text);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setComposerTitle
 int TLuaInterpreter::setComposerTitle(lua_State* L)
 {
-    Host& host = getHostFromLua(pGlobalLua);
+    Host& host = getHostFromLua(L);
 
-    if (!host.mTelnet || !host.mTelnet.mpComposer) {
+    if (!host.mTelnet.mpComposer) {
         return warnArgumentValue(L, __func__, "no composer present or loaded");
     }
 
     const QString title = getVerifiedString(L, __func__, 1, "title");
-    host.mTelnet.mpComposer.title->setText(title);
+    host.mTelnet.mpComposer->title->setText(title);
+    return 1;
 }
