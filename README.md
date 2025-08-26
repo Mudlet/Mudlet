@@ -107,7 +107,7 @@ Mudlet's [vision](https://www.mudlet.org/about/vision/) is to build the best tex
 
 ## Roadmap
 
-See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed, as well as 
+See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed
 
 ## Contribute
 
