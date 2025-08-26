@@ -630,15 +630,11 @@ void dlgConnectionProfiles::slot_saveName()
                         
                         // If we found any orphaned entries, clean them up
                         if (foundCharacterEntry || foundProxyEntry) {
-                            qDebug() << "dlgConnectionProfiles: Found orphaned keychain entries for new profile" << newProfileName << "- cleaning up";
-                            
                             if (foundCharacterEntry) {
                                 credManager->removeCredential(newProfileName, "character", 
                                     [newProfileName](bool success, const QString& errorMessage) {
-                                        if (success) {
-                                            qDebug() << "dlgConnectionProfiles: Successfully cleaned up orphaned character password for" << newProfileName;
-                                        } else {
-                                            qDebug() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
                                         }
                                     });
                             }
@@ -646,10 +642,8 @@ void dlgConnectionProfiles::slot_saveName()
                             if (foundProxyEntry) {
                                 credManager->removeCredential(newProfileName, "proxy", 
                                     [newProfileName](bool success, const QString& errorMessage) {
-                                        if (success) {
-                                            qDebug() << "dlgConnectionProfiles: Successfully cleaned up orphaned proxy password for" << newProfileName;
-                                        } else {
-                                            qDebug() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
                                         }
                                     });
                             }
@@ -810,20 +804,16 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         // Clean up character password entry
         credManager->removeCredential(profile, "character", 
             [profile](bool success, const QString& errorMessage) {
-                if (success) {
-                    qDebug() << "dlgConnectionProfiles: Successfully cleaned up character password for deleted profile" << profile;
-                } else {
-                    qDebug() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
+                if (!success) {
+                    qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
                 }
             });
         
         // Clean up proxy password entry (if any)
         credManager->removeCredential(profile, "proxy", 
             [credManager, profile](bool success, const QString& errorMessage) {
-                if (success) {
-                    qDebug() << "dlgConnectionProfiles: Successfully cleaned up proxy password for deleted profile" << profile;
-                } else {
-                    qDebug() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
+                if (!success) {
+                    qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
                 }
                 
                 // Clean up the credential manager after both operations
