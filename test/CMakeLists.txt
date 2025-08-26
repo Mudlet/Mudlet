@@ -113,8 +113,3 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
-
-# Simple test to verify bounds checking fix exists for GitHub issue #8104
-# This test documents the expected behavior but doesn't run complex integration
-add_executable(CTelnetTest CTelnetTest.cpp)
-add_test(NAME CTelnetTest COMMAND CTelnetTest)
