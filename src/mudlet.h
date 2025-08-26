@@ -26,7 +26,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Announcer.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
@@ -676,7 +675,6 @@ private:
     QPointer<QAction> mpActionToggleMainToolBar;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-    Announcer* mpAnnouncer = nullptr;
     // This pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsequent
     // loadTranslators(...) call

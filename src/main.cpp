@@ -44,7 +44,6 @@
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
-#include "Announcer.h"
 #include "FileOpenHandler.h"
 
 using namespace std::chrono_literals;
@@ -236,10 +235,6 @@ int main(int argc, char* argv[])
 
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
-
-#if defined(Q_OS_LINUX)
-    QAccessible::installFactory(Announcer::accessibleFactory);
-#endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
