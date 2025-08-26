@@ -1623,7 +1623,13 @@ OTHER_FILES += \
     ../.github/CODEOWNERS \
     ../.github/codeql/codeql-config.yml \
     ../.github/codespell-wordlist.txt \
+    ../.ai/ai-instructions.md \
+    ../.cursorrules \
     ../.github/CONTRIBUTING.md \
+    ../.github/copilot-instructions.md \
+    ../AGENTS.md \
+    ../AI-ASSISTANTS.md \
+    ../CLAUDE.md \
     ../.github/dependabot.yml \
     ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
