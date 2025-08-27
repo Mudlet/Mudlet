@@ -312,6 +312,7 @@ public:
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
+    void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&);
     void setToolBarIconSize(int);
@@ -319,6 +320,7 @@ public:
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
+    bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
@@ -715,6 +717,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mShowMapAuditErrors = false;
+    bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;
     // Argument to QDateTime::toString(...) to format the elapsed time display
