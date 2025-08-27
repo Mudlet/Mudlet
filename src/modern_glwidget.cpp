@@ -200,7 +200,7 @@ void ModernGLWidget::paintGL()
     }
 
     int ox, oy, oz;
-    if (!mShiftMode && !mCameraSmoothAnimating) {
+    if (!mShiftMode) {
         mRID = mpMap->mRoomIdHash.value(mpMap->mProfileName);
         TRoom* pRID = mpMap->mpRoomDB->getRoom(mRID);
         if (!pRID) {
@@ -243,26 +243,19 @@ void ModernGLWidget::paintGL()
                      << "to (" << targetX << "," << targetY << "," << targetZ << ")";
             
             startSmoothTransition(targetAID, targetX, targetY, targetZ);
-            mPreviousRID = mRID; // Update tracking
-            
-            // Use current position for this frame while animation starts
-            ox = mMapCenterX;
-            oy = mMapCenterY;  
-            oz = mMapCenterZ;
-        } else {
-            // No room change or experiment disabled - use instant positioning
-            mAID = pRID->getArea();
-            ox = pRID->x();
-            oy = pRID->y();
-            oz = pRID->z();
-            mMapCenterX = ox;
-            mMapCenterY = oy;
-            mMapCenterZ = oz;
-            mPreviousRID = mRID; // Update tracking
-            
-            if (mRID != mPreviousRID) {
-                qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
-            }
+        }
+        // Instant update map (smooth transition only impacts camera position)
+        mAID = pRID->getArea();
+        ox = pRID->x();
+        oy = pRID->y();
+        oz = pRID->z();
+        mMapCenterX = ox;
+        mMapCenterY = oy;
+        mMapCenterZ = oz;
+        mPreviousRID = mRID; // Update tracking
+
+        if (mRID != mPreviousRID) {
+            qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
         }
 
     } else {
@@ -1269,6 +1262,9 @@ QColor ModernGLWidget::getEnvironmentColor(TRoom* pRoom)
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)
 {
     
+    // Very slow for demonstration
+    mAnimationDuration = 500;
+
     // Set up animation parameters
     mTargetAID = targetAID;
     mTargetMapCenterX = static_cast<float>(targetX);
@@ -1276,15 +1272,26 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     mTargetMapCenterZ = static_cast<float>(targetZ);
     
     // Store current position as start position
-    mStartMapCenterX = static_cast<float>(mMapCenterX);
-    mStartMapCenterY = static_cast<float>(mMapCenterY);
-    mStartMapCenterZ = static_cast<float>(mMapCenterZ);
+    if (mCameraSmoothAnimating) {
+        mStartMapCenterX = mCurrentAnimationX;
+        mStartMapCenterY = mCurrentAnimationY;
+        mStartMapCenterZ = mCurrentAnimationZ;
+    } else {
+        mStartMapCenterX = static_cast<float>(mMapCenterX);
+        mStartMapCenterY = static_cast<float>(mMapCenterY);
+        mStartMapCenterZ = static_cast<float>(mMapCenterZ);
+    }
     
     // Initialize current animation position
     mCurrentAnimationX = mStartMapCenterX;
     mCurrentAnimationY = mStartMapCenterY;
     mCurrentAnimationZ = mStartMapCenterZ;
     
+    // update map's actual position
+    mMapCenterX = static_cast<float>(targetX);
+    mMapCenterY = static_cast<float>(targetY);
+    mMapCenterZ = static_cast<float>(targetZ);
+
     // Reset animation progress
     mAnimationProgress = 0.0;
     
@@ -1308,9 +1315,7 @@ void ModernGLWidget::onCameraAnimationTick()
         mCameraAnimationTimer->stop();
         
         mAID = mTargetAID;
-        mMapCenterX = static_cast<int>(mTargetMapCenterX);
-        mMapCenterY = static_cast<int>(mTargetMapCenterY);
-        mMapCenterZ = static_cast<int>(mTargetMapCenterZ);
+        mCameraController.setTarget(static_cast<int>(mTargetMapCenterX), static_cast<int>(mTargetMapCenterY), static_cast<int>(mTargetMapCenterZ));
         
         // Set final floating-point position
         mCurrentAnimationX = mTargetMapCenterX;
@@ -1331,7 +1336,7 @@ void ModernGLWidget::onCameraAnimationTick()
     }
     
     // Update camera controller with current floating-point position
-    mCameraController.setViewCenter(mCurrentAnimationX, mCurrentAnimationY, mCurrentAnimationZ);
+    mCameraController.setTarget(mCurrentAnimationX, mCurrentAnimationY, mCurrentAnimationZ);
     
     // Trigger a repaint
     update();
