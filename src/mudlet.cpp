@@ -75,6 +75,8 @@
 #include <QNetworkDiskCache>
 #include <QMediaPlayer>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QPoint>
 #include <QScreen>
 #include <QScrollBar>
