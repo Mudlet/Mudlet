@@ -2863,7 +2863,6 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
-    connect(mpConnectionDialog, &QObject::destroyed, this, [=, this]() { mpConnectionDialog = nullptr; });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
     
     // Use a timer to ensure the main window is ready before showing the dialog
