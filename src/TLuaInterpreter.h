@@ -217,6 +217,7 @@ public:
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
     static int sendIrc(lua_State*);
+    static int openIRC(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);
     static int getIrcChannels(lua_State*);
