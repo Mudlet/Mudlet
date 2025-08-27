@@ -508,8 +508,8 @@ void ModernGLWidget::renderRooms()
                     overlayAlpha,
                     mZSquishFactor);
 
-            // 3. Render up/down exit indicators on the overlay
-            renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
+            // 3. DON'T Render up/down exit indicators on the overlay
+            // renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
         } else {
         renderCube(rx,
                    ry,
