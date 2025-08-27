@@ -142,7 +142,7 @@ void GeometryManager::generateCubeTemplate()
     // Colors will be set per instance, so we don't populate them in the template
 }
 
-GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a)
+GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor)
 {
     GeometryData result;
     
@@ -151,7 +151,7 @@ GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, f
         // Scale and translate vertex
         result.vertices << (mCubeTemplate.vertices[i] * size + x);
         result.vertices << (mCubeTemplate.vertices[i + 1] * size + y);  
-        result.vertices << (mCubeTemplate.vertices[i + 2] * size + z);
+        result.vertices << (mCubeTemplate.vertices[i + 2] * size/zSquishFactor + z);
         
         // Copy normal (no transformation needed since it's a uniform scale)
         result.normals << mCubeTemplate.normals[i];
@@ -165,14 +165,14 @@ GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, f
     return result;
 }
 
-GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a)
+GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor)
 {
     if (!mInitialized) {
         qWarning() << "GeometryManager: generateCubeGeometry called before initialize()";
         return GeometryData();
     }
     
-    return transformCubeTemplate(x, y, z, size, r, g, b, a);
+    return transformCubeTemplate(x, y, z, size, r, g, b, a, zSquishFactor);
 }
 
 GeometryData GeometryManager::generateLineGeometry(const QVector<float>& vertices, const QVector<float>& colors)

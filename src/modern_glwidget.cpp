@@ -325,6 +325,13 @@ void ModernGLWidget::renderRooms()
         return;
     }
 
+    if (mpHost && mpHost->experimentEnabled("experiment.rendering-z.squished-rooms")) {
+        mZSquishFactor = 8.0f;
+    } else {
+        mZSquishFactor = 1.0f;
+    }
+
+
     float pz = static_cast<float>(mMapCenterZ);
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
@@ -357,24 +364,38 @@ void ModernGLWidget::renderRooms()
         bool isCurrentRoom = (rz == pz) && (rx == px) && (ry == py);
         bool isTargetRoom = (currentRoomId == mTargetRoomId);
         bool belowOrAtLevel = (rz <= pz);
+        float roomAlpha = 1.0f;
 
         // 1. Render main room cube using correct planeColor logic
         if (isCurrentRoom) {
             // Current room: red
-            renderCube(rx, ry, rz, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f);
+            renderCube(rx, ry, rz, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f, mZSquishFactor);
         } else if (isTargetRoom) {
             // Target room: green
-            renderCube(rx, ry, rz, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f);
+            renderCube(rx, ry, rz, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f, mZSquishFactor);
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
             float redComponent = roomColor.redF();
             float greenComponent = roomColor.greenF(); 
             float blueComponent = roomColor.blueF();
-            float roomAlpha = 1.0f;
             
-            // Check for more-transparent experiment
-            if (mpHost->experimentEnabled("experiment.rendering.more-transparent")) {
+            // Check for experimental rendering styles
+            if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+                static bool debugOnce = false;
+                if (!debugOnce) {
+                    qDebug() << "[Experiment Debug] Sky-ground experiment is ENABLED";
+                    debugOnce = true;
+                }
+                int levelDistance = static_cast<int>(rz - pz);
+                // rooms above current -> increasing alpha
+                roomAlpha = qBound(0.2f, roomAlpha - (0.2f * levelDistance), 1.0f);
+            
+                // Lighten rooms above, darken rooms below
+                redComponent = qBound(0.1f, redComponent + 0.2f*levelDistance, 0.9f);
+                greenComponent = qBound(0.1f, greenComponent + 0.2f*levelDistance, 0.9f);
+                blueComponent = qBound(0.1f, blueComponent + 0.2f*levelDistance, 0.9f);
+            } else if (mpHost->experimentEnabled("experiment.rendering.more-transparent")) {
                 static bool debugOnce = false;
                 if (!debugOnce) {
                     qDebug() << "[Experiment Debug] More-transparent experiment is ENABLED - SLIDING DARKNESS TEST";
@@ -383,7 +404,7 @@ void ModernGLWidget::renderRooms()
                 // EXPERIMENT: Apply sliding darkness based on level distance
                 int levelDistance = abs(static_cast<int>(rz - pz));
                 float darknessFactor = 1.0f; // Default: no darkness
-                
+
                 if (levelDistance == 1) {
                     darknessFactor = 0.5f; // 50% darker
                 } else if (levelDistance == 2) {
@@ -391,16 +412,16 @@ void ModernGLWidget::renderRooms()
                 } else if (levelDistance > 2) {
                     darknessFactor = 0.05f; // 95% darker
                 }
-                
+
                 // Apply darkness to color components, keep full opacity
                 redComponent *= darknessFactor;
                 greenComponent *= darknessFactor;
                 blueComponent *= darknessFactor;
                 roomAlpha = 1.0f; // Full opacity
-                
+
                 if (levelDistance > 0) {
                     qDebug() << "[Sliding Darkness] Room Z:" << rz << "Player Z:" << pz 
-                             << "Distance:" << levelDistance << "Darkness factor:" << darknessFactor;
+                        << "Distance:" << levelDistance << "Darkness factor:" << darknessFactor;
                 }
             } else {
                 // Original rendering: rooms above are dark and transparent
@@ -414,8 +435,12 @@ void ModernGLWidget::renderRooms()
                     blueComponent *= darkenFactor;
                 }
             }
-            
-            renderCube(rx, ry, rz, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha);
+
+            if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+                renderCube(rx, ry, rz, 1.0f / scale * roomAlpha, redComponent, greenComponent, blueComponent, roomAlpha, mZSquishFactor);
+            } else {
+                renderCube(rx, ry, rz, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha, mZSquishFactor);
+            }
         }
 
         // 2. Render thin environment color overlay on top
@@ -424,14 +449,24 @@ void ModernGLWidget::renderRooms()
         //mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
 
         QColor envColor = getEnvironmentColor(pR);
-        float overlayZ = rz + 0.25f; // Slightly above the main cube
+        float overlayZ = rz + 0.25f/mZSquishFactor; // Slightly above the main cube
         float envRed = envColor.redF();
         float envGreen = envColor.greenF();
         float envBlue = envColor.blueF();
         float overlayAlpha = 0.8f; // Default overlay transparency
         
         // Apply same sliding darkness to environment overlay
-        if (mpHost->experimentEnabled("experiment.rendering.more-transparent")) {
+        if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+            // rooms above current -> increasing alpha
+            int levelDistance = static_cast<int>(rz - pz);
+            float overlayAlpha = roomAlpha * 0.8f;
+            
+            // Lighten rooms above, darken rooms below
+            envRed = qBound(0.1f, envRed + 0.1f*levelDistance, 0.9f);
+            envGreen = qBound(0.1f, envGreen + 0.1f*levelDistance, 0.9f);
+            envBlue = qBound(0.1f, envBlue + 0.1f*levelDistance, 0.9f);
+
+        } else if (mpHost->experimentEnabled("experiment.rendering.more-transparent")) {
             // EXPERIMENT: Apply same darkness calculation to environment overlay
             int levelDistance = abs(static_cast<int>(rz - pz));
             float darknessFactor = 1.0f; // Default: no darkness
@@ -462,6 +497,20 @@ void ModernGLWidget::renderRooms()
             }
         }
         
+        if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+            renderCube(rx,
+                    ry,
+                    overlayZ,
+                    0.75f / scale * roomAlpha, // Slightly smaller and thinner
+                    envRed,
+                    envGreen,
+                    envBlue,
+                    overlayAlpha,
+                    mZSquishFactor);
+
+            // 3. Render up/down exit indicators on the overlay
+            renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
+        } else {
         renderCube(rx,
                    ry,
                    overlayZ,
@@ -469,10 +518,12 @@ void ModernGLWidget::renderRooms()
                    envRed,
                    envGreen,
                    envBlue,
-                   overlayAlpha);
+                   overlayAlpha,
+                   mZSquishFactor);
 
         // 3. Render up/down exit indicators on the overlay
-        renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f);
+        renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
+        }
 
         // Re-enable depth testing for subsequent rendering
         auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
@@ -636,13 +687,13 @@ void ModernGLWidget::renderConnections()
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
 
                 // Render green area exit cube at the destination position with translucency and darkening
-                renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
+                renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha, mZSquishFactor);
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
                 //auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
                 //mRenderCommandQueue.addCommand(std::move(disableDepthCommand2));
                 QColor envColor = getEnvironmentColor(pExit);
-                float overlayZ = dz + 0.25f;
+                float overlayZ = dz + 0.25f/mZSquishFactor;
                 float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
                 
                 // Darken area exit environment overlay if above current level
@@ -665,7 +716,8 @@ void ModernGLWidget::renderConnections()
                            exitEnvRed,
                            exitEnvGreen,
                            exitEnvBlue,
-                           overlayAlpha);
+                           overlayAlpha,
+                           mZSquishFactor);
                 auto enableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
                 mRenderCommandQueue.addCommand(std::move(enableDepthCommand2));
             }
@@ -678,10 +730,10 @@ void ModernGLWidget::renderConnections()
     }
 }
 
-void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a)
+void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor)
 {
     // Create render command and queue it
-    auto command = std::make_unique<RenderCubeCommand>(x, y, z, size, r, g, b, a, 
+    auto command = std::make_unique<RenderCubeCommand>(x, y, z, size, r, g, b, a, zSquishFactor,
                                                       mCameraController.getProjectionMatrix(), 
                                                       mCameraController.getViewMatrix(), 
                                                       mCameraController.getModelMatrix());
@@ -1092,58 +1144,58 @@ QColor ModernGLWidget::getPlaneColor(int zLevel, bool belowOrAtLevel)
 {
     // Both color arrays from original glwidget.cpp
     static const float planeColor[][4] = {{0.5f, 0.6f, 0.5f, 0.2f},
-                                          {0.233f, 0.498f, 0.113f, 0.2f},
-                                          {0.666f, 0.333f, 0.498f, 0.2f},
-                                          {0.5f, 0.333f, 0.666f, 0.2f},
-                                          {0.69f, 0.458f, 0.0f, 0.2f},
-                                          {0.333f, 0.0f, 0.49f, 0.2f},
-                                          {133.0f / 255.0f, 65.0f / 255.0f, 98.0f / 255.0f, 0.2f},
-                                          {0.3f, 0.3f, 0.0f, 0.2f},
-                                          {0.6f, 0.2f, 0.6f, 0.2f},
-                                          {0.6f, 0.6f, 0.2f, 0.2f},
-                                          {0.4f, 0.1f, 0.4f, 0.2f},
-                                          {0.4f, 0.4f, 0.1f, 0.2f},
-                                          {0.3f, 0.1f, 0.3f, 0.2f},
-                                          {0.3f, 0.3f, 0.1f, 0.2f},
-                                          {0.2f, 0.1f, 0.2f, 0.2f},
-                                          {0.2f, 0.2f, 0.1f, 0.2f},
-                                          {0.24f, 0.1f, 0.5f, 0.2f},
-                                          {0.1f, 0.1f, 0.0f, 0.2f},
-                                          {0.54f, 0.6f, 0.2f, 0.2f},
-                                          {0.2f, 0.2f, 0.5f, 0.2f},
-                                          {0.6f, 0.6f, 0.2f, 0.2f},
-                                          {0.6f, 0.4f, 0.6f, 0.2f},
-                                          {0.4f, 0.4f, 0.1f, 0.2f},
-                                          {0.4f, 0.2f, 0.4f, 0.2f},
-                                          {0.2f, 0.2f, 0.0f, 0.2f},
-                                          {0.2f, 0.1f, 0.3f, 0.2f}};
+        {0.233f, 0.498f, 0.113f, 0.2f},
+        {0.666f, 0.333f, 0.498f, 0.2f},
+        {0.5f, 0.333f, 0.666f, 0.2f},
+        {0.69f, 0.458f, 0.0f, 0.2f},
+        {0.333f, 0.0f, 0.49f, 0.2f},
+        {133.0f / 255.0f, 65.0f / 255.0f, 98.0f / 255.0f, 0.2f},
+        {0.3f, 0.3f, 0.0f, 0.2f},
+        {0.6f, 0.2f, 0.6f, 0.2f},
+        {0.6f, 0.6f, 0.2f, 0.2f},
+        {0.4f, 0.1f, 0.4f, 0.2f},
+        {0.4f, 0.4f, 0.1f, 0.2f},
+        {0.3f, 0.1f, 0.3f, 0.2f},
+        {0.3f, 0.3f, 0.1f, 0.2f},
+        {0.2f, 0.1f, 0.2f, 0.2f},
+        {0.2f, 0.2f, 0.1f, 0.2f},
+        {0.24f, 0.1f, 0.5f, 0.2f},
+        {0.1f, 0.1f, 0.0f, 0.2f},
+        {0.54f, 0.6f, 0.2f, 0.2f},
+        {0.2f, 0.2f, 0.5f, 0.2f},
+        {0.6f, 0.6f, 0.2f, 0.2f},
+        {0.6f, 0.4f, 0.6f, 0.2f},
+        {0.4f, 0.4f, 0.1f, 0.2f},
+        {0.4f, 0.2f, 0.4f, 0.2f},
+        {0.2f, 0.2f, 0.0f, 0.2f},
+        {0.2f, 0.1f, 0.3f, 0.2f}};
 
     static const float planeColor2[][4] = {{0.9f, 0.5f, 0.0f, 1.0f},
-                                           {165.0f / 255.0f, 102.0f / 255.0f, 167.0f / 255.0f, 1.0f},
-                                           {170.0f / 255.0f, 10.0f / 255.0f, 127.0f / 255.0f, 1.0f},
-                                           {203.0f / 255.0f, 135.0f / 255.0f, 101.0f / 255.0f, 1.0f},
-                                           {154.0f / 255.0f, 154.0f / 255.0f, 115.0f / 255.0f, 1.0f},
-                                           {107.0f / 255.0f, 154.0f / 255.0f, 100.0f / 255.0f, 1.0f},
-                                           {154.0f / 255.0f, 184.0f / 255.0f, 111.0f / 255.0f, 1.0f},
-                                           {67.0f / 255.0f, 154.0f / 255.0f, 148.0f / 255.0f, 1.0f},
-                                           {154.0f / 255.0f, 118.0f / 255.0f, 151.0f / 255.0f, 1.0f},
-                                           {208.0f / 255.0f, 213.0f / 255.0f, 164.0f / 255.0f, 1.0f},
-                                           {213.0f / 255.0f, 169.0f / 255.0f, 158.0f / 255.0f, 1.0f},
-                                           {139.0f / 255.0f, 209.0f / 255.0f, 0.0f, 1.0f},
-                                           {163.0f / 255.0f, 209.0f / 255.0f, 202.0f / 255.0f, 1.0f},
-                                           {158.0f / 255.0f, 156.0f / 255.0f, 209.0f / 255.0f, 1.0f},
-                                           {209.0f / 255.0f, 144.0f / 255.0f, 162.0f / 255.0f, 1.0f},
-                                           {209.0f / 255.0f, 183.0f / 255.0f, 78.0f / 255.0f, 1.0f},
-                                           {111.0f / 255.0f, 209.0f / 255.0f, 88.0f / 255.0f, 1.0f},
-                                           {95.0f / 255.0f, 120.0f / 255.0f, 209.0f / 255.0f, 1.0f},
-                                           {31.0f / 255.0f, 209.0f / 255.0f, 126.0f / 255.0f, 1.0f},
-                                           {1.0f, 170.0f / 255.0f, 1.0f, 1.0f},
-                                           {158.0f / 255.0f, 105.0f / 255.0f, 158.0f / 255.0f, 1.0f},
-                                           {68.0f / 255.0f, 189.0f / 255.0f, 189.0f / 255.0f, 1.0f},
-                                           {0.1f, 0.69f, 0.49f, 1.0f},
-                                           {0.0f, 0.15f, 1.0f, 1.0f},
-                                           {0.12f, 0.02f, 0.20f, 1.0f},
-                                           {0.0f, 0.3f, 0.1f, 1.0f}};
+        {165.0f / 255.0f, 102.0f / 255.0f, 167.0f / 255.0f, 1.0f},
+        {170.0f / 255.0f, 10.0f / 255.0f, 127.0f / 255.0f, 1.0f},
+        {203.0f / 255.0f, 135.0f / 255.0f, 101.0f / 255.0f, 1.0f},
+        {154.0f / 255.0f, 154.0f / 255.0f, 115.0f / 255.0f, 1.0f},
+        {107.0f / 255.0f, 154.0f / 255.0f, 100.0f / 255.0f, 1.0f},
+        {154.0f / 255.0f, 184.0f / 255.0f, 111.0f / 255.0f, 1.0f},
+        {67.0f / 255.0f, 154.0f / 255.0f, 148.0f / 255.0f, 1.0f},
+        {154.0f / 255.0f, 118.0f / 255.0f, 151.0f / 255.0f, 1.0f},
+        {208.0f / 255.0f, 213.0f / 255.0f, 164.0f / 255.0f, 1.0f},
+        {213.0f / 255.0f, 169.0f / 255.0f, 158.0f / 255.0f, 1.0f},
+        {139.0f / 255.0f, 209.0f / 255.0f, 0.0f, 1.0f},
+        {163.0f / 255.0f, 209.0f / 255.0f, 202.0f / 255.0f, 1.0f},
+        {158.0f / 255.0f, 156.0f / 255.0f, 209.0f / 255.0f, 1.0f},
+        {209.0f / 255.0f, 144.0f / 255.0f, 162.0f / 255.0f, 1.0f},
+        {209.0f / 255.0f, 183.0f / 255.0f, 78.0f / 255.0f, 1.0f},
+        {111.0f / 255.0f, 209.0f / 255.0f, 88.0f / 255.0f, 1.0f},
+        {95.0f / 255.0f, 120.0f / 255.0f, 209.0f / 255.0f, 1.0f},
+        {31.0f / 255.0f, 209.0f / 255.0f, 126.0f / 255.0f, 1.0f},
+        {1.0f, 170.0f / 255.0f, 1.0f, 1.0f},
+        {158.0f / 255.0f, 105.0f / 255.0f, 158.0f / 255.0f, 1.0f},
+        {68.0f / 255.0f, 189.0f / 255.0f, 189.0f / 255.0f, 1.0f},
+        {0.1f, 0.69f, 0.49f, 1.0f},
+        {0.0f, 0.15f, 1.0f, 1.0f},
+        {0.12f, 0.02f, 0.20f, 1.0f},
+        {0.0f, 0.3f, 0.1f, 1.0f}};
 
     int ef = abs(zLevel % 26);
     const float* color;
@@ -1152,18 +1204,26 @@ QColor ModernGLWidget::getPlaneColor(int zLevel, bool belowOrAtLevel)
     // rz <= pz: glColor4f(planeColor[ef]) - use planeColor for rooms below/at level
     // rz > pz:  glColor4f(planeColor2[ef]) - use planeColor2 for rooms above level
     // Try using the brighter array as default since most rooms are likely at the same level
-    if (belowOrAtLevel) {
-        color = planeColor2[ef]; // Use bright colors for rooms at/below level
-        // qDebug() << "Using planeColor2[" << ef << "] for room at/below level";
+    if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+        if (zLevel > 0) {
+            return QColor(50,50,150,255); // blue
+        } else {
+            return QColor(100,50,25,255); // brown
+        }
     } else {
-        color = planeColor[ef]; // Use darker colors for rooms above level
-        // qDebug() << "Using planeColor[" << ef << "] for room above level";
-    }
+        if (belowOrAtLevel) {
+            color = planeColor2[ef]; // Use bright colors for rooms at/below level
+                                     // qDebug() << "Using planeColor2[" << ef << "] for room at/below level";
+        } else {
+            color = planeColor[ef]; // Use darker colors for rooms above level
+                                    // qDebug() << "Using planeColor[" << ef << "] for room above level";
+        }
 
-    return QColor(static_cast<int>(color[0] * 255),
-                  static_cast<int>(color[1] * 255),
-                  static_cast<int>(color[2] * 255),
-                  255); // Use full alpha for room colors
+        return QColor(static_cast<int>(color[0] * 255),
+                static_cast<int>(color[1] * 255),
+                static_cast<int>(color[2] * 255),
+                255); // Use full alpha for room colors
+    }
 }
 
 QColor ModernGLWidget::getEnvironmentColor(TRoom* pRoom)

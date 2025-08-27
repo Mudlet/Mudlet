@@ -25,12 +25,12 @@
 
 CameraController::CameraController()
 {
-    mDistance = 15.0f;
-    mPositionVector = QVector3D(0.0f, 0.0f, 1.0f);
-    mUpVector = QVector3D(1.0f, 0.0f, 0.0f);
-    mRightVector = QVector3D(0.0f, 1.0f, 0.0f);
+    //mDistance = 15.0f;
+    //mPositionVector = QVector3D(0.0f, 0.0f, 1.0f);
+    //mUpVector = QVector3D(1.0f, 0.0f, 0.0f);
+    //mRightVector = QVector3D(0.0f, 1.0f, 0.0f);
     mTarget = QVector3D(0.0f, 0.0f, 0.0f);
-    //setDefaultView();
+    setDefaultView();
     calculateModelMatrix();
 }
 
@@ -120,8 +120,8 @@ QVector3D CameraController::getPosition()
 // TODO: set these things to use spherical coord method
 void CameraController::setDefaultView()
 {
-    // default camera position 15 degrees from directly above, and 15 degrees rotated to the left
-    setPosition(15.0f, 15.0f, -15.0f);
+    // default camera position 30 degrees from directly above, and 15 degrees rotated to the left (from forward == north)
+    setPosition(1.0f, 60.0f, static_cast<float>(270 - 15));
 }
 
 void CameraController::setSideView()

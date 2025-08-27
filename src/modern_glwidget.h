@@ -178,11 +178,14 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0; // Track previous room ID to detect changes
 
+    // Non-cubic rooms
+    float mZSquishFactor = 1.0f;
+
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
+    void renderCube(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor);
     void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
     void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
     void renderUpDownIndicators(TRoom* pRoom, float x, float y, float z);

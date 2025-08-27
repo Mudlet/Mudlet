@@ -57,7 +57,7 @@ public:
     void cleanup();
     
     // Generate geometry data for different primitives
-    GeometryData generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a);
+    GeometryData generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor);
     GeometryData generateLineGeometry(const QVector<float>& vertices, const QVector<float>& colors);
     GeometryData generateTriangleGeometry(const QVector<float>& vertices, const QVector<float>& colors);
     
@@ -85,7 +85,7 @@ private:
     GeometryData mCubeTemplate;
     
     void generateCubeTemplate();
-    GeometryData transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a);
+    GeometryData transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor);
 };
 
 #endif // MUDLET_GEOMETRY_MANAGER_H

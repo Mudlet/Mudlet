@@ -24,9 +24,9 @@
 #include "post_guard.h"
 
 // RenderCubeCommand implementation
-RenderCubeCommand::RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
+RenderCubeCommand::RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor,
                                    const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
-    : mX(x), mY(y), mZ(z), mSize(size), mR(r), mG(g), mB(b), mA(a)
+    : mX(x), mY(y), mZ(z), mSize(size), mR(r), mG(g), mB(b), mA(a), mZSquishFactor(zSquishFactor)
     , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
 {
 }
@@ -40,7 +40,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& colorBuffer,
                                QOpenGLBuffer& normalBuffer)
 {    
-    GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
+    GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA, mZSquishFactor);
     
     // Set uniforms
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
