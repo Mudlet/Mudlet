@@ -427,7 +427,10 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
             writeSecurePassword(profileName, pass);
         }
     } else {
-        writeProfileData(profileName, qsl("password"), pass);
+        auto result = mudlet::self()->writeProfileData(profileName, qsl("password"), pass);
+        if (!result.first) {
+            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
+        }
     }
 }
 
@@ -477,7 +480,12 @@ void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("login"), login);
+        const QString profileName = pItem->data(csmNameRole).toString();
+        auto result = mudlet::self()->writeProfileData(profileName, qsl("login"), login);
+        if (!result.first) {
+            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updateLogin() ERROR - failed to save character name for profile \"" << profileName << "\": " << result.second;
+            // Could optionally show user notification here
+        }
     }
 }
 
