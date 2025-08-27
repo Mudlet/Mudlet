@@ -2741,7 +2741,7 @@ int TLuaInterpreter::createComposer(lua_State* L)
         lua_pushboolean(L, isSave);
 
         if (lua_pcall(L, 2, 0, 0) != 0) {
-            const char* errMsg = lua_tostring(L, -1);
+            QString errMsg = QString::fromUtf8(lua_tostring(L, -1));
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "Lua error in Composer callback function:" << errMsg << "\n" >> 0;
             lua_pop(L, 1);
         }
