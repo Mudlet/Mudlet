@@ -753,6 +753,9 @@ private:
     bool findAIModel();
     void setupAIConfig();
 
+    // Helper method for detached windows cleanup
+    void saveDetachedWindowsGeometry();
+
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
 

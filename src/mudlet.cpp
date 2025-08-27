@@ -4185,6 +4185,7 @@ mudlet::~mudlet()
         }
     }
 
+    saveDetachedWindowsGeometry();
     shutdownAI();
 
     mudlet::smpSelf = nullptr;
@@ -6424,6 +6425,16 @@ void mudlet::shutdownAI()
     if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
         qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
         mpLlamafileManager->stop();
+    }
+}
+
+void mudlet::saveDetachedWindowsGeometry()
+{
+    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow) {
+            detachedWindow->saveWindowGeometry();
+        }
     }
 }
 
