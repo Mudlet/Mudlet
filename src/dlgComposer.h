@@ -30,6 +30,7 @@
 
 class Host;
 
+using ComposerCallback = std::function<void(const QString&, bool isSave)>;
 
 class dlgComposer : public QMainWindow, public Ui::composer
 {
@@ -40,6 +41,7 @@ public:
     explicit dlgComposer(Host*);
 
     void init(const QString &title, const QString &newText);
+    void setCallback(ComposerCallback callback);
 
 public slots:
     void slot_save();
@@ -47,6 +49,7 @@ public slots:
 
 private:
     QPointer<Host> mpHost;
+    ComposerCallback mCallback;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

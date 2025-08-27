@@ -2718,43 +2718,44 @@ int TLuaInterpreter::closeProfile(lua_State* L)
 int TLuaInterpreter::createComposer(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    QString title;
-    QString text;
-    // int function;
-
-    if (host.mTelnet.mpComposer ) {
+    if (host.mTelnet.mpComposer) {
         return warnArgumentValue(L, __func__, "composer already present");
     }
 
-    if (lua_gettop(L) == 0) {
-        title = QString();
-        text = QString();
-        // function = -1;
-    } else if (lua_gettop(L) >= 1) {
-        title = getVerifiedString(L, __func__, 1, "title");
-    } else if (lua_gettop(L) >= 2) {
-        text = getVerifiedString(L, __func__, 2, "text");
-    } else if (lua_gettop(L) >= 3) {
-        if (!lua_isfunction(L, 3)) {
-            lua_pushfstring(L, "createComposer: bad argument #3 type (callback as function expected, got %s!)", luaL_typename(L, 3));
-            return lua_error(L);
+    QString title = getVerifiedString(L, __func__, 1, "title");
+    QString text = getVerifiedString(L, __func__, 2, "text");
+    if (!lua_isfunction(L, 3)) {
+        lua_pushfstring(L, "createComposer: bad argument #3 type (callback as function expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    const int callbackRef = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    auto* composer = new dlgComposer(&host);
+    host.mTelnet.mpComposer = composer;
+    composer->init(title, text);
+
+    composer->setCallback([=,&host](const QString& editedText, bool isSave) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callbackRef);
+
+        lua_pushstring(L, editedText.toUtf8().constData());
+        lua_pushboolean(L, isSave);
+
+        if (lua_pcall(L, 2, 0, 0) != 0) {
+            const char* errMsg = lua_tostring(L, -1);
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "Lua error in Composer callback function:" << errMsg << "\n" >> 0;
+            lua_pop(L, 1);
         }
 
-        lua_pushfstring(L, "createComposer: callback function not implemented, yet!)");
-        return lua_error(L);
-        // compare callback function implemented in (Mapper file of) TLuaInterpreter::registerMapInfo
-    }
+        luaL_unref(L, LUA_REGISTRYINDEX, callbackRef);
 
-    host.mTelnet.mpComposer = new dlgComposer(&host);
-    host.mTelnet.mpComposer->init(title, text);
-    host.mTelnet.mpComposer->raise();
-    host.mTelnet.mpComposer->show();
-
-    // When "save" or "cancel" is clicked, hide the window again. Maybe part of the callback, then?
-    if (1 == 0) {
         host.mTelnet.mpComposer->close();
         host.mTelnet.mpComposer = nullptr;
-    }
+    });
+
+    composer->raise();
+    composer->show();
+
+    lua_pushboolean(L, true);
     return 1;
 }
 

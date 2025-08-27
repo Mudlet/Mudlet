@@ -39,13 +39,23 @@ dlgComposer::dlgComposer(Host* pH)
 
 void dlgComposer::slot_cancel()
 {
-    mpHost->mTelnet.atcpComposerCancel();
+    const QString text = edit->toPlainText();
+    if (mCallback) {
+        mCallback(text, false);
+    } else {
+        mpHost->mTelnet.atcpComposerCancel();
+    }
     this->hide();
 }
 
 void dlgComposer::slot_save()
 {
-    mpHost->mTelnet.atcpComposerSave(edit->toPlainText());
+    const QString text = edit->toPlainText();
+    if (mCallback) {
+        mCallback(text, true);
+    } else {
+        mpHost->mTelnet.atcpComposerSave(text);
+    }
     this->hide();
 }
 
@@ -53,4 +63,9 @@ void dlgComposer::init(const QString &newTitle, const QString &newText)
 {
     title->setText(newTitle);
     edit->setPlainText(newText);
+}
+
+void dlgComposer::setCallback(ComposerCallback callback)
+{
+    mCallback = std::move(callback);
 }
