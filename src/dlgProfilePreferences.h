@@ -169,6 +169,7 @@ private slots:
     void slot_changeWrapAt();
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
+    void slot_changeInvertMapZoom(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
     void slot_displayFontChanged();
