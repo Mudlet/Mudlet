@@ -60,7 +60,7 @@ const QString TConsole::cmLuaLineVariable("line");
 TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
-, mDisplayFontDetails((type == MainConsole) && pH->fontsAntiAlias())
+, mDisplayFontDetails(pH->fontsAntiAlias())
 , buffer(pH, this)
 , emergencyStop(new QToolButton)
 , mConsoleName(name)
