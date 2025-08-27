@@ -47,7 +47,6 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "XMLimport.h"
-#include "DarkTheme.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
@@ -83,6 +82,7 @@
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
+#include <QStyleHints>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QTimer>
@@ -5375,20 +5375,25 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         return;
     }
 
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && desktopInDarkMode())) {
+    switch (state) {
+    case enums::Appearance::dark:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
         mDarkMode = true;
+        break;
+    case enums::Appearance::light:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+        mDarkMode = false;
+        break;
+    case enums::Appearance::systemSetting:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+        mDarkMode = (QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
+        break;
     }
 
-    if (mDarkMode) {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new DarkTheme);
-        getHostManager().changeAllHostColour(getActiveHost());
-    } else {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
-        getHostManager().changeAllHostColour(getActiveHost());
-    }
+    // Apply the AltFocusMenuBarDisable wrapper for both themes
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+    qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    getHostManager().changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }
@@ -6191,34 +6196,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     }
 }
 
-// Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
-// Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
-bool mudlet::desktopInDarkMode()
-{
-#if defined(Q_OS_WINDOWS)
-    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
-    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
-#elif defined(Q_OS_MACOS)
-    bool isDark = false;
-    CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
-    CFStringRef uiStyle = nullptr;
-    CFStringRef darkUiStyle = CFSTR("Dark");
-    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
-    {
-        isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
-        coreMacOS::CFRelease(uiStyle);
-    }
-    return isDark;
-#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD) || defined(Q_OS_OPENBSD)
-    QProcess process;
-    process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
-    process.waitForFinished();
-    const QString output = QString::fromUtf8(process.readAllStandardOutput());
-    return output.contains(qsl("-dark"), Qt::CaseInsensitive);
-#endif
-
-    return false;
-}
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
