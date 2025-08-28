@@ -2774,22 +2774,22 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         case OPT_COMPRESS4: {
             if (telnetCommand.length() >= 5 && telnetCommand[3] == MCCP4_BEGIN_ENCODING) {
                 // Extract encoding type from BEGIN_ENCODING suboption
-                std::string encodingType;
+                std::string compressionType;
                 for (size_t i = 4; i < telnetCommand.length() - 2; ++i) {
                     if (telnetCommand[i] == TN_IAC) {
                         break; // End of encoding string
                     }
-                    encodingType += telnetCommand[i];
+                    compressionType += telnetCommand[i];
                 }
 
-                if (encodingType == "zstd") {
-                    mMCCP4_encoding = 1; // zstd encoding
-                    qDebug() << "MCCP4: Server selected zstd encoding";
-                } else if (encodingType == "deflate") {
-                    mMCCP4_encoding = 2; // deflate encoding
-                    qDebug() << "MCCP4: Server selected deflate encoding";
+                if (compressionType == "zstd") {
+                    mMCCP4_encoding = 1;
+                    qDebug() << "MCCP4: Server selected zstd";
+                } else if (compressionType == "deflate") {
+                    mMCCP4_encoding = 2;
+                    qDebug() << "MCCP4: Server selected deflate";
                 } else {
-                    qWarning() << "MCCP4: Unknown encoding type received:" << encodingType.c_str() << ", disabling MCCP4";
+                    qWarning() << "MCCP4: Unknown compression type received:" << compressionType.c_str() << ", disabling MCCP4";
 
                     // Send WONT to disable MCCP4
                     sendTelnetOption(TN_WONT, OPT_COMPRESS4);
@@ -2799,7 +2799,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 mNeedDecompression = true;
-                qDebug() << "MCCP4: Compression started with encoding" << encodingType.c_str();
+                qDebug() << "MCCP4: Compression started with" << compressionType.c_str();
 
                 if (mMCCP4_encoding == 1) { // zstd - initialize ZSTD stream
                     if (!mZstdDstream) {
