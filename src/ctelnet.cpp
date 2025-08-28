@@ -2039,8 +2039,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             qDebug() << "MCCP v2 negotiated.";
                         } else if (option == OPT_COMPRESS4) {
                             mMCCP_version_4 = true;
-                            mMCCP4_supportedEncodings << "zstd" << "deflate";
-                            qDebug() << "MCCP v4 negotiations beginning: offering zstd and deflate as options";
+                            qDebug() << "MCCP v4 negotiated! Offering supported encodings:" << MCCP4_SUPPORTED_ENCODINGS.join(",");
                             
                             // Send ACCEPT_ENCODING suboption
                             std::string response;
@@ -2048,7 +2047,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             response += TN_SB;
                             response += OPT_COMPRESS4;
                             response += MCCP4_ACCEPT_ENCODING;
-                            response += "zstd,deflate";
+                            response += MCCP4_SUPPORTED_ENCODINGS.join(",").toStdString();
                             response += TN_IAC;
                             response += TN_SE;
                             socketOutRaw(response);
@@ -2837,20 +2836,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     }
                 } else if (mMCCP4_encoding == 2) { // deflate - initialize zlib stream
                     initStreamDecompressor();
-                }
-            } else if (telnetCommand.length() >= 4 && telnetCommand[3] == MCCP4_WONT) {
-                // Handle WONT suboption - server doesn't want to use agreed encoding  
-                qDebug() << "MCCP4: Server sent WONT, disabling compression";
-                
-                hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
-                mMCCP_version_4 = false;
-                mMCCP4_encoding = 0;
-                mNeedDecompression = false;
-                
-                // Clean up compression contexts
-                if (mZstdDstream) {
-                    ZSTD_freeDStream(mZstdDstream);
-                    mZstdDstream = nullptr;
                 }
             } else if (telnetCommand.length() >= 4 && static_cast<unsigned char>(telnetCommand[3]) != 255) {
                 // Handle unknown suboptions (but not empty ones) - send WONT per spec
@@ -3816,7 +3801,6 @@ void cTelnet::initMCCP4StreamDecompressor()
     // Reset MCCP4 state to prepare for re-negotiation
     mMCCP_version_4 = false;
     mMCCP4_encoding = 0;
-    mMCCP4_supportedEncodings.clear();
     mNeedDecompression = false;
     
     // Clear the server's telnet option state for MCCP4

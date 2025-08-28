@@ -170,7 +170,9 @@ const char NEW_ENVIRON_USERVAR = 3;
 
 const char MCCP4_ACCEPT_ENCODING = 1;
 const char MCCP4_BEGIN_ENCODING = 2;
-const char MCCP4_WONT = 3;
+
+// MCCP4 supported encodings
+const QStringList MCCP4_SUPPORTED_ENCODINGS{"zstd", "deflate"};
 
 class cTelnet : public QObject
 {
@@ -395,7 +397,6 @@ private:
     bool mMCCP_version_2 = false;
     bool mMCCP_version_4 = false;
     int mMCCP4_encoding = 0;
-    QStringList mMCCP4_supportedEncodings;
 
 
     std::string mMudData;
