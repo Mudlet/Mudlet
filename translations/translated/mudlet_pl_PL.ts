@@ -108,7 +108,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1916"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>Moduł &quot;%1&quot; jest już zainstalowany. Proszę go najpierw odinstalować lub wybrać inną nazwę.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1956"/>
@@ -584,17 +584,17 @@ please wait...</source>
     <message>
       <location filename="../src/TBuffer.cpp" line="2223"/>
       <source>Send</source>
-      <translation type="unfinished"/>
+      <translation>Wyślij</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2228"/>
       <source>Prompt</source>
-      <translation type="unfinished"/>
+      <translation>Zachęta</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="2236"/>
       <source>Open browser to</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz przeglądarkę na</translation>
     </message>
   </context>
   <context>
@@ -1125,7 +1125,7 @@ Zobacz komunikat &quot;[BŁĄD:]&quot; z powodu.</translation>
       <location filename="../src/TCommandLine.cpp" line="68"/>
       <location filename="../src/TCommandLine.cpp" line="1784"/>
       <source>Show password</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż hasło</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
@@ -1230,7 +1230,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TCommandLine.cpp" line="1780"/>
       <source>Hide password</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj hasło</translation>
     </message>
   </context>
   <context>
@@ -1588,7 +1588,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="74"/>
       <location filename="../src/TDetachedWindow.cpp" line="960"/>
       <source>Mudlet - %1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - %1 (Odłączony)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="242"/>
@@ -1603,53 +1603,53 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="246"/>
       <source>Save the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz aktualny profil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="252"/>
       <source>&amp;Export Profile</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj profil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="253"/>
       <source>Export profile as package</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj profil jako pakiet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="257"/>
       <source>Profile &amp;Settings</source>
-      <translation type="unfinished"/>
+      <translation>Ustawienia profilu</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="259"/>
       <source>Open profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz ustawienia profilu</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="265"/>
       <source>&amp;Close Profile</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij profil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="267"/>
       <source>Close the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij aktualny profil</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="271"/>
       <source>&amp;Window</source>
-      <translation type="unfinished"/>
+      <translation>Okno</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="273"/>
       <source>&amp;Reattach to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Dołącz ponownie do głównego okna</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="275"/>
       <location filename="../src/TDetachedWindow.cpp" line="571"/>
       <source>Reattach this profile window to the main Mudlet window</source>
-      <translation type="unfinished"/>
+      <translation>Ponownie dołącz to okno profilowe do głównego okna Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="281"/>
@@ -1659,39 +1659,39 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="297"/>
       <source>Always on &amp;Top</source>
-      <translation type="unfinished"/>
+      <translation>Zawsze na wierzchu</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="300"/>
       <source>Keep this window always on top of other windows</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetlaj to okno zawsze nad innymi oknami (zawsze widoczne)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="308"/>
       <source>&amp;Minimize</source>
-      <translation type="unfinished"/>
+      <translation>Zminimalizuj</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="478"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Przyłącz &apos;%1&apos; do głównego okna</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="488"/>
       <source>Close Profile &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij Profil &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="497"/>
       <source>Close Window (All Profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij Okna (Wszystkie Profile)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="504"/>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <location filename="../src/TDetachedWindow.cpp" line="1253"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Pasek narzędziowy profilu</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="580"/>
@@ -1719,33 +1719,33 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="283"/>
       <source>Close this window and all profiles in it</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij to okno i wszystkie profile z niego</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="290"/>
       <source>Show &amp;Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Pasek Narzędziowy</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="293"/>
       <source>Show or hide the toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż lub Ukryj pasek narzędziowy</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="510"/>
       <source>Show Connection Indicators on Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż wskaźniki połączenia na zakładkach</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="570"/>
       <source>Reattach</source>
-      <translation type="unfinished"/>
+      <translation>Dołącz ponownie</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="601"/>
       <location filename="../src/TDetachedWindow.cpp" line="603"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="613"/>
@@ -1954,12 +1954,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1349"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Główne Okno)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1380"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Odłączone)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="2302"/>
@@ -1974,17 +1974,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="962"/>
       <source>Mudlet (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (Odłączony)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="970"/>
       <source> - Connected</source>
-      <translation type="unfinished"/>
+      <translation> - Połączony</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="973"/>
       <source> to %1</source>
-      <translation type="unfinished"/>
+      <translation> do %1</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="976"/>
@@ -1994,12 +1994,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="978"/>
       <source> - Disconnected</source>
-      <translation type="unfinished"/>
+      <translation> - Odłączony</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="983"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet (profil %1) - %2 (odłączony)</translation>
     </message>
   </context>
   <context>
@@ -2308,7 +2308,7 @@ próbowałem te miejsca:
       <location filename="../src/TMainConsole.cpp" line="1485"/>
       <source>MXP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zdarzenia MXP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1490"/>
@@ -2838,52 +2838,52 @@ in main console!</source>
     <message>
       <location filename="../src/TMedia.cpp" line="332"/>
       <source>fades</source>
-      <translation type="unfinished"/>
+      <translation>zanikanie</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1082"/>
       <source>Too many stopped media players. Purging stopped players.</source>
-      <translation type="unfinished"/>
+      <translation>Zbyt wiele zatrzymanych odtwarzaczy multimedialnych. Usuwanie zatrzymanych odtwarzaczy.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1090"/>
       <source>Too many stopped media players. Removed oldest active player.</source>
-      <translation type="unfinished"/>
+      <translation>Zbyt wiele zatrzymanych odtwarzaczy multimedialnych. Usunięto najstarszy aktywny odtwarzacz.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1187"/>
       <source>Maximum allowed active media players reached for media type. Cannot play additional media.</source>
-      <translation type="unfinished"/>
+      <translation>Osiągnięto maksymalną liczbę aktywnych odtwarzaczy multimedialnych dla danego typu multimediów. Nie można odtwarzać dodatkowych multimediów.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1264"/>
       <source>stops</source>
-      <translation type="unfinished"/>
+      <translation>zatrzymuje</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1281"/>
       <source>plays</source>
-      <translation type="unfinished"/>
+      <translation>graj</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1298"/>
       <source>pauses</source>
-      <translation type="unfinished"/>
+      <translation>wstrzymaj</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2051"/>
       <source>music</source>
-      <translation type="unfinished"/>
+      <translation>muzyka</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>video</source>
-      <translation type="unfinished"/>
+      <translation>wideo</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2052"/>
       <source>sound</source>
-      <translation type="unfinished"/>
+      <translation>dźwięk</translation>
     </message>
   </context>
   <context>
@@ -7200,42 +7200,42 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="870"/>
       <source>Protocols</source>
-      <translation type="unfinished"/>
+      <translation>Protokoły</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="874"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP: protokół komunikacji ogólnej</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="879"/>
       <source>MSDP: Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP: protokół danych serwera</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="884"/>
       <source>MSSP: Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP: Protokół Statusu Serwera</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="889"/>
       <source>MSP: Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP: Protokół Dźwiękowy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="894"/>
       <source>MXP: Mud eXtension Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MXP: Protokół rozszerzeń dodatków</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="899"/>
       <source>MTTS: Mud Terminal Type Standard</source>
-      <translation type="unfinished"/>
+      <translation>MTTS: Standardowy typ terminala</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="904"/>
       <source>MNES: Mud New-Environ Standard</source>
-      <translation type="unfinished"/>
+      <translation>MNES: Protokół standardu nowego środowiska</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1781"/>
@@ -8384,12 +8384,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Utwórz moduł</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>&lt;p&gt;Create a module from selected items&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tworzenie modułu z wybranych elementów&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
@@ -8418,7 +8418,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4719"/>
       <source>This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications.</source>
-      <translation type="unfinished"/>
+      <translation>Ten przedmiot jest częścią pakietu. Aby jak najlepiej zachować zmiany, skopiuj ten element przed edycją, ponieważ uaktualnienia pakietu mogą zastąpić modyfikacje.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5939"/>
@@ -8994,13 +8994,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="77"/>
       <source>Alias react on user input.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Alias reaguje na dane wejściowe użytkownika.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="79"/>
       <source>How to add a new alias now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy alias teraz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="81"/>
@@ -9012,7 +9012,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="86"/>
       <source>How to add a new alias from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy alias z wiersza polecenia</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="88"/>
@@ -9045,25 +9045,25 @@ Name of a selectable option for the Messagebox in the Mudlet Button Editor
 Name of a selectable option for the Messagebox in the Mudlet Keys Editor
 ----------
 Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Sprawdź instrukcję obsługi Mudlet, aby uzyskać więcej informacji</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="92"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Introduction to Aliases&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Wprowadzenie do aliasów&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="98"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wyzwalacze reagują na teksty wysłane przez serwer do mudleta.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
       <source>How to add a new trigger now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy wyzwalacz teraz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
@@ -9075,7 +9075,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>How to add a new trigger from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy wyzwalacz z wiersza poleceń</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="114"/>
@@ -9087,13 +9087,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
       <source>Scripts organize code and can react to events.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skrypty organizują kod i mogą reagować na zdarzenia/wyzwalacze.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
       <source>How to add a new script now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy skrypt teraz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
@@ -9105,7 +9105,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
       <source>How to have a script react to events</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak sprawić, by skrypt reagował na zdarzenia</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
@@ -9123,13 +9123,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>Timers react after a timespan once or regularly.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Timery/zegary reagują po upływie określonego czasu raz lub regularnie.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
       <source>How to add a new timer now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy timer/zegar teraz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
@@ -9141,7 +9141,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>How to add a new timer from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy timer/zegar z wiersza poleceń</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
@@ -9160,13 +9160,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
       <source>Buttons react on mouse clicks.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Button Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Przyciski reagują na kliknięcia myszką.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="170"/>
       <source>How to add a new button now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Button Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy przycisk teraz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="172"/>
@@ -9184,13 +9184,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="190"/>
       <source>Keys react on keyboard presses.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Keys Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Klawisze reagują na naciśnięcia klawiatury.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="192"/>
       <source>How to add a new keybinding now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Keys Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy klawisz/skrót klawiszowy teraz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="194"/>
@@ -9202,7 +9202,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="199"/>
       <source>How to add a new keybinding from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Keys Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nowy klawisz/skrót klawiszowy z wiersza poleceń</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
@@ -11653,12 +11653,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="4230"/>
       <location filename="../src/mudlet.cpp" line="4294"/>
       <source>Profile Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Pasek narzędziowy profilu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4283"/>
       <source>Detach Tab &quot;%1&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Odłącz kartę &quot;%1&quot;</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4878"/>
@@ -13027,7 +13027,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="503"/>
       <source>&lt;p&gt;Use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Użyj ścisłych zakończeń linii UNIX na poleceniach dla starych serwerów UNIX, które nie mogą poprawnie obsługiwać zakończenia linii systemu Windows;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
@@ -13037,7 +13037,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
       <source>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Podkreśla twój tekst linii wprowadzonej podczas przewijania historii w celu łatwego usuwania.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="602"/>
@@ -13072,7 +13072,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="825"/>
       <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użycie antyaliasingu na czcionce dla &lt;b&gt;Główny&lt;/b&gt; konsola. Wygładza czcionki, jeśli ekran ma wysoką rozdzielczość i można używać większych czcionek. Zwróć uwagę, że w przypadku niskich rozdzielczości i małych rozmiarów czcionek czcionka staje się rozmyta. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="828"/>
@@ -13088,7 +13088,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="887"/>
       <location filename="../src/ui/profile_preferences.ui" line="906"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, które można mieć przed tekstem na górze - można ustawić na ujemny, aby przenieść tekst poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="890"/>
@@ -13099,7 +13099,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="934"/>
       <location filename="../src/ui/profile_preferences.ui" line="953"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, aby mieć przed tekstem po prawej stronie - można ustawić na negatywne, aby przenieść tekst bezpośrednio poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="937"/>
@@ -13110,7 +13110,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="981"/>
       <location filename="../src/ui/profile_preferences.ui" line="1000"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, aby mieć przed tekstem na dole - można ustawić na ujemny, aby umożliwić tekst zejść poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="984"/>
@@ -13121,7 +13121,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1028"/>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, aby mieć przed tekstem po prawej stronie - można ustawić na negatywne, aby przenieść tekst bezpośrednio poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1031"/>
@@ -13153,7 +13153,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1207"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kolejne zawinięte linie zostaną wcięte przez tę wartość.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1249"/>
@@ -13214,7 +13214,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1502"/>
       <source>&lt;p&gt;Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokazuje znaki bikierunkowe Unicode, które mogą być używane do zmiany znaczenia kodu źródłowego, pozostając niewidocznym dla oka.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1539"/>
@@ -13404,48 +13404,48 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2231"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz profile, które chcesz skopiować mapę, a następnie naciśnij przycisk Kopiuj po prawej.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2244"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Skopiuj mapę do wybranych profili po lewej stronie.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2276"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zmień na niższą wersję, jeśli chcesz zapisać mapę w formacie, który może być odczytywany przez starsze wersje Mudleta. W ten sposób utraci się dodatkowe dane dostępne w bieżącym formacie mapy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2315"/>
       <location filename="../src/ui/profile_preferences.ui" line="2328"/>
       <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;W grach, które zapewniają mapy do pobrania, możesz nacisnąć ten przycisk, aby pobrać najnowszą mapę. Zauważ, że &lt;span style=&quot; font-weight:600;&quot;&gt;nadpisze&lt;/span&gt; wszelkie zmiany, które&apos;zrobiłeś na mapie, i będzie używać tylko nowej mapy (stracisz starą)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2357"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Domyślny obszar (id obszaru -1) jest używany przez niektóre skrypty mapowania jako tymczasowy obszar &apos;trzymający obszar&apos; dla pokoi, zanim&apos;zostaną umieszczone we właściwym obszarze.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2370"/>
       <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza ramki wokół pokoju. Kolor można ustawić w zakładce kolory mapy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3253"/>
       <source>&lt;p&gt;Allow Lua to set Discord status.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pozwól Lua ustawić status Discorda.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3759"/>
       <source>&lt;p&gt;Username for logging into the proxy if required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nazwa użytkownika do logowania się do serwera proxy, jeśli jest to wymagane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3775"/>
       <source>&lt;p&gt;Password for logging into the proxy if required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Hasło do logowania się do serwera proxy, jeśli jest wymagane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3808"/>
@@ -13470,7 +13470,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3890"/>
       <source>&lt;p&gt;On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Na niektórych platformach, takich jak macOS, narzędzie czytnika ekranu ma problemy z pełnym ogłaszaniem przychodzącego tekstu bez pomijania. Możesz zdecydować się na wyłączenie ogłaszania nowego tekstu w grze za pomocą tej opcji, aby zamiast tego użyć niestandardowego TTS, co pozwala uniknąć takich problemów.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3900"/>
@@ -13480,18 +13480,19 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3907"/>
       <source>Enable closed caption for media</source>
-      <translation type="unfinished"/>
+      <translation>Włącz napisy kodowane dla multimediów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3977"/>
       <source>&lt;p&gt;Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącz skróty F3 i Shift+F3 do wyszukiwania w górę i w dół w buforze.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4026"/>
       <source>&lt;p&gt;This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ta opcja dodaje podział wiersza &lt;LF&gt; lub &quot;
+&quot; do wprowadzania poleceń w przypadku pustych poleceń. Ta opcja rzadko będzie konieczna.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4044"/>
@@ -13501,22 +13502,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4058"/>
       <source>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre serwery korzystają z fragmentu kodu protokołu KaVir, który oczekuje, że klient poda zarówno swoją nazwę, jak i dziesiętny numer wersji podczas negocjacji TTYPE Telnet. Jednak dołączenie numeru wersji nie jest zgodne z odpowiednimi RFC, ponieważ znak kropki nie jest w nich dozwolony; więc od 2024 roku Mudlet domyślnie przestał go wysyłać. W rezultacie serwery, które opierają się na tych informacjach, mogą założyć, że Mudlet jest w wersji 1.0 lub wcześniejszej i w konsekwencji ograniczyć obsługę kolorów do 16 kolorów zamiast włączyć tryb 256 kolorów.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4061"/>
       <source>Send Mudlet version in terminal type</source>
-      <translation type="unfinished"/>
+      <translation>Wyślij wersję Mudlet w typie terminala</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4068"/>
       <source>&lt;p&gt;Some servers do not negotiate Mud eXtension Protocol (MXP). When checked, this preference forces the MXP processor to be enabled. Note: To disable MXP entirely, leave this unchecked and also uncheck MXP in Choose protocols section of the General tab in Settings.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre serwery nie negocjują protokołu Mud eXtension Protocol (MXP). Gdy ta opcja jest zaznaczona, wymusza włączenie procesora MXP. Uwaga: Aby całkowicie wyłączyć MXP, pozostaw tę opcję niezaznaczoną, a także odznacz MXP w sekcji Wybierz protokoły na karcie Ogólne w Ustawieniach.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4071"/>
       <source>Force MXP processing on</source>
-      <translation type="unfinished"/>
+      <translation>Wymuszaj przetwarzanie MXP na</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4105"/>
@@ -13608,7 +13609,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="558"/>
       <source>Show sent commands:</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż wysłane polecenia:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="574"/>
@@ -13624,7 +13625,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="589"/>
       <source>Script controlled</source>
-      <translation type="unfinished"/>
+      <translation>Skrypt kontrolowany</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="852"/>
@@ -13637,7 +13638,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1210"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Wcięcie wiszących zawiniętych linii poprzez:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1287"/>
@@ -13662,12 +13663,12 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1349"/>
       <source>Display whenever a tab is connected or a disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetlaj za każdym razem, gdy karta jest podłączona lub odłączona</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1352"/>
       <source>Show connection status on tabs</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż stan połączenia na kartach</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1466"/>
@@ -13944,7 +13945,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="311"/>
       <source>Choose protocols</source>
-      <translation type="unfinished"/>
+      <translation>Wybieranie protokołów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
@@ -14203,7 +14204,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="618"/>
       <source>Text to separate commands or blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do oddzielnych poleceń lub pusty, aby wyłączyć</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="689"/>
@@ -14253,22 +14254,22 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2651"/>
       <source>Lower level color:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor niższego poziomu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2671"/>
       <source>Upper level color:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor górnego poziomu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2691"/>
       <source>Overlapping rooms border:</source>
-      <translation type="unfinished"/>
+      <translation>Obramowanie nakładających się pomieszczeń:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3980"/>
       <source>Enable F3 search shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Włącz wyszukiwanie pod F3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4007"/>
@@ -15352,7 +15353,8 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="407"/>
       <source>&lt;p&gt;If set to any value but the first the trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;If set to the first value the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wyzwalacz wystrzeli tylko wtedy, gdy &lt;u&gt;wszystkie&lt;/u&gt; warunki na liście zostały spełnione w obrębie określonej delty linii, a przechwyty zostaną zapisane w &lt;tt&gt;wielowątkowości&lt;/tt&gt; zamiast &lt;tt&gt;dopasowań&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Jeśli opcja ta jest &lt;b&gt;nie&lt;/b&gt; ustawi spust zostanie uruchomiony, jeśli &lt;u&gt;jakikolwiek&lt;/u&gt; warunek na liście został spełniony.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
