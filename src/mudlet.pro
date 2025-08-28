@@ -377,7 +377,8 @@ unix:!macx {
     linux {
         LIBS += \
             -llua5.1 \
-            -lhunspell
+            -lhunspell \
+            -lzstd
         INCLUDEPATH += /usr/include/lua5.1
     }
     LIBS += -lpcre \
@@ -416,6 +417,7 @@ unix:!macx {
         -lpcre \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
+        -lzstd \
         -lpugixml \
         -lws2_32 \
         -loleaut32
@@ -474,7 +476,7 @@ exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/cc
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
-macx:LIBS += -lz
+macx:LIBS += -lz -lzstd
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
