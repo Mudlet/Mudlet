@@ -185,7 +185,8 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    void renderCube(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor);
+    void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
+    void renderRectangularCuboid(float x, float y, float z, float xSize, float ySize, float zSize, float r, float g, float b, float a);
     void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
     void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
     void renderUpDownIndicators(TRoom* pRoom, float x, float y, float z);

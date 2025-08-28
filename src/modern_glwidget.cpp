@@ -365,14 +365,15 @@ void ModernGLWidget::renderRooms()
         bool isTargetRoom = (currentRoomId == mTargetRoomId);
         bool belowOrAtLevel = (rz <= pz);
         float roomAlpha = 1.0f;
+        const float defaultSize = 1.0f / scale;
 
         // 1. Render main room cube using correct planeColor logic
         if (isCurrentRoom) {
             // Current room: red
-            renderCube(rx, ry, rz, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f, mZSquishFactor);
+            renderRectangularCuboid(rx, ry, rz, defaultSize, defaultSize, defaultSize / mZSquishFactor, 1.0f, 0.0f, 0.0f, 1.0f);
         } else if (isTargetRoom) {
             // Target room: green
-            renderCube(rx, ry, rz, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f, mZSquishFactor);
+            renderRectangularCuboid(rx, ry, rz, defaultSize, defaultSize, defaultSize / mZSquishFactor, 0.0f, 1.0f, 0.0f, 1.0f);
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
@@ -436,11 +437,7 @@ void ModernGLWidget::renderRooms()
                 }
             }
 
-            if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
-                renderCube(rx, ry, rz, 1.0f / scale * roomAlpha, redComponent, greenComponent, blueComponent, roomAlpha, mZSquishFactor);
-            } else {
-                renderCube(rx, ry, rz, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha, mZSquishFactor);
-            }
+            renderRectangularCuboid(rx, ry, rz, defaultSize, defaultSize, defaultSize / mZSquishFactor, redComponent, greenComponent, blueComponent, roomAlpha);
         }
 
         // 2. Render thin environment color overlay on top
@@ -497,32 +494,21 @@ void ModernGLWidget::renderRooms()
             }
         }
         
-        if (mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
-            renderCube(rx,
-                    ry,
-                    overlayZ,
-                    0.75f / scale * roomAlpha, // Slightly smaller and thinner
-                    envRed,
-                    envGreen,
-                    envBlue,
-                    overlayAlpha,
-                    mZSquishFactor);
+        const float overlaySize = 0.75f / scale; // slightly smaller and thinner
+        renderRectangularCuboid(rx,
+                ry,
+                overlayZ,
+                overlaySize,
+                overlaySize,
+                overlaySize / mZSquishFactor,
+                envRed,
+                envGreen,
+                envBlue,
+                overlayAlpha);
 
-            // 3. DON'T Render up/down exit indicators on the overlay
-            // renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
-        } else {
-        renderCube(rx,
-                   ry,
-                   overlayZ,
-                   0.75f / scale, // Slightly smaller and thinner
-                   envRed,
-                   envGreen,
-                   envBlue,
-                   overlayAlpha,
-                   mZSquishFactor);
-
-        // 3. Render up/down exit indicators on the overlay
-        renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
+        if (!mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+            // 3. Render up/down exit indicators on the overlay
+            renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
         }
 
         // Re-enable depth testing for subsequent rendering
@@ -687,7 +673,8 @@ void ModernGLWidget::renderConnections()
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
 
                 // Render green area exit cube at the destination position with translucency and darkening
-                renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha, mZSquishFactor);
+                const float size = 1.0f / scale;
+                renderRectangularCuboid(dx, dy, dz, size, size, size / mZSquishFactor, exitRed, exitGreen, exitBlue, exitAlpha);
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
                 //auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
@@ -709,15 +696,8 @@ void ModernGLWidget::renderConnections()
                     exitEnvBlue *= darkenFactor;
                 }
                 
-                renderCube(dx,
-                           dy,
-                           overlayZ,
-                           0.5f / scale, // Much smaller overlay
-                           exitEnvRed,
-                           exitEnvGreen,
-                           exitEnvBlue,
-                           overlayAlpha,
-                           mZSquishFactor);
+                const float exitEnvSize = 0.5f / scale;
+                renderRectangularCuboid(dx, dy, overlayZ, exitEnvSize, exitEnvSize, exitEnvSize / mZSquishFactor, exitEnvRed, exitEnvGreen, exitEnvBlue, overlayAlpha);
                 auto enableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
                 mRenderCommandQueue.addCommand(std::move(enableDepthCommand2));
             }
@@ -730,10 +710,20 @@ void ModernGLWidget::renderConnections()
     }
 }
 
-void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor)
+void ModernGLWidget::renderRectangularCuboid(float x, float y, float z, float xSize, float ySize, float zSize, float r, float g, float b, float a)
 {
     // Create render command and queue it
-    auto command = std::make_unique<RenderCubeCommand>(x, y, z, size, r, g, b, a, zSquishFactor,
+    auto command = std::make_unique<RenderRectangularCuboidCommand>(x, y, z, xSize, ySize, zSize, r, g, b, a,
+                                                      mCameraController.getProjectionMatrix(), 
+                                                      mCameraController.getViewMatrix(), 
+                                                      mCameraController.getModelMatrix());
+    mRenderCommandQueue.addCommand(std::move(command));
+}
+
+void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a)
+{
+    // Create render command and queue it
+    auto command = std::make_unique<RenderCubeCommand>(x, y, z, size, r, g, b, a,
                                                       mCameraController.getProjectionMatrix(), 
                                                       mCameraController.getViewMatrix(), 
                                                       mCameraController.getModelMatrix());

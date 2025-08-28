@@ -56,7 +56,7 @@ public:
 class RenderCubeCommand : public RenderCommand
 {
 public:
-    RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor,
+    RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
                      const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
     
     void execute(QOpenGLFunctions* gl,
@@ -73,7 +73,33 @@ public:
 private:
     float mX, mY, mZ, mSize;
     float mR, mG, mB, mA;
-    float mZSquishFactor;
+    QMatrix4x4 mProjectionMatrix;
+    QMatrix4x4 mViewMatrix;
+    QMatrix4x4 mModelMatrix;
+};
+
+// Command to render rectangular cuboid geometry
+class RenderRectangularCuboidCommand : public RenderCommand
+{
+public:
+    RenderRectangularCuboidCommand(float x, float y, float z, float xSize, float ySize, float zSize, float r, float g, float b, float a,
+                     const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    
+    void execute(QOpenGLFunctions* gl,
+                QOpenGLShaderProgram* shader,
+                GeometryManager* geometryManager,
+                ResourceManager* resourceManager,
+                QOpenGLVertexArrayObject& vao,
+                QOpenGLBuffer& vertexBuffer,
+                QOpenGLBuffer& colorBuffer,
+                QOpenGLBuffer& normalBuffer) override;
+                
+    const char* getCommandName() const override { return "RenderRectangularCuboid"; }
+
+private:
+    float mX, mY, mZ;
+    float mXSize, mYSize, mZSize;
+    float mR, mG, mB, mA;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;

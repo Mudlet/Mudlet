@@ -24,9 +24,9 @@
 #include "post_guard.h"
 
 // RenderCubeCommand implementation
-RenderCubeCommand::RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a, float zSquishFactor,
+RenderCubeCommand::RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
                                    const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
-    : mX(x), mY(y), mZ(z), mSize(size), mR(r), mG(g), mB(b), mA(a), mZSquishFactor(zSquishFactor)
+    : mX(x), mY(y), mZ(z), mSize(size), mR(r), mG(g), mB(b), mA(a)
     , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
 {
 }
@@ -40,7 +40,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& colorBuffer,
                                QOpenGLBuffer& normalBuffer)
 {    
-    GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA, mZSquishFactor);
+    GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
     
     // Set uniforms
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
@@ -52,6 +52,37 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
     geometryManager->renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, resourceManager, GL_TRIANGLES);
+}
+
+// RenderRectangularCuboid implementation
+RenderRectangularCuboidCommand::RenderRectangularCuboidCommand(float x, float y, float z, float xSize, float ySize, float zSize, float r, float g, float b, float a,
+                                   const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+    : mX(x), mY(y), mZ(z), mXSize(xSize), mYSize(ySize), mZSize(zSize), mR(r), mG(g), mB(b), mA(a)
+    , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+{
+}
+
+void RenderRectangularCuboidCommand::execute(QOpenGLFunctions* gl,
+                               QOpenGLShaderProgram* shader,
+                               GeometryManager* geometryManager,
+                               ResourceManager* resourceManager,
+                               QOpenGLVertexArrayObject& vao,
+                               QOpenGLBuffer& vertexBuffer,
+                               QOpenGLBuffer& colorBuffer,
+                               QOpenGLBuffer& normalBuffer)
+{    
+    GeometryData rectangularCuboidGeometry = geometryManager->generateRectangularCuboidGeometry(mX, mY, mZ, mXSize, mYSize, mZSize, mR, mG, mB, mA);
+    
+    // Set uniforms
+    QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
+    shader->setUniformValue("uMVP", mvp);
+    shader->setUniformValue("uModel", mModelMatrix);
+
+    // Normal matrix (inverse transpose of model matrix)
+    QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
+    shader->setUniformValue("uNormalMatrix", normalMatrix);
+    
+    geometryManager->renderGeometry(rectangularCuboidGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, resourceManager, GL_TRIANGLES);
 }
 
 // RenderLinesCommand implementation
