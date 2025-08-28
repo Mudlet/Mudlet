@@ -226,7 +226,7 @@ private:
     QAction* mpActionReconnectStandalone{nullptr};
     QAction* mpActionReattach{nullptr};
 
-    // Discord and IRC actions
+    // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
 
