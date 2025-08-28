@@ -172,7 +172,7 @@ const char MCCP4_ACCEPT_ENCODING = 1;
 const char MCCP4_BEGIN_ENCODING = 2;
 
 // MCCP4 supported encodings
-const QStringList MCCP4_SUPPORTED_ENCODINGS{"zstd", "deflate"};
+const QStringList MCCP4_SUPPORTED_ENCODINGS{qsl("zstd"), qsl("deflate")};
 
 class cTelnet : public QObject
 {
