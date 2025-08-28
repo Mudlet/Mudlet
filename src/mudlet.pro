@@ -37,7 +37,13 @@
 ############################################################################
 
 if(lessThan(QT_MAJOR_VERSION,6)) {
-    error("Mudlet requires Qt 6.0 or later")
+    error("Mudlet requires Qt 6.8.2 or later")
+}
+if(equals(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION,8)) {
+    error("Mudlet requires Qt 6.8.2 or later")
+}
+if(equals(QT_MAJOR_VERSION,6):equals(QT_MINOR_VERSION,8):lessThan(QT_PATCH_VERSION,2)) {
+    error("Mudlet requires Qt 6.8.2 or later")
 }
 
 # Including IRC Library
@@ -589,7 +595,6 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
-    DarkTheme.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -725,11 +730,9 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
-    Announcer.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
     ctelnet.h \
-    DarkTheme.h \
     discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
@@ -866,22 +869,6 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
-macx|win32 {
-    macx {
-        SOURCES += AnnouncerMac.mm
-    }
-
-    win32 {
-        SOURCES += AnnouncerWindows.cpp \
-            uiawrapper.cpp
-
-        HEADERS += uiawrapper.h
-    }
-} else {
-    # Everything else
-    SOURCES += \
-        AnnouncerUnix.cpp
-}
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -1632,22 +1619,21 @@ win32 {
 # This is a list of files that we want to show up in the Qt Creator IDE that are
 # not otherwise used by the main project:
 OTHER_FILES += \
+    ../.ai/ai-instructions.md \
     ../.crowdin.yml \
+    ../.cursorrules \
     ../.devcontainer/Dockerfile \
     ../.devcontainer/devcontainer.json \
     ../.devcontainer/library-scripts/desktop-lite-debian.sh \
-    ../.github/CODE_OF_CONDUCT.md \
     ../.github/CODEOWNERS \
     ../.github/codeql/codeql-config.yml \
     ../.github/codespell-wordlist.txt \
-    ../.github/CONTRIBUTING.md \
+    ../.github/copilot-instructions.md \
     ../.github/dependabot.yml \
-    ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
     ../.github/pr-labeler.yml \
     ../.github/PULL_REQUEST_TEMPLATE.md \
     ../.github/repo-metadata.yml \
-    ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
     ../.github/workflows/build-mudlet-win.yml \
     ../.github/workflows/clangtidy-diff-analysis.yml \
@@ -1667,6 +1653,8 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
+    ../AGENTS.md \
+    ../CLAUDE.md \
     ../CI/build-mudlet-for-windows.sh \
     ../CI/deploy-mudlet-for-windows.sh \
     ../CI/fix.grid.ui.ordering.js \
@@ -1695,6 +1683,11 @@ OTHER_FILES += \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
+    ../docs/AI-ASSISTANTS.md \
+    ../docs/CODE_OF_CONDUCT.md \
+    ../docs/CONTRIBUTING.md \
+    ../docs/FUNDING.yml \
+    ../docs/SUPPORT.md \
     ../test/CMakeLists.txt \
     ../test/GUIConsoleTests.mpackage \
     ../test/CredentialManagerTest.cpp \

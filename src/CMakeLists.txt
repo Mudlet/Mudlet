@@ -57,7 +57,6 @@ set(mudlet_SRCS
     AliasUnit.cpp
     AltFocusMenuBarDisable.cpp
     ctelnet.cpp
-    DarkTheme.cpp
     discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
@@ -193,7 +192,6 @@ set(mudlet_SRCS
     XMLimport.cpp)
 
 if(APPLE)
-  list(APPEND mudlet_SRCS AnnouncerMac.mm)
   # Sparkle updater for macOS
   if(USE_UPDATER)
     list(APPEND mudlet_SRCS sparkleupdater.mm)
@@ -206,11 +204,6 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
-elseif(WIN32)
-  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
-  list(APPEND mudlet_SRCS uiawrapper.cpp)
-else()
-  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -247,9 +240,7 @@ set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
-    Announcer.h
     ctelnet.h
-    DarkTheme.h
     discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
@@ -383,9 +374,6 @@ set(mudlet_HDRS
     XMLimport.h
     enums.h)
 
-if(WIN32)
-  list(APPEND mudlet_HDRS uiawrapper.h)
-endif()
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)

@@ -140,7 +140,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
 
     // Set the previous details if saved
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::getQSettings();
     auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
     if (!packageAuthor.isEmpty()) {
         ui->lineEdit_author->setText(packageAuthor);
@@ -1018,7 +1018,7 @@ void dlgPackageExporter::slot_exportPackage()
     }
 
     // save settings for future reuse
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::getQSettings();
     settings.setValue("packageAuthor", ui->lineEdit_author->text());
 }
 

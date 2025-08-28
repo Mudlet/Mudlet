@@ -47,7 +47,6 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "XMLimport.h"
-#include "DarkTheme.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
@@ -62,6 +61,8 @@
 #include "MMCPServer.h"
 
 #include "pre_guard.h"
+#include <QAccessible>
+#include <QAccessibleAnnouncementEvent>
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
@@ -74,12 +75,15 @@
 #include <QNetworkDiskCache>
 #include <QMediaPlayer>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QPoint>
 #include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
+#include <QStyleHints>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QTimer>
@@ -150,7 +154,9 @@ void mudlet::init()
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
 
     QFile gitShaFile(":/app-build.txt");
-    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "mudlet: failed to open app-build.txt for reading:" << gitShaFile.errorString();
+    }
     const QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     mAppBuild = gitSha;
@@ -744,6 +750,8 @@ void mudlet::init()
 
     // load bundled fonts
     mFontManager.addFonts();
+    // Configure emoji font support
+    mFontManager.addEmojiFont();
 
     // Initialise a couple of QMaps and some other elements that must be
     // translated into the current GUI Language
@@ -751,9 +759,8 @@ void mudlet::init()
 
     setupTrayIcon();
 
-    // initialize Announcer after the window is loaded, as UIA on Windows requires it
+    // emit the signal for adjusting accessible names
     QTimer::singleShot(0, this, [this]() {
-        mpAnnouncer = new Announcer(this);
         emit signal_adjustAccessibleNames();
     });
 
@@ -800,7 +807,10 @@ static QString readMarkerFile(const QString& path)
 {
     QString line;
     QFile file(path);
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open file for reading:" << path << file.errorString();
+        return QString();
+    }
     QTextStream(&file).readLineInto(&line);
     file.close();
     return line;
@@ -2653,6 +2663,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
@@ -2826,6 +2837,7 @@ void mudlet::writeSettings()
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("invertMapZoom", mInvertMapZoom);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
@@ -2861,7 +2873,6 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
-    connect(mpConnectionDialog, &QObject::destroyed, this, [=, this]() { mpConnectionDialog = nullptr; });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
     
     // Use a timer to ensure the main window is ready before showing the dialog
@@ -3667,7 +3678,10 @@ void mudlet::slot_replay()
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
+        return QString();
+    }
     if (!file.exists()) {
         return QString();
     }
@@ -3685,6 +3699,14 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
 QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
+    // Ensure the profile directory exists before attempting to write profile data
+    const QDir profileDir;
+    const QString profileHomePath = getMudletPath(enums::profileHomePath, profile);
+    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
+        qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
+        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
+    }
+
     QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
@@ -4186,6 +4208,7 @@ mudlet::~mudlet()
         }
     }
 
+    saveDetachedWindowsGeometry();
     shutdownAI();
 
     mudlet::smpSelf = nullptr;
@@ -4992,7 +5015,9 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         pHost->mLoadedOk = true;
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
-        file.open(QFile::ReadOnly | QFile::Text);
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
+        }
         XMLimport importer(pHost);
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
@@ -5326,6 +5351,13 @@ void mudlet::setShowMapAuditErrors(const bool state)
     }
 }
 
+void mudlet::setInvertMapZoom(const bool state)
+{
+    if (mInvertMapZoom != state) {
+        mInvertMapZoom = state;
+    }
+}
+
 void mudlet::setShowTabConnectionIndicators(const bool state)
 {
     if (mShowTabConnectionIndicators == state) {
@@ -5369,20 +5401,25 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         return;
     }
 
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && desktopInDarkMode())) {
+    switch (state) {
+    case enums::Appearance::dark:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
         mDarkMode = true;
+        break;
+    case enums::Appearance::light:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+        mDarkMode = false;
+        break;
+    case enums::Appearance::systemSetting:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+        mDarkMode = (QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
+        break;
     }
 
-    if (mDarkMode) {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new DarkTheme);
-        getHostManager().changeAllHostColour(getActiveHost());
-    } else {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
-        getHostManager().changeAllHostColour(getActiveHost());
-    }
+    // Apply the AltFocusMenuBarDisable wrapper for both themes
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+    qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    getHostManager().changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }
@@ -6185,44 +6222,28 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     }
 }
 
-// Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
-// Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
-bool mudlet::desktopInDarkMode()
-{
-#if defined(Q_OS_WINDOWS)
-    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
-    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
-#elif defined(Q_OS_MACOS)
-    bool isDark = false;
-    CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
-    CFStringRef uiStyle = nullptr;
-    CFStringRef darkUiStyle = CFSTR("Dark");
-    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
-    {
-        isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
-        coreMacOS::CFRelease(uiStyle);
-    }
-    return isDark;
-#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD) || defined(Q_OS_OPENBSD)
-    QProcess process;
-    process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
-    process.waitForFinished();
-    const QString output = QString::fromUtf8(process.readAllStandardOutput());
-    return output.contains(qsl("-dark"), Qt::CaseInsensitive);
-#endif
-
-    return false;
-}
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
-    if (isPlain){
-        mpAnnouncer->announce(text, processing);
+    QString textToAnnounce;
+    if (isPlain) {
+        textToAnnounce = text;
     } else {
         QTextDocument convertor;
         convertor.setHtml(text);
-        mpAnnouncer->announce(convertor.toPlainText(), processing);
+        textToAnnounce = convertor.toPlainText();
     }
+
+    QAccessibleAnnouncementEvent event(this, textToAnnounce);
+    
+    // Set politeness based on processing parameter
+    if (processing == QLatin1String("importantall") || processing == QLatin1String("importantmostrecent")) {
+        event.setPoliteness(QAccessible::AnnouncementPoliteness::Assertive);
+    } else {
+        event.setPoliteness(QAccessible::AnnouncementPoliteness::Polite);
+    }
+    
+    QAccessible::updateAccessibility(&event);
 }
 
 void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
@@ -6429,6 +6450,16 @@ void mudlet::shutdownAI()
     if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
         qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
         mpLlamafileManager->stop();
+    }
+}
+
+void mudlet::saveDetachedWindowsGeometry()
+{
+    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow) {
+            detachedWindow->saveWindowGeometry();
+        }
     }
 }
 
