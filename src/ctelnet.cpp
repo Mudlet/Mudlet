@@ -2853,25 +2853,36 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
     // raise sysTelnetEvent for all unhandled protocols
     // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reasons
-    if (telnetCommand[1] != TN_GA && telnetCommand[1] != TN_EOR) {
-        auto type = static_cast<unsigned char>(telnetCommand[1]);
-        // Only access telnetCommand[2] if it exists
-        auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(telnetCommand[2]) : 0;
-        QString msg = telnetCommand.c_str();
-        if (telnetCommand.size() >= 6) {
-            msg = msg.mid(3, telnetCommand.size() - 5);
+    // Use additional safety checks to prevent memory access violations
+    if (telnetCommand.size() >= 2 && telnetCommand.data() != nullptr) {
+        // Safely access the second character with extra validation
+        const auto size = telnetCommand.size();
+        if (size <= 1) {
+            return;
         }
 
-        TEvent event {};
-        event.mArgumentList.append(qsl("sysTelnetEvent"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(QString::number(type));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        event.mArgumentList.append(QString::number(telnetOption));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        event.mArgumentList.append(msg);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(event);
+        const char secondChar = telnetCommand.data()[1];
+        if (secondChar != TN_GA && secondChar != TN_EOR) {
+            auto type = static_cast<unsigned char>(secondChar);
+            // Only access telnetCommand[2] if it exists
+            auto telnetOption = size > 2 ? static_cast<unsigned char>(telnetCommand.data()[2]) : 0;
+            QString msg = telnetCommand.c_str();
+            if (size >= 6) {
+                msg = msg.mid(3, size - 5);
+            }
+
+            TEvent event {};
+            event.mArgumentList.append(qsl("sysTelnetEvent"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::number(type));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            event.mArgumentList.append(QString::number(telnetOption));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            event.mArgumentList.append(msg);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(event);
+        }
+        
     }
 }
 
