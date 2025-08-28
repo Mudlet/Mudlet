@@ -94,7 +94,8 @@ public:
                 QOpenGLVertexArrayObject& vao,
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer) override;
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer) override;
                 
     const char* getCommandName() const override { return "RenderRectangularCuboid"; }
 

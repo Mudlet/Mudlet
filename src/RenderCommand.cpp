@@ -70,7 +70,8 @@ void RenderRectangularCuboidCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLVertexArrayObject& vao,
                                QOpenGLBuffer& vertexBuffer,
                                QOpenGLBuffer& colorBuffer,
-                               QOpenGLBuffer& normalBuffer)
+                               QOpenGLBuffer& normalBuffer,
+                               QOpenGLBuffer& indexBuffer)
 {    
     GeometryData rectangularCuboidGeometry = geometryManager->generateRectangularCuboidGeometry(mX, mY, mZ, mXSize, mYSize, mZSize, mR, mG, mB, mA);
     
@@ -83,7 +84,7 @@ void RenderRectangularCuboidCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
-    geometryManager->renderGeometry(rectangularCuboidGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, resourceManager, GL_TRIANGLES);
+    geometryManager->renderGeometry(rectangularCuboidGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
 // RenderLinesCommand implementation
