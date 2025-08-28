@@ -782,7 +782,10 @@ void dlgConnectionProfiles::slot_deleteProfile()
     QUiLoader loader;
 
     QFile file(qsl(":/ui/delete_profile_confirmation.ui"));
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "dlgConnectionProfiles: failed to open UI file for reading:" << file.errorString();
+        return;
+    }
 
     auto* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
@@ -1375,7 +1378,10 @@ void dlgConnectionProfiles::slot_setCustomColor()
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QSaveFile file(profileColorPath);
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qWarning() << "dlgConnectionProfiles: failed to open profile color file for writing:" << file.errorString();
+            return;
+        }
         auto colorName = color.name();
         file.write(colorName.toUtf8(), colorName.length());
         if (!file.commit()) {
