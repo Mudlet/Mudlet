@@ -4563,12 +4563,12 @@ Powód odłączenia: </translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="586"/>
       <source>User Disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Użytkownik rozłączony</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="589"/>
       <source>Connection/login attempt rejected by server</source>
-      <translation type="unfinished"/>
+      <translation>Próba połączenia/logowania odrzucona przez serwer</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="592"/>
@@ -4579,7 +4579,8 @@ Powód odłączenia: </translation>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Gniazdo zostało odłączone.
+Powód: %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="644"/>
@@ -4616,12 +4617,12 @@ Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie
     <message>
       <location filename="../src/ctelnet.cpp" line="1628"/>
       <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wygląda na to, że ta gra używa KaVir&apos;s procedura obsługi protokołu, która działa najlepiej, gdy Mudlet zgłasza swój numer wersji podczas połączenia. Raportowanie wersji w typie terminala zostało automatycznie włączone w celu poprawy obsługi kolorów. Ponowne łączenie...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1639"/>
       <source>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but may not negotiate it. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this forced setting in Settings &gt; Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wygląda na to, że ta gra obsługuje MXP (Mud eXtension Protocol), ale może go nie negocjować. Przetwarzanie MXP zostało automatycznie włączone dla klikalnych linków, informacji o pokojach i bogatszych interakcji. Możesz wyłączyć to wymuszone ustawienie w Ustawieniach &gt; Opcje specjalne.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2612"/>
@@ -6390,7 +6391,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="140"/>
       <source>Text outline color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kolor konturu tekstu</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="162"/>
@@ -6489,7 +6490,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="333"/>
       <source>(recommended)</source>
-      <translation type="unfinished"/>
+      <translation>(zalecane)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
@@ -6505,13 +6506,14 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>one-line description (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>jednowierszowy opis (zalecany)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
       <source>Description
 (e.g. how to use)</source>
-      <translation type="unfinished"/>
+      <translation>Opis
+(np. jak używać)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="289"/>
@@ -6540,7 +6542,31 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>(Zalecane)
+
+Ten opis pakietu jest wyświetlany w menedżerze pakietów.  Edytor obsługuje zaznaczanie.  Postępuj zgodnie z poniższym opisem, aby zapoznać się z dokładnym przykładem tego, co należy zawrzeć w opisie pakietu.
+
+### Opis
+
+Pełny opis tego, co osiąga ten pakiet. Jeśli pakiet jest przeznaczony tylko dla danej gry, wspomnij o tym tutaj.  Określ, czy pakiet ma funkcję automatycznego aktualizowania, a jeśli nie, dodaj łącze w sekcji Zobacz też poniżej do repozytorium kodu.
+
+### Użycie
+
+Jeśli ten pakiet używa aliasów, pokaż kilka przykładów i oczekiwane dane wyjściowe.
+
+`&gt; alias_1'
+
+    wyjście alias_1 -- wcięcie o cztery spacje
+    Więcej danych wyjściowych -- dla bloków kodu
+
+Jeśli ten pakiet jest z implementacją grafiki GUI, rozważ dodanie zrzutów ekranu, bezpośrednio przeciągając i upuszczając obrazy do tego edytora.
+
+### Zobacz też
+
+Dalsza lektura. np. link do wiki Mudlet, forów, repozytorium pakietów Github lub strony internetowej.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [Link 2 może być stroną internetową](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="330"/>
@@ -6663,77 +6689,77 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="167"/>
       <source>Create Module - %1</source>
-      <translation type="unfinished"/>
+      <translation>Utwórz moduł - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="170"/>
       <source>Enter module name</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź nazwę modułu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="173"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Utwórz moduł</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="176"/>
       <source>Select where to save module</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz, gdzie chcesz zapisać moduł</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
       <source>Select items to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz elementy, które mają zostać uwzględnione w module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj opis modułu, ikonę i zasoby (opcjonalnie)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="190"/>
       <source>Module location</source>
-      <translation type="unfinished"/>
+      <translation>Lokalizacja modułu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Module description</source>
-      <translation type="unfinished"/>
+      <translation>Opis modułu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="197"/>
       <source>Brief description of your module</source>
-      <translation type="unfinished"/>
+      <translation>Krótki opis Twojego modułu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="198"/>
       <source>Module author (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Autor modułu (zalecane)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="199"/>
       <source>Module version (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Wersja modułu (zalecane)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="202"/>
       <source>Module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Zależności modułów</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="203"/>
       <source>Include module assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Dołącz zasoby modułu (obrazy, dźwięki, czcionki)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="204"/>
       <source>Select files to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz pliki, które mają zostać uwzględnione w module</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="212"/>
       <source>Select module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Wybieranie zależności modułów</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="223"/>
@@ -6759,7 +6785,28 @@ If this module uses aliases, show a few examples and expected output.
 Further reading material, e.g., links to documentation or forum posts.
 
 * https://wiki.mudlet.org/w/Manual:Modules</source>
-      <translation type="unfinished"/>
+      <translation>(Opcjonalnie)
+
+Opis tego modułu jest wyświetlany w Menedżerze modułów. Edytor obsługuje zaznaczanie.
+
+### Opis
+
+Pełny opis funkcji tego modułu. Jeśli moduł jest specyficzny dla gry, wspomnij o tym tutaj.
+
+### Użycie
+
+Jeśli ten moduł używa aliasów, pokaż kilka przykładów i oczekiwane dane wyjściowe.
+
+`&gt; alias_1'
+
+    wyjście alias_1 -- wcięcie o cztery spacje
+    Więcej danych wyjściowych -- dla bloków kodu
+
+### Zobacz też
+
+Dalsze materiały do czytania, np. linki do dokumentacji lub postów na forum.
+
+* https://wiki.mudlet.org/w/Manual:Modules</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="416"/>
@@ -6777,78 +6824,78 @@ Further reading material, e.g., links to documentation or forum posts.
       <location filename="../src/dlgPackageExporter.cpp" line="582"/>
       <source>package name</source>
       <extracomment>package name will be added to other fields in the &apos;required fields missing: ...&apos; tooltip when it&apos;s missing</extracomment>
-      <translation type="unfinished"/>
+      <translation>nazwa pakietu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="604"/>
       <source>Required field missing: %1</source>
-      <translation type="unfinished"/>
+      <translation>Brak wymaganego pola: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="607"/>
       <source>Export package</source>
-      <translation type="unfinished"/>
+      <translation>Eksport pakietu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="822"/>
       <source>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można utworzyć pustego modułu. Wybierz co najmniej jeden wyzwalacz, timer, alias, skrypt, akcję lub, który chcesz uwzględnić w module.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="824"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można utworzyć pustego pakietu. Wybierz co najmniej jeden przedmiot, który ma znaleźć się w paczce.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="936"/>
       <source>Module &quot;%1&quot; created and installed successfully! You can now close this dialog.</source>
-      <translation type="unfinished"/>
+      <translation>Moduł &quot;%1&quot; Utworzono i zainstalowano pomyślnie! Możesz teraz zamknąć to okno dialogowe.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="947"/>
       <source>Module Already Exists</source>
-      <translation type="unfinished"/>
+      <translation>Moduł już istnieje</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="948"/>
       <source>A module named &quot;%1&quot; is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Moduł o nazwie &quot;%1&quot; jest już zainstalowany.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="949"/>
       <source>Do you want to overwrite the existing module?</source>
-      <translation type="unfinished"/>
+      <translation>Czy chcesz nadpisać istniejący moduł?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="961"/>
       <source>Module Overwritten</source>
-      <translation type="unfinished"/>
+      <translation>Moduł nadpisany</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="962"/>
       <source>Module &quot;%1&quot; overwritten successfully!</source>
-      <translation type="unfinished"/>
+      <translation>Moduł &quot;%1&quot; został nadpisany!</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="963"/>
       <source>The existing module has been replaced.</source>
-      <translation type="unfinished"/>
+      <translation>Aktualny moduł został zastąpiony.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="971"/>
       <location filename="../src/dlgPackageExporter.cpp" line="987"/>
       <source>Module &quot;%1&quot; exported but installation failed: %2</source>
-      <translation type="unfinished"/>
+      <translation>Moduł &quot;%1&quot; Wyeksportowano, ale instalacja nie powiodła się: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="976"/>
       <source>Module &quot;%1&quot; exported but failed to uninstall existing version</source>
-      <translation type="unfinished"/>
+      <translation>Moduł &quot;%1&quot; Wyeksportowano, ale nie udało się odinstalować istniejącej wersji</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Module &quot;%1&quot; exported successfully but not installed (already exists)</source>
-      <translation type="unfinished"/>
+      <translation>Moduł &quot;%1&quot; Wyeksportowano pomyślnie, ale nie zainstalowano (już istnieje)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1316"/>
@@ -6866,7 +6913,7 @@ Further reading material, e.g., links to documentation or forum posts.
       <location filename="../src/dlgPackageExporter.cpp" line="1903"/>
       <source>Why not &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Dlaczego nie &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;przesyłać&lt;/a&gt; Twój pakiet dla innych użytkowników Mudlet?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageExporter.cpp" line="1921"/>
@@ -7189,13 +7236,13 @@ Further reading material, e.g., links to documentation or forum posts.
       <location filename="../src/dlgProfilePreferences.cpp" line="674"/>
       <source>Enable spell check using Mudlet dictionary:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Włącz sprawdzanie pisowni za pomocą słownika Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="677"/>
       <source>Enable spell check using System dictionary:</source>
       <extracomment>On *nix systems where we find the system ones we use them</extracomment>
-      <translation type="unfinished"/>
+      <translation>Włącz sprawdzanie pisowni za pomocą słownika systemowego:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="870"/>
@@ -9006,7 +9053,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="81"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Kliknij przycisk &apos;Dodaj przedmiot&apos; ikona powyżej.&lt;/li&gt;&lt;li&gt;Definiowanie danych wejściowych &lt;strong&gt;deseń&lt;/strong&gt; albo dosłownie, albo za pomocą wyrażenia regularnego Perla.&lt;/li&gt;&lt;li&gt;Zdefiniuj obiekt &apos;zastępstwo&apos; &lt;strong&gt;polecenie&lt;/strong&gt;, aby wysłać do gry w postaci zwykłego tekstu &lt;strong&gt;zamiast wzorca aliasu&lt;/strong&gt;lub napisz skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; alias.&lt;/li&gt;&lt;/ol&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="86"/>
@@ -9021,7 +9068,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Alias Editor
 ----------
 Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Istnieje wiele &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;para&lt;/a&gt; z &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Pakiety&lt;/a&gt; To może ci pomóc.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="90"/>
@@ -9069,7 +9116,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Kliknij przycisk &apos;Dodaj przedmiot&apos; ikona powyżej.&lt;/li&gt;&lt;li&gt;Zdefiniuj obiekt &lt;strong&gt;deseń&lt;/strong&gt;, na którym chcesz wyzwolić.&lt;/li&gt;&lt;li&gt;Wybierz odpowiedni wzór &lt;strong&gt;typ&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Definiowanie tekstu zwykłego &lt;strong&gt;polecenie&lt;/strong&gt; które chcesz wysłać do gry, jeśli wyzwalacz znajdzie wzór w tekście z gry, lub napisz skrypt na bardziej skomplikowane potrzeby.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; spustu.&lt;/li&gt;&lt;/ol&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
@@ -9081,7 +9128,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="114"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Introduction to Triggers&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Trigger Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Wprowadzenie do wyzwalaczy&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
@@ -9099,7 +9146,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Kliknij przycisk &apos;Dodaj przedmiot&apos; ikona powyżej.&lt;/li&gt;&lt;li&gt;Wprowadź skrypt w polu poniżej. Można na przykład zdefiniować &lt;strong&gt;Funkcje&lt;/strong&gt; do wywołania przez inne wyzwalacze, aliasy itp.&lt;/li&gt;&lt;li&gt;Jeśli napiszesz lua &lt;strong&gt;Polecenia&lt;/strong&gt; bez definiowania funkcji, będą one uruchamiane przy starcie Mudlet i za każdym razem, gdy otworzysz skrypt do edycji.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; scenariusza.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Skrypty są uruchamiane automatycznie po wyświetleniu, nawet jeśli są dezaktywowane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
@@ -9111,13 +9158,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
       <source>&lt;p&gt;You can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Możesz zarejestrować listę &lt;strong&gt;Zdarzenia&lt;/strong&gt; z symbolami + i -. Jeśli wystąpi jedno z tych zdarzeń, zostanie wywołana funkcja o tej samej nazwie, co sam element skryptu.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Zdarzenia można również dodawać do skryptu z wiersza poleceń w głównym oknie profilu w następujący sposób:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nazwaWydarzeniaOfTheMudletEvent&amp;quot;, &amp;quot;nazwaNazwaTwojaFunkcjiDoWywołanej&amp;quot;)&lt;/code&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="138"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Introduction to Scripts&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Script Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Wprowadzenie do skryptów&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
@@ -9135,7 +9182,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Kliknij przycisk &apos;Dodaj przedmiot&apos; ikona powyżej.&lt;/li&gt;&lt;li&gt;Zdefiniuj parametr &lt;strong&gt;Przedział czasowy&lt;/strong&gt; Po czym timer powinien zareagować w tym formacie: godziny : minuty : sekundy.&lt;/li&gt;&lt;li&gt;Definiowanie tekstu zwykłego &lt;strong&gt;polecenie&lt;/strong&gt; które chcesz wysłać do gry, gdy minie czas, lub napisać skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; zegar.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Jeśli chcesz, aby wyzwalacz reagował tylko raz, a nie regularnie, użyj zamiast tego funkcji Lua tempTimer().&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
@@ -9148,13 +9195,14 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <source>&lt;p&gt;Timers can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Timery można również zdefiniować z linii wejściowej w głównym oknie profilu w następujący sposób:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;Witam!
+&amp;quot;) koniec)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;To przywita Cię dokładnie 3 sekundy po jego wykonaniu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="162"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introduction to Timers&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Timer Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Wprowadzenie do timerów&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
@@ -9172,13 +9220,13 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="172"/>
       <source>&lt;ol&gt;&lt;li&gt;Add a new group to define a new &lt;strong&gt;button bar&lt;/strong&gt; in case you don&apos;t have any.&lt;/li&gt;&lt;li&gt;Add new groups as &lt;strong&gt;menus&lt;/strong&gt; to a button bar or sub-menus to menus.&lt;li&gt;&lt;li&gt;Add new items as &lt;strong&gt;buttons&lt;/strong&gt; to a button bar or menu or sub-menu.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the toolbar, menu or button. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If a button is made a &lt;strong&gt;click-down&lt;/strong&gt; button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua &apos;getButtonState()&apos; function reports whether the button is up or down.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Button Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Dodawanie nowej grupy w celu zdefiniowania nowej grupy &lt;strong&gt;Pasek przycisków&lt;/strong&gt; W przypadku, gdy nie&apos;Nie mam żadnych.&lt;/li&gt;&lt;li&gt;Dodaj nowe grupy jako &lt;strong&gt;Menu&lt;/strong&gt; do paska przycisków lub podmenu do menu.&lt;li&gt;&lt;li&gt;Dodaj nowe elementy jako &lt;strong&gt;Przyciski&lt;/strong&gt; do paska przycisków, menu lub podmenu.&lt;/li&gt;&lt;li&gt;Definiowanie tekstu zwykłego &lt;strong&gt;polecenie&lt;/strong&gt; które chcesz wysłać do gry, jeśli przycisk zostanie naciśnięty, lub napisać skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; paska narzędzi, menu lub przycisku. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Dezaktywowane elementy zostaną ukryte, a jeśli są to paski narzędzi lub menu, wszystkie zawarte w nich elementy również zostaną ukryte.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Jeśli przycisk zostanie wykonany jako &lt;strong&gt;Kliknięcie w dół&lt;/strong&gt; przycisk, to możesz również zdefiniować polecenie tekstowe, które chcesz wysłać do gry, gdy przycisk zostanie naciśnięty po raz drugi, aby go odznaczyć lub napisać skrypt, który będzie uruchamiany, gdy to się stanie - w ramach takiego skryptu Lua &apos;getButtonState()&apos; Funkcja informuje, czy przycisk jest w górę, czy w dół.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="184"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introduction to Buttons&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Button Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Wprowadzenie do przycisków&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="190"/>
@@ -9196,7 +9244,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="194"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Kliknij przycisk &apos;Dodaj przedmiot&apos; ikona powyżej.&lt;/li&gt;&lt;li&gt;Kliknij na &lt;strong&gt;&apos;Chwyć klucz&apos;&lt;/strong&gt; a następnie naciśnij kombinację, np. w tym modyfikujące, takie jak Control, Shift itp.&lt;/li&gt;&lt;li&gt;Definiowanie tekstu zwykłego &lt;strong&gt;polecenie&lt;/strong&gt; które chcesz wysłać do gry, jeśli przycisk zostanie naciśnięty, lub napisać skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; Nowe powiązanie.&lt;/li&gt;&lt;/ol&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="199"/>
@@ -9208,49 +9256,49 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
       <source>&lt;p&gt;Keys can be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klucze można zdefiniować z linii wejściowej w głównym oknie profilu w następujący sposób:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;mój skoku&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[wyślij(&amp;quot;skacz&amp;quot;]]) koniec)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Naciśnięcie F8 sprawi, że będziesz skakać.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="207"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;Introduction to Keybindings&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Keys Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;Wprowadzenie do skrótów klawiszowych&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="213"/>
       <source>Variables store information.</source>
       <extracomment>Headline for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zmienne przechowują informacje.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="215"/>
       <source>How to add a new variable now</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak teraz dodać nową zmienną</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="217"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Kliknij przycisk &apos;Dodaj przedmiot&apos; ikona powyżej. Aby zamiast tego dodać tabelę, kliknij przycisk &apos;Dodaj grupę&apos;.&lt;/li&gt;&lt;li&gt;Wybierz typ wartości zmiennej (może to być ciąg znaków, liczba całkowita, wartość logiczna)&lt;/li&gt;&lt;li&gt;Wprowadź wartość, która ma być przechowywana w tej zmiennej.&lt;/li&gt;&lt;li&gt;Jeśli chcesz zachować zmienną w swoich następnych sesjach Mudlet, zaznacz pole wyboru na liście zmiennych po lewej stronie.&lt;/li&gt;&lt;li&gt;Aby usunąć zmienną ręcznie, ustaw ją na &apos;zero&apos; lub kliknij przycisk &apos;Usunąć&apos; ikona powyżej.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Zmienne utworzone w tym miejscu wygrały&apos;t zostanie zapisany, gdy Mudlet zostanie zamknięty, chyba że zaznaczysz ich pole wyboru na liście zmiennych po lewej stronie. Zamiast tego możesz również tworzyć skrypty ze zmiennymi.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="224"/>
       <source>How to add a new variable from the command line</source>
       <extracomment>Name of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dodać nową zmienną z wiersza poleceń</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="226"/>
       <source>&lt;p&gt;Variables and tables can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zmienne i tabele można również definiować z wiersza wejściowego w głównym oknie profilu w następujący sposób:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Spowoduje to utworzenie ciągu o nazwie &apos;Foo&apos; z &apos;bar&apos; jako jego wartość.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="232"/>
       <source>&lt;p&gt;Start at the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;Introduction to Variables&lt;/a&gt; for a detailed overview.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Messagebox in the Mudlet Variable Editor</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zacznij od &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;Wprowadzenie do zmiennych&lt;/a&gt; , aby uzyskać szczegółowy przegląd.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="238"/>
@@ -9886,7 +9934,7 @@ Name of a selectable option for the Messagebox in the Mudlet Variable Editor</ex
     <message>
       <location filename="../src/main.cpp" line="350"/>
       <source>       -f, --fullscreen             start Mudlet in fullscreen mode.</source>
-      <translation type="unfinished"/>
+      <translation>       -f, --fullscreen        uruchamia Mudlet w trybie pełnoekranowym.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="351"/>
@@ -10102,7 +10150,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="152"/>
       <source>Window</source>
-      <translation type="unfinished"/>
+      <translation>Okno</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -10112,32 +10160,32 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="180"/>
       <source>Reattach detached windows</source>
-      <translation type="unfinished"/>
+      <translation>Ponowne dołączanie okien odłączonych</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="183"/>
       <source>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ponownie podłącz wszystkie odłączone okna profilu z powrotem do głównego okna Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="194"/>
       <source>Always on Top</source>
-      <translation type="unfinished"/>
+      <translation>Zawsze na wierzchu</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
       <source>&lt;p&gt;Keep the main Mudlet window always on top of other windows.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utrzymuj główne okno Mudlet zawsze na wierzchu innych okien.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="202"/>
       <source>Minimize</source>
-      <translation type="unfinished"/>
+      <translation>Zminimalizuj</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>&lt;p&gt;Minimize the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zminimalizuj główne okno Mudleta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
@@ -10298,12 +10346,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="481"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="489"/>
       <source>Show changelog</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż dziennik zmian</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="494"/>
@@ -10534,7 +10582,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Text outline:</source>
-      <translation type="unfinished"/>
+      <translation>Konspekt tekstu:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="202"/>
@@ -11042,7 +11090,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="291"/>
       <location filename="../src/mudlet.cpp" line="293"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="347"/>
@@ -11078,7 +11126,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="433"/>
       <source>Show Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Główny Pasek narzędzi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="489"/>
@@ -11283,7 +11331,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1012"/>
       <source>Esperanto</source>
-      <translation type="unfinished"/>
+      <translation>Esperanto</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1013"/>
@@ -11429,12 +11477,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1042"/>
       <source>Faroese</source>
-      <translation type="unfinished"/>
+      <translation>Faroese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1043"/>
       <source>Faroese (Faroe Islands)</source>
-      <translation type="unfinished"/>
+      <translation>Faroese (Faroe Islands)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1044"/>
@@ -11582,17 +11630,17 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1106"/>
       <source>Mongolian</source>
-      <translation type="unfinished"/>
+      <translation>Mongolski</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1107"/>
       <source>Mongolian (Mongolia)</source>
-      <translation type="unfinished"/>
+      <translation>Mongolski (Mongolia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1172"/>
       <source>Tagalog</source>
-      <translation type="unfinished"/>
+      <translation>Filipiński</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1275"/>
@@ -11610,17 +11658,17 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="1305"/>
       <source>------------ </source>
       <extracomment>This represents the format of the timestamps shown for lines that do not * have a timestamp in a console that is showing them. If localised this * should be set to the same format and length as the smTimeStampFormat:</extracomment>
-      <translation type="unfinished"/>
+      <translation>------------ </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1736"/>
       <source>%1 (Main Window)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Okno Główne)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1765"/>
       <source>%1 (Detached)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (Odłączone)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3366"/>
@@ -11647,7 +11695,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="4140"/>
       <source>[ INFO ]  - Compact input line set. Press &quot;%1&quot; to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Kompaktowy wersja linii wprowadzania komend. Naciśnij &quot;%1&quot; , aby ponownie wyświetlić przyciski w prawym dolnym rogu.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4230"/>
@@ -13543,7 +13591,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4187"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre MUD-y używają błędnej interpretacji ANSI Set Graphics Rendition (&lt;b&gt;SGR &lt;/b&gt;) sekwencje kodu dla trybu kolorów 16M, który używa tylko średników, a nie dwukropków do oddzielania elementów parametrów, tj. zamiast używać kodu w postaci: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Identyfikator przestrzeni kolorów&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Czerwony&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Zielony&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Niebieski&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Nieużywane&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerancja&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Przestrzeń kolorów tolerancji (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;w przypadku gdy &lt;i&gt;Identyfikator przestrzeni kolorów&lt;/i&gt; oczekuje się, że będzie pustym ciągiem, aby określić zwykły (domyślny) przypadek i wszystkie &lt;i&gt;Elementy parametrów&lt;/i&gt; (Plik &quot;2&quot; a wartości w polu &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) można, z technicznego punktu widzenia, pominąć; Korzystają one: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38; 2;&lt;/tt&gt;&amp;lt;Czerwony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Zielony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Niebieski&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;lub: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38; 2;&lt;/tt&gt;&amp;lt;Identyfikator przestrzeni kolorów&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Czerwony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Zielony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Niebieski&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;Nie jest możliwe wiarygodne wykrycie różnicy między tymi dwoma, więc zaznaczenie tej opcji powoduje, że Mudlet oczekuje ostatniej z dodatkowym (ale pustym!) parametrem.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4291"/>
@@ -13620,7 +13668,13 @@ try again when it has finished.</source>
 &lt;li&gt;&lt;b&gt;Always&lt;/b&gt;: Commands are always shown regardless of script settings&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Określa, w jaki sposób wysłane polecenia są echowane w polu wyświetlania:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;Nigdy&lt;/b&gt;: Polecenia nigdy nie są wyświetlane, niezależnie od ustawień skryptu&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Kontrolowane przez skrypt&lt;/b&gt;: Skrypty mogą kontrolować widoczność za pomocą send(cmd, prawda/fałsz)&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Zawsze&lt;/b&gt;: Polecenia są zawsze wyświetlane, niezależnie od ustawień skryptu&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;i&gt;Opcja ta może zostać wyłączona przez serwer gry, jeśli wynegocjuje użycie opcji telnet ECHO.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="589"/>
@@ -13950,7 +14004,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wymaga to również włączenia GMCP w protokołach.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2143"/>
