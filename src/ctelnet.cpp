@@ -2772,14 +2772,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
 
         case OPT_COMPRESS4: {
-            // Debug: Print exact bytes received
-            qDebug() << "MCCP4: Received suboption, length:" << telnetCommand.length();
-            QString hexDump;
-            for (size_t i = 0; i < telnetCommand.length(); ++i) {
-                hexDump += QString::number(static_cast<unsigned char>(telnetCommand[i]), 16).rightJustified(2, '0') + " ";
-            }
-            qDebug() << "MCCP4: Raw bytes:" << hexDump.trimmed();
-            
             if (telnetCommand.length() >= 5 && telnetCommand[3] == MCCP4_BEGIN_ENCODING) {
                 // Extract encoding type from BEGIN_ENCODING suboption
                 std::string encodingType;
@@ -2789,26 +2781,26 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     }
                     encodingType += telnetCommand[i];
                 }
-                
+
                 if (encodingType == "zstd") {
                     mMCCP4_encoding = 1; // zstd encoding
                     qDebug() << "MCCP4: Server selected zstd encoding";
                 } else if (encodingType == "deflate") {
-                    mMCCP4_encoding = 2; // deflate encoding  
+                    mMCCP4_encoding = 2; // deflate encoding
                     qDebug() << "MCCP4: Server selected deflate encoding";
                 } else {
                     qWarning() << "MCCP4: Unknown encoding type received:" << encodingType.c_str() << ", disabling MCCP4";
-                    
+
                     // Send WONT to disable MCCP4
                     sendTelnetOption(TN_WONT, OPT_COMPRESS4);
                     hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
                     mMCCP_version_4 = false;
                     return;
                 }
-                
+
                 mNeedDecompression = true;
                 qDebug() << "MCCP4: Compression started with encoding" << encodingType.c_str();
-                
+
                 if (mMCCP4_encoding == 1) { // zstd - initialize ZSTD stream
                     if (!mZstdDstream) {
                         mZstdDstream = ZSTD_createDStream();
@@ -2820,7 +2812,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             mNeedDecompression = false;
                             return;
                         }
-                        
+
                         size_t const initResult = ZSTD_initDStream(mZstdDstream);
                         if (ZSTD_isError(initResult)) {
                             qWarning() << "MCCP4: Failed to initialize ZSTD stream:" << ZSTD_getErrorName(initResult);
@@ -2840,8 +2832,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             } else if (telnetCommand.length() >= 4 && static_cast<unsigned char>(telnetCommand[3]) != 255) {
                 // Handle unknown suboptions (but not empty ones) - send WONT per spec
                 unsigned char unknownSuboption = static_cast<unsigned char>(telnetCommand[3]);
-                qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING (" << MCCP4_BEGIN_ENCODING << "), disabling MCCP4";
-                
+                qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING ("
+                           << MCCP4_BEGIN_ENCODING << "), disabling MCCP4";
+
                 // Send WONT to disable MCCP4
                 sendTelnetOption(TN_WONT, OPT_COMPRESS4);
                 hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
@@ -2849,7 +2842,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             } else {
                 // Handle empty suboption or IAC at position 3 (malformed sequence)
                 qWarning() << "MCCP4: Received malformed or empty suboption - server may not be following MCCP4 protocol correctly";
-                
+
                 // Send WONT to disable MCCP4
                 sendTelnetOption(TN_WONT, OPT_COMPRESS4);
                 hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
