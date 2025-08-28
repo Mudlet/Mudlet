@@ -121,8 +121,8 @@ const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
-const unsigned char OPT_ATCP = static_cast<unsigned char>(200);
-const unsigned char OPT_GMCP = static_cast<unsigned char>(201);
+const auto char OPT_ATCP = static_cast<unsigned char>(200);
+const auto char OPT_GMCP = static_cast<unsigned char>(201);
 
 const char CHARSET_REQUEST = 1;
 const char CHARSET_ACCEPTED = 2;
