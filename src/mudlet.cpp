@@ -6056,7 +6056,8 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
                                                       qsl("imperian.com"),
                                                       qsl("starmourn.com"),
                                                       qsl("stickmud.com")}},
-        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
+        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}},
+        {qsl(":/mudlet-tutorial.xml"),               {qsl("tutorial.mudlet.local")}}
         // clang-format on
     };
 
@@ -6070,6 +6071,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+    }
+
+    // Special handling for tutorial profile - ensure tutorial system is properly initialized
+    if (gameUrl == qsl("tutorial.mudlet.local")) {
+        // Tutorial will be initialized after profile load
     }
 }
 

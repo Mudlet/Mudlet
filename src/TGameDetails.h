@@ -217,6 +217,27 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。")},
 
+            {qsl("Mudlet Tutorial"),
+             qsl("tutorial.mudlet.local"),
+             23,
+             false,
+             qsl("<a href='https://wiki.mudlet.org/w/Manual:Introduction'>Mudlet Manual</a><br>"
+                 "<a href='https://forums.mudlet.org/'>Mudlet Forums</a>"),
+             qsl(":/icons/mudlet_main_48px.png"),
+             qsl("Welcome to the Mudlet Tutorial! This is an interactive tutorial profile that will teach you "
+                 "both MUD gameplay basics and Mudlet-specific features. You'll learn how to navigate text-based "
+                 "game worlds, interact with game environments, create automation scripts, and master the 'syntax game' "
+                 "of command exploration.\n\n"
+                 "This tutorial provides a safe, offline environment where you can practice without risk. "
+                 "No previous experience required - perfect for newcomers to MUDs and veterans looking to master Mudlet's features.\n\n"
+                 "Features:\n"
+                 "• Interactive MUD simulation environment\n"
+                 "• Step-by-step scripting lessons\n"
+                 "• Command syntax exploration training\n"
+                 "• Mudlet automation tutorials\n"
+                 "• Verification system to track your progress\n\n"
+                 "Click Connect to start your journey into the world of MUDs!")},
+
             {qsl("Realms of Despair"),
              qsl("realmsofdespair.com"),
              4000,
