@@ -425,7 +425,6 @@
     "sendATCP": "sendATCP(message, what)",
     "sendGMCP": "sendGMCP(command)",
     "sendIrc": "sendIrc(target, message)",
-    "openIRC": "openIRC()",
     "sendMSDP": "sendMSDP(variable[, value][, value...])",
     "sendSocket": "sendSocket(data)",
     "sendTelnetChannel102": "sendTelnetChannel102(msg)",
