@@ -980,7 +980,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
 
     case 85:    return QLatin1String("MCCP (85)");
     case 86:    return QLatin1String("MCCP2 (86)");
-    case 89:    return QLatin1String("MCCP4 (89)");
+    case 88:    return QLatin1String("MCCP4 (88)");
 
     case 90:    return QLatin1String("MSP (90)");
     case 91:    return QLatin1String("MXP (91)");
@@ -2036,11 +2036,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             qDebug() << "MCCP v1 negotiated.";
                         } else if (option == OPT_COMPRESS2) {
                             mMCCP_version_2 = true;
-                            qDebug() << "MCCP v2 negotiated!";
+                            qDebug() << "MCCP v2 negotiated.";
                         } else if (option == OPT_COMPRESS4) {
                             mMCCP_version_4 = true;
                             mMCCP4_supportedEncodings << "zstd" << "deflate";
-                            qDebug() << "MCCP v4 negotiated!";
+                            qDebug() << "MCCP v4 negotiations beginning: offering zstd and deflate as options";
                             
                             // Send ACCEPT_ENCODING suboption
                             std::string response;
@@ -2773,6 +2773,14 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
 
         case OPT_COMPRESS4: {
+            // Debug: Print exact bytes received
+            qDebug() << "MCCP4: Received suboption, length:" << telnetCommand.length();
+            QString hexDump;
+            for (size_t i = 0; i < telnetCommand.length(); ++i) {
+                hexDump += QString::number(static_cast<unsigned char>(telnetCommand[i]), 16).rightJustified(2, '0') + " ";
+            }
+            qDebug() << "MCCP4: Raw bytes:" << hexDump.trimmed();
+            
             if (telnetCommand.length() >= 5 && telnetCommand[3] == MCCP4_BEGIN_ENCODING) {
                 // Extract encoding type from BEGIN_ENCODING suboption
                 std::string encodingType;
@@ -2844,10 +2852,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     ZSTD_freeDStream(mZstdDstream);
                     mZstdDstream = nullptr;
                 }
-            } else if (telnetCommand.length() >= 4) {
-                // Handle unknown suboptions - send WONT per spec
+            } else if (telnetCommand.length() >= 4 && static_cast<unsigned char>(telnetCommand[3]) != 255) {
+                // Handle unknown suboptions (but not empty ones) - send WONT per spec
                 unsigned char unknownSuboption = static_cast<unsigned char>(telnetCommand[3]);
-                qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << ", disabling MCCP4";
+                qWarning() << "MCCP4: Unknown suboption received:" << unknownSuboption << "(" << QString::number(unknownSuboption, 16) << "hex), expected MCCP4_BEGIN_ENCODING (" << MCCP4_BEGIN_ENCODING << "), disabling MCCP4";
+                
+                // Send WONT to disable MCCP4
+                sendTelnetOption(TN_WONT, OPT_COMPRESS4);
+                hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
+                mMCCP_version_4 = false;
+            } else {
+                // Handle empty suboption or IAC at position 3 (malformed sequence)
+                qWarning() << "MCCP4: Received malformed or empty suboption - server may not be following MCCP4 protocol correctly";
                 
                 // Send WONT to disable MCCP4
                 sendTelnetOption(TN_WONT, OPT_COMPRESS4);
