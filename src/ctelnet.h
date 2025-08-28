@@ -47,6 +47,8 @@
 #include "post_guard.h"
 
 #include <zlib.h>
+#include <zstd.h>
+#include <zstd_errors.h>
 
 #include <iostream>
 #include <queue>
@@ -118,6 +120,7 @@ const char OPT_MSDP = 69; // https://tintin.mudhalla.net/protocols/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
+const char OPT_COMPRESS4 = 89; // MCCP4, documentation pending
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
@@ -164,6 +167,10 @@ const char NEW_ENVIRON_VAR = 0;
 const char NEW_ENVIRON_VAL = 1;
 const char NEW_ENVIRON_ESC = 2;
 const char NEW_ENVIRON_USERVAR = 3;
+
+const char MCCP4_ACCEPT_ENCODING = 1;
+const char MCCP4_BEGIN_ENCODING = 2;
+const char MCCP4_WONT = 3;
 
 class cTelnet : public QObject
 {
@@ -277,7 +284,9 @@ private:
     // feedTelnet(...) Lua function.
     void processSocketData(char *data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
+    void initMCCP4StreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    int decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
     void sendLoginAndPass();
 
@@ -349,6 +358,7 @@ private:
     std::queue<int> mCommandQueue;
 
     z_stream mZstream = {};
+    ZSTD_DStream* mZstdDstream = nullptr;
 
     bool mNeedDecompression = false;
     std::string command;
@@ -383,6 +393,9 @@ private:
     int mCommands = 0;
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
+    bool mMCCP_version_4 = false;
+    int mMCCP4_encoding = 0;
+    QStringList mMCCP4_supportedEncodings;
 
 
     std::string mMudData;

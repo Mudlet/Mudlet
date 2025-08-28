@@ -452,6 +452,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(zstd REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
@@ -514,7 +515,7 @@ set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
 # * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
 #   commands for suboptions - change the value to 2 to get a bit more detail
 #   about the size or nature of the command:
-target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
+target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=2)
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
 #   the single bytes of pure ASCII text:
@@ -602,6 +603,7 @@ target_link_libraries(
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
+        zstd::libzstd_shared
 # PLACEMARKER: sample benchmarking code
 #       nanobench
         ${QT_LIBS})
