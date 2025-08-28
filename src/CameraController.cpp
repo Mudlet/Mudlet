@@ -25,10 +25,6 @@
 
 CameraController::CameraController()
 {
-    //mDistance = 15.0f;
-    //mPositionVector = QVector3D(0.0f, 0.0f, 1.0f);
-    //mUpVector = QVector3D(1.0f, 0.0f, 0.0f);
-    //mRightVector = QVector3D(0.0f, 1.0f, 0.0f);
     mTarget = QVector3D(0.0f, 0.0f, 0.0f);
     setDefaultView();
     calculateModelMatrix();
@@ -59,6 +55,48 @@ void CameraController::setTarget(float x, float y, float z)
     mTarget.setX(x);
     mTarget.setY(y);
     mTarget.setZ(z);
+};
+
+void CameraController::translateTargetUp()
+{
+    mTarget.setZ(mTarget.z() + 1);
+}
+void CameraController::translateTargetDown()
+{
+    mTarget.setZ(mTarget.z() - 1);
+}
+void CameraController::translateTargetLeft()
+{
+    const float translationSpeed = 0.1f * mDistance;
+    const float normFactor = std::sqrt(mRightVector.x() * mRightVector.x() + mRightVector.y() * mRightVector.y());
+    mTarget.setX(mTarget.x() - translationSpeed * mRightVector.x() / normFactor);
+    mTarget.setY(mTarget.y() - translationSpeed * mRightVector.y() / normFactor);
+}
+void CameraController::translateTargetRight()
+{
+    const float translationSpeed = 0.1f * mDistance;
+    const float normFactor = std::sqrt(mRightVector.x() * mRightVector.x() + mRightVector.y() * mRightVector.y());
+    mTarget.setX(mTarget.x() + translationSpeed * mRightVector.x() / normFactor);
+    mTarget.setY(mTarget.y() + translationSpeed * mRightVector.y() / normFactor);
+}
+void CameraController::translateTargetForward()
+{
+    const float translationSpeed = 0.1f * mDistance;
+    const float normFactor = std::sqrt(mPositionVector.x() * mPositionVector.x() + mPositionVector.y() * mPositionVector.y());
+    mTarget.setX(mTarget.x() - translationSpeed * mPositionVector.x() / normFactor);
+    mTarget.setY(mTarget.y() - translationSpeed * mPositionVector.y() / normFactor);
+}
+void CameraController::translateTargetBackward()
+{
+    const float translationSpeed = 0.1f * mDistance;
+    const float normFactor = std::sqrt(mPositionVector.x() * mPositionVector.x() + mPositionVector.y() * mPositionVector.y());
+    mTarget.setX(mTarget.x() + translationSpeed * mPositionVector.x() / normFactor);
+    mTarget.setY(mTarget.y() + translationSpeed * mPositionVector.y() / normFactor);
+}
+
+void CameraController::snapTargetToGrid()
+{
+    setTarget(std::round(mTarget.x()), std::round(mTarget.y()), std::round(mTarget.z()));
 }
 
 void CameraController::setScale(float scale)

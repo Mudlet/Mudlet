@@ -165,7 +165,7 @@ void ModernGLWidget::setupBuffers()
 void ModernGLWidget::updateMatrices()
 {
     // Update camera controller with current state, but skip position updates during smooth animation
-    if (!mCameraSmoothAnimating) {
+    if (!mCameraSmoothAnimating && !mPanMode) {
         mCameraController.setTarget(static_cast<float>(mMapCenterX), static_cast<float>(mMapCenterY), static_cast<float>(mMapCenterZ));
     }
     mCameraController.setViewportSize(width(), height());
@@ -494,6 +494,11 @@ void ModernGLWidget::renderRooms()
             }
         }
         
+        if (!mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
+            // 3. Render up/down exit indicators on the overlay
+            renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
+        }
+
         const float overlaySize = 0.75f / scale; // slightly smaller and thinner
         renderRectangularCuboid(rx,
                 ry,
@@ -506,10 +511,6 @@ void ModernGLWidget::renderRooms()
                 envBlue,
                 overlayAlpha);
 
-        if (!mpHost->experimentEnabled("experiment.rendering.sky-ground")) {
-            // 3. Render up/down exit indicators on the overlay
-            renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f/mZSquishFactor);
-        }
 
         // Re-enable depth testing for subsequent rendering
         auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
@@ -755,73 +756,43 @@ void ModernGLWidget::slot_showAllLevels()
 void ModernGLWidget::slot_shiftDown()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY - 1, mMapCenterZ);
-    } else {
-        mMapCenterY--;
-        update();
-    }
+    mCameraController.translateTargetBackward();
+    update();
 }
 
 void ModernGLWidget::slot_shiftUp()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY + 1, mMapCenterZ);
-    } else {
-        mMapCenterY++;
-        update();
-    }
+    mCameraController.translateTargetForward();
+    update();
 }
 
 void ModernGLWidget::slot_shiftLeft()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX - 1, mMapCenterY, mMapCenterZ);
-    } else {
-        mMapCenterX--;
-        update();
-    }
+    mCameraController.translateTargetLeft();
+    update();
 }
 
 void ModernGLWidget::slot_shiftRight()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX + 1, mMapCenterY, mMapCenterZ);
-    } else {
-        mMapCenterX++;
-        update();
-    }
+    mCameraController.translateTargetRight();
+    update();
 }
 
 void ModernGLWidget::slot_shiftZup()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY, mMapCenterZ + 1);
-    } else {
-        mMapCenterZ++;
-        update();
-    }
+    mCameraController.translateTargetUp();
+    update();
 }
 
 void ModernGLWidget::slot_shiftZdown()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY, mMapCenterZ - 1);
-    } else {
-        mMapCenterZ--;
-        update();
-    }
+    mCameraController.translateTargetDown();
+    update();
 }
 
 void ModernGLWidget::slot_singleLevelView()
@@ -919,7 +890,7 @@ void ModernGLWidget::slot_setCameraPositionZ(int angle)
 
 void ModernGLWidget::slot_shiftCameraDown()
 {
-    const float angle = 1.0f;
+    const float angle = 3.0f;
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], currentPosition[1]+angle, currentPosition[2]);
     is2DView = false;
@@ -928,7 +899,7 @@ void ModernGLWidget::slot_shiftCameraDown()
 
 void ModernGLWidget::slot_shiftCameraUp()
 {
-    const float angle = 1.0f;
+    const float angle = 3.0f;
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], currentPosition[1]-angle, currentPosition[2]);
     is2DView = false;
@@ -937,7 +908,7 @@ void ModernGLWidget::slot_shiftCameraUp()
 
 void ModernGLWidget::slot_shiftCameraLeft()
 {
-    const float angle = 1.0f;
+    const float angle = 3.0f;
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], currentPosition[1], currentPosition[2]-angle);
     is2DView = false;
@@ -946,7 +917,7 @@ void ModernGLWidget::slot_shiftCameraLeft()
 
 void ModernGLWidget::slot_shiftCameraRight()
 {
-    const float angle = 1.0f;
+    const float angle = 3.0f;
     QVector3D currentPosition = mCameraController.getPosition();
     mCameraController.setPosition(currentPosition[0], currentPosition[1], currentPosition[2]+angle);
     is2DView = false;
@@ -966,7 +937,7 @@ void ModernGLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
         mMapCenterX = xPos;
         mMapCenterY = yPos;
         mMapCenterZ = zPos;
-        mCameraController.setViewCenter(xPos, yPos, zPos);
+        mCameraController.setTarget(xPos, yPos, zPos);
         update();
     }
 }
@@ -1018,14 +989,14 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
             if (event->modifiers() & Qt::ControlModifier) {
                 slot_shiftCameraRight();
             } else {
-                slot_shiftRight();
+                slot_shiftLeft();
             }
             mPanXStart = x;
         } else if ((mPanXStart - x) < -1.0f) {
             if (event->modifiers() & Qt::ControlModifier) {
                 slot_shiftCameraLeft();
             } else {
-                slot_shiftLeft();
+                slot_shiftRight();
             }
             mPanXStart = x;
         }
@@ -1049,9 +1020,14 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    // Implement mouse handling (placeholder)
     mPanMode = false;
+    mCameraController.snapTargetToGrid();
+    const QVector3D newCenter = mCameraController.getTarget();
+    mMapCenterX = newCenter.x();
+    mMapCenterY = newCenter.y();
+    mMapCenterZ = newCenter.z();
     QOpenGLWidget::mouseReleaseEvent(event);
+    update();
 }
 
 void ModernGLWidget::renderLines(const QVector<float>& vertices, const QVector<float>& colors)

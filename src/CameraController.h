@@ -33,11 +33,20 @@ public:
 
     // Camera position and orientation
     void setPosition(float r, float theta, float phi);
-    void setTarget(float x, float y, float z);
     void setScale(float scale);
     void setViewportSize(int width, int height);
     void shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle);
     
+    // Camera target control
+    void setTarget(float x, float y, float z);
+    void translateTargetUp();
+    void translateTargetDown();
+    void translateTargetLeft();
+    void translateTargetRight();
+    void translateTargetForward();
+    void translateTargetBackward();
+    void snapTargetToGrid();
+
     // View presets
     void setDefaultView();
     void setSideView();  
