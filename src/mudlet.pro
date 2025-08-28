@@ -611,7 +611,6 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
-    DarkTheme.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -747,7 +746,6 @@ HEADERS += \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
     ctelnet.h \
-    DarkTheme.h \
     discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
@@ -1653,28 +1651,21 @@ win32 {
 # This is a list of files that we want to show up in the Qt Creator IDE that are
 # not otherwise used by the main project:
 OTHER_FILES += \
+    ../.ai/ai-instructions.md \
     ../.crowdin.yml \
+    ../.cursorrules \
     ../.devcontainer/Dockerfile \
     ../.devcontainer/devcontainer.json \
     ../.devcontainer/library-scripts/desktop-lite-debian.sh \
-    ../.github/CODE_OF_CONDUCT.md \
     ../.github/CODEOWNERS \
     ../.github/codeql/codeql-config.yml \
     ../.github/codespell-wordlist.txt \
-    ../.ai/ai-instructions.md \
-    ../.cursorrules \
-    ../.github/CONTRIBUTING.md \
     ../.github/copilot-instructions.md \
-    ../AGENTS.md \
-    ../AI-ASSISTANTS.md \
-    ../CLAUDE.md \
     ../.github/dependabot.yml \
-    ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
     ../.github/pr-labeler.yml \
     ../.github/PULL_REQUEST_TEMPLATE.md \
     ../.github/repo-metadata.yml \
-    ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
     ../.github/workflows/build-mudlet-win.yml \
     ../.github/workflows/clangtidy-diff-analysis.yml \
@@ -1694,6 +1685,8 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
+    ../AGENTS.md \
+    ../CLAUDE.md \
     ../CI/build-mudlet-for-windows.sh \
     ../CI/deploy-mudlet-for-windows.sh \
     ../CI/fix.grid.ui.ordering.js \
@@ -1722,6 +1715,11 @@ OTHER_FILES += \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
+    ../docs/AI-ASSISTANTS.md \
+    ../docs/CODE_OF_CONDUCT.md \
+    ../docs/CONTRIBUTING.md \
+    ../docs/FUNDING.yml \
+    ../docs/SUPPORT.md \
     ../test/CMakeLists.txt \
     ../test/GUIConsoleTests.mpackage \
     ../test/CredentialManagerTest.cpp \

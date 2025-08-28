@@ -62,7 +62,8 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
                                    QOpenGLVertexArrayObject& vao,
                                    QOpenGLBuffer& vertexBuffer,
                                    QOpenGLBuffer& colorBuffer,
-                                   QOpenGLBuffer& normalBuffer)
+                                   QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer)
 {
     if (!mInitialized) {
         qWarning() << "RenderCommandQueue: Not initialized";
@@ -83,7 +84,7 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
     
     for (const auto& command : mCommands) {
         if (command) {
-            command->execute(this, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer);
+            command->execute(this, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer);
             
             // Update statistics
             mTotalCommandsExecuted++;

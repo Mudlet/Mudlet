@@ -47,7 +47,8 @@ public:
                         QOpenGLVertexArrayObject& vao,
                         QOpenGLBuffer& vertexBuffer,
                         QOpenGLBuffer& colorBuffer, 
-                        QOpenGLBuffer& normalBuffer) = 0;
+                        QOpenGLBuffer& normalBuffer,
+                        QOpenGLBuffer& indexBuffer) = 0;
                         
     virtual const char* getCommandName() const = 0;
 };
@@ -66,7 +67,8 @@ public:
                 QOpenGLVertexArrayObject& vao,
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer) override;
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer) override;
                 
     const char* getCommandName() const override { return "RenderCube"; }
 
@@ -119,7 +121,8 @@ public:
                 QOpenGLVertexArrayObject& vao,
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer) override;
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer) override;
                 
     const char* getCommandName() const override { return "RenderLines"; }
 
@@ -145,7 +148,8 @@ public:
                 QOpenGLVertexArrayObject& vao,
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer) override;
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer) override;
                 
     const char* getCommandName() const override { return "RenderTriangles"; }
 
@@ -178,7 +182,8 @@ public:
                 QOpenGLVertexArrayObject& vao,
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer) override;
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer) override;
                 
     const char* getCommandName() const override { return "GLState"; }
 

@@ -51,7 +51,8 @@ public:
                    QOpenGLVertexArrayObject& vao,
                    QOpenGLBuffer& vertexBuffer,
                    QOpenGLBuffer& colorBuffer,
-                   QOpenGLBuffer& normalBuffer);
+                   QOpenGLBuffer& normalBuffer,
+                   QOpenGLBuffer& indexBuffer);
     
     // Clear the command queue
     void clear();

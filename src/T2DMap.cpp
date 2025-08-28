@@ -4681,7 +4681,10 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     if (yDelta) {
         mPick = false;
         const qreal oldZoom = xyzoom;
-        xyzoom = qMax(csmMinXYZoom, xyzoom * pow(1.07, yDelta));
+        // If invert zoom is enabled, use the traditional (inverted) behavior
+        // Otherwise, use modern behavior (non-inverted)
+        const int adjustedYDelta = mudlet::self()->invertMapZoom() ? yDelta : -yDelta;
+        xyzoom = qMax(csmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
         mpMap->mpRoomDB->getArea(mAreaID)->set2DMapZoom(xyzoom);
 
         if (!qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {

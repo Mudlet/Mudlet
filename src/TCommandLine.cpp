@@ -34,6 +34,7 @@
 
 #include "pre_guard.h"
 #include <QKeyEvent>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>

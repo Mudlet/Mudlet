@@ -52,92 +52,48 @@ void GeometryManager::cleanup()
 
 void GeometryManager::generateCubeTemplate()
 {
-    // Generate unit cube centered at origin with the same vertex order and normals as original
+    // Generate unit cube centered at origin using indexed geometry
     mCubeTemplate.clear();
     
-    // Bottom face (glNormal3f(0.57735, -0.57735, 0.57735), etc.)
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << -0.57735f;
+    // Define 8 unique vertices for a unit cube
+    // Vertex order: front face (counter-clockwise from bottom-left), then back face
+    mCubeTemplate.vertices << -1.0f << -1.0f <<  1.0f;  // 0: Front bottom-left
+    mCubeTemplate.vertices <<  1.0f << -1.0f <<  1.0f;  // 1: Front bottom-right  
+    mCubeTemplate.vertices <<  1.0f <<  1.0f <<  1.0f;  // 2: Front top-right
+    mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f;  // 3: Front top-left
+    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f;  // 4: Back bottom-left
+    mCubeTemplate.vertices <<  1.0f << -1.0f << -1.0f;  // 5: Back bottom-right
+    mCubeTemplate.vertices <<  1.0f <<  1.0f << -1.0f;  // 6: Back top-right
+    mCubeTemplate.vertices << -1.0f <<  1.0f << -1.0f;  // 7: Back top-left
 
-    // Front face
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << 0.57735f;
+    // Define normals for each vertex (same approach as original - per vertex normals)
+    mCubeTemplate.normals << -0.57735f << -0.57735f <<  0.57735f; // 0
+    mCubeTemplate.normals <<  0.57735f << -0.57735f <<  0.57735f; // 1
+    mCubeTemplate.normals <<  0.57735f <<  0.57735f <<  0.57735f; // 2
+    mCubeTemplate.normals << -0.57735f <<  0.57735f <<  0.57735f; // 3
+    mCubeTemplate.normals << -0.57735f << -0.57735f << -0.57735f; // 4
+    mCubeTemplate.normals <<  0.57735f << -0.57735f << -0.57735f; // 5
+    mCubeTemplate.normals <<  0.57735f <<  0.57735f << -0.57735f; // 6
+    mCubeTemplate.normals << -0.57735f <<  0.57735f << -0.57735f; // 7
 
-    // Back face
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << -0.57735f;
-
-    // Right face
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << -0.57735f << -0.57735f;
-
-    // Left face
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << -0.57735f << 0.57735f;
-
-    // Top face
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << -0.57735f;
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << -0.57735f << 0.57735f << 0.57735f;
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f;
-    mCubeTemplate.normals << 0.57735f << 0.57735f << 0.57735f;
+    // Define indices for the 12 triangles (6 faces × 2 triangles each)
+    // Counter-clockwise winding order for front-facing triangles
+    QVector<unsigned int> indices = {
+        // Front face
+        0, 1, 2,  0, 2, 3,
+        // Back face  
+        5, 4, 7,  5, 7, 6,
+        // Left face
+        4, 0, 3,  4, 3, 7,
+        // Right face
+        1, 5, 6,  1, 6, 2,
+        // Bottom face
+        4, 5, 1,  4, 1, 0,
+        // Top face
+        3, 2, 6,  3, 6, 7
+    };
+    
+    mCubeTemplate.indices = indices;
     
     // Colors will be set per instance, so we don't populate them in the template
 }
@@ -161,6 +117,9 @@ GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, f
         // Set color for this vertex
         result.colors << r << g << b << a;
     }
+    
+    // Copy indices (they don't need transformation)
+    result.indices = mCubeTemplate.indices;
     
     return result;
 }
@@ -233,6 +192,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
                                    QOpenGLBuffer& vertexBuffer,
                                    QOpenGLBuffer& colorBuffer,
                                    QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer,
                                    GLenum drawMode)
 {
     if (geometry.isEmpty()) {
@@ -259,8 +219,18 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
     
-    // Draw the geometry
-    glDrawArrays(drawMode, 0, geometry.vertexCount());
+    // Draw the geometry - use indexed rendering if indices are available
+    if (geometry.hasIndices()) {
+        // Upload index data
+        indexBuffer.bind();
+        indexBuffer.allocate(geometry.indices.data(), geometry.indices.size() * sizeof(unsigned int));
+        
+        // Draw using indices
+        glDrawElements(drawMode, geometry.indexCount(), GL_UNSIGNED_INT, nullptr);
+    } else {
+        // Draw using vertex arrays (for lines and triangles)
+        glDrawArrays(drawMode, 0, geometry.vertexCount());
+    }
 }
 
 void GeometryManager::renderGeometry(const GeometryData& geometry,
@@ -268,6 +238,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
                                    QOpenGLBuffer& vertexBuffer,
                                    QOpenGLBuffer& colorBuffer,
                                    QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer,
                                    ResourceManager* resourceManager,
                                    GLenum drawMode)
 {
@@ -276,10 +247,14 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     }
     
     // Call the original render method
-    renderGeometry(geometry, vao, vertexBuffer, colorBuffer, normalBuffer, drawMode);
+    renderGeometry(geometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
     
     // Track draw call statistics
     if (resourceManager) {
-        resourceManager->onDrawCall(geometry.vertexCount());
+        if (geometry.hasIndices()) {
+            resourceManager->onDrawCall(geometry.indexCount() / 3); // Count triangles for indexed geometry
+        } else {
+            resourceManager->onDrawCall(geometry.vertexCount());
+        }
     }
 }

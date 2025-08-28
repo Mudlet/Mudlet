@@ -38,7 +38,7 @@
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
-: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mpMap(pMap), mpHost(pHost)
+: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mpMap(pMap), mpHost(pHost)
 {
     if (mpHost->mBgColor_2.alpha() < 255) {
         setAttribute(Qt::WA_OpaquePaintEvent, false);
@@ -69,6 +69,7 @@ void ModernGLWidget::cleanup()
     mVertexBuffer.destroy();
     mColorBuffer.destroy();
     mNormalBuffer.destroy();
+    mIndexBuffer.destroy();
     mVAO.destroy();
     doneCurrent();
 }
@@ -158,6 +159,13 @@ void ModernGLWidget::setupBuffers()
     mNormalBuffer.bind();
     mNormalBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Normal buffer creation"));
+
+    // Create index buffer
+    mIndexBuffer.create();
+    mResourceManager.onBufferCreated();
+    mIndexBuffer.bind();
+    mIndexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    mResourceManager.checkGLError(qsl("Index buffer creation"));
 
     // Configure vertex attribute pointers (will be set during rendering)
 }
@@ -296,7 +304,7 @@ void ModernGLWidget::paintGL()
     renderConnections();
 
     // Execute all queued commands
-    mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer);
+    mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer);
 
     shaderProgram->release();
     

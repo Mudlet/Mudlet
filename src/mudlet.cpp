@@ -47,7 +47,6 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "XMLimport.h"
-#include "DarkTheme.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
@@ -75,12 +74,15 @@
 #include <QNetworkDiskCache>
 #include <QMediaPlayer>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QPoint>
 #include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
+#include <QStyleHints>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QTimer>
@@ -2655,6 +2657,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
@@ -2828,6 +2831,7 @@ void mudlet::writeSettings()
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("invertMapZoom", mInvertMapZoom);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
@@ -3686,6 +3690,14 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
 QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
+    // Ensure the profile directory exists before attempting to write profile data
+    const QDir profileDir;
+    const QString profileHomePath = getMudletPath(enums::profileHomePath, profile);
+    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
+        qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
+        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
+    }
+
     QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
@@ -4173,6 +4185,7 @@ mudlet::~mudlet()
         }
     }
 
+    saveDetachedWindowsGeometry();
     shutdownAI();
 
     mudlet::smpSelf = nullptr;
@@ -5313,6 +5326,13 @@ void mudlet::setShowMapAuditErrors(const bool state)
     }
 }
 
+void mudlet::setInvertMapZoom(const bool state)
+{
+    if (mInvertMapZoom != state) {
+        mInvertMapZoom = state;
+    }
+}
+
 void mudlet::setShowTabConnectionIndicators(const bool state)
 {
     if (mShowTabConnectionIndicators == state) {
@@ -5356,20 +5376,25 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         return;
     }
 
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && desktopInDarkMode())) {
+    switch (state) {
+    case enums::Appearance::dark:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
         mDarkMode = true;
+        break;
+    case enums::Appearance::light:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+        mDarkMode = false;
+        break;
+    case enums::Appearance::systemSetting:
+        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+        mDarkMode = (QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
+        break;
     }
 
-    if (mDarkMode) {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new DarkTheme);
-        getHostManager().changeAllHostColour(getActiveHost());
-    } else {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
-        getHostManager().changeAllHostColour(getActiveHost());
-    }
+    // Apply the AltFocusMenuBarDisable wrapper for both themes
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+    qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    getHostManager().changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }
@@ -6172,34 +6197,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     }
 }
 
-// Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
-// Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
-bool mudlet::desktopInDarkMode()
-{
-#if defined(Q_OS_WINDOWS)
-    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
-    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
-#elif defined(Q_OS_MACOS)
-    bool isDark = false;
-    CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
-    CFStringRef uiStyle = nullptr;
-    CFStringRef darkUiStyle = CFSTR("Dark");
-    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
-    {
-        isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
-        coreMacOS::CFRelease(uiStyle);
-    }
-    return isDark;
-#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD) || defined(Q_OS_OPENBSD)
-    QProcess process;
-    process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
-    process.waitForFinished();
-    const QString output = QString::fromUtf8(process.readAllStandardOutput());
-    return output.contains(qsl("-dark"), Qt::CaseInsensitive);
-#endif
-
-    return false;
-}
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
@@ -6428,6 +6425,16 @@ void mudlet::shutdownAI()
     if (mpLlamafileManager && mpLlamafileManager->isRunning()) {
         qDebug() << "mudlet::shutdownAI() - Stopping AI service...";
         mpLlamafileManager->stop();
+    }
+}
+
+void mudlet::saveDetachedWindowsGeometry()
+{
+    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
+        TDetachedWindow* detachedWindow = it.value();
+        if (detachedWindow) {
+            detachedWindow->saveWindowGeometry();
+        }
     }
 }
 

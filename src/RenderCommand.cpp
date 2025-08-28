@@ -38,7 +38,8 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLVertexArrayObject& vao,
                                QOpenGLBuffer& vertexBuffer,
                                QOpenGLBuffer& colorBuffer,
-                               QOpenGLBuffer& normalBuffer)
+                               QOpenGLBuffer& normalBuffer,
+                               QOpenGLBuffer& indexBuffer)
 {    
     GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
     
@@ -51,7 +52,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
-    geometryManager->renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, resourceManager, GL_TRIANGLES);
+    geometryManager->renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
 // RenderRectangularCuboid implementation
@@ -100,7 +101,8 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
                                 QOpenGLVertexArrayObject& vao,
                                 QOpenGLBuffer& vertexBuffer,
                                 QOpenGLBuffer& colorBuffer,
-                                QOpenGLBuffer& normalBuffer)
+                                QOpenGLBuffer& normalBuffer,
+                                QOpenGLBuffer& indexBuffer)
 {
     GeometryData lineGeometry = geometryManager->generateLineGeometry(mVertices, mColors);
     
@@ -116,7 +118,7 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
-    geometryManager->renderGeometry(lineGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, resourceManager, GL_LINES);
+    geometryManager->renderGeometry(lineGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_LINES);
 }
 
 // RenderTrianglesCommand implementation
@@ -134,7 +136,8 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                     QOpenGLVertexArrayObject& vao,
                                     QOpenGLBuffer& vertexBuffer,
                                     QOpenGLBuffer& colorBuffer,
-                                    QOpenGLBuffer& normalBuffer)
+                                    QOpenGLBuffer& normalBuffer,
+                                    QOpenGLBuffer& indexBuffer)
 {
     GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
     
@@ -150,7 +153,7 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
-    geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, resourceManager, GL_TRIANGLES);
+    geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
 // GLStateCommand implementation
@@ -166,7 +169,8 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
                             QOpenGLVertexArrayObject& vao,
                             QOpenGLBuffer& vertexBuffer,
                             QOpenGLBuffer& colorBuffer,
-                            QOpenGLBuffer& normalBuffer)
+                            QOpenGLBuffer& normalBuffer,
+                            QOpenGLBuffer& indexBuffer)
 {
     switch (mStateType) {
         case ENABLE_DEPTH_TEST:
