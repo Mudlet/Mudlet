@@ -3676,14 +3676,15 @@ void mudlet::slot_replay()
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
-        return QString();
-    }
     if (!file.exists()) {
         return QString();
     }
 
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
+        return QString();
+    }
+    
     QDataStream ifs(&file);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
         ifs.setVersion(scmQDataStreamFormat_5_12);
