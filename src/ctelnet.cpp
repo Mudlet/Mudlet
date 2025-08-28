@@ -2777,7 +2777,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 // Extract encoding type from BEGIN_ENCODING suboption
                 std::string encodingType;
                 for (size_t i = 4; i < telnetCommand.length() - 2; ++i) {
-                    if (static_cast<unsigned char>(telnetCommand[i]) == TN_IAC) {
+                    if (telnetCommand[i] == TN_IAC) {
                         break; // End of encoding string
                     }
                     encodingType += telnetCommand[i];
@@ -3893,7 +3893,7 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         size_t consumedInput = input.pos;
         size_t remainingInput = length - consumedInput;
         
-        if (remainingInput > 0 && static_cast<unsigned char>(in_buffer[consumedInput]) == TN_IAC) {
+        if (remainingInput > 0 && in_buffer[consumedInput] == TN_IAC) {
             // Raw telnet data detected, switch to uncompressed mode temporarily
             qDebug() << "MCCP4: Frame end detected, switching to raw telnet mode for IAC sequence";
             
