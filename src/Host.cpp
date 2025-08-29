@@ -275,6 +275,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
+, mShow3DView(false)
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
@@ -346,7 +347,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         dirLogFile.mkpath(directoryLogFile);
     }
     mErrorLogFile.setFileName(logFileName);
-    mErrorLogFile.open(QIODevice::Append);
+    if (!mErrorLogFile.open(QIODevice::Append)) {
+        qWarning() << "Host: failed to open error log file for appending:" << mErrorLogFile.errorString();
+    }
      /*
      * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
      * since user-content can contain anything and someone else reviewing
@@ -1221,7 +1224,10 @@ void Host::check_for_mappingscript()
         QUiLoader loader;
 
         QFile file(":/ui/lacking_mapper_script.ui");
-        file.open(QFile::ReadOnly);
+        if (!file.open(QFile::ReadOnly)) {
+            qWarning() << "Host: failed to open lacking_mapper_script.ui for reading:" << file.errorString();
+            return;
+        }
 
         auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
         file.close();
@@ -1943,7 +1949,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (thing != enums::PackageModuleType::ModuleFromUI) {
             QUiLoader loader(this);
             QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
-            uiFile.open(QFile::ReadOnly);
+            if (!uiFile.open(QFile::ReadOnly)) {
+                qWarning() << "Host: failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
+                return {false, qsl("could not open unpacking progress dialog UI file")};
+            }
             pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
             uiFile.close();
             if (!pUnzipDialog) {
@@ -2012,7 +2021,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
-            file2.open(QFile::ReadOnly | QFile::Text);
+            if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+                qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
+                continue;
+            }
             XMLimport reader(this);
             if (thing != enums::PackageModuleType::Package) {
                 QStringList moduleEntry;
@@ -2028,7 +2040,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     } else {
         file2.setFileName(fileName);
-        file2.open(QFile::ReadOnly | QFile::Text);
+        if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+            qWarning() << "Host: failed to open file for reading:" << fileName << file2.errorString();
+            return {false, qsl("could not open package file")};
+        }
         XMLimport reader(this);
         if (thing != enums::PackageModuleType::Package) {
             QStringList moduleEntry;

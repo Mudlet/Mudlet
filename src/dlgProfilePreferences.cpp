@@ -3915,7 +3915,10 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
 
     QUiLoader loader;
     QFile file(qsl(":/ui/glyph_usage.ui"));
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "dlgProfilePreferences: failed to open UI file for reading:" << file.errorString();
+        return;
+    }
     mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!mpDialogMapGlyphUsage) {

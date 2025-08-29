@@ -3409,7 +3409,10 @@ void T2DMap::slot_customLineProperties()
             QUiLoader loader;
 
             QFile file(qsl(":/ui/custom_lines_properties.ui"));
-            file.open(QFile::ReadOnly);
+            if (!file.open(QFile::ReadOnly)) {
+                qWarning() << "T2DMap: failed to open custom_lines_properties.ui for reading:" << file.errorString();
+                return;
+            }
             auto* dialog = qobject_cast<QDialog*>(loader.load(&file, this));
             file.close();
             if (!dialog) {
@@ -4254,7 +4257,10 @@ void T2DMap::slot_setArea()
     QUiLoader loader;
 
     QFile file(":/ui/set_room_area.ui");
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "T2DMap: failed to open set_room_area.ui for reading:" << file.errorString();
+        return;
+    }
     auto* set_room_area_dialog = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!set_room_area_dialog) {
@@ -4809,7 +4815,10 @@ void T2DMap::slot_setCustomLine()
     QUiLoader loader;
 
     QFile file(":/ui/custom_lines.ui");
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "T2DMap: failed to open custom_lines.ui for reading:" << file.errorString();
+        return;
+    }
     auto* dialog = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!dialog) {

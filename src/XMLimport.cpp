@@ -788,6 +788,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);
     setBoolAttribute(qsl("mShowRoomIDs"), pHost->mShowRoomID);
     setBoolAttribute(qsl("mShowPanel"), pHost->mShowPanel);
+    setBoolAttribute(qsl("mShow3DView"), pHost->mShow3DView);
     setBoolAttribute(qsl("mHaveMapperScript"), pHost->mHaveMapperScript);
     setBoolAttribute(qsl("mSslTsl"), pHost->mSslTsl);
     setBoolAttribute(qsl("mSslIgnoreExpired"), pHost->mSslIgnoreExpired);
