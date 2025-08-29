@@ -530,7 +530,7 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter
     painter.restore();
 
     if (yOffset > initialYOffset) {
-        painter.fillRect(xOffset, 10, widgetWidth - 10 - xOffset, 10, pHost->mMapInfoBg);
+        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, pHost->mMapInfoBg);
     }
 }
 
