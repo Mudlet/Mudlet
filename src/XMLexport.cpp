@@ -672,6 +672,19 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+    
+    // Write experiments
+    {
+        QStringList allExperiments = pHost->getAllExperiments();
+        if (!allExperiments.isEmpty()) {
+            for (const auto& experimentKey : allExperiments) {
+                auto experiment = host.append_child("experiment");
+                experiment.append_attribute("key") = experimentKey.toUtf8().constData();
+                experiment.append_attribute("enabled") = "yes";
+            }
+        }
+    }
+    
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);

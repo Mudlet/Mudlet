@@ -4589,3 +4589,82 @@ QFont Host::getAndClearTempDisplayFont()
     mTempDisplayFontAttributes.reset();
     return tempFont;
 }
+
+// Static whitelist of valid experiments
+const QSet<QString> Host::mValidExperiments = {
+    qsl("experiment.rendering.originalish"),
+    qsl("experiment.rendering.more-transparent"),
+    qsl("experiment.rendering-movement.smooth"),
+    qsl("experiment.3dmap.modernmapper"),
+};
+
+bool Host::experimentEnabled(const QString& experimentKey) const
+{
+    return mExperiments.value(experimentKey, false);
+}
+
+std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey, bool enabled)
+{
+    // Validate experiment key against whitelist
+    if (!mValidExperiments.contains(experimentKey)) {
+        return {false, qsl("Invalid experiment name: %1").arg(experimentKey)};
+    }
+    
+    if (enabled) {
+        // Check if this is a grouped experiment (contains dots beyond "experiment.")
+        if (experimentKey.count('.') >= 2) {
+            // Extract group (e.g., "experiment.rendering" from "experiment.rendering.originalish")
+            QString group = experimentKey.section('.', 0, 1);
+            
+            // Disable all other experiments in the same group
+            for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
+                if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
+                    it.value() = false;
+                }
+            }
+        }
+        mExperiments[experimentKey] = true;
+    } else {
+        mExperiments[experimentKey] = false;
+    }
+    
+#if defined(INCLUDE_3DMAPPER)
+    // Refresh maps if any experiments changed the 3D map
+    if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+        mpMap->mpMapper->mp2dMap->update();
+    }
+    if (mpMap && mpMap->mpM) {
+        mpMap->mpM->update();
+    }
+#endif
+    
+    return {true, QString()};
+}
+
+QString Host::getActiveExperimentInGroup(const QString& group) const
+{
+    QString groupPrefix = group + ".";
+    for (auto it = mExperiments.constBegin(); it != mExperiments.constEnd(); ++it) {
+        if (it.key().startsWith(groupPrefix) && it.value()) {
+            // Return just the experiment name without the group prefix
+            return it.key().mid(groupPrefix.length());
+        }
+    }
+    return QString(); // No active experiment in this group
+}
+
+QStringList Host::getAllExperiments() const
+{
+    QStringList result;
+    for (auto it = mExperiments.constBegin(); it != mExperiments.constEnd(); ++it) {
+        if (it.value()) {
+            result << it.key();
+        }
+    }
+    return result;
+}
+
+QStringList Host::getValidExperiments() const
+{
+    return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+}

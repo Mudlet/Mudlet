@@ -47,6 +47,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 #if defined(INCLUDE_3DMAPPER)
     QSurfaceFormat fmt;
+#ifndef NDEBUG    
+    fmt.setOption(QSurfaceFormat::DebugContext);
+#endif
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);
 #endif
@@ -243,7 +246,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     if (glWidget) {
         glWidget->update();
     } else {
-        glWidget = new GLWidget(mpMap, mpHost, this);
+        glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost, this);
         glWidget->setObjectName("glWidget");
 
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -253,25 +256,25 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         glWidget->setSizePolicy(sizePolicy);
         verticalLayout_mapper->insertWidget(0, glWidget);
         mpMap->mpM = glWidget;
-        connect(pushButton_ortho, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showAllLevels);
-        connect(pushButton_singleLevel, &QAbstractButton::clicked, glWidget, &GLWidget::slot_singleLevelView);
-        connect(pushButton_increaseTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreUpperLevels);
-        connect(pushButton_increaseBottom, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreLowerLevels);
-        connect(pushButton_reduceTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showLessUpperLevels);
-        connect(pushButton_reduceBottom, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showLessLowerLevels);
-        connect(toolButton_shiftZup, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZup);
-        connect(toolButton_shiftZdown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZdown);
-        connect(toolButton_shiftLeft, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftLeft);
-        connect(toolButton_shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftRight);
-        connect(toolButton_shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftUp);
-        connect(toolButton_shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftDown);
-        connect(pushButton_defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_defaultView);
-        connect(pushButton_sideView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_sideView);
-        connect(pushButton_topView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_topView);
-        connect(slider_scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setScale);
-        connect(slider_xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setCameraPositionX);
-        connect(slider_yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setCameraPositionY);
-        connect(slider_zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setCameraPositionZ);
+        connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
+        connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
+        connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
+        connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
+        connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
+        connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
+        connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
+        connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
+        connect(toolButton_shiftLeft, SIGNAL(clicked()), glWidget, SLOT(slot_shiftLeft()));
+        connect(toolButton_shiftRight, SIGNAL(clicked()), glWidget, SLOT(slot_shiftRight()));
+        connect(toolButton_shiftUp, SIGNAL(clicked()), glWidget, SLOT(slot_shiftUp()));
+        connect(toolButton_shiftDown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftDown()));
+        connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
+        connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
+        connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
+        connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
+        connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
+        connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
+        connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
     }
 
 
@@ -417,4 +420,57 @@ void dlgMapper::setFont(const QFont& newFont)
     QWidget::setFont(newFont);
     mp2dMap->setFont(newFont);
     mp2dMap->mFontHeight = mp2dMap->fontMetrics().height();
+}
+
+void dlgMapper::recreate3DWidget()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (!glWidget) {
+        return;
+    }
+    
+    if (GLWidgetFactory::isCorrectWidgetType(glWidget, mpHost.data())) {
+        return;
+    }
+    
+    bool was3DMode = glWidget->isVisible();
+    
+    glWidget->setParent(nullptr);
+    glWidget->deleteLater();
+    glWidget = nullptr;
+    mpMap->mpM = nullptr;
+    
+    glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost.data(), this);
+    glWidget->setObjectName("glWidget");
+    
+    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    sizePolicy.setHorizontalStretch(0);
+    sizePolicy.setVerticalStretch(0);
+    sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
+    glWidget->setSizePolicy(sizePolicy);
+    verticalLayout_mapper->insertWidget(0, glWidget);
+    mpMap->mpM = glWidget;
+    
+    connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
+    connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
+    connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
+    connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
+    connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
+    connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
+    connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
+    connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
+    connect(toolButton_shiftLeft, SIGNAL(clicked()), glWidget, SLOT(slot_shiftLeft()));
+    connect(toolButton_shiftRight, SIGNAL(clicked()), glWidget, SLOT(slot_shiftRight()));
+    connect(toolButton_shiftUp, SIGNAL(clicked()), glWidget, SLOT(slot_shiftUp()));
+    connect(toolButton_shiftDown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftDown()));
+    connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
+    connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
+    connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
+    connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
+    connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
+    connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
+    connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
+    
+    glWidget->setVisible(was3DMode);
+#endif
 }

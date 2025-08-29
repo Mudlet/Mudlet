@@ -245,6 +245,22 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+######################### Shader hot-reload toggle ############################
+# To enable shader hot-reloading, set the environment WITH_SHADER_HOT_RELOAD variable to "YES"
+# ie: export WITH_SHADER_HOT_RELOAD="YES" qmake
+#
+SHADER_HOT_RELOAD_TEST = $$upper($$(WITH_SHADER_HOT_RELOAD))
+equals(SHADER_HOT_RELOAD_TEST, "YES" ) {
+    DEFINES += USE_SHADER_HOT_RELOAD
+    !build_pass{
+        message("Shader hot-reloading is enabled in this configuration")
+    }
+} else {
+    !build_pass{
+        message("Shader hot-reloading is disabled in this configuration")
+    }
+}
+
 ######################## System QtKeyChain library #############################
 # To use a system provided QtKeyChain library set the environmental variable
 # WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
@@ -945,17 +961,39 @@ linux|macx|win32 {
 
 
 contains( DEFINES, INCLUDE_3DMAPPER ) {
-    HEADERS += glwidget.h
-    SOURCES += glwidget.cpp
+    HEADERS += glwidget.h \
+               modern_glwidget.h \
+               glwidget_integration.h \
+               CameraController.h \
+               GeometryManager.h \
+               RenderCommand.h \
+               RenderCommandQueue.h \
+               ResourceManager.h \
+               ShaderManager.h
+    SOURCES += glwidget.cpp \
+               modern_glwidget.cpp \
+               glwidget_integration.cpp \
+               CameraController.cpp \
+               GeometryManager.cpp \
+               RenderCommand.cpp \
+               RenderCommandQueue.cpp \
+               ResourceManager.cpp \
+               ShaderManager.cpp
+    
+    # Enable shader hot-reloading when USE_SHADER_HOT_RELOAD is defined
+    contains( DEFINES, USE_SHADER_HOT_RELOAD ) {
+        DEFINES += MUDLET_SHADER_HOT_RELOAD=1
+    }
+    
+    !build_pass{
+        message("The 3D mapper code with both OpenGL implementations is included in this configuration for runtime selection")
+    }
+    
     QT += opengl
 
     win32 {
         LIBS += -lopengl32 \
                 -lglu32
-    }
-
-    !build_pass{
-        message("The 3D mapper code is included in this configuration")
     }
 } else {
     !build_pass{

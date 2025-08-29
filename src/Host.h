@@ -214,6 +214,14 @@ public:
     ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
+    bool            getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
+
+    // Experiment system methods
+    bool            experimentEnabled(const QString& experimentKey) const;
+    std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
+    QString         getActiveExperimentInGroup(const QString& group) const;
+    QStringList     getAllExperiments() const;
+    QStringList     getValidExperiments() const;
 
     void            forceClose();
     bool            isClosingDown() const { return mIsClosingDown; }
@@ -815,6 +823,12 @@ private:
 
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
+
+    // Experiment system storage: key -> enabled state
+    QMap<QString, bool> mExperiments;
+    
+    // Static whitelist of valid experiments
+    static const QSet<QString> mValidExperiments;
 
     TriggerUnit mTriggerUnit;
     TimerUnit mTimerUnit;
