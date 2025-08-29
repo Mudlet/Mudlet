@@ -929,7 +929,6 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
     if (event->buttons() & Qt::LeftButton) {        // translation on xy-plane
-        // TODO: allow user to click on rooms
         auto eventPos = event->position().toPoint();
         const int x = eventPos.x();
         const int y = height() - eventPos.y(); // the opengl origin is at bottom left

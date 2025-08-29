@@ -41,12 +41,12 @@ void CameraController::setPosition(float r, float theta, float phi)
     phi = phi/360 * 2 * pi;
 
     mDistance = r;
-    mPositionVector.setX( std::sin(theta) * std::cos(phi));
-    mPositionVector.setY( std::sin(theta) * std::sin(phi));
-    mPositionVector.setZ( std::cos(theta));
-    mUpVector.setX( std::sin(theta - pi/2) * std::cos(phi));
-    mUpVector.setY( std::sin(theta - pi/2) * std::sin(phi));
-    mUpVector.setZ( std::cos(theta - pi/2));
+    mPositionVector.setX(std::sin(theta) * std::cos(phi));
+    mPositionVector.setY(std::sin(theta) * std::sin(phi));
+    mPositionVector.setZ(std::cos(theta));
+    mUpVector.setX(std::sin(theta - pi/2) * std::cos(phi));
+    mUpVector.setY(std::sin(theta - pi/2) * std::sin(phi));
+    mUpVector.setZ(std::cos(theta - pi/2));
     mRightVector = QVector3D::crossProduct(mPositionVector, mUpVector);
 }
 
@@ -101,7 +101,6 @@ void CameraController::snapTargetToGrid()
 
 void CameraController::setScale(float scale)
 {
-    // TODO: change this to setDistance once old mapper is obsolete
     // Clamp scale to reasonable bounds to prevent zoom issues
     mDistance = qBound(0.01f, scale, 100.0f);
 }
@@ -136,7 +135,7 @@ QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rota
     // Apply Rodrigues rotation formula
     return std::cos(rotationAngle) * currentVector 
         + std::sin(rotationAngle) * QVector3D::crossProduct(rotationAxis, currentVector)
-        + QVector3D::dotProduct(rotationAxis, currentVector) * ( 1 - std::cos(rotationAngle)) * rotationAxis;
+        + QVector3D::dotProduct(rotationAxis, currentVector) * (1 - std::cos(rotationAngle)) * rotationAxis;
 }
 
 
@@ -155,7 +154,6 @@ QVector3D CameraController::getPosition()
     }
 }
 
-// TODO: set these things to use spherical coord method
 void CameraController::setDefaultView()
 {
     // default camera position 30 degrees from directly above, and 15 degrees rotated to the left (from forward == north)
