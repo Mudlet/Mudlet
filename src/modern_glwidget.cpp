@@ -323,7 +323,12 @@ void ModernGLWidget::paintGL()
     painter.drawText(10, height() - 20, "Modern OpenGL Mapper");
     
     // Draw map info using contributor manager
-    QColor infoColor = mpHost->mMapInfoBg.isValid() ? mpHost->mMapInfoBg : QColor(0, 0, 0, 200);
+    QColor infoColor;
+    if (mpHost->mBgColor_2.lightness() > 127) {
+        infoColor = QColor(Qt::black);
+    } else {
+        infoColor = QColor(Qt::white);
+    }
     paintMapInfo(mFrameTimer, painter, mAID, infoColor);
     
     painter.end();
@@ -1273,6 +1278,9 @@ void ModernGLWidget::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& pa
     int yOffset = 10;
     const int initialYOffset = yOffset;
 
+    painter.save();
+    painter.setFont(mpHost->getDisplayFont());
+    
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
             auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, 0, pRoom->getArea(), displayAreaId, infoColor);
@@ -1282,7 +1290,7 @@ void ModernGLWidget::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& pa
             yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties);
         }
     }
-
+    
 #ifdef QT_DEBUG
     yOffset += paintMapInfoContributor(painter,
                          xOffset,
@@ -1297,6 +1305,8 @@ void ModernGLWidget::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& pa
     Q_UNUSED(renderTimer)
 #endif
 
+    painter.restore();
+
     if (yOffset > initialYOffset) {
         painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
     }
@@ -1307,31 +1317,25 @@ int ModernGLWidget::paintMapInfoContributor(QPainter& painter, int xOffset, int 
     if (properties.text.isEmpty()) {
         return 0;
     }
-
+    
     painter.save();
     auto infoText = properties.text.trimmed();
     auto font = painter.font();
     font.setBold(properties.isBold);
     font.setItalic(properties.isItalic);
     painter.setFont(font);
-
-    const int lineHeight = QFontMetrics(font).height();
+    const int infoHeight = mFontHeight;
     QRect testRect;
-    QRect infoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, lineHeight);
-    testRect = painter.boundingRect(infoRect.left() + 10, infoRect.top(), infoRect.width() - 20, infoRect.height() - 20, 
+    QRect mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
+    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, 
                                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), 
                                    infoText);
-
-    if (testRect.height() > infoRect.height()) {
-        infoRect.setHeight(testRect.height() + 20);
-    }
-
-    painter.fillRect(infoRect, properties.color);
-    painter.setPen(QPen(mpHost->mMapInfoText));
-    painter.drawText(infoRect.left() + 10, infoRect.top(), infoRect.width() - 20, infoRect.height() - 20, 
+    mMapInfoRect.setHeight(testRect.height() + 10);
+    painter.fillRect(mMapInfoRect, mpHost->mMapInfoBg);
+    painter.setPen(properties.color);
+    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, 
                     Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), 
                     infoText);
-
     painter.restore();
-    return infoRect.height();
+    return mMapInfoRect.height();
 }
