@@ -5335,7 +5335,7 @@ void dlgTriggerEditor::saveTimer()
         return;
     }
     
-    // Additional safety check: ensure the item is still part of the tree widget
+    // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_timers) {
         return;
     }
@@ -5457,7 +5457,7 @@ void dlgTriggerEditor::saveAlias()
         return;
     }
     
-    // Additional safety check: ensure the item is still part of the tree widget
+    // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_aliases) {
         return;
     }
@@ -5598,7 +5598,7 @@ void dlgTriggerEditor::saveAction()
         return;
     }
     
-    // Additional safety check: ensure the item is still part of the tree widget
+    // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_actions) {
         return;
     }
@@ -5780,7 +5780,7 @@ void dlgTriggerEditor::saveScript()
         return;
     }
     
-    // Additional safety check: ensure the item is still part of the tree widget
+    // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_scripts) {
         return;
     }
@@ -6154,7 +6154,7 @@ void dlgTriggerEditor::saveKey()
         return;
     }
     
-    // Additional safety check: ensure the item is still part of the tree widget
+    // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_keys) {
         return;
     }
