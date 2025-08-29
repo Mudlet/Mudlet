@@ -1988,19 +1988,19 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="1009"/>
       <source>Connected</source>
       <extracomment>This text will be part of to the title of a detached Mudlet window, if it is currently connected but we don&apos;t know to where. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Connected&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Подключено</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1013"/>
       <source>Connecting...</source>
       <extracomment>This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Connecting...&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Подключение...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1016"/>
       <source>Disconnected</source>
       <extracomment>This text will be part of the title of a detached Mudlet window, if it is not connected. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Disconnected&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Отключено</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1390"/>
@@ -8473,7 +8473,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="87"/>
       <source>How to add a new alias from the input line</source>
       <extracomment>Name of a selectable option for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Как добавить новый алиас из командной строки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="90"/>
