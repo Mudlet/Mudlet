@@ -53,6 +53,7 @@
 class Host;
 class TMap;
 class TRoom;
+struct MapInfoProperties;
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -187,6 +188,8 @@ private:
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
+    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
+    int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties);
 };
 
 #endif // MUDLET_MODERN_GLWIDGET_H

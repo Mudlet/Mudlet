@@ -29,6 +29,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "mapInfoContributorManager.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -320,6 +321,11 @@ void ModernGLWidget::paintGL()
     painter.setPen(QPen(QColor(255, 255, 255, 200))); // Semi-transparent white
     painter.setFont(QFont("Arial", 12, QFont::Bold));
     painter.drawText(10, height() - 20, "Modern OpenGL Mapper");
+    
+    // Draw map info using contributor manager
+    QColor infoColor = mpHost->mMapInfoBg.isValid() ? mpHost->mMapInfoBg : QColor(0, 0, 0, 200);
+    paintMapInfo(mFrameTimer, painter, mAID, infoColor);
+    
     painter.end();
     
     // Display instant frame time
@@ -1243,4 +1249,89 @@ void ModernGLWidget::onCameraAnimationTick()
     
     // Trigger a repaint
     update();
+}
+
+void ModernGLWidget::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor)
+{
+    if (!mpMap || !mpMap->mMapInfoContributorManager || !mpHost) {
+        return;
+    }
+
+    QList<QString> contributorList = mpMap->mMapInfoContributorManager->getContributorKeys();
+    QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
+    if (!contributorKeys.intersects(mpHost->mMapInfoContributors)) {
+        return;
+    }
+
+    TRoom* pRoom = mpMap->mpRoomDB->getRoom(mRID);
+    if (!pRoom) {
+        return;
+    }
+
+    int roomID = mRID;
+    int xOffset = 10;
+    int yOffset = 10;
+    const int initialYOffset = yOffset;
+
+    for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
+        if (mpHost->mMapInfoContributors.contains(key)) {
+            auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, 0, pRoom->getArea(), displayAreaId, infoColor);
+            if (!properties.color.isValid()) {
+                properties.color = infoColor;
+            }
+            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties);
+        }
+    }
+
+#ifdef QT_DEBUG
+    yOffset += paintMapInfoContributor(painter,
+                         xOffset,
+                         yOffset,
+                         {false,
+                          false,
+                          tr("render time: %1S mO: (%2,%3,%4)")
+                                  .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
+                                  .arg(QString::number(mMapCenterX), QString::number(mMapCenterY), QString::number(mMapCenterZ)),
+                          infoColor});
+#else
+    Q_UNUSED(renderTimer)
+#endif
+
+    if (yOffset > initialYOffset) {
+        painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
+    }
+}
+
+int ModernGLWidget::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
+{
+    if (properties.text.isEmpty()) {
+        return 0;
+    }
+
+    painter.save();
+    auto infoText = properties.text.trimmed();
+    auto font = painter.font();
+    font.setBold(properties.isBold);
+    font.setItalic(properties.isItalic);
+    painter.setFont(font);
+
+    const int lineHeight = QFontMetrics(font).height();
+    QRect testRect;
+    QRect infoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, lineHeight);
+    testRect = painter.boundingRect(infoRect.left() + 10, infoRect.top(), infoRect.width() - 20, infoRect.height() - 20, 
+                                   Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), 
+                                   infoText);
+
+    if (testRect.height() > infoRect.height()) {
+        infoRect.setHeight(testRect.height() + 20);
+    }
+
+    painter.fillRect(infoRect, properties.color);
+    painter.setPen(QPen(mpHost->mMapInfoText));
+    painter.drawText(infoRect.left() + 10, infoRect.top(), infoRect.width() - 20, infoRect.height() - 20, 
+                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), 
+                    infoText);
+
+    painter.restore();
+    return infoRect.height();
 }
