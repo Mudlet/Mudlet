@@ -36,7 +36,7 @@ void CameraController::setPosition(float r, float theta, float phi)
 {
     // convert from degrees into radians
     theta = qBound(2.0f, theta, 178.0f);
-    const double pi = std::numbers::pi;
+    const double pi = boost::math::constants::pi<double>();
     theta = theta/360 * 2 * pi;
     phi = phi/360 * 2 * pi;
 
@@ -131,7 +131,8 @@ void CameraController::shiftPerspective(float verticalAngle, float horizontalAng
 QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rotationAxis, float rotationAngle)
 {
     // convert degrees to radians
-    rotationAngle = rotationAngle / 360 * 2 * std::numbers::pi;
+    const double pi = boost::math::constants::pi<double>();
+    rotationAngle = rotationAngle / 360 * 2 * pi;
     // Apply Rodrigues rotation formula
     return std::cos(rotationAngle) * currentVector 
         + std::sin(rotationAngle) * QVector3D::crossProduct(rotationAxis, currentVector)
@@ -144,7 +145,8 @@ QVector3D CameraController::getPosition()
     if (mPositionVector.x() == 0 && mPositionVector.y() == 0) {
         return QVector3D(mDistance, 0.0f, 0.0f);
     } else {
-    const float toDegrees = 180.0f/std::numbers::pi;
+    const double pi = boost::math::constants::pi<double>();
+    const float toDegrees = 180.0f/pi;
     const float x = mPositionVector.x();
     const float y = mPositionVector.y();
     const float z = mPositionVector.z();

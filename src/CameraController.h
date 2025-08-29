@@ -23,6 +23,7 @@
 #include "pre_guard.h"
 #include <QMatrix4x4>
 #include <QVector3D>
+#include <boost/math/constants/constants.hpp>
 #include "post_guard.h"
 
 class CameraController
