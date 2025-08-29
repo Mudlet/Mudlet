@@ -97,7 +97,7 @@ private:
     GeometryData mCubeTemplate;
     
     void generateCubeTemplate();
-    GeometryData transformCubeTemplate(float x, float y, float z, float xSize, float ySize, float zSize, float r, float g, float b, float a);
+    GeometryData transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a);
 };
 
 #endif // MUDLET_GEOMETRY_MANAGER_H

@@ -78,16 +78,6 @@ private:
     QVector3D mRightVector;
     QVector3D mUpVector;
     
-    int mViewportWidth = 400;
-    int mViewportHeight = 400;
-    
-    bool mGridMode = false;
-    
-    // Transformation matrices
-    QMatrix4x4 mProjectionMatrix;
-    QMatrix4x4 mViewMatrix;
-    QMatrix4x4 mModelMatrix;
-    
     // Internal matrix calculation
     void calculateProjectionMatrix();
     void calculateViewMatrix();
