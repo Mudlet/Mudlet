@@ -11,6 +11,7 @@ layout (location = 5) in vec4 aInstanceColor; // Per-instance color
 uniform mat4 uMVP;
 uniform mat4 uModel;
 uniform mat3 uNormalMatrix;
+uniform bool uUseInstancing = false;
 
 uniform vec3 uLight0Pos = vec3(5000.0, 4000.0, 1000.0);
 uniform vec3 uLight1Pos = vec3(5000.0, 1000.0, 1000.0);
@@ -24,11 +25,10 @@ out vec4 vertexColor;
 void main()
 {
     // Determine position and color based on whether we're using instanced rendering
-    // If instance position is non-zero, we're in instanced mode
     vec3 finalPos = aPos;
     vec4 finalColor = aColor;
     
-    if (length(aInstancePos) > 0.0 || length(aInstanceSize) > 0.0) {
+    if (uUseInstancing) {
         // Instanced rendering mode: transform position and use instance color
         finalPos = aPos * aInstanceSize + aInstancePos;
         finalColor = aInstanceColor;

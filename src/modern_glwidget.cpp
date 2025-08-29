@@ -314,9 +314,9 @@ void ModernGLWidget::paintGL()
     // Use our shader program
     shaderProgram->bind();
 
-    // Build up render commands
-    renderRooms();
+    // Build up render commands - render connections first so rooms appear above them
     renderConnections();
+    renderRooms();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer);
@@ -694,8 +694,6 @@ void ModernGLWidget::renderConnections()
                 renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
-                auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(disableDepthCommand2));
                 QColor envColor = getEnvironmentColor(pExit);
                 float overlayZ = dz + 0.25f;
                 float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
@@ -721,8 +719,6 @@ void ModernGLWidget::renderConnections()
                            exitEnvGreen,
                            exitEnvBlue,
                            overlayAlpha);
-                auto enableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(enableDepthCommand2));
             }
         }
     }

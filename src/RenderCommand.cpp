@@ -47,6 +47,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
 
     // Normal matrix (inverse transpose of model matrix)
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
@@ -83,6 +84,7 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -118,6 +120,7 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -150,6 +153,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", true);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
