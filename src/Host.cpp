@@ -4581,7 +4581,6 @@ const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.originalish"),
     qsl("experiment.rendering.more-transparent"),
     qsl("experiment.rendering.sky-ground"),
-    qsl("experiment.rendering-z.squished-rooms"),
     qsl("experiment.rendering-movement.smooth"),
     qsl("experiment.3dmap.modernmapper"),
 };

@@ -124,16 +124,6 @@ GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, f
     return result;
 }
 
-GeometryData GeometryManager::generateRectangularCuboidGeometry(float x, float y, float z, float xSize, float ySize, float zSize, float r, float g, float b, float a)
-{
-    if (!mInitialized) {
-        qWarning() << "GeometryManager: generateRectangularCuboidGeometry called before initialize()";
-        return GeometryData();
-    }
-    
-    return transformCubeTemplate(x, y, z, xSize, ySize, zSize, r, g, b, a);
-}
-
 GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a)
 {
     if (!mInitialized) {
