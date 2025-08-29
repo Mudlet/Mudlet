@@ -156,8 +156,6 @@ TDetachedWindow::~TDetachedWindow()
         mpMapDockWidget->deleteLater();
         mpMapDockWidget = nullptr;
     }
-
-    saveWindowGeometry();
 }
 
 void TDetachedWindow::setupUI()
@@ -545,7 +543,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
 void TDetachedWindow::saveWindowGeometry()
 {
-    QSettings settings;
+    QSettings& settings = *mudlet::getQSettings();
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
     settings.setValue(key + "/geometry", saveGeometry());
@@ -554,7 +552,7 @@ void TDetachedWindow::saveWindowGeometry()
 
 void TDetachedWindow::restoreWindowGeometry()
 {
-    QSettings settings;
+    QSettings& settings = *mudlet::getQSettings();
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
 
@@ -1023,8 +1021,7 @@ void TDetachedWindow::updateWindowTitle()
         //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %1 is the number of profiles, %2 is the name of the profile currently shown.
         title = tr("Mudlet (%1 profiles) - %2 (Detached)")
                 .arg(mProfileConsoleMap.size())
-                //: This text will be part of the title of a detached Mudlet window with multiple profiles opened, but the profile currently shown has no name, so show "None" instead. The whole title will be like "Mudlet (3 profiles) - None (Detached)"
-                .arg(mCurrentProfileName.isEmpty() ? tr("None") : mCurrentProfileName);
+                .arg(mCurrentProfileName);
     }
 
     setWindowTitle(title);

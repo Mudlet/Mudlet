@@ -1,11 +1,12 @@
-#ifndef MUDLET_GLWIDGET_H
-#define MUDLET_GLWIDGET_H
+#ifndef MUDLET_MODERN_GLWIDGET_H
+#define MUDLET_MODERN_GLWIDGET_H
 
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016, 2020-2021 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,22 +33,35 @@
 
 #include "pre_guard.h"
 #include <QElapsedTimer>
+#include <QMatrix4x4>
+#include <QOpenGLBuffer>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QTimer>
+#include <QEasingCurve>
 #include "post_guard.h"
+
+#include "GeometryManager.h"
+#include "RenderCommandQueue.h"
+#include "ResourceManager.h"
+#include "ShaderManager.h"
+#include "CameraController.h"
 
 class Host;
 class TMap;
+class TRoom;
 
-
-class GLWidget : public QOpenGLWidget
+class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(GLWidget)
-    GLWidget(TMap*, Host*, QWidget* parent = nullptr);
-    ~GLWidget() = default;
+    Q_DISABLE_COPY(ModernGLWidget)
+    ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
+    ~ModernGLWidget() override;
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
@@ -76,6 +90,9 @@ public slots:
     void slot_sideView();
     void slot_topView();
 
+private slots:
+    void onCameraAnimationTick();
+
 protected:
     void initializeGL() override;
     void paintGL() override;
@@ -88,7 +105,30 @@ public:
     TMap* mpMap = nullptr;
 
 private:
+    // Shader and rendering resources
+    ShaderManager mShaderManager;
+    QOpenGLBuffer mVertexBuffer;
+    QOpenGLBuffer mColorBuffer;
+    QOpenGLBuffer mNormalBuffer;
+    QOpenGLBuffer mIndexBuffer;
+    QOpenGLVertexArrayObject mVAO;
+    
+    // Geometry management
+    GeometryManager mGeometryManager;
+    
+    // Render command queue
+    RenderCommandQueue mRenderCommandQueue;
+    
+    // Resource management
+    ResourceManager mResourceManager;
+    
+    // Camera management
+    CameraController mCameraController;
+
+    // Host reference
     QPointer<Host> mpHost;
+
+    // View state
     bool is2DView = false;
     bool mPanMode = false;
     float mPanXStart = 0;
@@ -96,6 +136,7 @@ private:
     float zmax = 9999999.0;
     float zmin = 9999999.0;
 
+    // Map state
     int mRID = 0;
     int mAID = 0;
     int mMapCenterX = 0;
@@ -103,21 +144,49 @@ private:
     int mMapCenterZ = 0;
     bool mShiftMode = false;
 
-    float xRot = 1.0;
-    float yRot = 5.0;
-    float zRot = 10.0;
     // Scales the size of rooms compared to the space between them - currently
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
     // of "2.5"):
     float scale = 4;
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
-
-    float mScale = 1.0;
     int mTargetRoomId = 0;
     
     // Frame timing for benchmarking
     QElapsedTimer mFrameTimer;
+    
+    // Smooth camera animation
+    QTimer* mCameraAnimationTimer = nullptr;
+    int mTargetAID = 0;
+    float mTargetMapCenterX = 0.0f;
+    float mTargetMapCenterY = 0.0f;
+    float mTargetMapCenterZ = 0.0f;
+    float mStartMapCenterX = 0.0f;
+    float mStartMapCenterY = 0.0f; 
+    float mStartMapCenterZ = 0.0f;
+    float mCurrentAnimationX = 0.0f; // Floating point current position during animation
+    float mCurrentAnimationY = 0.0f;
+    float mCurrentAnimationZ = 0.0f;
+    qreal mAnimationProgress = 0.0;
+    int mAnimationDuration = 100; // 100ms animation duration for smooth movement
+    QEasingCurve mEasingCurve;
+    bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
+    int mPreviousRID = 0; // Track previous room ID to detect changes
+
+    // Private methods for modern OpenGL
+    void updateMatrices();
+    void renderRooms();
+    void renderConnections();
+    void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
+    void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
+    void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
+    void renderUpDownIndicators(TRoom* pRoom, float x, float y, float z);
+    void renderText(const QString& text, float x, float y);
+    void setupBuffers();
+    void cleanup();
+    QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
+    QColor getEnvironmentColor(TRoom* pRoom);
+    void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
 };
 
-#endif // MUDLET_GLWIDGET_H
+#endif // MUDLET_MODERN_GLWIDGET_H

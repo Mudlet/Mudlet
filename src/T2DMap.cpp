@@ -37,7 +37,7 @@
 #include "dlgRoomProperties.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
+#include "glwidget_integration.h"
 #endif
 
 
@@ -3409,7 +3409,10 @@ void T2DMap::slot_customLineProperties()
             QUiLoader loader;
 
             QFile file(qsl(":/ui/custom_lines_properties.ui"));
-            file.open(QFile::ReadOnly);
+            if (!file.open(QFile::ReadOnly)) {
+                qWarning() << "T2DMap: failed to open custom_lines_properties.ui for reading:" << file.errorString();
+                return;
+            }
             auto* dialog = qobject_cast<QDialog*>(loader.load(&file, this));
             file.close();
             if (!dialog) {
@@ -4254,7 +4257,10 @@ void T2DMap::slot_setArea()
     QUiLoader loader;
 
     QFile file(":/ui/set_room_area.ui");
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "T2DMap: failed to open set_room_area.ui for reading:" << file.errorString();
+        return;
+    }
     auto* set_room_area_dialog = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!set_room_area_dialog) {
@@ -4681,7 +4687,10 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     if (yDelta) {
         mPick = false;
         const qreal oldZoom = xyzoom;
-        xyzoom = qMax(csmMinXYZoom, xyzoom * pow(1.07, yDelta));
+        // If invert zoom is enabled, use the traditional (inverted) behavior
+        // Otherwise, use modern behavior (non-inverted)
+        const int adjustedYDelta = mudlet::self()->invertMapZoom() ? yDelta : -yDelta;
+        xyzoom = qMax(csmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
         mpMap->mpRoomDB->getArea(mAreaID)->set2DMapZoom(xyzoom);
 
         if (!qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {
@@ -4806,7 +4815,10 @@ void T2DMap::slot_setCustomLine()
     QUiLoader loader;
 
     QFile file(":/ui/custom_lines.ui");
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "T2DMap: failed to open custom_lines.ui for reading:" << file.errorString();
+        return;
+    }
     auto* dialog = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!dialog) {

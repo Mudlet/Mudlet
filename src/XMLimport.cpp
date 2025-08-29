@@ -788,6 +788,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);
     setBoolAttribute(qsl("mShowRoomIDs"), pHost->mShowRoomID);
     setBoolAttribute(qsl("mShowPanel"), pHost->mShowPanel);
+    setBoolAttribute(qsl("mShow3DView"), pHost->mShow3DView);
     setBoolAttribute(qsl("mHaveMapperScript"), pHost->mHaveMapperScript);
     setBoolAttribute(qsl("mSslTsl"), pHost->mSslTsl);
     setBoolAttribute(qsl("mSslIgnoreExpired"), pHost->mSslIgnoreExpired);
@@ -1363,6 +1364,13 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("experiment")) {
+                QString key = attributes().value(qsl("key")).toString();
+                bool enabled = attributes().value(qsl("enabled")) == YES;
+                if (enabled && !key.isEmpty()) {
+                    mpHost->setExperimentEnabled(key, true);
+                }
+                readElementText(); // consume the element
             } else {
                 readUnknownElement(qsl("Host"));
             }

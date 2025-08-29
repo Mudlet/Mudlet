@@ -249,7 +249,9 @@ int main(int argc, char* argv[])
     app->setOrganizationName(qsl("Mudlet"));
 
     QFile gitShaFile(":/app-build.txt");
-    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "main: failed to open app-build.txt for reading:" << gitShaFile.errorString();
+    }
     const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     const bool releaseVersion = appBuild.isEmpty();

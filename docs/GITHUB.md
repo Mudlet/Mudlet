@@ -4,13 +4,6 @@ This directory contains GitHub-specific configuration files and templates that h
 
 ## Files and Their Purpose
 
-### Community & Contribution Files
-
-- **`CODE_OF_CONDUCT.md`** - Community standards and behavior expectations
-- **`CONTRIBUTING.md`** - Guidelines for contributing to the project
-- **`SUPPORT.md`** - Information on getting help and support
-- **`FUNDING.yml`** - Sponsorship and funding information for GitHub's sponsor button
-
 ### Issue & PR Management
 
 - **`ISSUE_TEMPLATE/`** - Templates for bug reports and feature requests

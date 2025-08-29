@@ -226,6 +226,7 @@ public:
     void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
+    QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
     QAbstractSocket::SocketState getConnectionState() const { return mpSocket.state(); }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);

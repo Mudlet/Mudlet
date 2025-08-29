@@ -275,6 +275,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
+, mShow3DView(false)
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
@@ -346,7 +347,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         dirLogFile.mkpath(directoryLogFile);
     }
     mErrorLogFile.setFileName(logFileName);
-    mErrorLogFile.open(QIODevice::Append);
+    if (!mErrorLogFile.open(QIODevice::Append)) {
+        qWarning() << "Host: failed to open error log file for appending:" << mErrorLogFile.errorString();
+    }
      /*
      * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
      * since user-content can contain anything and someone else reviewing
@@ -1221,7 +1224,10 @@ void Host::check_for_mappingscript()
         QUiLoader loader;
 
         QFile file(":/ui/lacking_mapper_script.ui");
-        file.open(QFile::ReadOnly);
+        if (!file.open(QFile::ReadOnly)) {
+            qWarning() << "Host: failed to open lacking_mapper_script.ui for reading:" << file.errorString();
+            return;
+        }
 
         auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
         file.close();
@@ -1943,7 +1949,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (thing != enums::PackageModuleType::ModuleFromUI) {
             QUiLoader loader(this);
             QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
-            uiFile.open(QFile::ReadOnly);
+            if (!uiFile.open(QFile::ReadOnly)) {
+                qWarning() << "Host: failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
+                return {false, qsl("could not open unpacking progress dialog UI file")};
+            }
             pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
             uiFile.close();
             if (!pUnzipDialog) {
@@ -2012,7 +2021,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
-            file2.open(QFile::ReadOnly | QFile::Text);
+            if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+                qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
+                continue;
+            }
             XMLimport reader(this);
             if (thing != enums::PackageModuleType::Package) {
                 QStringList moduleEntry;
@@ -2028,7 +2040,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     } else {
         file2.setFileName(fileName);
-        file2.open(QFile::ReadOnly | QFile::Text);
+        if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+            qWarning() << "Host: failed to open file for reading:" << fileName << file2.errorString();
+            return {false, qsl("could not open package file")};
+        }
         XMLimport reader(this);
         if (thing != enums::PackageModuleType::Package) {
             QStringList moduleEntry;
@@ -4573,4 +4588,83 @@ QFont Host::getAndClearTempDisplayFont()
     mTempDisplayFont.reset();
     mTempDisplayFontAttributes.reset();
     return tempFont;
+}
+
+// Static whitelist of valid experiments
+const QSet<QString> Host::mValidExperiments = {
+    qsl("experiment.rendering.originalish"),
+    qsl("experiment.rendering.more-transparent"),
+    qsl("experiment.rendering-movement.smooth"),
+    qsl("experiment.3dmap.modernmapper"),
+};
+
+bool Host::experimentEnabled(const QString& experimentKey) const
+{
+    return mExperiments.value(experimentKey, false);
+}
+
+std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey, bool enabled)
+{
+    // Validate experiment key against whitelist
+    if (!mValidExperiments.contains(experimentKey)) {
+        return {false, qsl("Invalid experiment name: %1").arg(experimentKey)};
+    }
+    
+    if (enabled) {
+        // Check if this is a grouped experiment (contains dots beyond "experiment.")
+        if (experimentKey.count('.') >= 2) {
+            // Extract group (e.g., "experiment.rendering" from "experiment.rendering.originalish")
+            QString group = experimentKey.section('.', 0, 1);
+            
+            // Disable all other experiments in the same group
+            for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
+                if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
+                    it.value() = false;
+                }
+            }
+        }
+        mExperiments[experimentKey] = true;
+    } else {
+        mExperiments[experimentKey] = false;
+    }
+    
+#if defined(INCLUDE_3DMAPPER)
+    // Refresh maps if any experiments changed the 3D map
+    if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+        mpMap->mpMapper->mp2dMap->update();
+    }
+    if (mpMap && mpMap->mpM) {
+        mpMap->mpM->update();
+    }
+#endif
+    
+    return {true, QString()};
+}
+
+QString Host::getActiveExperimentInGroup(const QString& group) const
+{
+    QString groupPrefix = group + ".";
+    for (auto it = mExperiments.constBegin(); it != mExperiments.constEnd(); ++it) {
+        if (it.key().startsWith(groupPrefix) && it.value()) {
+            // Return just the experiment name without the group prefix
+            return it.key().mid(groupPrefix.length());
+        }
+    }
+    return QString(); // No active experiment in this group
+}
+
+QStringList Host::getAllExperiments() const
+{
+    QStringList result;
+    for (auto it = mExperiments.constBegin(); it != mExperiments.constEnd(); ++it) {
+        if (it.value()) {
+            result << it.key();
+        }
+    }
+    return result;
+}
+
+QStringList Host::getValidExperiments() const
+{
+    return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
 }

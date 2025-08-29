@@ -34,7 +34,8 @@
 class Host;
 class TMap;
 #if defined(INCLUDE_3DMAPPER)
-class GLWidget;
+#include "glwidget_integration.h"
+class QOpenGLWidget;
 #endif
 
 
@@ -46,7 +47,7 @@ public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
 #if defined(INCLUDE_3DMAPPER)
-    GLWidget* glWidget = nullptr;
+    QOpenGLWidget* glWidget = nullptr;
 #endif
     void updateAreaComboBox();
     void resetAreaComboBoxToPlayerRoomArea();
@@ -55,6 +56,7 @@ public:
     bool isFloatAndDockable() const;
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
+    void recreate3DWidget();
 
 public slots:
     void slot_toggleRoundRooms(const bool);
