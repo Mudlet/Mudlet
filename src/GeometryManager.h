@@ -25,6 +25,7 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLFunctions>
+#include <QOpenGLContext>
 #include "post_guard.h"
 
 struct GeometryData {
@@ -54,6 +55,21 @@ struct GeometryData {
     
     bool hasIndices() const {
         return !indices.isEmpty();
+    }
+};
+
+// Instance data for instanced cube rendering
+struct CubeInstanceData {
+    float position[3];  // x, y, z world position
+    float size[3];      // sx, sy, sz scale factors
+    float color[4];     // r, g, b, a color components
+    
+    CubeInstanceData() = default;
+    
+    CubeInstanceData(float x, float y, float z, float sx, float sy, float sz, float r, float g, float b, float a) {
+        position[0] = x; position[1] = y; position[2] = z;
+        size[0] = sx; size[1] = sy; size[2] = sz;
+        color[0] = r; color[1] = g; color[2] = b; color[3] = a;
     }
 };
 
@@ -89,12 +105,39 @@ public:
                        QOpenGLBuffer& indexBuffer,
                        class ResourceManager* resourceManager,
                        GLenum drawMode = GL_TRIANGLES);
+                       
+    // Instanced rendering methods for cube batching
+    void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
+                             QOpenGLVertexArrayObject& vao,
+                             QOpenGLBuffer& vertexBuffer,
+                             QOpenGLBuffer& colorBuffer,
+                             QOpenGLBuffer& normalBuffer,
+                             QOpenGLBuffer& indexBuffer,
+                             QOpenGLBuffer& instanceBuffer,
+                             GLenum drawMode = GL_TRIANGLES);
+                             
+    void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
+                             QOpenGLVertexArrayObject& vao,
+                             QOpenGLBuffer& vertexBuffer,
+                             QOpenGLBuffer& colorBuffer,
+                             QOpenGLBuffer& normalBuffer,
+                             QOpenGLBuffer& indexBuffer,
+                             QOpenGLBuffer& instanceBuffer,
+                             class ResourceManager* resourceManager,
+                             GLenum drawMode = GL_TRIANGLES);
 
 private:
     bool mInitialized = false;
     
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
+    
+    // Function pointers for instancing (OpenGL 3.3+)
+    typedef void (QOPENGLF_APIENTRYP PFNGLVERTEXATTRIBDIVISORPROC) (GLuint index, GLuint divisor);
+    typedef void (QOPENGLF_APIENTRYP PFNGLDRAWELEMENTSINSTANCEDPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
+    
+    PFNGLVERTEXATTRIBDIVISORPROC glVertexAttribDivisor = nullptr;
+    PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
     
     void generateCubeTemplate();
     GeometryData transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a);

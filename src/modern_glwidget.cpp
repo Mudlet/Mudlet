@@ -38,7 +38,7 @@
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
-: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mpMap(pMap), mpHost(pHost)
+: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mInstanceBuffer(QOpenGLBuffer::VertexBuffer), mpMap(pMap), mpHost(pHost)
 {
     if (mpHost->mBgColor_2.alpha() < 255) {
         setAttribute(Qt::WA_OpaquePaintEvent, false);
@@ -70,6 +70,7 @@ void ModernGLWidget::cleanup()
     mColorBuffer.destroy();
     mNormalBuffer.destroy();
     mIndexBuffer.destroy();
+    mInstanceBuffer.destroy();
     mVAO.destroy();
     doneCurrent();
 }
@@ -166,6 +167,13 @@ void ModernGLWidget::setupBuffers()
     mIndexBuffer.bind();
     mIndexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Index buffer creation"));
+
+    // Create instance buffer for instanced rendering
+    mInstanceBuffer.create();
+    mResourceManager.onBufferCreated();
+    mInstanceBuffer.bind();
+    mInstanceBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    mResourceManager.checkGLError(qsl("Instance buffer creation"));
 
     // Configure vertex attribute pointers (will be set during rendering)
 }
@@ -344,6 +352,12 @@ void ModernGLWidget::renderRooms()
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
 
+    // Batched instance data for instanced rendering
+    QVector<CubeInstanceData> mainRoomInstances;
+    QVector<CubeInstanceData> currentRoomInstances;
+    QVector<CubeInstanceData> targetRoomInstances;
+    QVector<CubeInstanceData> overlayInstances;
+
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
         int currentRoomId = itRoom.next();
@@ -373,13 +387,13 @@ void ModernGLWidget::renderRooms()
         bool isTargetRoom = (currentRoomId == mTargetRoomId);
         bool belowOrAtLevel = (rz <= pz);
 
-        // 1. Render main room cube using correct planeColor logic
+        // 1. Collect main room cube data
         if (isCurrentRoom) {
             // Current room: red
-            renderCube(rx, ry, rz, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f);
+            currentRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f));
         } else if (isTargetRoom) {
             // Target room: green
-            renderCube(rx, ry, rz, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f);
+            targetRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
@@ -430,14 +444,10 @@ void ModernGLWidget::renderRooms()
                 }
             }
             
-            renderCube(rx, ry, rz, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha);
+            mainRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha));
         }
 
-        // 2. Render thin environment color overlay on top
-        // Disable depth testing like the original to prevent clipping
-        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
-
+        // 2. Collect environment color overlay data
         QColor envColor = getEnvironmentColor(pR);
         float overlayZ = rz + 0.25f; // Slightly above the main cube
         float envRed = envColor.redF();
@@ -477,17 +487,47 @@ void ModernGLWidget::renderRooms()
             }
         }
         
-        renderCube(rx,
-                   ry,
-                   overlayZ,
-                   0.75f / scale, // Slightly smaller and thinner
-                   envRed,
-                   envGreen,
-                   envBlue,
-                   overlayAlpha);
+        overlayInstances.append(CubeInstanceData(rx, ry, overlayZ, 0.75f / scale, 0.75f / scale, 0.75f / scale, envRed, envGreen, envBlue, overlayAlpha));
 
-        // 3. Render up/down exit indicators on the overlay
+        // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
         renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f);
+    }
+
+    // Create instanced render commands for each batch
+    if (!mainRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(mainRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!currentRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(currentRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!targetRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(targetRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!overlayInstances.isEmpty()) {
+        // Disable depth testing for overlays like the original
+        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+
+        auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
 
         // Re-enable depth testing for subsequent rendering
         auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
