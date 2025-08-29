@@ -1364,6 +1364,13 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("experiment")) {
+                QString key = attributes().value(qsl("key")).toString();
+                bool enabled = attributes().value(qsl("enabled")) == YES;
+                if (enabled && !key.isEmpty()) {
+                    mpHost->setExperimentEnabled(key, true);
+                }
+                readElementText(); // consume the element
             } else {
                 readUnknownElement(qsl("Host"));
             }

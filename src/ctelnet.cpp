@@ -44,7 +44,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
+#include "glwidget_integration.h"
 #endif
 
 #include "pre_guard.h"
@@ -836,7 +836,7 @@ void cTelnet::sendNAWS(int width, int height)
     socketOutRaw(message);
 }
 
-void cTelnet::sendTelnetOption(char type, char option)
+void cTelnet::sendTelnetOption(char type, unsigned char option)
 {
 #ifdef DEBUG_TELNET
     QString _type;
@@ -1734,7 +1734,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
 #endif
 
-    char option;
+    unsigned char option;
     switch (ch) {
     case TN_GA:
     case TN_EOR: {
