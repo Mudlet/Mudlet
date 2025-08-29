@@ -11311,49 +11311,63 @@ void dlgTriggerEditor::clearTriggerForm()
 {
     mpTriggersMainArea->hide();
     mpSourceEditorArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::clearTimerForm()
 {
     mpTimersMainArea->hide();
     mpTimersMainArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::clearAliasForm()
 {
     mpAliasMainArea->hide();
     mpSourceEditorArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::clearScriptForm()
 {
     mpScriptsMainArea->hide();
     mpSourceEditorArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::clearActionForm()
 {
     mpActionsMainArea->hide();
     mpSourceEditorArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::clearKeyForm()
 {
     mpKeysMainArea->hide();
     mpSourceEditorArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::clearVarForm()
 {
     mpVarsMainArea->hide();
     mpSourceEditorArea->hide();
-    showIntro();
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        showIntro();
+    }
 }
 
 void dlgTriggerEditor::setEditorShowBidi(const bool state)
