@@ -46,6 +46,8 @@
 #include <QTime>
 #include "post_guard.h"
 
+#include "utils.h"
+
 #include <zlib.h>
 #include <zstd.h>
 #include <zstd_errors.h>
