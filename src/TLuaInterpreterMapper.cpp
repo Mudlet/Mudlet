@@ -3921,3 +3921,47 @@ int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
     return 1;
 
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportAreaImage
+int TLuaInterpreter::exportAreaImage(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const QString filePath = getVerifiedString(L, __func__, 2, "file path");
+    
+    int maxWidth = 65536;
+    int maxHeight = 65536;
+    
+    if (lua_gettop(L) > 2) {
+        maxWidth = getVerifiedInt(L, __func__, 3, "max width", true);
+        if (maxWidth <= 0) {
+            return warnArgumentValue(L, __func__, "max width must be greater than 0");
+        }
+    }
+    
+    if (lua_gettop(L) > 3) {
+        maxHeight = getVerifiedInt(L, __func__, 4, "max height", true);
+        if (maxHeight <= 0) {
+            return warnArgumentValue(L, __func__, "max height must be greater than 0");
+        }
+    }
+
+    if (!host.mpMap->mpRoomDB->getArea(areaId)) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(areaId)));
+    }
+
+    // Get the T2DMap instance from the mapper
+    if (!host.mpMap->mpMapper || !host.mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "mapper not available");
+    }
+
+    auto result = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, maxWidth, maxHeight);
+    
+    lua_pushboolean(L, result.first);
+    lua_pushstring(L, result.second.toUtf8().constData());
+    return 2;
+}
