@@ -3949,6 +3949,11 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
             return warnArgumentValue(L, __func__, "max height must be greater than 0");
         }
     }
+    
+    std::optional<int> zLevel = std::nullopt;
+    if (lua_gettop(L) > 4) {
+        zLevel = getVerifiedInt(L, __func__, 5, "z level", true);
+    }
 
     if (!host.mpMap->mpRoomDB->getArea(areaId)) {
         return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(areaId)));
@@ -3959,7 +3964,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         return warnArgumentValue(L, __func__, "mapper not available");
     }
 
-    auto result = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, maxWidth, maxHeight);
+    auto result = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, maxWidth, maxHeight, zLevel);
     
     lua_pushboolean(L, result.first);
     lua_pushstring(L, result.second.toUtf8().constData());

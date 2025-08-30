@@ -5373,7 +5373,7 @@ void T2DMap::clearSelection()
     }
 }
 
-std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, int maxWidth, int maxHeight)
+std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, int maxWidth, int maxHeight, std::optional<int> zLevel)
 {
     qDebug() << "T2DMap::exportAreaToImage: Starting export for area" << areaId << "to" << filePath;
     
@@ -5434,12 +5434,12 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const int maxRoomSize = 50; // Prevent rooms from being too large
     const int finalRoomSize = qBound(minRoomSize, roomSize, maxRoomSize);
     
-    // Use room-based dimensions instead of zoom-based ones for export
-    const float mRoomWidth = finalRoomSize;
-    const float mRoomHeight = finalRoomSize;
+    // Store room-based dimensions for export
+    const float exportRoomWidth = finalRoomSize;
+    const float exportRoomHeight = finalRoomSize;
     
     qDebug() << "T2DMap::exportAreaToImage: Room size:" << finalRoomSize;
-    qDebug() << "T2DMap::exportAreaToImage: Room dimensions:" << mRoomWidth << "x" << mRoomHeight;
+    qDebug() << "T2DMap::exportAreaToImage: Room dimensions:" << exportRoomWidth << "x" << exportRoomHeight;
     
     // Calculate image size based on actual area content
     const int padding = finalRoomSize * 2;
@@ -5448,10 +5448,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     
     // Calculate offsets to position rooms correctly in the image
     // Map the area bounds to the image with padding, accounting for Y-axis flip
-    const int mRX = padding - (pArea->min_x * finalRoomSize);
-    const int mRY = padding + (pArea->max_y * finalRoomSize);
+    const int exportRX = padding - (pArea->min_x * finalRoomSize);
+    const int exportRY = padding - (pArea->min_y * finalRoomSize);
     
-    qDebug() << "T2DMap::exportAreaToImage: Offsets:" << mRX << "," << mRY;
+    qDebug() << "T2DMap::exportAreaToImage: Offsets:" << exportRX << "," << exportRY;
     qDebug() << "T2DMap::exportAreaToImage: Image size:" << imageWidth << "x" << imageHeight;
     
     // Create the image
@@ -5473,6 +5473,18 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         painter.setRenderHint(QPainter::TextAntialiasing, true);
     }
 
+    // Store original coordinate system values to restore later
+    const int originalRX = mRX;
+    const int originalRY = mRY;
+    const float originalRoomWidth = mRoomWidth;
+    const float originalRoomHeight = mRoomHeight;
+    
+    // Set class member variables to export coordinate system for all calculations
+    mRX = exportRX;
+    mRY = exportRY;
+    mRoomWidth = finalRoomSize;
+    mRoomHeight = finalRoomSize;
+
     // Set up fonts and pens - use similar approach to paintEvent
     QFont roomVNumFont = mpMap->mMapSymbolFont;
     QFont mapNameFont = mpMap->mMapSymbolFont;
@@ -5488,7 +5500,8 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     
     QPen pen;
     pen.setColor(mpHost->mFgColor_2);
-    const float exitWidth = mRoomWidth > 0 ? qMax(1.0f, static_cast<float>(eSize / 10.0 + 0.5)) : 1.0f;
+    // Use the same exitWidth calculation as paintEvent
+    const float exitWidth = 1 / eSize * finalRoomSize * rSize;
     pen.setWidthF(exitWidth);
     
     // Use the same Z-level filtering and drawing approach as paintEvent
@@ -5503,29 +5516,34 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             break;
         }
     }
-    const int zLevel = centerRoom ? centerRoom->z() : 0;
-    qDebug() << "T2DMap::exportAreaToImage: Using Z-level:" << zLevel;
+    // Use the same Z-level filtering and drawing approach as paintEvent
+    const int exportZLevel = zLevel.has_value() ? zLevel.value() : mMapCenterZ;
+    qDebug() << "T2DMap::exportAreaToImage: Using Z-level:" << exportZLevel 
+             << (zLevel.has_value() ? "(specified)" : "(from mMapCenterZ)");
     
     // Draw the ("background") labels that are on the bottom of the map - same as paintEvent
     QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         auto mapLabel = itMapLabel.value();
-        if (mapLabel.pos.z() != zLevel) {
+        if (mapLabel.pos.z() != exportZLevel) {
             continue;
         }
         if (mapLabel.text.isEmpty()) {
             mapLabel.text = tr("no text");
             pArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
+        // Use export coordinate system for label positioning
+        const int exportRX = padding - (pArea->min_x * finalRoomSize);
+        const int exportRY = padding - (pArea->min_y * finalRoomSize);
         QPointF labelPosition;
-        const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-        const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
+        const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
+        const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
+        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
         }
@@ -5533,7 +5551,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             continue;
         }
 
-        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
+        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * finalRoomSize + exportRX, mapLabel.pos.y() * finalRoomSize * -1 + exportRY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
                 painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
@@ -5559,7 +5577,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // Build exit lists from rooms on current Z-level (like paintEvent does)
     for (int roomId : pArea->rooms) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom || pRoom->z() != zLevel) {
+        if (!pRoom || pRoom->z() != exportZLevel) {
             continue;
         }
         exitList << roomId;
@@ -5572,12 +5590,15 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // First pass: draw rooms on level below (like paintEvent shadow rooms)
     for (int roomId : pArea->rooms) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom || pRoom->z() != zLevel - 1) {
+        if (!pRoom || pRoom->z() != exportZLevel - 1) {
             continue;
         }
         
-        const float rx = pRoom->x() * mRoomWidth + mRX;
-        const float ry = pRoom->y() * -1 * mRoomHeight + mRY;
+        // Use export coordinate system for room positioning
+        const int exportRX = padding - (pArea->min_x * finalRoomSize);
+        const int exportRY = padding - (pArea->min_y * finalRoomSize);
+        const float rx = pRoom->x() * finalRoomSize + exportRX;
+        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
         
         if (rx >= 0 && ry >= 0 && rx <= imageWidth && ry <= imageHeight) {
             painter.save();
@@ -5587,12 +5608,12 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
             if (mBubbleMode) {
                 const QPointF roomCenter(rx, ry);
-                const float roomRadius = (mRoomWidth * rSize) / 2.0f;
+                const float roomRadius = (finalRoomSize * rSize) / 2.0f;
                 QPainterPath diameterPath;
                 diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                 painter.drawPath(diameterPath);
             } else {
-                const QRectF shadowRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
+                const QRectF shadowRect(rx - (finalRoomSize * rSize * 0.8), ry - (finalRoomSize * rSize * 0.2), finalRoomSize * rSize, finalRoomSize * rSize);
                 painter.drawRect(shadowRect);
             }
             painter.restore();
@@ -5603,15 +5624,24 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // Second pass: draw main rooms on current level using existing drawRoom method
     for (int roomId : pArea->rooms) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom || pRoom->z() != zLevel) {
+        if (!pRoom || pRoom->z() != exportZLevel) {
             roomsSkipped++;
             continue;
         }
         
-        const float rx = pRoom->x() * mRoomWidth + mRX;
-        const float ry = pRoom->y() * -1 * mRoomHeight + mRY;
+        // Use export coordinate system for room positioning
+        const int exportRX = padding - (pArea->min_x * finalRoomSize);
+        const int exportRY = padding - (pArea->min_y * finalRoomSize);
+        const float rx = pRoom->x() * finalRoomSize + exportRX;
+        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
         
+        // Debug: Check which rooms are being filtered out
         if (rx < 0 || ry < 0 || rx > imageWidth || ry > imageHeight) {
+            if (roomsSkipped < 5) { // Only log first few to avoid spam
+                qDebug() << "T2DMap::exportAreaToImage: Skipping room" << roomId << "at position" 
+                         << pRoom->x() << "," << pRoom->y() << "-> screen pos" << rx << "," << ry 
+                         << "(image bounds: 0-" << imageWidth << ", 0-" << imageHeight << ")";
+            }
             roomsSkipped++;
             continue;
         }
@@ -5634,7 +5664,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // Draw room exits (like paintEvent does at line 1480)
     if (!pArea->gridMode) {
         qDebug() << "T2DMap::exportAreaToImage: Drawing exit lines...";
-        paintRoomExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
+        paintRoomExits(painter, pen, exitList, oneWayExits, pArea, exportZLevel, exitWidth, areaExitsMap);
     }
     
     // Draw the ("foreground") labels that are on the top of the map - same as paintEvent
@@ -5642,13 +5672,16 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         auto mapLabel = itMapLabel.value();
-        if (mapLabel.pos.z() != zLevel) {
+        if (mapLabel.pos.z() != exportZLevel) {
             continue;
         }
-        const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-        const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        // Use export coordinate system for label positioning
+        const int exportRX = padding - (pArea->min_x * finalRoomSize);
+        const int exportRY = padding - (pArea->min_y * finalRoomSize);
+        const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
+        const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
+        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
+        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
@@ -5656,7 +5689,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (!((0 < labelY || 0 < labelY + labelHeight) && (imageHeight > labelY || imageHeight > labelY + labelHeight))) {
             continue;
         }
-        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
+        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * finalRoomSize + exportRX, mapLabel.pos.y() * finalRoomSize * -1 + exportRY, labelWidth, labelHeight);
         if (mapLabel.showOnTop) {
             QPointF labelPosition(labelX, labelY);
             if (!mapLabel.noScaling) {
@@ -5677,6 +5710,12 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     painter.end();
     qDebug() << "T2DMap::exportAreaToImage: Painter finished";
     
+    // Restore the original coordinate system
+    mRX = originalRX;
+    mRY = originalRY;
+    mRoomWidth = originalRoomWidth;
+    mRoomHeight = originalRoomHeight;
+    
     // Save the image
     qDebug() << "T2DMap::exportAreaToImage: Saving image to" << filePath;
     QFileInfo fileInfo(filePath);
@@ -5688,6 +5727,11 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     
     if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
         qDebug() << "T2DMap::exportAreaToImage: Failed to save image";
+        // Restore coordinate system before returning on error too
+        mRX = originalRX;
+        mRY = originalRY;
+        mRoomWidth = originalRoomWidth;
+        mRoomHeight = originalRoomHeight;
         return {false, tr("Failed to save image to %1").arg(filePath)};
     }
     
