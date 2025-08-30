@@ -5791,46 +5791,150 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                 addExitAndCheckOneWay("sw", room->getSouthwest());
             }
             
-            // Draw regular exit lines to destination rooms
+            // Draw regular exit lines to destination rooms (same as paintRoomExits logic)
             for (const int exitRoomId : roomExitList) {
                 if (exitRoomId <= 0) continue;
                 
                 TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (!exitRoom) continue;
                 
-                const float exitRoomX = exitRoom->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
-                const float exitRoomY = exitRoom->y() * -1 * finalRoomSize + (padding - (pArea->min_y * finalRoomSize));
+                // Determine if this is an area exit (like original paintRoomExits)
+                const bool areaExit = exitRoom->getArea() != areaId;
+                const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
                 
-                // Skip if destination room is outside the image bounds
-                if (exitRoomX < 0 || exitRoomY < 0 || exitRoomX > imageWidth || exitRoomY > imageHeight) {
-                    continue;
-                }
-                
-                // Draw line from room center to exit room center
-                const QLineF exitLine(rx, ry, exitRoomX, exitRoomY);
-                
-                if (roomOneWayExits.contains(exitRoomId)) {
-                    // Draw one-way exit with dashed line
-                    QPen oneWayPen = pen;
-                    oneWayPen.setStyle(Qt::DashLine);
-                    painter.setPen(oneWayPen);
-                } else {
-                    painter.setPen(pen);
-                }
-                
-                painter.drawLine(exitLine);
-                
-                // Draw door if exists on this regular exit
+                QLineF exitLine;
                 QString doorKey;
-                if (room->getNorth() == exitRoomId) doorKey = "n";
-                else if (room->getSouth() == exitRoomId) doorKey = "s";
-                else if (room->getEast() == exitRoomId) doorKey = "e";
-                else if (room->getWest() == exitRoomId) doorKey = "w";
-                else if (room->getNortheast() == exitRoomId) doorKey = "ne";
-                else if (room->getNorthwest() == exitRoomId) doorKey = "nw";
-                else if (room->getSoutheast() == exitRoomId) doorKey = "se";
-                else if (room->getSouthwest() == exitRoomId) doorKey = "sw";
                 
+                // Determine door key and exit line based on direction
+                if (room->getNorth() == exitRoomId) {
+                    doorKey = "n";
+                    if (areaExit) {
+                        exitLine = QLineF(rx, ry - exitArrowScale * finalRoomSize,
+                                         rx, ry);
+                    }
+                } else if (room->getSouth() == exitRoomId) {
+                    doorKey = "s";
+                    if (areaExit) {
+                        exitLine = QLineF(rx, ry + exitArrowScale * finalRoomSize,
+                                         rx, ry);
+                    }
+                } else if (room->getEast() == exitRoomId) {
+                    doorKey = "e";
+                    if (areaExit) {
+                        exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry,
+                                         rx, ry);
+                    }
+                } else if (room->getWest() == exitRoomId) {
+                    doorKey = "w";
+                    if (areaExit) {
+                        exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry,
+                                         rx, ry);
+                    }
+                } else if (room->getNortheast() == exitRoomId) {
+                    doorKey = "ne";
+                    if (areaExit) {
+                        exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize,
+                                         rx, ry);
+                    }
+                } else if (room->getNorthwest() == exitRoomId) {
+                    doorKey = "nw";
+                    if (areaExit) {
+                        exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize,
+                                         rx, ry);
+                    }
+                } else if (room->getSoutheast() == exitRoomId) {
+                    doorKey = "se";
+                    if (areaExit) {
+                        exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize,
+                                         rx, ry);
+                    }
+                } else if (room->getSouthwest() == exitRoomId) {
+                    doorKey = "sw";
+                    if (areaExit) {
+                        exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize,
+                                         rx, ry);
+                    }
+                }
+                
+                if (!areaExit) {
+                    // Same-area exit: draw line to destination room (original logic)
+                    const float exitRoomX = exitRoom->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
+                    const float exitRoomY = exitRoom->y() * -1 * finalRoomSize + (padding - (pArea->min_y * finalRoomSize));
+                    
+                    // Skip if destination room is outside the image bounds
+                    if (exitRoomX < 0 || exitRoomY < 0 || exitRoomX > imageWidth || exitRoomY > imageHeight) {
+                        continue;
+                    }
+                    
+                    exitLine = QLineF(rx, ry, exitRoomX, exitRoomY);
+                    
+                    if (roomOneWayExits.contains(exitRoomId)) {
+                        // Draw one-way exit with dashed line
+                        QPen oneWayPen = pen;
+                        oneWayPen.setStyle(Qt::DashLine);
+                        painter.setPen(oneWayPen);
+                    } else {
+                        painter.setPen(pen);
+                    }
+                    
+                    painter.drawLine(exitLine);
+                    
+                } else {
+                    // Area exit: draw directional stub with arrow (like original paintRoomExits)
+                    painter.save();
+                    QPen areaPen = pen;
+                    areaPen.setWidthF(exitWidth);
+                    areaPen.setCapStyle(Qt::RoundCap);
+                    areaPen.setCosmetic(mMapperUseAntiAlias);
+                    areaPen.setColor(mpMap->getColor(exitRoomId));
+                    painter.setPen(areaPen);
+                    
+                    // Draw the area exit stub line
+                    painter.drawLine(exitLine);
+                    
+                    // Draw arrow head (same logic as original paintRoomExits lines 2298-2333)
+                    QLineF arrowLine = QLineF(exitLine);
+                    if (mLargeAreaExitArrows) {
+                        arrowLine.setLength((finalRoomSize * 2.0) * 0.4);
+                    } else {
+                        arrowLine.setLength(exitWidth * 5.0);
+                    }
+                    const QPointF arrowTip = arrowLine.p1();
+                    const QPointF arrowBase = arrowLine.p2();
+                    const QLineF arrowBaseLine = QLineF(arrowLine);
+                    const qreal arrowAngle = arrowBaseLine.angle() - 90.0;
+                    
+                    QLineF arrowSide;
+                    arrowSide.setP1(arrowBase);
+                    arrowSide.setAngle(arrowAngle);
+                    if (mLargeAreaExitArrows) {
+                        arrowSide.setLength((finalRoomSize * 2.0) * 0.15);
+                    } else {
+                        arrowSide.setLength(exitWidth * 2.0);
+                    }
+                    const QPointF arrowLeft = arrowSide.p2();
+                    arrowSide.setAngle(arrowSide.angle() + 180.0);
+                    const QPointF arrowRight = arrowSide.p2();
+                    
+                    QPolygonF arrowHead;
+                    arrowHead.append(arrowTip);
+                    arrowHead.append(arrowLeft);
+                    arrowHead.append(arrowRight);
+                    
+                    QBrush arrowBrush = painter.brush();
+                    arrowBrush.setColor(mpMap->getColor(exitRoomId));
+                    arrowBrush.setStyle(Qt::SolidPattern);
+                    QPen arrowPen = painter.pen();
+                    arrowPen.setJoinStyle(Qt::RoundJoin);
+                    arrowPen.setCapStyle(Qt::RoundCap);
+                    arrowPen.setCosmetic(mMapperUseAntiAlias);
+                    painter.setPen(arrowPen);
+                    painter.setBrush(arrowBrush);
+                    painter.drawPolygon(arrowHead);
+                    painter.restore();
+                }
+                
+                // Draw door if exists on this exit (both area and same-area exits)
                 if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
                     // Apply half-length reduction like original paintRoomExits
                     QLineF halfExitLine = exitLine;
