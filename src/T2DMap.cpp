@@ -5609,69 +5609,189 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             
             room->rendered = true;
             
-            // Build exit lists for this room (same logic as paintRoomExits)
+            // First, draw custom exit lines (if any) - exact logic from paintRoomExits
+            if (!room->customLines.empty()) {
+                painter.save();
+                QMapIterator<QString, QList<QPointF>> itk(room->customLines);
+                while (itk.hasNext()) {
+                    itk.next();
+                    const QString exitKey = itk.key();
+                    QColor customLineColor;
+                    if (roomId == mCustomLineSelectedRoom && exitKey == mCustomLineSelectedExit) {
+                        customLineColor = QColor(255, 155, 55);
+                    } else {
+                        customLineColor = room->customLinesColor.value(exitKey, Qt::red);
+                    }
+                    
+                    const QPointF origin = QPointF(rx, ry);
+                    
+                    // Calculate fixed offset point based on exit direction (same logic as paintRoomExits)
+                    QPointF fixedOffsetPoint;
+                    bool isXYPlainExit = false;
+                    if (exitKey == "n") {
+                        fixedOffsetPoint = QPointF(rx, ry - finalRoomSize / 2.0);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "ne") {
+                        fixedOffsetPoint = QPointF(rx + finalRoomSize / 2.0, ry - finalRoomSize / 2.0);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "e") {
+                        fixedOffsetPoint = QPointF(rx + finalRoomSize / 2.0, ry);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "se") {
+                        fixedOffsetPoint = QPointF(rx + finalRoomSize / 2.0, ry + finalRoomSize / 2.0);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "s") {
+                        fixedOffsetPoint = QPointF(rx, ry + finalRoomSize / 2.0);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "sw") {
+                        fixedOffsetPoint = QPointF(rx - finalRoomSize / 2.0, ry + finalRoomSize / 2.0);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "w") {
+                        fixedOffsetPoint = QPointF(rx - finalRoomSize / 2.0, ry);
+                        isXYPlainExit = true;
+                    } else if (exitKey == "nw") {
+                        fixedOffsetPoint = QPointF(rx - finalRoomSize / 2.0, ry - finalRoomSize / 2.0);
+                        isXYPlainExit = true;
+                    } else {
+                        fixedOffsetPoint = QPointF(rx, ry);
+                    }
+                    
+                    QPen customLinePen = painter.pen();
+                    customLinePen.setCosmetic(mMapperUseAntiAlias);
+                    customLinePen.setWidthF(exitWidth);
+                    customLinePen.setCapStyle(Qt::RoundCap);
+                    customLinePen.setJoinStyle(Qt::RoundJoin);
+                    customLinePen.setColor(customLineColor);
+                    customLinePen.setStyle(room->customLinesStyle.value(exitKey, Qt::SolidLine));
+                    
+                    QVector<QPointF> polyLinePoints;
+                    const QList<QPointF> customLinePoints = itk.value();
+                    QLineF doorLineSegment;
+                    
+                    if (!customLinePoints.empty()) {
+                        painter.setPen(customLinePen);
+                        polyLinePoints << origin;
+                        polyLinePoints << fixedOffsetPoint;
+                        
+                        // Transform custom line points (same as original: customLinePoints.at(pk).x() * mRoomWidth + mRX)
+                        for (int pk = 0, total = customLinePoints.size(); pk < total; ++pk) {
+                            const float pointX = customLinePoints.at(pk).x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
+                            const float pointY = customLinePoints.at(pk).y() * finalRoomSize * -1 + (padding - (pArea->min_y * finalRoomSize));
+                            polyLinePoints << QPointF(pointX, pointY);
+                        }
+                        
+                        // Determine door line segment for door drawing (same logic as original)
+                        if (polyLinePoints.size() > 2) {
+                            if (isXYPlainExit) {
+                                doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
+                            } else {
+                                // Non-XY-Plane exits have the first two points being coincident:
+                                doorLineSegment = QLineF{polyLinePoints.at(1), polyLinePoints.at(2)};
+                            }
+                        } else {
+                            // There must be 2 points ...
+                            doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
+                        }
+                        
+                        // Draw the custom polyline
+                        painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
+                        
+                        // Draw arrow if needed (same logic as original)
+                        if (room->customLinesArrow.value(exitKey, false)) {
+                            QLineF arrowLine = QLineF(polyLinePoints.last(), polyLinePoints.at(polyLinePoints.size() - 2));
+                            arrowLine.setLength(exitWidth * 5.0);
+                            const QPointF arrowTip = arrowLine.p1();
+                            const QPointF arrowBase = arrowLine.p2();
+                            
+                            QLineF arrowHead1 = arrowLine;
+                            arrowHead1.setLength(exitWidth * 3.0);
+                            arrowHead1.setAngle(arrowLine.angle() + 20);
+                            
+                            QLineF arrowHead2 = arrowLine;
+                            arrowHead2.setLength(exitWidth * 3.0);
+                            arrowHead2.setAngle(arrowLine.angle() - 20);
+                            
+                            painter.drawLine(arrowHead1);
+                            painter.drawLine(arrowHead2);
+                        }
+                        
+                        // Draw door if exists on this custom line
+                        if (room->doors.value(exitKey, 0) > 0) {
+                            drawDoor(painter, *room, exitKey, doorLineSegment);
+                        }
+                    }
+                }
+                painter.restore();
+            }
+            
+            // Now draw regular exits - use exact same logic as paintRoomExits
             QList<int> roomExitList;
             QList<int> roomOneWayExits;
             
-            // Add exits from this room (simplified version - just basic directions for now)
-            if (room->getNorth() > 0) {
-                roomExitList.push_back(room->getNorth());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getNorth());
-                if (exitRoom && exitRoom->getSouth() != roomId) {
-                    roomOneWayExits.push_back(room->getNorth());
+            // Helper function to add exit and check for one-way
+            auto addExitAndCheckOneWay = [&](const QString& dirKey, int exitRoomId) {
+                if (exitRoomId > 0) {
+                    roomExitList.push_back(exitRoomId);
+                    TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
+                    if (exitRoom) {
+                        // Check if it's a one-way exit (return direction doesn't point back)
+                        bool isOneWay = false;
+                        if (dirKey == "n" && exitRoom->getSouth() != roomId) isOneWay = true;
+                        else if (dirKey == "s" && exitRoom->getNorth() != roomId) isOneWay = true;
+                        else if (dirKey == "e" && exitRoom->getWest() != roomId) isOneWay = true;
+                        else if (dirKey == "w" && exitRoom->getEast() != roomId) isOneWay = true;
+                        else if (dirKey == "ne" && exitRoom->getSouthwest() != roomId) isOneWay = true;
+                        else if (dirKey == "nw" && exitRoom->getSoutheast() != roomId) isOneWay = true;
+                        else if (dirKey == "se" && exitRoom->getNorthwest() != roomId) isOneWay = true;
+                        else if (dirKey == "sw" && exitRoom->getNortheast() != roomId) isOneWay = true;
+                        
+                        if (isOneWay) {
+                            roomOneWayExits.push_back(exitRoomId);
+                        }
+                    }
                 }
-            }
-            if (room->getSouth() > 0) {
-                roomExitList.push_back(room->getSouth());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getSouth());
-                if (exitRoom && exitRoom->getNorth() != roomId) {
-                    roomOneWayExits.push_back(room->getSouth());
+            };
+            
+            // Only add regular exits for directions that don't have custom lines (like paintRoomExits)
+            if (!room->customLines.empty()) {
+                // This room has custom lines - only add regular exits for directions without custom lines
+                if (!room->customLines.contains("n")) {
+                    addExitAndCheckOneWay("n", room->getNorth());
                 }
-            }
-            if (room->getEast() > 0) {
-                roomExitList.push_back(room->getEast());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getEast());
-                if (exitRoom && exitRoom->getWest() != roomId) {
-                    roomOneWayExits.push_back(room->getEast());
+                if (!room->customLines.contains("ne")) {
+                    addExitAndCheckOneWay("ne", room->getNortheast());
                 }
-            }
-            if (room->getWest() > 0) {
-                roomExitList.push_back(room->getWest());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getWest());
-                if (exitRoom && exitRoom->getEast() != roomId) {
-                    roomOneWayExits.push_back(room->getWest());
+                if (!room->customLines.contains("e")) {
+                    addExitAndCheckOneWay("e", room->getEast());
                 }
-            }
-            if (room->getNortheast() > 0) {
-                roomExitList.push_back(room->getNortheast());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getNortheast());
-                if (exitRoom && exitRoom->getSouthwest() != roomId) {
-                    roomOneWayExits.push_back(room->getNortheast());
+                if (!room->customLines.contains("se")) {
+                    addExitAndCheckOneWay("se", room->getSoutheast());
                 }
-            }
-            if (room->getNorthwest() > 0) {
-                roomExitList.push_back(room->getNorthwest());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getNorthwest());
-                if (exitRoom && exitRoom->getSoutheast() != roomId) {
-                    roomOneWayExits.push_back(room->getNorthwest());
+                if (!room->customLines.contains("s")) {
+                    addExitAndCheckOneWay("s", room->getSouth());
                 }
-            }
-            if (room->getSoutheast() > 0) {
-                roomExitList.push_back(room->getSoutheast());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getSoutheast());
-                if (exitRoom && exitRoom->getNorthwest() != roomId) {
-                    roomOneWayExits.push_back(room->getSoutheast());
+                if (!room->customLines.contains("sw")) {
+                    addExitAndCheckOneWay("sw", room->getSouthwest());
                 }
-            }
-            if (room->getSouthwest() > 0) {
-                roomExitList.push_back(room->getSouthwest());
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getSouthwest());
-                if (exitRoom && exitRoom->getNortheast() != roomId) {
-                    roomOneWayExits.push_back(room->getSouthwest());
+                if (!room->customLines.contains("w")) {
+                    addExitAndCheckOneWay("w", room->getWest());
                 }
+                if (!room->customLines.contains("nw")) {
+                    addExitAndCheckOneWay("nw", room->getNorthwest());
+                }
+            } else {
+                // This room has no custom lines - add all regular exits (only 8 cardinal/diagonal directions)
+                addExitAndCheckOneWay("n", room->getNorth());
+                addExitAndCheckOneWay("s", room->getSouth());
+                addExitAndCheckOneWay("e", room->getEast());
+                addExitAndCheckOneWay("w", room->getWest());
+                addExitAndCheckOneWay("ne", room->getNortheast());
+                addExitAndCheckOneWay("nw", room->getNorthwest());
+                addExitAndCheckOneWay("se", room->getSoutheast());
+                addExitAndCheckOneWay("sw", room->getSouthwest());
             }
             
-            // Draw exit lines to destination rooms
+            // Draw regular exit lines to destination rooms
             for (const int exitRoomId : roomExitList) {
                 if (exitRoomId <= 0) continue;
                 
@@ -5687,7 +5807,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                 }
                 
                 // Draw line from room center to exit room center
-                painter.setPen(pen);
                 const QLineF exitLine(rx, ry, exitRoomX, exitRoomY);
                 
                 if (roomOneWayExits.contains(exitRoomId)) {
@@ -5695,9 +5814,26 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                     QPen oneWayPen = pen;
                     oneWayPen.setStyle(Qt::DashLine);
                     painter.setPen(oneWayPen);
+                } else {
+                    painter.setPen(pen);
                 }
                 
                 painter.drawLine(exitLine);
+                
+                // Draw door if exists on this regular exit
+                QString doorKey;
+                if (room->getNorth() == exitRoomId) doorKey = "n";
+                else if (room->getSouth() == exitRoomId) doorKey = "s";
+                else if (room->getEast() == exitRoomId) doorKey = "e";
+                else if (room->getWest() == exitRoomId) doorKey = "w";
+                else if (room->getNortheast() == exitRoomId) doorKey = "ne";
+                else if (room->getNorthwest() == exitRoomId) doorKey = "nw";
+                else if (room->getSoutheast() == exitRoomId) doorKey = "se";
+                else if (room->getSouthwest() == exitRoomId) doorKey = "sw";
+                
+                if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
+                    drawDoor(painter, *room, doorKey, exitLine);
+                }
             }
         }
     }
