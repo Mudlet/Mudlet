@@ -5832,7 +5832,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                 else if (room->getSouthwest() == exitRoomId) doorKey = "sw";
                 
                 if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
-                    drawDoor(painter, *room, doorKey, exitLine);
+                    // Apply half-length reduction like original paintRoomExits
+                    QLineF halfExitLine = exitLine;
+                    halfExitLine.setLength(halfExitLine.length() / 2.0);
+                    drawDoor(painter, *room, doorKey, halfExitLine);
                 }
             }
         }
