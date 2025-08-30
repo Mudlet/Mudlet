@@ -5482,6 +5482,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // Set class member variables to export coordinate system for all calculations
     mRX = exportRX;
     mRY = exportRY;
+    // Set mRoomWidth/mRoomHeight to match paintEvent logic - these represent pixels per room unit
     mRoomWidth = finalRoomSize;
     mRoomHeight = finalRoomSize;
 
@@ -5497,6 +5498,12 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const int fontPixelSize = qMax(6, static_cast<int>(mRoomHeight * rSize / 4.0));
     roomVNumFont.setPixelSize(fontPixelSize);
     mapNameFont.setPixelSize(fontPixelSize);
+    
+    // Reset symbol font size to match paintEvent behavior (line 1185)
+    mSymbolFontSize = 1;
+    
+    // Flush symbol cache to ensure symbols are regenerated with export dimensions
+    flushSymbolPixmapCache();
     
     QPen pen;
     pen.setColor(mpHost->mFgColor_2);
