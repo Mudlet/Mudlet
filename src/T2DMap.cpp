@@ -5583,7 +5583,126 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         exitList << roomId;
     }
     
-    // Draw rooms on Z-level and below (like paintEvent does)
+    // Draw room exits first (like paintEvent does at line 1480) - BEFORE drawing rooms
+    if (!pArea->gridMode) {
+        qDebug() << "T2DMap::exportAreaToImage: Drawing exit lines...";
+        
+        // paintRoomExits uses width() and height() for visibility filtering, but we need to use imageWidth/imageHeight
+        // Since we can't easily override those methods, we'll create a custom export-specific exit drawing
+        
+        // Draw exits using similar logic to paintRoomExits but with export-specific coordinates
+        QSetIterator<int> itRoom2(pArea->getAreaRooms());
+        while (itRoom2.hasNext()) {
+            const int roomId = itRoom2.next();
+            TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+            if (!room || room->z() != exportZLevel) {
+                continue;
+            }
+            
+            const float rx = room->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
+            const float ry = room->y() * -1 * finalRoomSize + (padding - (pArea->min_y * finalRoomSize));
+            
+            // Skip rooms that are outside the image bounds
+            if (rx < 0 || ry < 0 || rx > imageWidth || ry > imageHeight) {
+                continue;
+            }
+            
+            room->rendered = true;
+            
+            // Build exit lists for this room (same logic as paintRoomExits)
+            QList<int> roomExitList;
+            QList<int> roomOneWayExits;
+            
+            // Add exits from this room (simplified version - just basic directions for now)
+            if (room->getNorth() > 0) {
+                roomExitList.push_back(room->getNorth());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getNorth());
+                if (exitRoom && exitRoom->getSouth() != roomId) {
+                    roomOneWayExits.push_back(room->getNorth());
+                }
+            }
+            if (room->getSouth() > 0) {
+                roomExitList.push_back(room->getSouth());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getSouth());
+                if (exitRoom && exitRoom->getNorth() != roomId) {
+                    roomOneWayExits.push_back(room->getSouth());
+                }
+            }
+            if (room->getEast() > 0) {
+                roomExitList.push_back(room->getEast());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getEast());
+                if (exitRoom && exitRoom->getWest() != roomId) {
+                    roomOneWayExits.push_back(room->getEast());
+                }
+            }
+            if (room->getWest() > 0) {
+                roomExitList.push_back(room->getWest());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getWest());
+                if (exitRoom && exitRoom->getEast() != roomId) {
+                    roomOneWayExits.push_back(room->getWest());
+                }
+            }
+            if (room->getNortheast() > 0) {
+                roomExitList.push_back(room->getNortheast());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getNortheast());
+                if (exitRoom && exitRoom->getSouthwest() != roomId) {
+                    roomOneWayExits.push_back(room->getNortheast());
+                }
+            }
+            if (room->getNorthwest() > 0) {
+                roomExitList.push_back(room->getNorthwest());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getNorthwest());
+                if (exitRoom && exitRoom->getSoutheast() != roomId) {
+                    roomOneWayExits.push_back(room->getNorthwest());
+                }
+            }
+            if (room->getSoutheast() > 0) {
+                roomExitList.push_back(room->getSoutheast());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getSoutheast());
+                if (exitRoom && exitRoom->getNorthwest() != roomId) {
+                    roomOneWayExits.push_back(room->getSoutheast());
+                }
+            }
+            if (room->getSouthwest() > 0) {
+                roomExitList.push_back(room->getSouthwest());
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(room->getSouthwest());
+                if (exitRoom && exitRoom->getNortheast() != roomId) {
+                    roomOneWayExits.push_back(room->getSouthwest());
+                }
+            }
+            
+            // Draw exit lines to destination rooms
+            for (const int exitRoomId : roomExitList) {
+                if (exitRoomId <= 0) continue;
+                
+                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
+                if (!exitRoom) continue;
+                
+                const float exitRoomX = exitRoom->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
+                const float exitRoomY = exitRoom->y() * -1 * finalRoomSize + (padding - (pArea->min_y * finalRoomSize));
+                
+                // Skip if destination room is outside the image bounds
+                if (exitRoomX < 0 || exitRoomY < 0 || exitRoomX > imageWidth || exitRoomY > imageHeight) {
+                    continue;
+                }
+                
+                // Draw line from room center to exit room center
+                painter.setPen(pen);
+                const QLineF exitLine(rx, ry, exitRoomX, exitRoomY);
+                
+                if (roomOneWayExits.contains(exitRoomId)) {
+                    // Draw one-way exit with dashed line
+                    QPen oneWayPen = pen;
+                    oneWayPen.setStyle(Qt::DashLine);
+                    painter.setPen(oneWayPen);
+                }
+                
+                painter.drawLine(exitLine);
+            }
+        }
+    }
+    
+    // Now draw rooms on Z-level and below (like paintEvent does)
     int roomsDrawn = 0;
     int roomsSkipped = 0;
     
@@ -5660,12 +5779,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
     
     qDebug() << "T2DMap::exportAreaToImage: Finished drawing rooms. Rooms drawn:" << roomsDrawn << ", skipped:" << roomsSkipped;
-    
-    // Draw room exits (like paintEvent does at line 1480)
-    if (!pArea->gridMode) {
-        qDebug() << "T2DMap::exportAreaToImage: Drawing exit lines...";
-        paintRoomExits(painter, pen, exitList, oneWayExits, pArea, exportZLevel, exitWidth, areaExitsMap);
-    }
     
     // Draw the ("foreground") labels that are on the top of the map - same as paintEvent
     itMapLabel.toFront();  // Reset the iterator
