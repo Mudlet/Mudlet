@@ -392,13 +392,13 @@ void ModernGLWidget::renderRooms()
             // Current room: red
             QMatrix4x4 transform = QMatrix4x4();
             transform.translate(rx,ry,rz);
-            transform.scale(1.0f/scale);
+            transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
         } else if (isTargetRoom) {
             // Target room: green
             QMatrix4x4 transform = QMatrix4x4();
             transform.translate(rx,ry,rz);
-            transform.scale(1.0f/scale);
+            transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             targetRoomInstances.append(CubeInstanceData(transform, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
             // Normal room: use planeColor logic based on z-level relationship
@@ -452,13 +452,13 @@ void ModernGLWidget::renderRooms()
             
             QMatrix4x4 transform = QMatrix4x4();
             transform.translate(rx,ry,rz);
-            transform.scale(1.0f/scale);
+            transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             mainRoomInstances.append(CubeInstanceData(transform, redComponent, greenComponent, blueComponent, roomAlpha));
         }
 
         // 2. Collect environment color overlay data
         QColor envColor = getEnvironmentColor(pR);
-        float overlayZ = rz + 0.25f; // Slightly above the main cube
+        float overlayZ = rz + 0.25f/zFlattening; // Slightly above the main cube
         float envRed = envColor.redF();
         float envGreen = envColor.greenF();
         float envBlue = envColor.blueF();
@@ -498,11 +498,11 @@ void ModernGLWidget::renderRooms()
         
         QMatrix4x4 transform = QMatrix4x4();
         transform.translate(rx,ry,overlayZ);
-        transform.scale(0.75f / scale);
+        transform.scale(0.75f / scale, 0.75f / scale, 0.75f / scale / zFlattening);
         overlayInstances.append(CubeInstanceData(transform, envRed, envGreen, envBlue, overlayAlpha));
 
         // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
-        renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f);
+        renderUpDownIndicators(pR, rx, ry, overlayZ + (0.75f / scale / 2) + 0.1f/zFlattening);
     }
 
     // Create instanced render commands for each batch
