@@ -5373,9 +5373,15 @@ void T2DMap::clearSelection()
     }
 }
 
-std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, int maxWidth, int maxHeight, std::optional<int> zLevel)
+std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal exportScale)
 {
     qDebug() << "T2DMap::exportAreaToImage: Starting export for area" << areaId << "to" << filePath;
+    
+    // Validate export scale parameter
+    if (exportScale <= 0.0 || exportScale > 10.0) {
+        qDebug() << "T2DMap::exportAreaToImage: Invalid export scale:" << exportScale;
+        return {false, tr("Export scale must be between 0.1 and 10.0")};
+    }
     
     if (!mpMap || mpHost.isNull()) {
         qDebug() << "T2DMap::exportAreaToImage: Map not initialized";
@@ -5414,22 +5420,11 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const float xyzoom = pArea->get2DMapZoom();
     qDebug() << "T2DMap::exportAreaToImage: Area zoom level:" << xyzoom;
     
-    // Calculate spans and room dimensions like in paintEvent
-    float xspan, yspan;
-    if (maxWidth > maxHeight) {
-        xspan = xyzoom * (static_cast<float>(maxWidth) / maxHeight);
-        yspan = xyzoom;
-    } else {
-        xspan = xyzoom;
-        yspan = xyzoom * (static_cast<float>(maxHeight) / maxWidth);
-    }
-    
-    // Calculate room size based on fitting the area within reasonable dimensions
-    // Use more reasonable max dimensions if the provided ones are too large
-    const int reasonableMaxWidth = qMin(maxWidth, 2048);
-    const int reasonableMaxHeight = qMin(maxHeight, 2048);
-    
-    const int roomSize = qMin(reasonableMaxWidth / areaWidth, reasonableMaxHeight / areaHeight);
+    // Calculate room size based on area dimensions - auto-sizing approach
+    // Aim for reasonable room sizes that fit well regardless of area size
+    const int targetImageDimension = 1024; // Target around 1024 pixels for the larger dimension
+    const int maxDimension = qMax(areaWidth, areaHeight);
+    const int roomSize = targetImageDimension / maxDimension;
     const int minRoomSize = 8;
     const int maxRoomSize = 50; // Prevent rooms from being too large
     const int finalRoomSize = qBound(minRoomSize, roomSize, maxRoomSize);
@@ -5454,8 +5449,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     qDebug() << "T2DMap::exportAreaToImage: Offsets:" << exportRX << "," << exportRY;
     qDebug() << "T2DMap::exportAreaToImage: Image size:" << imageWidth << "x" << imageHeight;
     
-    // Create high-quality 2x resolution image for crisp exports
-    const qreal exportScale = 2.0;
+    // Create high-quality image for crisp exports using specified scale
     qDebug() << "T2DMap::exportAreaToImage: Creating high-quality pixmap at" << exportScale << "x resolution...";
     QPixmap pixmap(imageWidth * exportScale, imageHeight * exportScale);
     pixmap.setDevicePixelRatio(exportScale);

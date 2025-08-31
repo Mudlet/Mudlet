@@ -87,7 +87,7 @@ public:
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
     void clearSelection();
-    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, int maxWidth = 65536, int maxHeight = 65536, std::optional<int> zLevel = std::nullopt);
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal exportScale = 2.0);
 
 
 

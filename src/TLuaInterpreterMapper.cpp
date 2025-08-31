@@ -3933,26 +3933,17 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
     const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
     const QString filePath = getVerifiedString(L, __func__, 2, "file path");
     
-    int maxWidth = 65536;
-    int maxHeight = 65536;
-    
-    if (lua_gettop(L) > 2) {
-        maxWidth = getVerifiedInt(L, __func__, 3, "max width", true);
-        if (maxWidth <= 0) {
-            return warnArgumentValue(L, __func__, "max width must be greater than 0");
-        }
-    }
-    
-    if (lua_gettop(L) > 3) {
-        maxHeight = getVerifiedInt(L, __func__, 4, "max height", true);
-        if (maxHeight <= 0) {
-            return warnArgumentValue(L, __func__, "max height must be greater than 0");
-        }
-    }
-    
     std::optional<int> zLevel = std::nullopt;
-    if (lua_gettop(L) > 4) {
-        zLevel = getVerifiedInt(L, __func__, 5, "z level", true);
+    if (lua_gettop(L) > 2) {
+        zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
+    }
+    
+    qreal exportScale = 2.0; // Default to 2x for quality
+    if (lua_gettop(L) > 3) {
+        exportScale = getVerifiedDouble(L, __func__, 4, "export scale", true);
+        if (exportScale <= 0.0 || exportScale > 10.0) {
+            return warnArgumentValue(L, __func__, "export scale must be between 0.1 and 10.0");
+        }
     }
 
     if (!host.mpMap->mpRoomDB->getArea(areaId)) {
@@ -3964,7 +3955,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         return warnArgumentValue(L, __func__, "mapper not available");
     }
 
-    auto result = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, maxWidth, maxHeight, zLevel);
+    auto result = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, exportScale);
     
     lua_pushboolean(L, result.first);
     lua_pushstring(L, result.second.toUtf8().constData());
