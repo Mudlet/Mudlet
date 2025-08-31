@@ -5380,23 +5380,23 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // Validate export scale parameter
     if (exportScale <= 0.0 || exportScale > 10.0) {
         qDebug() << "T2DMap::exportAreaToImage: Invalid export scale:" << exportScale;
-        return {false, tr("Export scale must be between 0.1 and 10.0")};
+        return {false, qsl("Export scale must be between 0.1 and 10.0")};
     }
     
     if (!mpMap || mpHost.isNull()) {
         qDebug() << "T2DMap::exportAreaToImage: Map not initialized";
-        return {false, tr("Map not initialized")};
+        return {false, qsl("Map not initialized")};
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
     if (!pArea) {
         qDebug() << "T2DMap::exportAreaToImage: Area" << areaId << "not found";
-        return {false, tr("Area %1 not found").arg(areaId)};
+        return {false, qsl("Area %1 not found").arg(areaId)};
     }
 
     if (pArea->rooms.isEmpty()) {
         qDebug() << "T2DMap::exportAreaToImage: Area" << areaId << "contains no rooms";
-        return {false, tr("Area %1 contains no rooms").arg(areaId)};
+        return {false, qsl("Area %1 contains no rooms").arg(areaId)};
     }
 
     qDebug() << "T2DMap::exportAreaToImage: Area has" << pArea->rooms.size() << "rooms";
@@ -5413,7 +5413,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     
     if (areaWidth <= 0 || areaHeight <= 0) {
         qDebug() << "T2DMap::exportAreaToImage: Invalid area dimensions";
-        return {false, tr("Area %1 has invalid dimensions").arg(areaId)};
+        return {false, qsl("Area %1 has invalid dimensions").arg(areaId)};
     }
 
     // Use zoom level to determine appropriate scale - similar to paintEvent
@@ -5458,7 +5458,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
         qDebug() << "T2DMap::exportAreaToImage: Failed to create image painter";
-        return {false, tr("Failed to create image painter")};
+        return {false, qsl("Failed to create image painter")};
     }
     qDebug() << "T2DMap::exportAreaToImage: Pixmap and painter created successfully";
 
@@ -6075,8 +6075,8 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     mRoomWidth = originalRoomWidth;
     mRoomHeight = originalRoomHeight;
     
-    // Save the image
-    qDebug() << "T2DMap::exportAreaToImage: Saving image to" << filePath;
+    // Prepare for async image save
+    qDebug() << "T2DMap::exportAreaToImage: Preparing async save to" << filePath;
     QFileInfo fileInfo(filePath);
     QString format = fileInfo.suffix().toLower();
     if (format.isEmpty()) {
@@ -6084,18 +6084,43 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
     qDebug() << "T2DMap::exportAreaToImage: Using format:" << format;
     
-    if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
-        qDebug() << "T2DMap::exportAreaToImage: Failed to save image";
-        // Restore coordinate system before returning on error too
-        mRX = originalRX;
-        mRY = originalRY;
-        mRoomWidth = originalRoomWidth;
-        mRoomHeight = originalRoomHeight;
-        return {false, tr("Failed to save image to %1").arg(filePath)};
+    // Clean up any existing export watcher
+    if (mpExportWatcher) {
+        mpExportWatcher->deleteLater();
     }
     
-    qDebug() << "T2DMap::exportAreaToImage: Export completed successfully";
-    return {true, tr("Area exported successfully to %1 (%2x%3)").arg(filePath).arg(imageWidth).arg(imageHeight)};
+    // Create new watcher for this export task
+    mpExportWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+    connect(mpExportWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this]() {
+        auto result = mpExportWatcher->result();
+        if (!result.first) {
+            // Only show errors, no success messages
+            mpHost->postMessage(tr("[MAP]: %1").arg(result.second));
+        }
+        mpExportWatcher->deleteLater();
+        mpExportWatcher = nullptr;
+    });
+    
+    // Start async save task - fire & forget
+    auto future = QtConcurrent::task(&T2DMap::performImageSave)
+                      .withArguments(this, pixmap, filePath, format)
+                      .spawn();
+    mpExportWatcher->setFuture(future);
+    
+    return {true, {}};
+}
+
+std::pair<bool, QString> T2DMap::performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format)
+{
+    qDebug() << "T2DMap::performImageSave: Saving image to" << filePath << "with format" << format;
+    
+    if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
+        qDebug() << "T2DMap::performImageSave: Failed to save image";
+        return {false, qsl("Failed to save image to %1").arg(filePath)};
+    }
+    
+    qDebug() << "T2DMap::performImageSave: Image saved successfully";
+    return {true, {}};
 }
 
 void T2DMap::slot_exportAreaToImage()

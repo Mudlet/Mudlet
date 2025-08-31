@@ -3952,12 +3952,15 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
 
     // Get the T2DMap instance from the mapper
     if (!host.mpMap->mpMapper || !host.mpMap->mpMapper->mp2dMap) {
-        return warnArgumentValue(L, __func__, "mapper not available");
+        return warnArgumentValue(L, __func__, "map needs to be open");
     }
 
-    auto result = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, exportScale);
+    auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, exportScale);
     
-    lua_pushboolean(L, result.first);
-    lua_pushstring(L, result.second.toUtf8().constData());
-    return 2;
+    lua_pushboolean(L, success);
+    if (!success) {
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    return 1;
 }

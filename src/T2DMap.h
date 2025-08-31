@@ -32,11 +32,13 @@
 #include <QCache>
 #include <QColor>
 #include <QFont>
+#include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
+#include <QtConcurrent>
 #include "post_guard.h"
 
 class Host;
@@ -100,6 +102,7 @@ public:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom = csmDefaultXYZoom;
+    QFutureWatcher<std::pair<bool, QString>>* mpExportWatcher = nullptr;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
@@ -246,6 +249,7 @@ private:
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
+    std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);
