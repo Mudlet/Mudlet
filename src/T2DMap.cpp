@@ -36,6 +36,7 @@
 #include "dlgRoomExits.h"
 #include "dlgRoomProperties.h"
 #include "mudlet.h"
+#include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -6135,7 +6136,14 @@ void T2DMap::slot_exportAreaToImage()
         areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAreaID, areaName);
     }
 
-    QString defaultFileName = tr("%1_area_%2.png").arg(mpHost->getName()).arg(mAreaID);
+    QString defaultFileName;
+    if (!areaName.isEmpty()) {
+        // Use sanitized area name for filename
+        defaultFileName = qsl("%1.png").arg(utils::sanitizeForPath(areaName));
+    } else {
+        // Fall back to area ID if no area name
+        defaultFileName = tr("area_%1.png").arg(mAreaID);
+    }
     QString filePath = QFileDialog::getSaveFileName(this,
                                                     tr("Export Area %1 to Image").arg(areaName),
                                                     defaultFileName,
