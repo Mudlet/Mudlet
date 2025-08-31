@@ -348,6 +348,12 @@ void ModernGLWidget::renderRooms()
         return;
     }
 
+    if (mpHost && mpHost->experimentEnabled("experiment.flat-rooms")) {
+        zFlattening = 8.0f;
+    } else {
+        zFlattening = 1.0f;
+    }
+
     float pz = static_cast<float>(mMapCenterZ);
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
