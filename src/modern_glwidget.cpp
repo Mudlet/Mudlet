@@ -390,10 +390,16 @@ void ModernGLWidget::renderRooms()
         // 1. Collect main room cube data
         if (isCurrentRoom) {
             // Current room: red
-            currentRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f));
+            QMatrix4x4 transform = QMatrix4x4();
+            transform.translate(rx,ry,rz);
+            transform.scale(1.0f/scale);
+            currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
         } else if (isTargetRoom) {
             // Target room: green
-            targetRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f));
+            QMatrix4x4 transform = QMatrix4x4();
+            transform.translate(rx,ry,rz);
+            transform.scale(1.0f/scale);
+            targetRoomInstances.append(CubeInstanceData(transform, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
@@ -444,7 +450,10 @@ void ModernGLWidget::renderRooms()
                 }
             }
             
-            mainRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha));
+            QMatrix4x4 transform = QMatrix4x4();
+            transform.translate(rx,ry,rz);
+            transform.scale(1.0f/scale);
+            mainRoomInstances.append(CubeInstanceData(transform, redComponent, greenComponent, blueComponent, roomAlpha));
         }
 
         // 2. Collect environment color overlay data
@@ -487,7 +496,10 @@ void ModernGLWidget::renderRooms()
             }
         }
         
-        overlayInstances.append(CubeInstanceData(rx, ry, overlayZ, 0.75f / scale, 0.75f / scale, 0.75f / scale, envRed, envGreen, envBlue, overlayAlpha));
+        QMatrix4x4 transform = QMatrix4x4();
+        transform.translate(rx,ry,overlayZ);
+        transform.scale(0.75f / scale);
+        overlayInstances.append(CubeInstanceData(transform, envRed, envGreen, envBlue, overlayAlpha));
 
         // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
         renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f);
