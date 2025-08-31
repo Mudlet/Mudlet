@@ -354,6 +354,12 @@ void ModernGLWidget::renderRooms()
         zFlattening = 1.0f;
     }
 
+    if (mpHost && mpHost->experimentEnabled("experiment.always-depth-test")) {
+        // Enable depth testing
+        auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+        mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
+    }
+
     float pz = static_cast<float>(mMapCenterZ);
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
@@ -538,8 +544,10 @@ void ModernGLWidget::renderRooms()
 
     if (!overlayInstances.isEmpty()) {
         // Disable depth testing for overlays like the original
-        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+        if (mpHost && !mpHost->experimentEnabled("experiment.always-depth-test")) {
+            auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+            mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+        }
 
         auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, 
                                                                     mCameraController.getProjectionMatrix(), 
