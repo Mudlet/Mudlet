@@ -4638,7 +4638,7 @@ changed.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="1658"/>
       <source>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but hasn&apos;t turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings &gt; Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but hasn&apos;t turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings &gt; Special Options.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2662"/>
@@ -8468,7 +8468,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="87"/>
       <source>How to add a new alias from the input line</source>
       <extracomment>Name of a selectable option for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>How to add a new alias from the input line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="90"/>
@@ -8477,37 +8477,37 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <extracomment>Help contents of a selectable option for the Alias intro
 ----------
 Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>There are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="92"/>
       <source>Alias can also be defined from the input line in the main profile window like this:</source>
       <extracomment>Part of the Alias intro - This introductory text will be followed by a Lua code example for a trigger.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Alias can also be defined from the input line in the main profile window like this:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="95"/>
       <source>My greetings</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the name of the alias which reacts on the player typing &quot;hi&quot; by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>My greetings</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="97"/>
       <source>hi</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the text input from the player which will be reacted on by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>hi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="99"/>
       <source>say Greetings, traveller!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the command that Mudlet will send to the game after the player typed &quot;hi&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>say Greetings, traveller!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="101"/>
       <source>We said hi!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the confirmation text shown to the player after they typed &quot;hi&quot; and we said &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>We said hi!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="104"/>
@@ -8518,7 +8518,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="232"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="258"/>
       <source>Where to find more information</source>
-      <translation type="unfinished"/>
+      <translation>Where to find more information</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="106"/>
@@ -8526,12 +8526,12 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="166"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="234"/>
       <source>Watch a &lt;a href=&apos;%1&apos;&gt;video demonstration&lt;/a&gt; of the basic functionality.</source>
-      <translation type="unfinished"/>
+      <translation>Watch a &lt;a href=&apos;%1&apos;&gt;video demonstration&lt;/a&gt; of the basic functionality.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Introduction to Aliases&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Introduction to Aliases&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="109"/>
@@ -8542,7 +8542,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="261"/>
       <source>Do you maybe have any other suggestions, questions or doubts?</source>
-      <translation type="unfinished"/>
+      <translation>Do you maybe have any other suggestions, questions or doubts?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
@@ -8553,85 +8553,85 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="238"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
       <source>Join our community on &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt; or in &lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;Mudlet forums&lt;/a&gt; - See you there!</source>
-      <translation type="unfinished"/>
+      <translation>Join our community on &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt; or in &lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;Mudlet forums&lt;/a&gt; - See you there!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
       <source>How to add a new trigger from the input line</source>
       <extracomment>Name of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>How to add a new trigger from the input line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="129"/>
       <source>Triggers can also be defined from the input line in the main profile window like this:</source>
       <extracomment>Part of the Trigger intro - This introductory text will be followed by a Lua code example for a trigger.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Triggers can also be defined from the input line in the main profile window like this:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
       <source>My drink trigger</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the name of the trigger which reacts on &quot;You are thirsty&quot; with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>My drink trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="134"/>
       <source>You are thirsty.</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the text from game which will be triggered on, and reacted to with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>You are thirsty.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="136"/>
       <source>drink water</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text &quot;You are thirsty.&quot; from game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>drink water</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="143"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Introduction to Triggers&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Introduction to Triggers&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Introduction to Scripts&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Introduction to Scripts&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="184"/>
       <source>How to add a new timer from the input line</source>
       <extracomment>Name of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>How to add a new timer from the input line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="191"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introduction to Timers&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introduction to Timers&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="212"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introduction to Buttons&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introduction to Buttons&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="227"/>
       <source>How to add a new keybinding from the input line</source>
       <extracomment>Name of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>How to add a new keybinding from the input line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="236"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;Introduction to Keybindings&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;Introduction to Keybindings&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="253"/>
       <source>How to add a new variable from the input line</source>
       <extracomment>Name of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>How to add a new variable from the input line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="260"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;Introduction to Variables&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;Introduction to Variables&lt;/a&gt; for a detailed overview.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="591"/>
@@ -8656,12 +8656,12 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2863"/>
       <source>Don&apos;t ask again</source>
-      <translation type="unfinished"/>
+      <translation>Don&apos;t ask again</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2900"/>
       <source>Do you really want to delete alias &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete alias &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2902"/>
@@ -8669,17 +8669,20 @@ Help contents of a selectable option for the Trigger intro</extracomment>
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 aliases?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2907"/>
       <source>Delete Alias(es)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Alias(es)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2973"/>
       <source>Do you really want to delete button &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete button &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2975"/>
@@ -8687,17 +8690,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 buttons?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2980"/>
       <source>Delete Button(s)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Button(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3057"/>
       <source>Do you really want to delete variable &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete variable &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
@@ -8705,17 +8711,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 variables?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3064"/>
       <source>Delete Variable(s)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Variable(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3137"/>
       <source>Do you really want to delete script &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete script &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3139"/>
@@ -8723,17 +8732,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 scripts?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3144"/>
       <source>Delete Script(s)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Script(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3210"/>
       <source>Do you really want to delete key &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete key &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3212"/>
@@ -8741,17 +8753,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 keys?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3217"/>
       <source>Delete Key(s)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Key(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3283"/>
       <source>Do you really want to delete trigger &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete trigger &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3285"/>
@@ -8759,17 +8774,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 triggers?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3290"/>
       <source>Delete Trigger(s)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Trigger(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3356"/>
       <source>Do you really want to delete timer &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete timer &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3358"/>
@@ -8777,12 +8795,15 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Do you really want to delete %1 timers?
+
+Items to be deleted:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3363"/>
       <source>Delete Timer(s)</source>
-      <translation type="unfinished"/>
+      <translation>Delete Timer(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
@@ -9250,7 +9271,7 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9498"/>
       <source>No valid triggers found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No valid triggers found to export.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9506"/>
