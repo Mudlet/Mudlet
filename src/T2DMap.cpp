@@ -5454,9 +5454,11 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     qDebug() << "T2DMap::exportAreaToImage: Offsets:" << exportRX << "," << exportRY;
     qDebug() << "T2DMap::exportAreaToImage: Image size:" << imageWidth << "x" << imageHeight;
     
-    // Create the image
-    qDebug() << "T2DMap::exportAreaToImage: Creating pixmap...";
-    QPixmap pixmap(imageWidth, imageHeight);
+    // Create high-quality 2x resolution image for crisp exports
+    const qreal exportScale = 2.0;
+    qDebug() << "T2DMap::exportAreaToImage: Creating high-quality pixmap at" << exportScale << "x resolution...";
+    QPixmap pixmap(imageWidth * exportScale, imageHeight * exportScale);
+    pixmap.setDevicePixelRatio(exportScale);
     pixmap.fill(mpHost->mBgColor_2);
     
     QPainter painter(&pixmap);
@@ -5479,10 +5481,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const float originalRoomWidth = mRoomWidth;
     const float originalRoomHeight = mRoomHeight;
     
-    // Set class member variables to export coordinate system for all calculations
+    // Set class member variables to export coordinate system (Qt handles scaling via devicePixelRatio)
     mRX = exportRX;
     mRY = exportRY;
-    // Set mRoomWidth/mRoomHeight to match paintEvent logic - these represent pixels per room unit
+    // Set mRoomWidth/mRoomHeight for high-quality rendering (Qt handles scaling)
     mRoomWidth = finalRoomSize;
     mRoomHeight = finalRoomSize;
 
@@ -5507,7 +5509,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     
     QPen pen;
     pen.setColor(mpHost->mFgColor_2);
-    // Use the same exitWidth calculation as paintEvent
+    // Use the same exitWidth calculation as paintEvent (Qt handles scaling via devicePixelRatio)
     const float exitWidth = 1 / eSize * finalRoomSize * rSize;
     pen.setWidthF(exitWidth);
     
@@ -5558,7 +5560,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             continue;
         }
 
-        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * finalRoomSize + exportRX, mapLabel.pos.y() * finalRoomSize * -1 + exportRY, labelWidth, labelHeight);
+        QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
                 painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
@@ -6052,7 +6054,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (!((0 < labelY || 0 < labelY + labelHeight) && (imageHeight > labelY || imageHeight > labelY + labelHeight))) {
             continue;
         }
-        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * finalRoomSize + exportRX, mapLabel.pos.y() * finalRoomSize * -1 + exportRY, labelWidth, labelHeight);
+        QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
         if (mapLabel.showOnTop) {
             QPointF labelPosition(labelX, labelY);
             if (!mapLabel.noScaling) {
