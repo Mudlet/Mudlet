@@ -572,6 +572,9 @@ void ModernGLWidget::renderConnections()
         return;
     }
 
+    QVector<CubeInstanceData> roomConnectionInstances;
+    const QVector3D zVector = QVector3D(0,0,1);
+
     float pz = static_cast<float>(mMapCenterZ);
 
     // Collect all lines to draw
@@ -651,7 +654,7 @@ void ModernGLWidget::renderConnections()
                 // Add line from current room to exit room
                 lineVertices << rx << ry << rz; // Start point
                 lineVertices << ex << ey << ez; // End point
-
+                
                 // Determine translucency based on destination room level
                 bool exitAboveCurrentLevel = (ez > pz);
                 float connectionAlpha = exitAboveCurrentLevel ? 0.2f : 1.0f;
@@ -660,6 +663,15 @@ void ModernGLWidget::renderConnections()
                 lineColors << r << g << b << connectionAlpha; // Start color
                 lineColors << r << g << b << connectionAlpha; // End color
 
+                // for volume exits we calculate the cube transformation we need
+                const QVector3D exitVector = QVector3D(ex-rx, ey-ry, ez-rz);
+                const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
+                QMatrix4x4 transform = QMatrix4x4();
+                transform.translate(exitVector/4.0f);
+                transform.translate(rx, ry, rz);
+                transform.rotate(alignmentQuat);
+                transform.scale(0.02f, 0.02f, exitVector.length()/4.0f);
+                roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
             } else {
                 // Area exit - draw directional stub
                 float dx = rx, dy = ry, dz = rz;
@@ -716,6 +728,16 @@ void ModernGLWidget::renderConnections()
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // Start color
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
 
+                // for volume exits we calculate the cube transformation we need
+                const QVector3D exitVector = QVector3D(dx-rx, dy-ry, dz-rz);
+                const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
+                QMatrix4x4 transform = QMatrix4x4();
+                transform.translate(exitVector/4.0f);
+                transform.translate(rx, ry, rz);
+                transform.rotate(alignmentQuat);
+                transform.scale(0.02f, 0.02f, exitVector.length()/4.0f);
+                roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+
                 // Render green area exit cube at the destination position with translucency and darkening
                 renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
 
@@ -749,10 +771,28 @@ void ModernGLWidget::renderConnections()
         }
     }
 
-    // Render all collected lines
-    if (!lineVertices.isEmpty()) {
-        renderLines(lineVertices, lineColors);
+
+    if (!roomConnectionInstances.isEmpty() && mpHost && mpHost->experimentEnabled("experiment.room-connection-volume.basic")) {
+
+        if (mpHost && mpHost->experimentEnabled("experiment.always-depth-test")) {
+            // Enable depth testing
+            auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+            mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
+        }
+
+        auto command = std::make_unique<RenderInstancedCubesCommand>(roomConnectionInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+
+    } else {
+        // Render all collected lines
+        if (!lineVertices.isEmpty()) {
+            renderLines(lineVertices, lineColors);
+        }
     }
+
 }
 
 void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a)

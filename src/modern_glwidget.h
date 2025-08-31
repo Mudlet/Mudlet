@@ -34,6 +34,8 @@
 #include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMatrix4x4>
+#include <QVector3D>
+#include <QQuaternion>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
