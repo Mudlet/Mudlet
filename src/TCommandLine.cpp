@@ -34,6 +34,7 @@
 
 #include "pre_guard.h"
 #include <QKeyEvent>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
@@ -182,6 +183,7 @@ bool TCommandLine::event(QEvent* event)
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
             }
             mpConsole->mpBufferSearchBox->setFocus();
+            mpConsole->mpBufferSearchBox->selectAll();
             ke->accept();
             return true;
         }

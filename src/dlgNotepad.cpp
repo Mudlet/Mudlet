@@ -76,7 +76,10 @@ void dlgNotepad::save()
     }
     QSaveFile file;
     file.setFileName(fileName);
-    file.open(QIODevice::WriteOnly);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qDebug() << "dlgNotepad::save: failed to open file for writing:" << file.errorString();
+        return;
+    }
     QTextStream fileStream;
     fileStream.setDevice(&file);
     fileStream << notesEdit->toPlainText();
@@ -90,7 +93,10 @@ void dlgNotepad::save()
 void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
 {
     QFile file(fn);
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "dlgNotepad::restoreFile: failed to open file for reading:" << file.errorString();
+        return;
+    }
     QTextStream fileStream;
     fileStream.setDevice(&file);
     if (!useUtf8Encoding) {

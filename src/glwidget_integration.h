@@ -1,5 +1,8 @@
+#ifndef MUDLET_GLWIDGET_INTEGRATION_H
+#define MUDLET_GLWIDGET_INTEGRATION_H
+
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,22 +20,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_DARKTHEME_H
-#define MUDLET_DARKTHEME_H
+#include "glwidget.h"
+#include "modern_glwidget.h"
 
-#include <QProxyStyle>
-#include <QStyleFactory>
+class TMap;
+class Host;
+class QWidget;
 
-#include "utils.h"
+namespace GLWidgetFactory {
+QOpenGLWidget* createGLWidget(TMap* pMap, Host* pHost, QWidget* parent = nullptr);
+bool isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost);
+QString getWidgetTypeName(QOpenGLWidget* widget);
+}
 
-class DarkTheme : public QProxyStyle
-{
-    Q_OBJECT
+// Factory functions provide runtime widget creation
+// Legacy GLWidget class name remains available for existing code
 
-public:
-    DarkTheme();
-    explicit DarkTheme(QStyle* style);
-    void polish(QPalette& palette) override;
-};
-
-#endif // end MUDLET_DARKTHEME_H
+#endif // MUDLET_GLWIDGET_INTEGRATION_H

@@ -107,11 +107,15 @@ Mudlet's [vision](https://www.mudlet.org/about/vision/) is to build the best tex
 
 ## Roadmap
 
-See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed, as well as contribute!
+See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed
+
+## Contribute
+
+Join in, contributions are welcome! Find out how you can start [Contributing](docs/CONTRIBUTING.md).
 
 ## Credits
 
-Author: [Mudlet Makers](https://github.com/Mudlet/Mudlet/graphs/contributors). Join in, contributions are welcome!
+Author: [Mudlet Makers](https://github.com/Mudlet/Mudlet/graphs/contributors). 
 
 This software wouldnt've been possible without these open source packages:
 
