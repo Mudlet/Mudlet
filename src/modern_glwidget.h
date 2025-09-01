@@ -53,6 +53,7 @@
 class Host;
 class TMap;
 class TRoom;
+struct MapInfoProperties;
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -143,6 +144,7 @@ private:
     int mMapCenterY = 0;
     int mMapCenterZ = 0;
     bool mShiftMode = false;
+    int mFontHeight = 20;
 
     // Scales the size of rooms compared to the space between them - currently
     // hard coded to be a quarter (would be equivalent to a 2D room size setting

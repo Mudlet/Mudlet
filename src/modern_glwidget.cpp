@@ -320,6 +320,17 @@ void ModernGLWidget::paintGL()
     painter.setPen(QPen(QColor(255, 255, 255, 200))); // Semi-transparent white
     painter.setFont(QFont("Arial", 12, QFont::Bold));
     painter.drawText(10, height() - 20, "Modern OpenGL Mapper");
+    
+    // Draw map info using contributor manager
+    QColor infoColor;
+    if (mpHost->mBgColor_2.lightness() > 127) {
+        infoColor = QColor(Qt::black);
+    } else {
+        infoColor = QColor(Qt::white);
+    }
+    dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, 
+                           mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight);
+    
     painter.end();
     
     // Display instant frame time
@@ -1244,3 +1255,4 @@ void ModernGLWidget::onCameraAnimationTick()
     // Trigger a repaint
     update();
 }
+
