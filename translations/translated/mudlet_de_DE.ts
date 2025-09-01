@@ -8483,7 +8483,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="87"/>
       <source>How to add a new alias from the input line</source>
       <extracomment>Name of a selectable option for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man ein neues Alias mit der Eingabezeile erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="90"/>
@@ -8574,7 +8574,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
       <source>How to add a new trigger from the input line</source>
       <extracomment>Name of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man einen neuen Trigger mit der Eingabezeile erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="129"/>
@@ -8614,7 +8614,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="184"/>
       <source>How to add a new timer from the input line</source>
       <extracomment>Name of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man einen neuen Timer mit der Eingabezeile erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="191"/>
@@ -8630,7 +8630,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="227"/>
       <source>How to add a new keybinding from the input line</source>
       <extracomment>Name of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man ein neues Tastenkürzel mit der Eingabezeile erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="236"/>
@@ -8641,7 +8641,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="253"/>
       <source>How to add a new variable from the input line</source>
       <extracomment>Name of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man eine neue Variable mit der Eingabezeile erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="260"/>
@@ -9467,7 +9467,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="80"/>
       <source>How to add a new alias now</source>
       <extracomment>Name of a selectable option for the Alias intro</extracomment>
-      <translation>Wie man ein neues Alias jetzt hinzufügt</translation>
+      <translation>Wie man jetzt ein neues Alias erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="82"/>
@@ -9485,7 +9485,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="116"/>
       <source>How to add a new trigger now</source>
       <extracomment>Name of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man jetzt einen neuen Trigger erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="118"/>
@@ -9503,7 +9503,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="151"/>
       <source>How to add a new script now</source>
       <extracomment>Name of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man jetzt ein neues Skript erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="153"/>
@@ -9533,7 +9533,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="176"/>
       <source>How to add a new timer now</source>
       <extracomment>Name of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man jetzt einen neuen Timer erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="178"/>
@@ -9552,13 +9552,13 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="197"/>
       <source>Buttons react on mouse clicks.</source>
       <extracomment>Headline for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Buttons reagieren auf Mausklicks.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="199"/>
       <source>How to add a new button now</source>
       <extracomment>Name of a selectable option for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man jetzt einen neuen Button erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
@@ -9576,7 +9576,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="220"/>
       <source>How to add a new keybinding now</source>
       <extracomment>Name of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man jetzt ein neues Tastenkürzel erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="222"/>
@@ -9600,7 +9600,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="244"/>
       <source>How to add a new variable now</source>
       <extracomment>Name of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wie man jetzt eine neue Variable erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="246"/>
@@ -9618,25 +9618,25 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="266"/>
       <source>activated</source>
       <extracomment>Item is currently on, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktiviert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="268"/>
       <source>deactivated</source>
       <extracomment>Item is currently off, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>deaktiviert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="270"/>
       <source>activated folder</source>
       <extracomment>Folder is currently turned on</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktivierter Ordner</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="272"/>
       <source>deactivated folder</source>
       <extracomment>Folder is currently turned off</extracomment>
-      <translation type="unfinished"/>
+      <translation>deaktivierter Ordner</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="274"/>
@@ -9648,31 +9648,31 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="276"/>
       <source>%1 in a deactivated group</source>
       <extracomment>Item is currently turned on individually, but is member of an inactive group</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 in deaktivierter Gruppe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="278"/>
       <source>activated filter chain</source>
       <extracomment>A trigger that unlocks other triggers is currently turned on, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktivierte Filterkette</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="280"/>
       <source>deactivated filter chain</source>
       <extracomment>A trigger that unlocks other triggers is currently turned off, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>deaktivierte Filterkette</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="282"/>
       <source>activated offset timer</source>
       <extracomment>A timer that starts after another timer is currently turned on</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktivierter Offset-Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="284"/>
       <source>deactivated offset timer</source>
       <extracomment>A timer that starts after another timer is currently turned off</extracomment>
-      <translation type="unfinished"/>
+      <translation>deaktivierter Offset-Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="356"/>
@@ -10249,13 +10249,14 @@ Items to be deleted:
     <message>
       <location filename="../src/main.cpp" line="347"/>
       <source>       -f, --fullscreen             start Mudlet in fullscreen mode.</source>
-      <translation type="unfinished"/>
+      <translation>       -f, --fullscreen             Mudlet im Vollbildmodus starten.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="348"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>       --steammode                  Mudlets Einstellungen an Steams 
+                                    Anforderungen anpassen.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="350"/>
@@ -10373,12 +10374,12 @@ Verwendung dieser Anwendung nützlich sind:</translation>
     <message>
       <location filename="../src/main.cpp" line="393"/>
       <source>Arguments:</source>
-      <translation type="unfinished"/>
+      <translation>Argumente:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="394"/>
       <source>        [FILE]                       File to install as a package</source>
-      <translation type="unfinished"/>
+      <translation>        [DATEI]                      Datei, die als Paket installiert werden soll</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="395"/>
@@ -10394,7 +10395,7 @@ Verwendung dieser Anwendung nützlich sind:</translation>
       <location filename="../src/main.cpp" line="335"/>
       <source>Usage: %1 [OPTION...] [FILE] </source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Nutzung: %1 [OPTION...] [DATEI] </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="339"/>
@@ -10814,7 +10815,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="379"/>
       <source>Fullscreen</source>
-      <translation type="unfinished"/>
+      <translation>Vollbild</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="418"/>
