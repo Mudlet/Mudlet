@@ -279,6 +279,10 @@ public:
     static int denyCurrentSend(lua_State*);
     static int tempBeginOfLineTrigger(lua_State*);
     static int tempExactMatchTrigger(lua_State*);
+#if defined(INCLUDE_3DMAPPER)
+    static int shiftMapPerspective(lua_State*);
+    static int setMapPerspective(lua_State*);
+#endif
     static int centerview(lua_State*);
     static int getAreaTable(lua_State*);
     static int getAreaTableSwap(lua_State*);

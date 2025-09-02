@@ -31,6 +31,7 @@
 #endif
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QOpenGLWidget>
 #include <QPointer>
 #include "post_guard.h"
@@ -114,6 +115,9 @@ private:
 
     float mScale = 1.0;
     int mTargetRoomId = 0;
+    
+    // Frame timing for benchmarking
+    QElapsedTimer mFrameTimer;
 };
 
 #endif // MUDLET_GLWIDGET_H
