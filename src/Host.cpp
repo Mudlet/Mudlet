@@ -1351,7 +1351,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         return;
     }
 
-    for (const QString& command : commandList)
+    for (const QString& command : commandList) {
         if (command.isEmpty()) {
             continue;
         }
