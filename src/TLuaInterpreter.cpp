@@ -5277,6 +5277,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAreaRooms", TLuaInterpreter::getAreaRooms);
     lua_register(pGlobalLua, "getAreaRooms1", TLuaInterpreter::getAreaRooms1);
     lua_register(pGlobalLua, "getPath", TLuaInterpreter::getPath);
+#if defined(INCLUDE_3DMAPPER)
+    lua_register(pGlobalLua, "shiftMapPerspective", TLuaInterpreter::shiftMapPerspective);
+    lua_register(pGlobalLua, "setMapPerspective", TLuaInterpreter::setMapPerspective);
+#endif
     lua_register(pGlobalLua, "centerview", TLuaInterpreter::centerview);
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
