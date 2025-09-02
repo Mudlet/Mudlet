@@ -621,7 +621,7 @@ void Host::autoSaveMap()
 
 void Host::loadPackageInfo()
 {
-    for (auto package : mInstalledPackages) {
+    for (const auto& package : mInstalledPackages) {
         const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
@@ -1433,7 +1433,7 @@ int Host::findStopWatchId(const QString& name) const
     if (total > 1) {
         std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
     }
-    for (const auto currentId: stopWatchIdList) {
+    for (const int currentId: stopWatchIdList) {
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         if (pCurrentStopWatch->name() == name) {
             return currentId;
@@ -1658,7 +1658,7 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     int alreadyUsedId = 0;
     // we are looking BOTH for the current name and checking that any other
     // ones WITH names do not match the new name:
-    for (const auto currentId : stopWatchIdList) {
+    for (const int currentId : stopWatchIdList) {
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         // This will also pick up the FIRST (lowest id) currently unnamed
         // stopwatch:
@@ -1782,13 +1782,13 @@ void Host::raiseEvent(const TEvent& pE)
 
     if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
         const QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
-        for (auto function : functionsList) {
+        for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
     if (mAnonymousEventHandlerFunctions.contains(star)) {
         const QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
-        for (auto function : functionsList) {
+        for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
@@ -2325,7 +2325,7 @@ void Host::setupSandboxedLuaState(lua_State* L)
         "collectgarbage"
     };
     
-    for (auto function : dangerousFunctions) {
+    for (const auto& function : dangerousFunctions) {
         lua_pushnil(L);
         lua_setglobal(L, function);
     }
@@ -2341,7 +2341,7 @@ void Host::setupSandboxedLuaState(lua_State* L)
             "rawget", "rawset", "rawequal", "rawlen"
         };
         
-        for (auto function : removedBaseFunctions) {
+        for (const auto& function : removedBaseFunctions) {
             lua_pushnil(L);
             lua_setfield(L, -2, function);
         }
