@@ -1187,7 +1187,7 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
             writeScriptElement(pT->mScript, scriptContents);
 
             auto eventHandlerList = scriptContents.append_child("eventHandlerList");
-            for (const auto& handler : mEventHandlerList) {
+            for (const auto& handler : pT->mEventHandlerList) {
                 eventHandlerList.append_child("string").text().set(pT->handler.toUtf8().constData());
             }
         }
