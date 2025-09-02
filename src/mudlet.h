@@ -26,7 +26,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Announcer.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
@@ -313,6 +312,7 @@ public:
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
+    void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&);
     void setToolBarIconSize(int);
@@ -320,6 +320,7 @@ public:
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
+    bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
@@ -566,7 +567,6 @@ private slots:
 
 
 private:
-    static bool desktopInDarkMode();
 
 
     void assignKeySequences();
@@ -676,7 +676,6 @@ private:
     QPointer<QAction> mpActionToggleMainToolBar;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-    Announcer* mpAnnouncer = nullptr;
     // This pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsequent
     // loadTranslators(...) call
@@ -717,6 +716,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mShowMapAuditErrors = false;
+    bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;
     // Argument to QDateTime::toString(...) to format the elapsed time display
@@ -752,6 +752,9 @@ private:
     void shutdownAI();
     bool findAIModel();
     void setupAIConfig();
+
+    // Helper method for detached windows cleanup
+    void saveDetachedWindowsGeometry();
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;

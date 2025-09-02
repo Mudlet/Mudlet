@@ -137,6 +137,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
+                        OPTION_VARIABLE USE_SHADER_HOT_RELOAD
+                        READABLE_NAME "shader hot-reloading"
+                        DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
@@ -144,7 +148,7 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
 
-find_package(Qt6 6.4.0 REQUIRED)
+find_package(Qt6 6.8.2 REQUIRED)
 
 find_package(Lua 5.1 EXACT)
 

@@ -2302,7 +2302,11 @@ void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, con
 {
 #if defined(INCLUDE_3DMAPPER)
     if (mpM) {
-        mpM->setViewCenter(areaId, xPos, yPos, zPos);
+        if (auto* glWidget = dynamic_cast<GLWidget*>(mpM.data())) {
+            glWidget->setViewCenter(areaId, xPos, yPos, zPos);
+        } else if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpM.data())) {
+            modernWidget->setViewCenter(areaId, xPos, yPos, zPos);
+        }
     }
 #else
     Q_UNUSED(areaId)

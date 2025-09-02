@@ -33,8 +33,10 @@
 
 class Host;
 class TMap;
+struct MapInfoProperties;
 #if defined(INCLUDE_3DMAPPER)
-class GLWidget;
+#include "glwidget_integration.h"
+class QOpenGLWidget;
 #endif
 
 
@@ -46,7 +48,7 @@ public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
 #if defined(INCLUDE_3DMAPPER)
-    GLWidget* glWidget = nullptr;
+    QOpenGLWidget* glWidget = nullptr;
 #endif
     void updateAreaComboBox();
     void resetAreaComboBoxToPlayerRoomArea();
@@ -55,6 +57,7 @@ public:
     bool isFloatAndDockable() const;
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
+    void recreate3DWidget();
 
 public slots:
     void slot_toggleRoundRooms(const bool);
@@ -71,6 +74,13 @@ public slots:
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
+    
+    static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
+                            int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
+                            int xOffset, int yOffset, int widgetWidth, int fontHeight);
+    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
+                                      const MapInfoProperties& properties, QColor bgColor, int fontHeight,
+                                      int widgetWidth);
 
 private:
     TMap* mpMap = nullptr;

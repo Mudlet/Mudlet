@@ -27,14 +27,10 @@
 #include "TAccessibleTextEdit.h"
 #include "TTextEdit.h"
 
-#include "Announcer.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
-#if defined(Q_OS_WINDOWS)
-#include "uiawrapper.h"
-#endif
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
@@ -323,11 +319,7 @@ void TTextEdit::showNewLines()
 
 
     if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
-        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost
-#if defined (Q_OS_WINDOWS)
-            && UiaWrapper::self()->clientsAreListening()
-#endif
-            ) {
+        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
         // content has been deleted

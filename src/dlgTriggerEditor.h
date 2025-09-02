@@ -245,6 +245,7 @@ public slots:
     void slot_saveSelectedItem(QTreeWidgetItem* pItem);
     void slot_export();
     void slot_import();
+    void slot_createModule();
     void slot_viewStatsAction();
     void slot_toggleCentralDebugConsole();
     void slot_nextSection();
@@ -382,6 +383,14 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
+    // Multi-selection export functions
+    void exportMultipleTriggersToClipboard(const QList<TTrigger*>& triggers);
+    void exportMultipleTimersToClipboard(const QList<TTimer*>& timers);
+    void exportMultipleAliasesToClipboard(const QList<TAlias*>& aliases);
+    void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
+    void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
+    void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
     void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
@@ -451,6 +460,7 @@ private:
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
+    bool showDeleteConfirmation(const QString& title, const QString& message);
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
     void checkForMoreThanOneTriggerItem();
@@ -568,6 +578,7 @@ private:
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:
     QAction* mpExportAction = nullptr;
+    QAction* mpCreateModuleAction = nullptr;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
