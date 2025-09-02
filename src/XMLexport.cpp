@@ -532,7 +532,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         auto mInstalledPackages = host.append_child("mInstalledPackages");
 
-        for (const auto& package : pHost->mInstalledPackages ) {
+        for (const auto& package : pHost->mInstalledPackages) {
             mInstalledPackages.append_child("string").text().set(package.toUtf8().constData());
         }
 
@@ -1188,7 +1188,7 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
 
             auto eventHandlerList = scriptContents.append_child("eventHandlerList");
             for (const auto& handler : pT->mEventHandlerList) {
-                eventHandlerList.append_child("string").text().set(pT->handler.toUtf8().constData());
+                eventHandlerList.append_child("string").text().set(handler.toUtf8().constData());
             }
         }
     }
