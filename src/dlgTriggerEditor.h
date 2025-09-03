@@ -29,6 +29,8 @@
 #include "pre_guard.h"
 #include "ui_trigger_editor.h"
 #include <QPointer>
+#include <QUndoStack>
+#include <QUndoCommand>
 #include <unordered_map>
 #include "post_guard.h"
 
@@ -298,6 +300,10 @@ public slots:
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
     void slot_editorThemeChanged();
+    void slot_undo();
+    void slot_redo();
+    void slot_updateUndoRedoActions();
+    void configureTextWidgetUndoBehavior();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -554,6 +560,10 @@ private:
     QAction* mDeleteItem = nullptr;
     QAction* mAddGroup = nullptr;
     QAction* mSaveItem = nullptr;
+    QAction* mUndoAction = nullptr;
+    QAction* mRedoAction = nullptr;
+    QUndoStack* mUndoStack = nullptr;
+    bool mCreatingFromUndoCommand = false; // Flag to prevent recursion
 
     SearchOptions mSearchOptions = SearchOptionNone;
     QSplitter* searchSplitter;
@@ -634,6 +644,19 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+
+    // Helper methods for undo/redo operations
+    QTreeWidgetItem* findTriggerItemById(int id);
+    QTreeWidgetItem* findAliasItemById(int id);
+    QTreeWidgetItem* findTimerItemById(int id);
+    QTreeWidgetItem* findScriptItemById(int id);
+    QTreeWidgetItem* findActionItemById(int id);
+    QTreeWidgetItem* findKeyItemById(int id);
+
+    // Undo commands for various operations
+    friend class DeleteItemCommand;
+    friend class AddItemCommand;
+    friend class PropertyChangeCommand;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

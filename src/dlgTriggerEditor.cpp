@@ -25,6 +25,7 @@
 
 
 #include "dlgTriggerEditor.h"
+#include "TriggerEditorCommands.h"
 
 #include "Host.h"
 #include "LuaInterface.h"
@@ -55,6 +56,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QTimer>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -72,6 +74,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 {
     // init generated dialog
     setupUi(this);
+    
+    // Initialize undo stack
+    mUndoStack = new QUndoStack(this);
+    mUndoStack->setUndoLimit(50); // Set a reasonable limit for undo levels
+    connect(mUndoStack, &QUndoStack::canUndoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoActions);
+    connect(mUndoStack, &QUndoStack::canRedoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoActions);
+    
+    // Initial update of undo/redo button states
+    QTimer::singleShot(0, this, &dlgTriggerEditor::slot_updateUndoRedoActions);
+    
+    qDebug() << "dlgTriggerEditor constructor: undo stack initialized with" << mUndoStack->count() << "commands";
+    
+    // Configure all text widgets for better undo granularity
+    QTimer::singleShot(100, this, &dlgTriggerEditor::configureTextWidgetUndoBehavior);
 
     // clang-format off
     introAddItem.insert(EditorViewType::cmAliasView, {
@@ -618,6 +634,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
     connect(mSaveItem, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
 
+    // Create undo/redo actions
+    mUndoAction = new QAction(QIcon::fromTheme(qsl("edit-undo"), QIcon(qsl(":/icons/edit-undo.png"))), tr("Undo"), this);
+    mUndoAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Undo last change"), QKeySequence(QKeySequence::Undo).toString()));
+    mUndoAction->setShortcut(QKeySequence::Undo);
+    mUndoAction->setEnabled(false);
+    connect(mUndoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_undo);
+
+    mRedoAction = new QAction(QIcon::fromTheme(qsl("edit-redo"), QIcon(qsl(":/icons/edit-redo.png"))), tr("Redo"), this);
+    mRedoAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Redo last change"), QKeySequence(QKeySequence::Redo).toString()));
+    mRedoAction->setShortcut(QKeySequence::Redo);
+    mRedoAction->setEnabled(false);
+    connect(mRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_redo);
+
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
@@ -738,6 +767,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(mSaveItem);
+    
+    toolBar->addSeparator();
+    toolBar->addAction(mUndoAction);
+    toolBar->addAction(mRedoAction);
+    
     //: This is the toolbar that is initially placed at the top of the editor.
     toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions").arg(hostName));
 
@@ -1125,6 +1159,309 @@ void dlgTriggerEditor::slot_editorThemeChanged()
 {
     for (int i = 0; i < 50; i++) {
         mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->setTheme(mpHost->mEditorTheme);
+    }
+}
+
+void dlgTriggerEditor::slot_undo()
+{
+    // UNIFIED APPROACH: Use ONLY the global undo stack
+    // All text changes and item operations go through the same stack
+    // This ensures proper sequential undo/redo behavior
+    
+    qDebug() << "UNIFIED slot_undo() called:";
+    qDebug() << "  - global canUndo=" << (mUndoStack ? mUndoStack->canUndo() : false);
+    qDebug() << "  - stack count=" << (mUndoStack ? mUndoStack->count() : 0);
+    
+    // CURSOR-AWARE APPROACH: Prioritize based on where the cursor is
+    QWidget* focusWidget = QApplication::focusWidget();
+    QString focusWidgetName = focusWidget ? focusWidget->metaObject()->className() : "nullptr";
+    
+    qDebug() << "CURSOR-AWARE slot_undo() - focus widget=" << focusWidgetName;
+    
+    // PRIORITY 1: Lua editor has focus - use ONLY Lua editor undo
+    bool luaEditorFocused = false;
+    if (mpSourceEditorEdbee && focusWidget) {
+        QWidget* parent = focusWidget;
+        while (parent && !luaEditorFocused) {
+            if (parent == mpSourceEditorEdbee) {
+                luaEditorFocused = true;
+                break;
+            }
+            parent = parent->parentWidget();
+        }
+    }
+    
+    if (luaEditorFocused && mpSourceEditorEdbee) {
+        auto* controller = mpSourceEditorEdbee->controller();
+        if (controller && controller->textDocument()->textUndoStack()->canUndo()) {
+            qDebug() << "CURSOR-AWARE: Using Lua editor undo (cursor in Lua editor)";
+            controller->executeCommand("undo");
+            slot_updateUndoRedoActions();
+            return;
+        }
+    }
+    
+    // PRIORITY 2: Text field has focus - use unified text undo  
+    bool textFieldFocused = false;
+    if (focusWidget) {
+        textFieldFocused = qobject_cast<QLineEdit*>(focusWidget) || 
+                          qobject_cast<QPlainTextEdit*>(focusWidget) ||
+                          qobject_cast<QTextEdit*>(focusWidget);
+    }
+    
+    if (textFieldFocused && mUndoStack && mUndoStack->canUndo()) {
+        qDebug() << "CURSOR-AWARE: Using unified text undo (cursor in text field)";
+        mUndoStack->undo();
+        slot_updateUndoRedoActions();
+        return;
+    }
+    
+    // PRIORITY 3: Tree or other UI focused - use item operation undo
+    if (mUndoStack && mUndoStack->canUndo()) {
+        qDebug() << "CURSOR-AWARE: Using item operation undo (cursor in tree/UI)";
+        mUndoStack->undo();
+    } else {
+        qDebug() << "CURSOR-AWARE: No undo available";
+    }
+    
+    slot_updateUndoRedoActions();
+}
+
+void dlgTriggerEditor::slot_redo()
+{
+    // CURSOR-AWARE APPROACH: Prioritize based on where the cursor is
+    // - Lua editor focused → Use Lua editor redo only
+    // - Text field focused → Use unified text redo  
+    // - Tree focused → Use item operation redo only
+    
+    QWidget* focusWidget = QApplication::focusWidget();
+    QString focusWidgetName = focusWidget ? focusWidget->metaObject()->className() : "nullptr";
+    
+    qDebug() << "CURSOR-AWARE slot_redo() - focus widget=" << focusWidgetName;
+    qDebug() << "  - global canRedo=" << (mUndoStack ? mUndoStack->canRedo() : false);
+    
+    // PRIORITY 1: Lua editor has focus - use ONLY Lua editor redo
+    bool luaEditorFocused = false;
+    if (mpSourceEditorEdbee && focusWidget) {
+        QWidget* parent = focusWidget;
+        while (parent && !luaEditorFocused) {
+            if (parent == mpSourceEditorEdbee) {
+                luaEditorFocused = true;
+                break;
+            }
+            parent = parent->parentWidget();
+        }
+    }
+    
+    if (luaEditorFocused && mpSourceEditorEdbee) {
+        auto* controller = mpSourceEditorEdbee->controller();
+        if (controller && controller->textDocument()->textUndoStack()->canRedo()) {
+            qDebug() << "CURSOR-AWARE: Using Lua editor redo (cursor in Lua editor)";
+            controller->executeCommand("redo");
+            slot_updateUndoRedoActions();
+            return;
+        }
+    }
+    
+    // PRIORITY 2: Text field has focus - use unified text redo  
+    bool textFieldFocused = false;
+    if (focusWidget) {
+        textFieldFocused = qobject_cast<QLineEdit*>(focusWidget) || 
+                          qobject_cast<QPlainTextEdit*>(focusWidget) ||
+                          qobject_cast<QTextEdit*>(focusWidget);
+    }
+    
+    if (textFieldFocused && mUndoStack && mUndoStack->canRedo()) {
+        qDebug() << "CURSOR-AWARE: Using unified text redo (cursor in text field)";
+        mUndoStack->redo();
+        slot_updateUndoRedoActions();
+        return;
+    }
+    
+    // PRIORITY 3: Tree or other UI focused - use item operation redo
+    if (mUndoStack && mUndoStack->canRedo()) {
+        qDebug() << "CURSOR-AWARE: Using item operation redo (cursor in tree/UI)";
+        mUndoStack->redo();
+    } else {
+        qDebug() << "CURSOR-AWARE: No redo available";
+    }
+    
+    slot_updateUndoRedoActions();
+}
+
+void dlgTriggerEditor::configureTextWidgetUndoBehavior()
+{
+    // UNIFIED APPROACH: Disable individual widget undo systems
+    // All text changes will be captured via TextChangeCommand in the unified stack
+    QList<QLineEdit*> lineEdits = findChildren<QLineEdit*>();
+    QList<QPlainTextEdit*> plainTextEdits = findChildren<QPlainTextEdit*>();
+    QList<QTextEdit*> textEdits = findChildren<QTextEdit*>();
+    
+    qDebug() << "UNIFIED: Disabling individual widget undo systems:";
+    qDebug() << "  - Found" << lineEdits.size() << "QLineEdit widgets";
+    qDebug() << "  - Found" << plainTextEdits.size() << "QPlainTextEdit widgets"; 
+    qDebug() << "  - Found" << textEdits.size() << "QTextEdit widgets";
+    
+    // Connect QLineEdit text changes to unified undo system
+    for (QLineEdit* lineEdit : lineEdits) {
+        // Store previous text and cursor position for change detection
+        lineEdit->setProperty("previousText", lineEdit->text());
+        lineEdit->setProperty("previousCursorPos", lineEdit->cursorPosition());
+        
+        // Connect to textChanged signal to capture changes
+        connect(lineEdit, &QLineEdit::textChanged, this, [this, lineEdit](const QString& newText) {
+            QString oldText = lineEdit->property("previousText").toString();
+            if (oldText != newText && !mCreatingFromUndoCommand) {
+                QString widgetName = lineEdit->objectName();
+                if (widgetName.isEmpty()) widgetName = "QLineEdit";
+                
+                qDebug() << "CURSOR-AWARE: Text changed in" << widgetName << "from:" << oldText << "to:" << newText;
+                
+                // Create TextChangeCommand which will capture cursor positions automatically
+                mUndoStack->push(new TextChangeCommand(lineEdit, oldText, newText, widgetName));
+                
+                // Update stored values
+                lineEdit->setProperty("previousText", newText);
+                lineEdit->setProperty("previousCursorPos", lineEdit->cursorPosition());
+            }
+        });
+        
+        qDebug() << "  - Connected QLineEdit:" << lineEdit->objectName();
+    }
+    
+    // Connect QPlainTextEdit changes to unified undo system  
+    for (QPlainTextEdit* plainTextEdit : plainTextEdits) {
+        // DISABLE individual undo system
+        plainTextEdit->setUndoRedoEnabled(false);
+        
+        // Store previous text for change detection
+        plainTextEdit->setProperty("previousText", plainTextEdit->toPlainText());
+        
+        // Connect to textChanged signal
+        connect(plainTextEdit, &QPlainTextEdit::textChanged, this, [this, plainTextEdit]() {
+            QString newText = plainTextEdit->toPlainText();
+            QString oldText = plainTextEdit->property("previousText").toString();
+            if (oldText != newText && !mCreatingFromUndoCommand) {
+                QString widgetName = plainTextEdit->objectName();
+                if (widgetName.isEmpty()) widgetName = "QPlainTextEdit";
+                
+                qDebug() << "CURSOR-AWARE: Text changed in" << widgetName << "from:" << oldText << "to:" << newText;
+                
+                // Create TextChangeCommand which will capture cursor positions automatically
+                mUndoStack->push(new TextChangeCommand(plainTextEdit, oldText, newText, widgetName));
+                plainTextEdit->setProperty("previousText", newText);
+            }
+        });
+        
+        qDebug() << "  - Disabled undo for QPlainTextEdit:" << plainTextEdit->objectName();
+    }
+    
+    // Connect QTextEdit changes to unified undo system
+    for (QTextEdit* textEdit : textEdits) {
+        // DISABLE individual undo system
+        textEdit->setUndoRedoEnabled(false);
+        
+        // Store previous text for change detection  
+        textEdit->setProperty("previousText", textEdit->toPlainText());
+        
+        // Connect to textChanged signal
+        connect(textEdit, &QTextEdit::textChanged, this, [this, textEdit]() {
+            QString newText = textEdit->toPlainText();
+            QString oldText = textEdit->property("previousText").toString();
+            if (oldText != newText && !mCreatingFromUndoCommand) {
+                QString widgetName = textEdit->objectName();
+                if (widgetName.isEmpty()) widgetName = "QTextEdit";
+                
+                qDebug() << "UNIFIED: Text changed in" << widgetName << "from:" << oldText << "to:" << newText;
+                mUndoStack->push(new TextChangeCommand(textEdit, oldText, newText, widgetName));
+                textEdit->setProperty("previousText", newText);
+            }
+        });
+        
+        qDebug() << "  - Disabled undo for QTextEdit:" << textEdit->objectName();
+    }
+    
+    qDebug() << "UNIFIED: Text widget configuration complete - all changes go to unified stack";
+}
+
+void dlgTriggerEditor::slot_updateUndoRedoActions()
+{
+    // CURSOR-AWARE button state update
+    // Button state depends on where the cursor is currently positioned
+    
+    QWidget* focusWidget = QApplication::focusWidget();
+    bool canUndo = false;
+    bool canRedo = false;
+    
+    // Check if Lua editor is focused
+    bool luaEditorFocused = false;
+    if (mpSourceEditorEdbee && focusWidget) {
+        QWidget* parent = focusWidget;
+        while (parent && !luaEditorFocused) {
+            if (parent == mpSourceEditorEdbee) {
+                luaEditorFocused = true;
+                break;
+            }
+            parent = parent->parentWidget();
+        }
+    }
+    
+    // Update button states based on cursor position
+    if (luaEditorFocused && mpSourceEditorEdbee) {
+        // Cursor in Lua editor - check Lua editor undo stack
+        auto* controller = mpSourceEditorEdbee->controller();
+        if (controller && controller->textDocument()->textUndoStack()) {
+            canUndo = controller->textDocument()->textUndoStack()->canUndo();
+            canRedo = controller->textDocument()->textUndoStack()->canRedo();
+        }
+    } else {
+        // Cursor in text fields or tree - check unified stack
+        if (mUndoStack) {
+            canUndo = mUndoStack->canUndo();
+            canRedo = mUndoStack->canRedo();
+        }
+    }
+    
+    // Debug output
+    static int lastCount = -1;
+    int currentCount = mUndoStack ? mUndoStack->count() : 0;
+    if (currentCount != lastCount) {
+        qDebug() << "CURSOR-AWARE button update:";
+        qDebug() << "  - Lua editor focused=" << luaEditorFocused;
+        qDebug() << "  - canUndo=" << canUndo << ", canRedo=" << canRedo;
+        qDebug() << "  - unified stack count=" << currentCount;
+        lastCount = currentCount;
+    }
+    
+    // Update UI buttons based on cursor-aware state
+    if (mUndoAction) {
+        mUndoAction->setEnabled(canUndo);
+        if (luaEditorFocused) {
+            mUndoAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Undo Lua editor change"), 
+                                                               QKeySequence(QKeySequence::Undo).toString()));
+        } else if (mUndoStack && mUndoStack->canUndo()) {
+            mUndoAction->setToolTip(qsl("<p>%1 - %2 (%3)</p>").arg(tr("Undo"), 
+                                                                   mUndoStack->undoText(),
+                                                                   QKeySequence(QKeySequence::Undo).toString()));
+        } else {
+            mUndoAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Undo last change"), 
+                                                               QKeySequence(QKeySequence::Undo).toString()));
+        }
+    }
+    
+    if (mRedoAction) {
+        mRedoAction->setEnabled(canRedo);
+        if (luaEditorFocused) {
+            mRedoAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Redo Lua editor change"), 
+                                                               QKeySequence(QKeySequence::Redo).toString()));
+        } else if (mUndoStack && mUndoStack->canRedo()) {
+            mRedoAction->setToolTip(qsl("<p>%1 - %2 (%3)</p>").arg(tr("Redo"), 
+                                                                   mUndoStack->redoText(),
+                                                                   QKeySequence(QKeySequence::Redo).toString()));
+        } else {
+            mRedoAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Redo last change"), 
+                                                               QKeySequence(QKeySequence::Redo).toString()));
+        }
     }
 }
 
@@ -2880,6 +3217,19 @@ void dlgTriggerEditor::delete_alias()
     if (selectedItems.isEmpty()) {
         return;
     }
+    
+    // Use undo command for deletion unless called from undo command to prevent recursion
+    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+        auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Alias"));
+        mUndoStack->push(cmd);
+        return;
+    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+        auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Alias"));
+        mUndoStack->push(cmd);
+        return;
+    }
+    
+    // Fallback to original delete logic if no undo stack
 
     QStringList itemNames;
     QList<TAlias*> aliasesToDelete;
@@ -2953,6 +3303,19 @@ void dlgTriggerEditor::delete_action()
     if (selectedItems.isEmpty()) {
         return;
     }
+    
+    // Use undo command for deletion unless called from undo command to prevent recursion
+    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+        auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Action"));
+        mUndoStack->push(cmd);
+        return;
+    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+        auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Action"));
+        mUndoStack->push(cmd);
+        return;
+    }
+    
+    // Fallback to original delete logic if no undo stack
 
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
@@ -3117,6 +3480,19 @@ void dlgTriggerEditor::delete_script()
     if (selectedItems.isEmpty()) {
         return;
     }
+    
+    // Use undo command for deletion unless called from undo command to prevent recursion
+    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+        auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Script"));
+        mUndoStack->push(cmd);
+        return;
+    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+        auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Script"));
+        mUndoStack->push(cmd);
+        return;
+    }
+    
+    // Fallback to original delete logic if no undo stack
 
     QStringList itemNames;
     QList<TScript*> scriptsToDelete;
@@ -3190,6 +3566,19 @@ void dlgTriggerEditor::delete_key()
     if (selectedItems.isEmpty()) {
         return;
     }
+    
+    // Use undo command for deletion unless called from undo command to prevent recursion
+    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+        auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Key"));
+        mUndoStack->push(cmd);
+        return;
+    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+        auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Key"));
+        mUndoStack->push(cmd);
+        return;
+    }
+    
+    // Fallback to original delete logic if no undo stack
 
     QStringList itemNames;
     QList<TKey*> keysToDelete;
@@ -3263,6 +3652,19 @@ void dlgTriggerEditor::delete_trigger()
     if (selectedItems.isEmpty()) {
         return;
     }
+    
+    // Use undo command for deletion unless called from undo command to prevent recursion
+    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+        auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Trigger"));
+        mUndoStack->push(cmd);
+        return;
+    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+        auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Trigger"));
+        mUndoStack->push(cmd);
+        return;
+    }
+    
+    // Fallback to original delete logic if no undo stack
 
     QStringList itemNames;
     QList<TTrigger*> triggersToDelete;
@@ -3336,6 +3738,19 @@ void dlgTriggerEditor::delete_timer()
     if (selectedItems.isEmpty()) {
         return;
     }
+    
+    // Use undo command for deletion unless called from undo command to prevent recursion
+    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+        auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Timer"));
+        mUndoStack->push(cmd);
+        return;
+    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+        auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Timer"));
+        mUndoStack->push(cmd);
+        return;
+    }
+    
+    // Fallback to original delete logic if no undo stack
 
     QStringList itemNames;
     QList<TTimer*> timersToDelete;
@@ -5090,6 +5505,7 @@ TAction* dlgTriggerEditor::getActionFromTreeItem(QTreeWidgetItem* item)
 
 void dlgTriggerEditor::slot_itemEdited()
 {
+    
     QString packageName;
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView: {
@@ -5137,6 +5553,10 @@ void dlgTriggerEditor::slot_itemEdited()
     if (!packageName.isEmpty()) {
         showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
     }
+    
+    // CRITICAL FIX: Update undo/redo button states when text changes!
+    // This is called whenever text editor content changes, so we need to update button states
+    slot_updateUndoRedoActions();
 }
 
 void dlgTriggerEditor::saveTrigger()
@@ -8741,87 +9161,295 @@ void dlgTriggerEditor::slot_saveEdits()
 
 void dlgTriggerEditor::slot_addNewItem()
 {
+    // Prevent recursion when called from undo commands
+    if (mCreatingFromUndoCommand) {
+        qDebug() << "slot_addNewItem() blocked - called from undo command";
+        return;
+    }
+    
+    QString itemType;
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        addTrigger(false); //add normal trigger
-        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
-        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+        itemType = qsl("Trigger");
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal timer
-        mpTimersMainArea->lineEdit_timer_name->setFocus();
-        mpTimersMainArea->lineEdit_timer_name->selectAll();
+        itemType = qsl("Timer");
         break;
     case EditorViewType::cmAliasView:
-        addAlias(false); //add normal alias
-        mpAliasMainArea->lineEdit_alias_name->setFocus();
-        mpAliasMainArea->lineEdit_alias_name->selectAll();
+        itemType = qsl("Alias");
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal script
-        mpScriptsMainArea->lineEdit_script_name->setFocus();
-        mpScriptsMainArea->lineEdit_script_name->selectAll();
+        itemType = qsl("Script");
         break;
     case EditorViewType::cmActionView:
-        addAction(false); //add normal action
-        mpActionsMainArea->lineEdit_action_name->setFocus();
-        mpActionsMainArea->lineEdit_action_name->selectAll();
+        itemType = qsl("Action");
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal key
-        mpKeysMainArea->lineEdit_key_name->setFocus();
-        mpKeysMainArea->lineEdit_key_name->selectAll();
+        itemType = qsl("Key");
         break;
     case EditorViewType::cmVarsView:
-        addVar(false); //add variable
-        mpVarsMainArea->lineEdit_var_name->setFocus();
-        // variables start without a default name
+        itemType = qsl("Variable");
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_addNewItem() undefined view";
+        return;
+    }
+    
+    // Use undo command for addition
+    if (mUndoStack) {
+        // Get current selection to maintain parent context
+        QTreeWidgetItem* currentParent = nullptr;
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            currentParent = treeWidget_triggers->currentItem();
+            // If selected item is a regular trigger (not folder), use its parent instead
+            if (currentParent) {
+                const int currentID = currentParent->data(0, Qt::UserRole).toInt();
+                TTrigger* currentTrigger = this->mpHost->getTriggerUnit()->getTrigger(currentID);
+                if (currentTrigger && !currentTrigger->isFolder()) {
+                    // Use the parent of the selected trigger (to create siblings)
+                    currentParent = currentParent->parent();
+                }
+            }
+            break;
+        case EditorViewType::cmTimerView:
+            currentParent = treeWidget_timers->currentItem();
+            break;
+        case EditorViewType::cmAliasView:
+            currentParent = treeWidget_aliases->currentItem();
+            break;
+        case EditorViewType::cmScriptView:
+            currentParent = treeWidget_scripts->currentItem();
+            break;
+        case EditorViewType::cmActionView:
+            currentParent = treeWidget_actions->currentItem();
+            break;
+        case EditorViewType::cmKeysView:
+            currentParent = treeWidget_keys->currentItem();
+            break;
+        default:
+            break;
+        }
+        
+        auto* cmd = new AddItemCommand(this, itemType, false, currentParent);
+        mUndoStack->push(cmd);
+        
+        // Set focus based on item type
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+            mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+            break;
+        case EditorViewType::cmTimerView:
+            mpTimersMainArea->lineEdit_timer_name->setFocus();
+            mpTimersMainArea->lineEdit_timer_name->selectAll();
+            break;
+        case EditorViewType::cmAliasView:
+            mpAliasMainArea->lineEdit_alias_name->setFocus();
+            mpAliasMainArea->lineEdit_alias_name->selectAll();
+            break;
+        case EditorViewType::cmScriptView:
+            mpScriptsMainArea->lineEdit_script_name->setFocus();
+            mpScriptsMainArea->lineEdit_script_name->selectAll();
+            break;
+        case EditorViewType::cmActionView:
+            mpActionsMainArea->lineEdit_action_name->setFocus();
+            mpActionsMainArea->lineEdit_action_name->selectAll();
+            break;
+        case EditorViewType::cmKeysView:
+            mpKeysMainArea->lineEdit_key_name->setFocus();
+            mpKeysMainArea->lineEdit_key_name->selectAll();
+            break;
+        case EditorViewType::cmVarsView:
+            mpVarsMainArea->lineEdit_var_name->setFocus();
+            break;
+        default:
+            break;
+        }
+    } else {
+        // Fallback to direct addition if no undo stack
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            addTrigger(false);
+            mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+            mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+            break;
+        case EditorViewType::cmTimerView:
+            addTimer(false);
+            mpTimersMainArea->lineEdit_timer_name->setFocus();
+            mpTimersMainArea->lineEdit_timer_name->selectAll();
+            break;
+        case EditorViewType::cmAliasView:
+            addAlias(false);
+            mpAliasMainArea->lineEdit_alias_name->setFocus();
+            mpAliasMainArea->lineEdit_alias_name->selectAll();
+            break;
+        case EditorViewType::cmScriptView:
+            addScript(false);
+            mpScriptsMainArea->lineEdit_script_name->setFocus();
+            mpScriptsMainArea->lineEdit_script_name->selectAll();
+            break;
+        case EditorViewType::cmActionView:
+            addAction(false);
+            mpActionsMainArea->lineEdit_action_name->setFocus();
+            mpActionsMainArea->lineEdit_action_name->selectAll();
+            break;
+        case EditorViewType::cmKeysView:
+            addKey(false);
+            mpKeysMainArea->lineEdit_key_name->setFocus();
+            mpKeysMainArea->lineEdit_key_name->selectAll();
+            break;
+        case EditorViewType::cmVarsView:
+            addVar(false);
+            mpVarsMainArea->lineEdit_var_name->setFocus();
+            break;
+        default:
+            break;
+        }
     }
 }
 
 void dlgTriggerEditor::slot_addNewGroup()
 {
+    QString itemType;
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        addTrigger(true); //add trigger group
-        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
-        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+        itemType = qsl("Trigger");
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true); //add timer group
-        mpTimersMainArea->lineEdit_timer_name->setFocus();
-        mpTimersMainArea->lineEdit_timer_name->selectAll();
+        itemType = qsl("Timer");
         break;
     case EditorViewType::cmAliasView:
-        addAlias(true); //add alias group
-        mpAliasMainArea->lineEdit_alias_name->setFocus();
-        mpAliasMainArea->lineEdit_alias_name->selectAll();
+        itemType = qsl("Alias");
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add script group
-        mpScriptsMainArea->lineEdit_script_name->setFocus();
-        mpScriptsMainArea->lineEdit_script_name->selectAll();
+        itemType = qsl("Script");
         break;
     case EditorViewType::cmActionView:
-        addAction(true); //add action group
-        mpActionsMainArea->lineEdit_action_name->setFocus();
-        mpActionsMainArea->lineEdit_action_name->selectAll();
+        itemType = qsl("Action");
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add keys group
-        mpKeysMainArea->lineEdit_key_name->setFocus();
-        mpKeysMainArea->lineEdit_key_name->selectAll();
+        itemType = qsl("Key");
         break;
     case EditorViewType::cmVarsView:
-        addVar(true); // add lua table
-        mpVarsMainArea->lineEdit_var_name->setFocus();
-        // variables start without a default name
+        itemType = qsl("Variable");
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_addNewGroup() undefined view";
+        return;
+    }
+    
+    // Use undo command for group addition
+    if (mUndoStack) {
+        // Get current selection to maintain parent context
+        QTreeWidgetItem* currentParent = nullptr;
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            currentParent = treeWidget_triggers->currentItem();
+            // If selected item is a regular trigger (not folder), use its parent instead
+            if (currentParent) {
+                const int currentID = currentParent->data(0, Qt::UserRole).toInt();
+                TTrigger* currentTrigger = this->mpHost->getTriggerUnit()->getTrigger(currentID);
+                if (currentTrigger && !currentTrigger->isFolder()) {
+                    // Use the parent of the selected trigger (to create siblings)
+                    currentParent = currentParent->parent();
+                }
+            }
+            break;
+        case EditorViewType::cmTimerView:
+            currentParent = treeWidget_timers->currentItem();
+            break;
+        case EditorViewType::cmAliasView:
+            currentParent = treeWidget_aliases->currentItem();
+            break;
+        case EditorViewType::cmScriptView:
+            currentParent = treeWidget_scripts->currentItem();
+            break;
+        case EditorViewType::cmActionView:
+            currentParent = treeWidget_actions->currentItem();
+            break;
+        case EditorViewType::cmKeysView:
+            currentParent = treeWidget_keys->currentItem();
+            break;
+        default:
+            break;
+        }
+        
+        auto* cmd = new AddItemCommand(this, itemType, true, currentParent);
+        mUndoStack->push(cmd);
+        
+        // Set focus based on item type
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+            mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+            break;
+        case EditorViewType::cmTimerView:
+            mpTimersMainArea->lineEdit_timer_name->setFocus();
+            mpTimersMainArea->lineEdit_timer_name->selectAll();
+            break;
+        case EditorViewType::cmAliasView:
+            mpAliasMainArea->lineEdit_alias_name->setFocus();
+            mpAliasMainArea->lineEdit_alias_name->selectAll();
+            break;
+        case EditorViewType::cmScriptView:
+            mpScriptsMainArea->lineEdit_script_name->setFocus();
+            mpScriptsMainArea->lineEdit_script_name->selectAll();
+            break;
+        case EditorViewType::cmActionView:
+            mpActionsMainArea->lineEdit_action_name->setFocus();
+            mpActionsMainArea->lineEdit_action_name->selectAll();
+            break;
+        case EditorViewType::cmKeysView:
+            mpKeysMainArea->lineEdit_key_name->setFocus();
+            mpKeysMainArea->lineEdit_key_name->selectAll();
+            break;
+        case EditorViewType::cmVarsView:
+            mpVarsMainArea->lineEdit_var_name->setFocus();
+            break;
+        default:
+            break;
+        }
+    } else {
+        // Fallback to direct addition if no undo stack
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            addTrigger(true);
+            mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+            mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+            break;
+        case EditorViewType::cmTimerView:
+            addTimer(true);
+            mpTimersMainArea->lineEdit_timer_name->setFocus();
+            mpTimersMainArea->lineEdit_timer_name->selectAll();
+            break;
+        case EditorViewType::cmAliasView:
+            addAlias(true);
+            mpAliasMainArea->lineEdit_alias_name->setFocus();
+            mpAliasMainArea->lineEdit_alias_name->selectAll();
+            break;
+        case EditorViewType::cmScriptView:
+            addScript(true);
+            mpScriptsMainArea->lineEdit_script_name->setFocus();
+            mpScriptsMainArea->lineEdit_script_name->selectAll();
+            break;
+        case EditorViewType::cmActionView:
+            addAction(true);
+            mpActionsMainArea->lineEdit_action_name->setFocus();
+            mpActionsMainArea->lineEdit_action_name->selectAll();
+            break;
+        case EditorViewType::cmKeysView:
+            addKey(true);
+            mpKeysMainArea->lineEdit_key_name->setFocus();
+            mpKeysMainArea->lineEdit_key_name->selectAll();
+            break;
+        case EditorViewType::cmVarsView:
+            addVar(true);
+            mpVarsMainArea->lineEdit_var_name->setFocus();
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -10907,6 +11535,12 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setText(initialText);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
+    
+    // Note: Not connecting text editor undo stack signals to avoid excessive updates
+    // The button states will be updated when needed through other mechanisms
+    
+    // Update undo/redo button states after loading new document
+    slot_updateUndoRedoActions();
 }
 
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
@@ -11499,4 +12133,137 @@ void dlgTriggerEditor::setDisplayFont(const QFont& newFont)
     config->beginChanges();
     config->setFont(newFont);
     config->endChanges();
+}
+
+// Helper methods for finding tree items by ID for undo/redo operations
+QTreeWidgetItem* dlgTriggerEditor::findTriggerItemById(int id)
+{
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*)> searchItem = [&](QTreeWidgetItem* item) -> QTreeWidgetItem* {
+        if (item->data(0, Qt::UserRole).toInt() == id) {
+            return item;
+        }
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (auto* found = searchItem(item->child(i))) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    for (int i = 0; i < treeWidget_triggers->topLevelItemCount(); ++i) {
+        if (auto* found = searchItem(treeWidget_triggers->topLevelItem(i))) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem* dlgTriggerEditor::findAliasItemById(int id)
+{
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*)> searchItem = [&](QTreeWidgetItem* item) -> QTreeWidgetItem* {
+        if (item->data(0, Qt::UserRole).toInt() == id) {
+            return item;
+        }
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (auto* found = searchItem(item->child(i))) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    for (int i = 0; i < treeWidget_aliases->topLevelItemCount(); ++i) {
+        if (auto* found = searchItem(treeWidget_aliases->topLevelItem(i))) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem* dlgTriggerEditor::findTimerItemById(int id)
+{
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*)> searchItem = [&](QTreeWidgetItem* item) -> QTreeWidgetItem* {
+        if (item->data(0, Qt::UserRole).toInt() == id) {
+            return item;
+        }
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (auto* found = searchItem(item->child(i))) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    for (int i = 0; i < treeWidget_timers->topLevelItemCount(); ++i) {
+        if (auto* found = searchItem(treeWidget_timers->topLevelItem(i))) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem* dlgTriggerEditor::findScriptItemById(int id)
+{
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*)> searchItem = [&](QTreeWidgetItem* item) -> QTreeWidgetItem* {
+        if (item->data(0, Qt::UserRole).toInt() == id) {
+            return item;
+        }
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (auto* found = searchItem(item->child(i))) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    for (int i = 0; i < treeWidget_scripts->topLevelItemCount(); ++i) {
+        if (auto* found = searchItem(treeWidget_scripts->topLevelItem(i))) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem* dlgTriggerEditor::findActionItemById(int id)
+{
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*)> searchItem = [&](QTreeWidgetItem* item) -> QTreeWidgetItem* {
+        if (item->data(0, Qt::UserRole).toInt() == id) {
+            return item;
+        }
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (auto* found = searchItem(item->child(i))) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    for (int i = 0; i < treeWidget_actions->topLevelItemCount(); ++i) {
+        if (auto* found = searchItem(treeWidget_actions->topLevelItem(i))) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem* dlgTriggerEditor::findKeyItemById(int id)
+{
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*)> searchItem = [&](QTreeWidgetItem* item) -> QTreeWidgetItem* {
+        if (item->data(0, Qt::UserRole).toInt() == id) {
+            return item;
+        }
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (auto* found = searchItem(item->child(i))) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    for (int i = 0; i < treeWidget_keys->topLevelItemCount(); ++i) {
+        if (auto* found = searchItem(treeWidget_keys->topLevelItem(i))) {
+            return found;
+        }
+    }
+    return nullptr;
 }
