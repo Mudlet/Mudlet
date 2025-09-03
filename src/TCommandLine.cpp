@@ -183,6 +183,7 @@ bool TCommandLine::event(QEvent* event)
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
             }
             mpConsole->mpBufferSearchBox->setFocus();
+            mpConsole->mpBufferSearchBox->selectAll();
             ke->accept();
             return true;
         }
