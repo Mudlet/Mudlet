@@ -89,7 +89,7 @@ public:
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
     void clearSelection();
-    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0);
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
 

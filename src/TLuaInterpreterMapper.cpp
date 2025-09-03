@@ -3934,8 +3934,19 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
     const QString filePath = getVerifiedString(L, __func__, 2, "file path");
     
     std::optional<int> zLevel = std::nullopt;
+    bool exportAllZLevels = false;
+    
     if (lua_gettop(L) > 2) {
-        zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
+        // Check if the third parameter is a boolean (true means export all Z levels)
+        if (lua_type(L, 3) == LUA_TBOOLEAN) {
+            exportAllZLevels = lua_toboolean(L, 3);
+            if (!exportAllZLevels) {
+                return warnArgumentValue(L, __func__, "zLevel parameter when boolean must be true to export all Z levels");
+            }
+        } else {
+            // Traditional behavior: integer Z level
+            zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
+        }
     }
     
     // NOTE: Zoom parameter temporarily disabled due to blurry room symbol rendering at zoom > 2.0
@@ -3950,7 +3961,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         return warnArgumentValue(L, __func__, "map needs to be open");
     }
 
-    auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom);
+    auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
     
     lua_pushboolean(L, success);
     if (!success) {

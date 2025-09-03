@@ -5374,7 +5374,7 @@ void T2DMap::clearSelection()
     }
 }
 
-std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom)
+std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels)
 {
     
     // Validate zoom parameter
@@ -5395,6 +5395,35 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         return {false, qsl("Area %1 contains no rooms").arg(areaId)};
     }
 
+    // Handle exporting all Z levels if requested
+    if (exportAllZLevels) {
+        if (pArea->zLevels.isEmpty()) {
+            return {false, qsl("Area %1 has no Z levels").arg(areaId)};
+        }
+
+        // Generate filename for each Z level
+        QFileInfo fileInfo(filePath);
+        QString baseFileName = fileInfo.completeBaseName();
+        QString extension = fileInfo.suffix();
+        QString basePath = fileInfo.absolutePath();
+        
+        // Export each Z level as a separate file
+        for (int currentZLevel : pArea->zLevels) {
+            QString levelFileName = QString("%1/%2_level_%3.%4")
+                                  .arg(basePath)
+                                  .arg(baseFileName)
+                                  .arg(currentZLevel)
+                                  .arg(extension.isEmpty() ? "png" : extension);
+            
+            // Recursively call this function for each Z level (without exportAllZLevels flag)
+            auto [success, message] = exportAreaToImage(areaId, levelFileName, currentZLevel, zoom, false);
+            if (!success) {
+                return {false, qsl("Failed to export Z level %1: %2").arg(currentZLevel).arg(message)};
+            }
+        }
+        
+        return {true, {}};
+    }
 
     // Calculate area bounds
     pArea->calcSpan();
