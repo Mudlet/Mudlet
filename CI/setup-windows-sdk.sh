@@ -95,6 +95,7 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-gstreamer" \
     "mingw-w64-${BUILDCOMPONENT}-gstreamer" \
     "mingw-w64-${BUILDCOMPONENT}-gst-plugins-base" \
     "mingw-w64-${BUILDCOMPONENT}-gst-plugins-good" \
