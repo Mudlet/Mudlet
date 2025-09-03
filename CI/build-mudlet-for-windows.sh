@@ -186,7 +186,14 @@ if [ -d "${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0" ]; then
 else
   echo "Warning: GStreamer plugins directory not found at ${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"
   echo "Available directories:"
-  ls -la "${MINGW_INTERNAL_BASE_DIR}/lib/" | grep -i gst || echo "No GStreamer directories found"
+  for dir in "${MINGW_INTERNAL_BASE_DIR}/lib/"*gst*; do
+    if [ -d "$dir" ]; then
+      echo "  $(basename "$dir")"
+    fi
+  done
+  if [ ! -d "${MINGW_INTERNAL_BASE_DIR}/lib/"*gst* ]; then
+    echo "  No GStreamer directories found"
+  fi
 fi
 echo ""
 
