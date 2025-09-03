@@ -175,6 +175,27 @@ else
   echo "Warning: GStreamer plugins directory not found at ${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"
 fi
 
+echo ""
+echo "Copying GStreamer core libraries..."
+# Copy GStreamer core runtime libraries needed for Qt multimedia
+if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/libgstreamer-1.0-0.dll" ]; then
+  cp -v -p -t . \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgstreamer-1.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgstbase-1.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgstpbutils-1.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgstaudio-1.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgstvideo-1.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgstapp-1.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libglib-2.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgobject-2.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgio-2.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libgmodule-2.0-0.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libffi-8.dll" || echo "Some GStreamer libraries not found (this may be expected)"
+  echo "GStreamer core libraries copied"
+else
+  echo "Warning: GStreamer core libraries not found at ${MINGW_INTERNAL_BASE_DIR}/bin/"
+fi
+
 
 echo ""
 echo "Copying discord-rpc library in..."
