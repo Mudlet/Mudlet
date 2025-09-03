@@ -226,6 +226,16 @@ cTelnet::~cTelnet()
         mZstdDstream = nullptr;
     }
     
+    // Clean up MCCP4 ZSTD buffers
+    if (mZstdInBuffer) {
+        free(mZstdInBuffer);
+        mZstdInBuffer = nullptr;
+    }
+    if (mZstdOutBuffer) {
+        free(mZstdOutBuffer);
+        mZstdOutBuffer = nullptr;
+    }
+    
     mpSocket.deleteLater();
 }
 
@@ -2853,6 +2863,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
                     if (!mZstdDstream) {
+                        // Initialize buffers first
+                        if (!initZstdBuffers()) {
+                            qWarning() << "MCCP4: Failed to initialize ZSTD buffers";
+                            sendTelnetOption(TN_WONT, OPT_COMPRESS4);
+                            hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
+                            mMCCP_version_4 = false;
+                            mNeedDecompression = false;
+                            return;
+                        }
+                        
                         mZstdDstream = ZSTD_createDStream();
                         if (!mZstdDstream) {
                             qWarning() << "MCCP4: Failed to create ZSTD streaming decompression context";
@@ -3847,6 +3867,18 @@ void cTelnet::initMCCP4StreamDecompressor()
         mZstdDstream = nullptr;
     }
     
+    // Clean up ZSTD buffers
+    if (mZstdInBuffer) {
+        free(mZstdInBuffer);
+        mZstdInBuffer = nullptr;
+    }
+    if (mZstdOutBuffer) {
+        free(mZstdOutBuffer);
+        mZstdOutBuffer = nullptr;
+    }
+    mZstdInBufferSize = 0;
+    mZstdOutBufferSize = 0;
+    
     // Reset MCCP4 state to prepare for re-negotiation
     mMCCP_version_4 = false;
     mMCCP4_encoding = MCCP4_ENCODING_NONE;
@@ -3856,6 +3888,45 @@ void cTelnet::initMCCP4StreamDecompressor()
     hisOptionState[static_cast<int>(OPT_COMPRESS4)] = false;
     
     qDebug() << "MCCP4: Stream decompressor reset for server restart/hotboot - ready for re-negotiation";
+}
+
+bool cTelnet::initZstdBuffers()
+{
+    // Free existing buffers if any
+    if (mZstdInBuffer) {
+        free(mZstdInBuffer);
+        mZstdInBuffer = nullptr;
+    }
+    if (mZstdOutBuffer) {
+        free(mZstdOutBuffer);
+        mZstdOutBuffer = nullptr;
+    }
+    
+    // Get ZSTD recommended buffer sizes
+    mZstdInBufferSize = ZSTD_DStreamInSize();
+    mZstdOutBufferSize = ZSTD_DStreamOutSize();
+    
+    // Allocate buffers
+    mZstdInBuffer = static_cast<char*>(malloc(mZstdInBufferSize));
+    mZstdOutBuffer = static_cast<char*>(malloc(mZstdOutBufferSize));
+    
+    if (!mZstdInBuffer || !mZstdOutBuffer) {
+        // Cleanup on allocation failure
+        if (mZstdInBuffer) {
+            free(mZstdInBuffer);
+            mZstdInBuffer = nullptr;
+        }
+        if (mZstdOutBuffer) {
+            free(mZstdOutBuffer);
+            mZstdOutBuffer = nullptr;
+        }
+        mZstdInBufferSize = 0;
+        mZstdOutBufferSize = 0;
+        return false;
+    }
+    
+    qDebug() << "MCCP4: Initialized ZSTD buffers - input size:" << mZstdInBufferSize << "output size:" << mZstdOutBufferSize;
+    return true;
 }
 
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
@@ -3904,10 +3975,16 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         return -1;
     }
     
+    // Ensure we have buffers allocated
+    if (!mZstdOutBuffer || mZstdOutBufferSize == 0) {
+        qWarning() << "MCCP4: ZSTD buffers not initialized";
+        return -1;
+    }
+    
     qDebug() << "MCCP4: decompressMCCP4Buffer called with length:" << length;
 
     ZSTD_inBuffer input = { in_buffer, static_cast<size_t>(length), 0 };
-    ZSTD_outBuffer output = { out_buffer, BUFFER_SIZE, 0 };
+    ZSTD_outBuffer output = { mZstdOutBuffer, mZstdOutBufferSize, 0 };
     
     size_t const result = ZSTD_decompressStream(mZstdDstream, &output, &input);
     
@@ -3934,7 +4011,7 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         
         // Return remaining input as-is for error recovery
         size_t remainingInput = length - input.pos;
-        memcpy(out_buffer, in_buffer + input.pos, std::min(remainingInput, BUFFER_SIZE));
+        memcpy(out_buffer, in_buffer + input.pos, std::min(remainingInput, static_cast<size_t>(BUFFER_SIZE)));
         int recoverySize = std::min(static_cast<int>(remainingInput), static_cast<int>(BUFFER_SIZE));
         in_buffer += length;
         length = 0;
@@ -3980,7 +4057,11 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         length -= static_cast<int>(input.pos);
     }
     
-    return static_cast<int>(output.pos);
+    // Copy decompressed data to output buffer (limited by BUFFER_SIZE for compatibility)
+    size_t copySize = std::min(output.pos, static_cast<size_t>(BUFFER_SIZE));
+    memcpy(out_buffer, mZstdOutBuffer, copySize);
+    
+    return static_cast<int>(copySize);
 }
 
 

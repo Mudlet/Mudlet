@@ -293,6 +293,7 @@ private:
     void processSocketData(char *data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     void initMCCP4StreamDecompressor();
+    bool initZstdBuffers();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     int decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
@@ -367,6 +368,12 @@ private:
 
     z_stream mZstream = {};
     ZSTD_DStream* mZstdDstream = nullptr;
+    
+    // MCCP4 ZSTD buffer management
+    size_t mZstdInBufferSize = 0;
+    size_t mZstdOutBufferSize = 0;
+    char* mZstdInBuffer = nullptr;
+    char* mZstdOutBuffer = nullptr;
 
     bool mNeedDecompression = false;
     std::string command;
