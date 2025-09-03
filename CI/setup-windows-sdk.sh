@@ -95,6 +95,11 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+    "mingw-w64-${BUILDCOMPONENT}-gstreamer" \
+    "mingw-w64-${BUILDCOMPONENT}-gst-plugins-base" \
+    "mingw-w64-${BUILDCOMPONENT}-gst-plugins-good" \
+    "mingw-w64-${BUILDCOMPONENT}-gst-plugins-bad" \
+    "mingw-w64-${BUILDCOMPONENT}-gst-libav" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \

@@ -460,6 +460,26 @@ int main(int argc, char* argv[])
     // Needed for Qt6 on Windows (at least) - and does not work in mudlet class c'tor
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #if defined(Q_OS_WINDOWS)
+    // Configure GStreamer plugin paths for multimedia support (OGG, etc.)
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString gstPluginPath = QDir(appDir).filePath("gstreamer-1.0");
+    if (QDir(gstPluginPath).exists()) {
+        if (qputenv("GST_PLUGIN_PATH", gstPluginPath.toLocal8Bit())) {
+            qDebug().noquote() << "main(...) INFO - setting GST_PLUGIN_PATH to:" << gstPluginPath;
+        }
+        if (qputenv("GST_PLUGIN_SYSTEM_PATH", gstPluginPath.toLocal8Bit())) {
+            qDebug().noquote() << "main(...) INFO - setting GST_PLUGIN_SYSTEM_PATH to:" << gstPluginPath;
+        }
+        // Prefer GStreamer backend for better codec support (OGG, etc.)
+        if (qEnvironmentVariableIsEmpty("QT_MULTIMEDIA_PREFERRED_PLUGINS")) {
+            if (qputenv("QT_MULTIMEDIA_PREFERRED_PLUGINS", QByteArray("gstreamer"))) {
+                qDebug().noquote() << "main(...) INFO - setting QT_MULTIMEDIA_PREFERRED_PLUGINS to: \"gstreamer\".";
+            }
+        }
+    } else {
+        qDebug().noquote() << "main(...) INFO - GStreamer plugins not found at:" << gstPluginPath << ", using default multimedia backend";
+    }
+    
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
         // sound to work:

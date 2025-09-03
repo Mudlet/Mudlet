@@ -165,6 +165,16 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
 
+echo ""
+echo "Copying GStreamer plugins for multimedia support..."
+mkdir -p ./gstreamer-1.0
+if [ -d "${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0" ]; then
+  cp -v -p -t ./gstreamer-1.0 "${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"/*.dll
+  echo "GStreamer plugins copied successfully"
+else
+  echo "Warning: GStreamer plugins directory not found at ${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"
+fi
+
 
 echo ""
 echo "Copying discord-rpc library in..."

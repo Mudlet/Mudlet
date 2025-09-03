@@ -123,6 +123,17 @@ echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
 
+# Configure GStreamer for Qt6 Multimedia to support OGG and other formats
+export GST_PLUGIN_PATH="${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"
+export GST_PLUGIN_SYSTEM_PATH="${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"
+export QT_MULTIMEDIA_PREFERRED_PLUGINS="gstreamer"
+
+echo "Setting up GStreamer for multimedia support:"
+echo "GST_PLUGIN_PATH is: ${GST_PLUGIN_PATH}"
+echo "GST_PLUGIN_SYSTEM_PATH is: ${GST_PLUGIN_SYSTEM_PATH}"
+echo "QT_MULTIMEDIA_PREFERRED_PLUGINS is: ${QT_MULTIMEDIA_PREFERRED_PLUGINS}"
+echo ""
+
 if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
     # The updater is not helpful in this environment (PR testing build)
     export WITH_UPDATER="NO"
