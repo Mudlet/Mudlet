@@ -5374,12 +5374,12 @@ void T2DMap::clearSelection()
     }
 }
 
-std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal exportScale)
+std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom)
 {
     
-    // Validate export scale parameter
-    if (exportScale <= 0.0 || exportScale > 10.0) {
-        return {false, qsl("Export scale must be between 0.1 and 10.0")};
+    // Validate zoom parameter
+    if (zoom <= 0.0 || zoom > 10.0) {
+        return {false, qsl("Zoom must be between 0.1 and 10.0")};
     }
     
     if (!mpMap || mpHost.isNull()) {
@@ -5435,9 +5435,9 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const int exportRY = padding - (pArea->min_y * finalRoomSize);
     
     
-    // Create high-quality image for crisp exports using specified scale
-    QPixmap pixmap(imageWidth * exportScale, imageHeight * exportScale);
-    pixmap.setDevicePixelRatio(exportScale);
+    // Create high-quality image for crisp exports using specified zoom
+    QPixmap pixmap(imageWidth * zoom, imageHeight * zoom);
+    pixmap.setDevicePixelRatio(zoom);
     pixmap.fill(mpHost->mBgColor_2);
     
     QPainter painter(&pixmap);

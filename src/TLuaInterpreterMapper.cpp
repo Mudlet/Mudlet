@@ -3938,8 +3938,8 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
     }
     
-    // NOTE: Scale parameter temporarily disabled due to blurry room symbol rendering at scales > 2.0
-    qreal exportScale = 2.0;
+    // NOTE: Zoom parameter temporarily disabled due to blurry room symbol rendering at zoom > 2.0
+    qreal zoom = 2.0;
 
     if (!host.mpMap->mpRoomDB->getArea(areaId)) {
         return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(areaId)));
@@ -3950,7 +3950,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         return warnArgumentValue(L, __func__, "map needs to be open");
     }
 
-    auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, exportScale);
+    auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom);
     
     lua_pushboolean(L, success);
     if (!success) {
