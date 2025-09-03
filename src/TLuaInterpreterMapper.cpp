@@ -3938,13 +3938,8 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
     }
     
-    qreal exportScale = 2.0; // Default to 2x for quality
-    if (lua_gettop(L) > 3) {
-        exportScale = getVerifiedDouble(L, __func__, 4, "export scale", true);
-        if (exportScale <= 0.0 || exportScale > 10.0) {
-            return warnArgumentValue(L, __func__, "export scale must be between 0.1 and 10.0");
-        }
-    }
+    // NOTE: Scale parameter temporarily disabled due to blurry room symbol rendering at scales > 2.0
+    qreal exportScale = 2.0;
 
     if (!host.mpMap->mpRoomDB->getArea(areaId)) {
         return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(areaId)));
