@@ -7,7 +7,7 @@
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *   Copyright (C) 2011-2021 by Vadim Peretokin - vperetokin@gmail.com     *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -3939,8 +3939,8 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     // install default packages
-    for (int i = 0; i < mPackagesToInstallList.size(); i++) {
-        pHost->installPackage(mPackagesToInstallList[i], enums::PackageModuleType::Package);
+    for (const auto& package : mPackagesToInstallList) {
+        pHost->installPackage(package, enums::PackageModuleType::Package);
     }
 
     mPackagesToInstallList.clear();
@@ -3977,12 +3977,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
-    for (int i = 0; i < modules.size(); i++) {
-        QStringList entry = pHost->mInstalledModules[modules[i]];
+    for (const auto& module : modules) {
+        QStringList entry = pHost->mInstalledModules[module];
         pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-        pHost->mInstalledModules[modules[i]] = entry;
+        pHost->mInstalledModules[module] = entry;
     }
 }
 
