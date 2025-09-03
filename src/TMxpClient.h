@@ -99,6 +99,8 @@ public:
         Q_UNUSED(tag)
         return result;
     }
+
+    virtual void setCaptionForSendEvent(const QString& caption) { Q_UNUSED(caption) }
 };
 
 #endif //MUDLET_TMXPCLIENT_H
