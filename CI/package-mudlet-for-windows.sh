@@ -196,6 +196,18 @@ else
   echo "Warning: GStreamer core libraries not found at ${MINGW_INTERNAL_BASE_DIR}/bin/"
 fi
 
+echo ""
+echo "Copying Qt GStreamer multimedia plugin..."
+# Ensure the Qt GStreamer multimedia plugin is available for backend detection
+if [ -f "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/gstreamermediaplugin.dll" ]; then
+  cp -v -p "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/gstreamermediaplugin.dll" ./multimedia/
+  echo "Qt GStreamer multimedia plugin copied successfully"
+else
+  echo "Warning: Qt GStreamer multimedia plugin not found at ${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/"
+  echo "Available Qt multimedia plugins:"
+  ls -la "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/" || echo "Multimedia plugins directory not found"
+fi
+
 
 echo ""
 echo "Copying discord-rpc library in..."
