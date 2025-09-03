@@ -42,6 +42,8 @@ public:
 
     void handleContent(char ch) override;
 
+    QString currentCaption() const { return mLastCaption; }
+
 private:
     void updateHrefInLinks(TMxpClient& client) const;
     void resetCurrentTagContent(TMxpClient& client);
@@ -54,6 +56,7 @@ private:
 
     bool mIsHrefInContent;
     QString mCurrentTagContent;
+    QString mLastCaption;
     int mLinkId;
 };
 
