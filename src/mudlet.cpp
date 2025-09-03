@@ -5645,15 +5645,15 @@ int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
         std::sort(wl.begin(), wl.end(), sorter);
     }
 
-    for (int index = 0; index < wordCount; ++index) {
+    for (const auto& word : wl) {
         // qDebug().nospace().noquote() << "    " << wordList.at(index);
-        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, wl.at(index));
+        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, word);
         // The finder will be at the start of the string
         int startPos = 0;
         int endPos = graphemeFinder.toNextBoundary();
         do {
             if (endPos > 0) {
-                const QString grapheme(wl.at(index).mid(startPos, endPos - startPos));
+                const QString grapheme(word.mid(startPos, endPos - startPos));
                 if (gc.contains(grapheme)) {
                     ++gc[grapheme];
                 } else {
@@ -6139,8 +6139,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
     // splitter and then re-add each of them at the end in turn - once we have
     // gone through them all it will mean that they are in the same order as the
     // tabs:
-    for (int index = 0; index < itemsCount; ++index) {
-        const auto& wantedTabName = tabNamesInOrder.at(index);
+    for (const QString& wantedTabName : tabNamesInOrder) {
         mpSplitter_profileContainer->addWidget(widgetMap.value(wantedTabName));
     }
 }

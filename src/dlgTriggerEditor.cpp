@@ -1795,7 +1795,8 @@ void dlgTriggerEditor::searchKeys(const QString& text)
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || 
+               !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -10034,8 +10035,8 @@ void dlgTriggerEditor::slot_pasteXml()
         
         QString originalClipboard = QApplication::clipboard()->text();
         
-        for (int i = 0; i < xmlPackages.size(); ++i) {
-            QString xmlItem = xmlPackages[i].trimmed();
+        for (const QString& xmlItem : xmlPackages) {
+            xmlItem = xmlItem.trimmed();
             if (xmlItem.isEmpty()) {
                 continue; // Skip empty items
             }

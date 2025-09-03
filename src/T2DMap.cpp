@@ -4,7 +4,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
- *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -452,10 +452,9 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
     symbolPainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform, true);
 
     const QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
-    const QVector<quint32> codePoints = symbolString.toUcs4();
     QVector<bool> isUsable;
-    for (int i = 0; i < codePoints.size(); ++i) {
-        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
+    for (const quint32 codePoint : symbolString.toUcs4()) {
+        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoint));
     }
 
     QFont fontForThisSymbol = mpMap->mMapSymbolFont;
@@ -2075,8 +2074,8 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                     painter.setPen(customLinePen);
                     polyLinePoints << origin;
                     polyLinePoints << fixedOffsetPoint;
-                    for (int pk = 0, total = customLinePoints.size(); pk < total; ++pk) {
-                        polyLinePoints << QPointF(customLinePoints.at(pk).x() * mRoomWidth + mRX, customLinePoints.at(pk).y() * mRoomHeight * -1 + mRY);
+                    for (const QPointF& customLinePoint : customLinePoints) {
+                        polyLinePoints << QPointF(customLinePoint.x() * mRoomWidth + mRX, customLinePoint.y() * mRoomHeight * -1 + mRY);
                     }
                     if (polyLinePoints.size() > 2) {
                         if (isXYPlainExit) {
@@ -4201,9 +4200,9 @@ void T2DMap::slot_setArea()
     std::sort( sortedAreaList.begin(), sortedAreaList.end(), sorter);
 
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
-    for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
-        const int areaId = areaNamesMap.key(sortedAreaList.at(i));
-        arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
+    for (const QString& areaName : sortedAreaList) {
+        const int areaId = areaNamesMap.key(areaName);
+        arealist_combobox->addItem(qsl("%1 (%2)").arg(areaName, QString::number(areaId)), QString::number(areaId));
     }
 
     connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=, this](const QString newText) {
