@@ -6052,15 +6052,11 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
 }
 
 std::pair<bool, QString> T2DMap::performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format)
-{
-    qDebug() << "T2DMap::performImageSave: Saving image to" << filePath << "with format" << format;
-    
+{    
     if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
-        qDebug() << "T2DMap::performImageSave: Failed to save image";
         return {false, qsl("Failed to save image to %1").arg(filePath)};
     }
     
-    qDebug() << "T2DMap::performImageSave: Image saved successfully";
     return {true, {}};
 }
 
