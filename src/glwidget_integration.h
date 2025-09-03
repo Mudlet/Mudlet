@@ -1,5 +1,8 @@
+#ifndef MUDLET_GLWIDGET_INTEGRATION_H
+#define MUDLET_GLWIDGET_INTEGRATION_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,20 +20,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPEVENT_H
-#define MUDLET_TMXPEVENT_H
+#include "glwidget.h"
+#include "modern_glwidget.h"
 
-#include "pre_guard.h"
-#include <QMap>
-#include <QStringList>
-#include "post_guard.h"
+class TMap;
+class Host;
+class QWidget;
 
-struct TMxpEvent
-{
-    QString name;
-    QMap<QString, QString> attrs;
-    QStringList actions;
-    QString caption;
-};
+namespace GLWidgetFactory {
+QOpenGLWidget* createGLWidget(TMap* pMap, Host* pHost, QWidget* parent = nullptr);
+bool isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost);
+QString getWidgetTypeName(QOpenGLWidget* widget);
+}
 
-#endif //MUDLET_TMXPEVENT_H
+// Factory functions provide runtime widget creation
+// Legacy GLWidget class name remains available for existing code
+
+#endif // MUDLET_GLWIDGET_INTEGRATION_H

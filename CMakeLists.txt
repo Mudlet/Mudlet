@@ -137,6 +137,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
+                        OPTION_VARIABLE USE_SHADER_HOT_RELOAD
+                        READABLE_NAME "shader hot-reloading"
+                        DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")

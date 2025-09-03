@@ -2040,7 +2040,7 @@ void dlgProfilePreferences::slot_setMapBgColor()
 // if 3D map, update transparency flags
 #if defined(INCLUDE_3DMAPPER)
         if (pHost->mpMap->mpMapper->glWidget) {
-            GLWidget* map = pHost->mpMap->mpMapper->glWidget;
+            QOpenGLWidget* map = pHost->mpMap->mpMapper->glWidget;
             if (pHost->mBgColor_2.alpha() < 255) {
             map->setAttribute(Qt::WA_OpaquePaintEvent, false);
             map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
@@ -3915,7 +3915,10 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
 
     QUiLoader loader;
     QFile file(qsl(":/ui/glyph_usage.ui"));
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "dlgProfilePreferences: failed to open UI file for reading:" << file.errorString();
+        return;
+    }
     mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!mpDialogMapGlyphUsage) {

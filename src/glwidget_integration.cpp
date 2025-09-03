@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,20 +17,41 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPEVENT_H
-#define MUDLET_TMXPEVENT_H
+#include "glwidget_integration.h"
+#include "Host.h"
 
-#include "pre_guard.h"
-#include <QMap>
-#include <QStringList>
-#include "post_guard.h"
-
-struct TMxpEvent
+QOpenGLWidget* GLWidgetFactory::createGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 {
-    QString name;
-    QMap<QString, QString> attrs;
-    QStringList actions;
-    QString caption;
-};
+    if (pHost && pHost->getUseModern3DMapper()) {
+        return new ModernGLWidget(pMap, pHost, parent);
+    } else {
+        return new GLWidget(pMap, pHost, parent);
+    }
+}
 
-#endif //MUDLET_TMXPEVENT_H
+bool GLWidgetFactory::isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost)
+{
+    if (!widget || !pHost) {
+        return false;
+    }
+    
+    bool shouldUseModern = pHost->getUseModern3DMapper();
+    bool isModern = dynamic_cast<ModernGLWidget*>(widget) != nullptr;
+    
+    return shouldUseModern == isModern;
+}
+
+QString GLWidgetFactory::getWidgetTypeName(QOpenGLWidget* widget)
+{
+    if (!widget) {
+        return QStringLiteral("null");
+    }
+    
+    if (dynamic_cast<ModernGLWidget*>(widget)) {
+        return QStringLiteral("ModernGLWidget");
+    } else if (dynamic_cast<GLWidget*>(widget)) {
+        return QStringLiteral("GLWidget");
+    } else {
+        return QStringLiteral("Unknown");
+    }
+}
