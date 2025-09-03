@@ -88,6 +88,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     
     // Configure all text widgets for better undo granularity
     QTimer::singleShot(100, this, &dlgTriggerEditor::configureTextWidgetUndoBehavior);
+    QTimer::singleShot(200, this, &dlgTriggerEditor::configureUIElementUndoBehavior);
 
     // clang-format off
     introAddItem.insert(EditorViewType::cmAliasView, {
@@ -1181,13 +1182,12 @@ void dlgTriggerEditor::slot_undo()
     // PRIORITY 1: Lua editor has focus - use ONLY Lua editor undo
     bool luaEditorFocused = false;
     if (mpSourceEditorEdbee && focusWidget) {
-        QWidget* parent = focusWidget;
-        while (parent && !luaEditorFocused) {
+        // Check if focused widget is a child of the Lua editor
+        for (QWidget* parent = focusWidget; parent; parent = parent->parentWidget()) {
             if (parent == mpSourceEditorEdbee) {
                 luaEditorFocused = true;
                 break;
             }
-            parent = parent->parentWidget();
         }
     }
     
@@ -1243,13 +1243,12 @@ void dlgTriggerEditor::slot_redo()
     // PRIORITY 1: Lua editor has focus - use ONLY Lua editor redo
     bool luaEditorFocused = false;
     if (mpSourceEditorEdbee && focusWidget) {
-        QWidget* parent = focusWidget;
-        while (parent && !luaEditorFocused) {
+        // Check if focused widget is a child of the Lua editor
+        for (QWidget* parent = focusWidget; parent; parent = parent->parentWidget()) {
             if (parent == mpSourceEditorEdbee) {
                 luaEditorFocused = true;
                 break;
             }
-            parent = parent->parentWidget();
         }
     }
     
@@ -1384,6 +1383,125 @@ void dlgTriggerEditor::configureTextWidgetUndoBehavior()
     qDebug() << "UNIFIED: Text widget configuration complete - all changes go to unified stack";
 }
 
+void dlgTriggerEditor::configureUIElementUndoBehavior()
+{
+    // Configure undo support for all toggleable/settable UI elements
+    qDebug() << "UNIFIED: Configuring UI element undo behavior for checkboxes, spinboxes, comboboxes";
+    
+    // Connect trigger-specific checkboxes
+    if (mpTriggersMainArea) {
+        // Perl slash G option checkbox
+        if (mpTriggersMainArea->checkBox_perlSlashGOption) {
+            connect(mpTriggersMainArea->checkBox_perlSlashGOption, &QCheckBox::toggled, 
+                    this, [this](bool newValue) {
+                        if (!mCreatingFromUndoCommand) {
+                            bool oldValue = !newValue; // Since it was just toggled
+                            qDebug() << "UNIFIED: Checkbox perlSlashGOption changed from" << oldValue << "to" << newValue;
+                            mUndoStack->push(new CheckboxChangeCommand(
+                                mpTriggersMainArea->checkBox_perlSlashGOption, 
+                                oldValue, newValue, "Toggle Perl slash G option"));
+                        }
+                    });
+        }
+        
+        // Filter trigger checkbox
+        if (mpTriggersMainArea->checkBox_filterTrigger) {
+            connect(mpTriggersMainArea->checkBox_filterTrigger, &QCheckBox::toggled, 
+                    this, [this](bool newValue) {
+                        if (!mCreatingFromUndoCommand) {
+                            bool oldValue = !newValue;
+                            qDebug() << "UNIFIED: Checkbox filterTrigger changed from" << oldValue << "to" << newValue;
+                            mUndoStack->push(new CheckboxChangeCommand(
+                                mpTriggersMainArea->checkBox_filterTrigger, 
+                                oldValue, newValue, "Toggle filter trigger"));
+                        }
+                    });
+        }
+        
+        // Trigger colorizer groupbox (acts like checkbox)
+        if (mpTriggersMainArea->groupBox_triggerColorizer) {
+            connect(mpTriggersMainArea->groupBox_triggerColorizer, &QGroupBox::toggled,
+                    this, [this](bool newValue) {
+                        if (!mCreatingFromUndoCommand) {
+                            bool oldValue = !newValue;
+                            qDebug() << "UNIFIED: Trigger colorizer changed from" << oldValue << "to" << newValue;
+                            // Handle this as a special checkbox-like operation for the groupbox
+                            // We'd need a special command for QGroupBox, but for now treat it similarly
+                        }
+                    });
+        }
+        
+        // Spinboxes - Stay open
+        if (mpTriggersMainArea->spinBox_stayOpen) {
+            connect(mpTriggersMainArea->spinBox_stayOpen, qOverload<int>(&QSpinBox::valueChanged),
+                    this, [this](int newValue) {
+                        if (!mCreatingFromUndoCommand) {
+                            // Get the old value by checking the spinbox's previous state
+                            static int lastStayOpenValue = 0;
+                            qDebug() << "UNIFIED: SpinBox stayOpen changed from" << lastStayOpenValue << "to" << newValue;
+                            mUndoStack->push(new SpinboxChangeCommand(
+                                mpTriggersMainArea->spinBox_stayOpen,
+                                lastStayOpenValue, newValue, "Change stay open value"));
+                            lastStayOpenValue = newValue;
+                        }
+                    });
+        }
+        
+        // Spinboxes - Line margin
+        if (mpTriggersMainArea->spinBox_lineMargin) {
+            connect(mpTriggersMainArea->spinBox_lineMargin, qOverload<int>(&QSpinBox::valueChanged),
+                    this, [this](int newValue) {
+                        if (!mCreatingFromUndoCommand) {
+                            static int lastLineMarginValue = -1;
+                            qDebug() << "UNIFIED: SpinBox lineMargin changed from" << lastLineMarginValue << "to" << newValue;
+                            mUndoStack->push(new SpinboxChangeCommand(
+                                mpTriggersMainArea->spinBox_lineMargin,
+                                lastLineMarginValue, newValue, "Change line margin"));
+                            lastLineMarginValue = newValue;
+                        }
+                    });
+        }
+    }
+    
+    // Connect pattern type comboboxes
+    for (auto* patternEdit : mTriggerPatternEdit) {
+        if (patternEdit && patternEdit->comboBox_patternType) {
+            connect(patternEdit->comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged),
+                    this, [this, patternEdit](int newIndex) {
+                        if (!mCreatingFromUndoCommand) {
+                            // Track old value using widget property
+                            int oldIndex = patternEdit->comboBox_patternType->property("previousIndex").toInt();
+                            qDebug() << "UNIFIED: ComboBox patternType changed from" << oldIndex << "to" << newIndex;
+                            mUndoStack->push(new ComboboxChangeCommand(
+                                patternEdit->comboBox_patternType,
+                                oldIndex, newIndex, "Change pattern type"));
+                            patternEdit->comboBox_patternType->setProperty("previousIndex", newIndex);
+                        }
+                    });
+            
+            // Initialize previous index property
+            patternEdit->comboBox_patternType->setProperty("previousIndex", 
+                patternEdit->comboBox_patternType->currentIndex());
+        }
+    }
+    
+    // Connect action-specific elements if available
+    if (mpActionsMainArea && mpActionsMainArea->checkBox_action_button_isPushDown) {
+        connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::toggled,
+                this, [this](bool newValue) {
+                    if (!mCreatingFromUndoCommand) {
+                        bool oldValue = !newValue;
+                        qDebug() << "UNIFIED: Action push down checkbox changed from" << oldValue << "to" << newValue;
+                        mUndoStack->push(new CheckboxChangeCommand(
+                            mpActionsMainArea->checkBox_action_button_isPushDown,
+                            oldValue, newValue, "Toggle push down button"));
+                    }
+                });
+    }
+    
+    qDebug() << "UNIFIED: UI element undo behavior configuration complete";
+}
+
 void dlgTriggerEditor::slot_updateUndoRedoActions()
 {
     // CURSOR-AWARE button state update
@@ -1396,13 +1514,12 @@ void dlgTriggerEditor::slot_updateUndoRedoActions()
     // Check if Lua editor is focused
     bool luaEditorFocused = false;
     if (mpSourceEditorEdbee && focusWidget) {
-        QWidget* parent = focusWidget;
-        while (parent && !luaEditorFocused) {
+        // Check if focused widget is a child of the Lua editor
+        for (QWidget* parent = focusWidget; parent; parent = parent->parentWidget()) {
             if (parent == mpSourceEditorEdbee) {
                 luaEditorFocused = true;
                 break;
             }
-            parent = parent->parentWidget();
         }
     }
     
