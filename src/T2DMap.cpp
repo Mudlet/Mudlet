@@ -5587,7 +5587,79 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         exitList << roomId;
     }
     
-    // Draw room exits first (like paintEvent does at line 1480) - BEFORE drawing rooms
+    
+    // Now draw rooms on Z-level and below (like paintEvent does)
+    int roomsDrawn = 0;
+    int roomsSkipped = 0;
+    
+    // First pass: draw rooms on level below (like paintEvent shadow rooms)
+    for (int roomId : pArea->rooms) {
+        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pRoom || pRoom->z() != exportZLevel - 1) {
+            continue;
+        }
+        
+        // Use export coordinate system for room positioning
+        const int exportRX = padding - (pArea->min_x * finalRoomSize);
+        const int exportRY = padding - (pArea->min_y * finalRoomSize);
+        const float rx = pRoom->x() * finalRoomSize + exportRX;
+        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
+        
+        if (rx >= 0 && ry >= 0 && rx <= imageWidth && ry <= imageHeight) {
+            painter.save();
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QBrush(mpHost->mLowerLevelColor));
+            
+            // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
+            if (mBubbleMode) {
+                const QPointF roomCenter(rx, ry);
+                const float roomRadius = (finalRoomSize * rSize) / 2.0f;
+                QPainterPath diameterPath;
+                diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                painter.drawPath(diameterPath);
+            } else {
+                const QRectF shadowRect(rx - (finalRoomSize * rSize * 0.8), ry - (finalRoomSize * rSize * 0.2), finalRoomSize * rSize, finalRoomSize * rSize);
+                painter.drawRect(shadowRect);
+            }
+            painter.restore();
+            roomsDrawn++;
+        }
+    }
+    
+    // Second pass: draw rooms on level above (like paintEvent upper level rooms)
+    for (int roomId : pArea->rooms) {
+        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pRoom || pRoom->z() != exportZLevel + 1) {
+            continue;
+        }
+        
+        // Use export coordinate system for room positioning  
+        const int exportRX = padding - (pArea->min_x * finalRoomSize);
+        const int exportRY = padding - (pArea->min_y * finalRoomSize);
+        const float rx = pRoom->x() * finalRoomSize + exportRX;
+        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
+        
+        if (rx >= 0 && ry >= 0 && rx <= imageWidth && ry <= imageHeight) {
+            painter.save();
+            painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
+            painter.setBrush(Qt::transparent);
+            
+            // Draw outline room using the same approach as paintEvent (lines 1456-1471)
+            if (mBubbleMode) {
+                const float roomRadius = 0.5 * rSize * finalRoomSize;
+                const QPointF roomCenter = QPointF(rx + (roomRadius * rSize * 0.5), ry - (roomRadius * rSize * 0.5));
+                QPainterPath diameterPath;
+                diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                painter.drawPath(diameterPath);
+            } else {
+                painter.drawRect(rx - (finalRoomSize * rSize * 0.2), ry - (finalRoomSize * rSize * 0.8), finalRoomSize * rSize, finalRoomSize * rSize);
+            }
+            painter.restore();
+            roomsDrawn++;
+        }
+    }
+    
+    // Third pass: draw room exits (moved to correct position after upper-level rooms)
     if (!pArea->gridMode) {
         qDebug() << "T2DMap::exportAreaToImage: Drawing exit lines...";
         
@@ -5949,45 +6021,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
     }
     
-    // Now draw rooms on Z-level and below (like paintEvent does)
-    int roomsDrawn = 0;
-    int roomsSkipped = 0;
-    
-    // First pass: draw rooms on level below (like paintEvent shadow rooms)
-    for (int roomId : pArea->rooms) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom || pRoom->z() != exportZLevel - 1) {
-            continue;
-        }
-        
-        // Use export coordinate system for room positioning
-        const int exportRX = padding - (pArea->min_x * finalRoomSize);
-        const int exportRY = padding - (pArea->min_y * finalRoomSize);
-        const float rx = pRoom->x() * finalRoomSize + exportRX;
-        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
-        
-        if (rx >= 0 && ry >= 0 && rx <= imageWidth && ry <= imageHeight) {
-            painter.save();
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(QBrush(mpHost->mLowerLevelColor));
-            
-            // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
-            if (mBubbleMode) {
-                const QPointF roomCenter(rx, ry);
-                const float roomRadius = (finalRoomSize * rSize) / 2.0f;
-                QPainterPath diameterPath;
-                diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                painter.drawPath(diameterPath);
-            } else {
-                const QRectF shadowRect(rx - (finalRoomSize * rSize * 0.8), ry - (finalRoomSize * rSize * 0.2), finalRoomSize * rSize, finalRoomSize * rSize);
-                painter.drawRect(shadowRect);
-            }
-            painter.restore();
-            roomsDrawn++;
-        }
-    }
-    
-    // Second pass: draw main rooms on current level using existing drawRoom method
+    // Fourth pass: draw main rooms on current level using existing drawRoom method
     for (int roomId : pArea->rooms) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
         if (!pRoom || pRoom->z() != exportZLevel) {
