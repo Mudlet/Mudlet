@@ -463,7 +463,9 @@ int main(int argc, char* argv[])
     // Configure GStreamer plugin paths for multimedia support (OGG, etc.)
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString gstPluginPath = QDir(appDir).filePath("gstreamer-1.0");
-    if (QDir(gstPluginPath).exists()) {
+    bool gstreamerAvailable = QDir(gstPluginPath).exists();
+    
+    if (gstreamerAvailable) {
         if (qputenv("GST_PLUGIN_PATH", gstPluginPath.toLocal8Bit())) {
             qDebug().noquote() << "main(...) INFO - setting GST_PLUGIN_PATH to:" << gstPluginPath;
         }
@@ -482,11 +484,12 @@ int main(int argc, char* argv[])
     
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work:
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        // sound to work. Use GStreamer if available, otherwise fall back to Windows backend
+        const char* backend = gstreamerAvailable ? "gstreamer" : "windows";
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray(backend))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to:" << backend << ".";
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to:" << backend << ", sound may not work.";
         }
     } else {
         qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
