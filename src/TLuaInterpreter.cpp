@@ -3435,7 +3435,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions)
+void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions, const QString &caption)
 {
     lua_State *L = pGlobalLua;
     lua_getglobal(L, "mxp");
@@ -3471,6 +3471,10 @@ void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QS
         lua_pushstring(L, actions[i].toUtf8().constData());
         lua_rawseti(L, -2, i + 1);
     }
+    lua_pop(L, 1);
+
+    lua_pushstring(L, caption.toUtf8().constData());
+    lua_setfield(L, -2, "text");
 
     lua_pop(L, lua_gettop(L));
 
