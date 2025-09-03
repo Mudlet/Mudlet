@@ -477,6 +477,9 @@ void cTelnet::connectIt(const QString& address, int port)
      * wish to use the wide versions of these character which can be used here.
      */
     const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
+     * of the Game Server (or Proxy); %2 is the port number.
+     */
     postMessage(tr("[ INFO ]  - Looking up the details of server: %1:%2 ...").arg(displayAddress, QString::number(port)));
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
@@ -705,9 +708,16 @@ void cTelnet::slot_socketDisconnected()
 
             QStringList reasons;
             if (mDontReconnect) {
-                // Do the same as for the insecure connection mode:
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
                 reasons.append(tr("User Disconnected"));
             } else if (timeOffset >= 0 && timeOffset < 5000) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
                 reasons.append(tr("Connection/login attempt rejected by server"));
             }
 
@@ -723,6 +733,17 @@ void cTelnet::slot_socketDisconnected()
             }
 
             if (reasons.count()) {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected securely, but the connection has been lost.
+                 * It is possible with a secure connection that there is MORE
+                 * than one error message to show, but for English or other
+                 * locales where the singular case (%n==1) is distinct it would
+                 * be perfectly feasible to replace "for %n reason(s)" with
+                 * "because" for that number (1) of errors - however the text
+                 * should then be repeated in the corresponding situation for
+                 * an "open" connection which is different in that it only ever
+                 * has one "reason" to report.
+                 */
                 postMessage(tr("[ ALERT ] - Socket got disconnected, for %n reason(s):\n"
                                "%1",
                                // Intentional comment to separate arguments
@@ -730,7 +751,13 @@ void cTelnet::slot_socketDisconnected()
                                reasons.count())
                                     .arg(reasons.join(QChar::LineFeed)));
             } else {
-                // No problems in the disconnection
+                /*: This message is used when we have been trying to connect or
+                 * we were connected securely or in an open manner, but the
+                 * connection has been lost and we do not have any explaination
+                 * to give to the user as to why. Anyhow, in this case we do not
+                 * have anything more to say about it. This text used in two
+                 * places, ensure the same translation is used in both of them.
+                 */
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             }
 
@@ -739,18 +766,46 @@ void cTelnet::slot_socketDisconnected()
             // We were not connecting securely
             QString reason;
             if (mDontReconnect) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
                 reason = tr("User Disconnected");
             } else if (QAbstractSocket::SslHandshakeFailedError == mpSocket->error()) {
-                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off");
+                //: A reason why a connection to a game server ended.
+                reason = tr("Secure connections not supported by this game on this port; try turning the option off");
             } else if (timeOffset >= 0 && timeOffset < 5000) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
                 reason = tr("Connection/login attempt rejected by server");
-                // successful connection duration under 5s == rejected by server
-            } else {
+            } else if (!mpSocket->errorString().isEmpty()){
                 reason = mpSocket->errorString();
             }
 
-            postMessage(tr("[ ALERT ] - Socket got disconnected.\n"
-                           "Reason: %1.").arg(reason));
+            if (reason.isEmpty()) {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected securely or in an open manner, but the
+                 * connection has been lost and we do not have any explaination
+                 * to give to the user as to why. Anyhow, in this case we do not
+                 * have anything more to say about it. This text used in two
+                 * places, ensure the same translation is used in both of them.
+                 */
+                postMessage(tr("[ ALERT ] - Socket got disconnected."));
+            } else {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected in an open, insecure manner, but the
+                 * connection has been lost. Unlike the secure connection case
+                 * there is only one error message to show; it would be
+                 * desirable to use the same text for this message as the "one
+                 * reason" (%n==1) situation for locales such as English (with
+                 * a distinct form for the singular) use for the secure type
+                 * of connection.
+                 */
+                postMessage(tr("[ ALERT ] - Socket got disconnected, for reason:\n"
+                                           "%1").arg(reason));
+            }
 #if !defined(QT_NO_SSL)
         }
 #endif
@@ -863,7 +918,11 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     const bool hasIPv4_address = (addressList_ipV4.count());
     const bool hasIPv6_address = (addressList_ipV6.count());
     if (!(hasIPv4_address || hasIPv6_address)) {
-        // Haven't got any address to use:
+        /*: This text is used in the (expected) case when the user has provided
+         * a URL for the Game Server rather than (unusually) an IP address.
+         * After a DNS lookup however, we have NOT found any IP addresses which
+         * means that we cannot proceed further to connect to the Game server.
+         */
         postMessage(tr("[ ERROR ] - Host name lookup Failure! A connection cannot be established.\n"
                                    "The server name is not correct, or your nameservers are not\n"
                                    "working properly."));
@@ -874,13 +933,15 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     QStringList addressesToReport;
     for (const auto& address : addressList_ipV6) {
         /*: Used to add an IPv6 address line to the list displayed during
-         * connecting to a Host.
+         * connecting to a Host. Some, e.g. Far Eastern locales may require a
+         * different text here if they do not use spaces, or "wide" '('...')'
          */
         addressesToReport << tr("%1 (IPv6)").arg(address);
     }
     for (const auto& address : addressList_ipV4) {
         /*: Used to add an IPv4 address line to the list displayed during
-         * connecting to a Host.
+         * connecting to a Host. Some, e.g. Far Eastern locales may require a
+         * different text here if they do not use spaces, or "wide" '('...')'
          */
         addressesToReport << tr("%1 (IPv4)").arg(address);
     }
@@ -892,13 +953,28 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
         // what the reverse lookup gave us - but if it is the same thing then
         // there isn't much we can say
         if (!mHostUrl.compare(hostInfo.hostName())) {
-            // No extra information
+            /*: This text is used when the user has provided a raw IP address
+             * for the Game Server rather than a URL. In this case we try to
+             * perform a "reverse-lookup" to see if we can identify the URL that
+             * matches it - but nothing useful was found.
+             */
             postMessage(tr("[ INFO ]  - No further details have been found."));
         } else {
+            /*: This text is used when the user has provided a raw IP address
+             * (%1) for the Game Server rather than a URL. In this case we try
+             * to perform a "reverse-lookup" to see if we can identify the URL
+             * that matches it - and this is used when we have something (%2)
+             * to show.
+             */
             postMessage(tr("[ INFO ]  - A host name for IP address %1 has been found.\n"
                            "It is: %2").arg(mHostUrl, hostInfo.hostName()));
         }
     } else {
+        /*: This text is used in the (expected) case when the user has provided
+         * a URL (%1) for the Game Server rather than (unusually) an IP address.
+         * After a DNS lookup we have found at least one but possibly more (%n)
+         * IP addresses, which will be listed (one per line) as %2.
+         */
         postMessage(tr("[ INFO ]  - The %n IP address(es) of %1 has/have been found. It/They are:\n"
                        "%2",
                        // Intentional comment to separate arguments
@@ -928,9 +1004,17 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
             connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
             if (mConnectViaProxy) {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the proxy and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
                 postMessage(tr("[ INFO ]  - Trying secure (IPv4 and IPv6) connections to %1:%2 via proxy...")
                                     .arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the Server and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
                 postMessage(tr("[ INFO ]  - Trying secure (IPv4 and IPv6) connections to %1:%2 ...")
                                     .arg(hostInfo.hostName(), QString::number(mHostPort)));
             }
@@ -945,9 +1029,15 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
                 if (mConnectViaProxy) {
+                    /*: %1 is the URL for the proxy for the Game Server and %2
+                     * is the port number for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying secure (IPv6) connection to %1:%2 via proxy...")
                                         .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying secure (IPv6) connection to %1:%2 ...")
                                         .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
@@ -960,9 +1050,15 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
                 if (mConnectViaProxy) {
+                    /*: %1 is the URL for the proxy for the Game Server and %2
+                     * is the port number for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying secure (IPv4) connection to %1:%2 via proxy...")
                                         .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying secure (IPv4) connection to %1:%2 ...")
                                         .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
@@ -981,9 +1077,17 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
             connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
             if (mConnectViaProxy) {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the proxy and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
                 postMessage(tr("[ INFO ]  - Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...")
                                     .arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the Server and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
                 postMessage(tr("[ INFO ]  - Trying open (IPv4 and IPv6) connections to %1:%2 ...")
                                     .arg(hostInfo.hostName(), QString::number(mHostPort)));
             }
@@ -997,12 +1101,20 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
                 connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
+                const QString displayAddress = isRawIPv6Address(hostInfo.hostName()) ? tr("[%1]").arg(hostInfo.hostName()) : hostInfo.hostName();
                 if (mConnectViaProxy) {
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * proxy for the Game Server and %2 is the port number for
+                     * the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying open (IPv6) connection to %1:%2 via proxy...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                                        .arg(displayAddress, QString::number(mHostPort)));
                 } else {
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying open (IPv6) connection to %1:%2 ...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                                        .arg(displayAddress, QString::number(mHostPort)));
                 }
 
                 mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
@@ -1013,9 +1125,15 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
                 if (mConnectViaProxy) {
+                    /*: %1 is the URL or IPv4 address for the proxy for the Game
+                     * Server and %2 is the port number for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying open (IPv4) connection to %1:%2 via proxy...")
                                         .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
                     postMessage(tr("[ INFO ]  - Trying open (IPv4) connection to %1:%2 ...")
                                         .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
