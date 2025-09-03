@@ -640,6 +640,47 @@ int TLuaInterpreter::auditAreas(lua_State* L)
     return 0;
 }
 
+#if defined(INCLUDE_3DMAPPER)
+int TLuaInterpreter::shiftMapPerspective(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+    }
+
+    const float verticalAngle = getVerifiedFloat(L, __func__, 1, "verticalAngle");
+    const float horizontalAngle = getVerifiedFloat(L, __func__, 2, "horizontalAngle");
+    const float rotationAngle = getVerifiedFloat(L, __func__, 3, "rotationAngle");
+
+    if (host.mpMap->mpM) {
+        if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(host.mpMap->mpM.data())) {
+        modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
+        }
+    }
+    return 0;
+}
+int TLuaInterpreter::setMapPerspective(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+    }
+
+    const float r = getVerifiedFloat(L, __func__, 1, "r");
+    const float theta = getVerifiedFloat(L, __func__, 2, "theta");
+    const float phi = getVerifiedFloat(L, __func__, 3, "phi");
+
+    if (host.mpMap->mpM) {
+        if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(host.mpMap->mpM.data())) {
+        modernWidget->setCameraPosition(r, theta, phi);
+        }
+    }
+    return 0;
+}
+#endif
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#centerview
 int TLuaInterpreter::centerview(lua_State* L)
 {

@@ -121,8 +121,8 @@ const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
-const char OPT_ATCP = static_cast<char>(200);
-const char OPT_GMCP = static_cast<char>(201);
+const auto OPT_ATCP = static_cast<unsigned char>(200);
+const auto OPT_GMCP = static_cast<unsigned char>(201);
 
 const char CHARSET_REQUEST = 1;
 const char CHARSET_ACCEPTED = 2;
@@ -310,7 +310,7 @@ private:
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
-    void sendTelnetOption(char type, char option);
+    void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData();

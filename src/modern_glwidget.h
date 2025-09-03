@@ -53,6 +53,7 @@
 class Host;
 class TMap;
 class TRoom;
+struct MapInfoProperties;
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -65,6 +66,8 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    void shiftCamera(float, float, float);
+    void setCameraPosition(float, float, float);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -74,6 +77,10 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
+    void slot_shiftCameraUp();
+    void slot_shiftCameraDown();
+    void slot_shiftCameraLeft();
+    void slot_shiftCameraRight();
     void slot_shiftZup();
     void slot_shiftZdown();
     void slot_setCameraPositionX(int angle);
@@ -143,6 +150,7 @@ private:
     int mMapCenterY = 0;
     int mMapCenterZ = 0;
     bool mShiftMode = false;
+    int mFontHeight = 20;
 
     // Scales the size of rooms compared to the space between them - currently
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
