@@ -176,5 +176,19 @@ fi
 echo " ... make finished"
 echo ""
 
+echo "Copying GStreamer plugins to build directory for runtime availability..."
+GSTREAMER_DEST_DIR="./${BUILD_CONFIG}/gstreamer-1.0"
+mkdir -p "${GSTREAMER_DEST_DIR}"
+if [ -d "${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0" ]; then
+  find "${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0" -name "*.dll" -exec cp -v {} "${GSTREAMER_DEST_DIR}/" \;
+  echo "GStreamer plugins copied successfully to ${GSTREAMER_DEST_DIR}"
+  ls -la "${GSTREAMER_DEST_DIR}/"
+else
+  echo "Warning: GStreamer plugins directory not found at ${MINGW_INTERNAL_BASE_DIR}/lib/gstreamer-1.0"
+  echo "Available directories:"
+  ls -la "${MINGW_INTERNAL_BASE_DIR}/lib/" | grep -i gst || echo "No GStreamer directories found"
+fi
+echo ""
+
 cd ~ || exit 1
 exit 0
