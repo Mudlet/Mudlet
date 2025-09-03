@@ -304,7 +304,6 @@ public slots:
     void slot_redo();
     void slot_updateUndoRedoActions();
     void configureTextWidgetUndoBehavior();
-    void configureUIElementUndoBehavior();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
