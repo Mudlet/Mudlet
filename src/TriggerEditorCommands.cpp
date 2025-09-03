@@ -630,24 +630,21 @@ void TextChangeCommand::applyText(const QString& text, int cursorPosition)
         lineEdit->setText(text);
         // Restore cursor position
         lineEdit->setCursorPosition(qMin(cursorPosition, text.length()));
-    }
-    else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(mWidget)) {
+    } else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(mWidget)) {
         const QSignalBlocker blocker(plainTextEdit);
         plainTextEdit->setPlainText(text);
         // Restore cursor position  
         QTextCursor cursor = plainTextEdit->textCursor();
         cursor.setPosition(qMin(cursorPosition, text.length()));
         plainTextEdit->setTextCursor(cursor);
-    }
-    else if (auto* textEdit = qobject_cast<QTextEdit*>(mWidget)) {
+    } else if (auto* textEdit = qobject_cast<QTextEdit*>(mWidget)) {
         const QSignalBlocker blocker(textEdit);
         textEdit->setPlainText(text);
         // Restore cursor position
         QTextCursor cursor = textEdit->textCursor();
         cursor.setPosition(qMin(cursorPosition, text.length()));
         textEdit->setTextCursor(cursor);
-    }
-    else {
+    } else {
         qWarning() << "TextChangeCommand::applyText() - unsupported widget type:" << mWidget->metaObject()->className();
     }
 }
@@ -660,11 +657,9 @@ int TextChangeCommand::getCursorPosition() const
 
     if (auto* lineEdit = qobject_cast<QLineEdit*>(mWidget)) {
         return lineEdit->cursorPosition();
-    }
-    else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(mWidget)) {
+    } else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(mWidget)) {
         return plainTextEdit->textCursor().position();
-    }
-    else if (auto* textEdit = qobject_cast<QTextEdit*>(mWidget)) {
+    } else if (auto* textEdit = qobject_cast<QTextEdit*>(mWidget)) {
         return textEdit->textCursor().position();
     }
     
@@ -679,13 +674,11 @@ void TextChangeCommand::setCursorPosition(int position) const
 
     if (auto* lineEdit = qobject_cast<QLineEdit*>(mWidget)) {
         lineEdit->setCursorPosition(position);
-    }
-    else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(mWidget)) {
+    } else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(mWidget)) {
         QTextCursor cursor = plainTextEdit->textCursor();
         cursor.setPosition(position);
         plainTextEdit->setTextCursor(cursor);
-    }
-    else if (auto* textEdit = qobject_cast<QTextEdit*>(mWidget)) {
+    } else if (auto* textEdit = qobject_cast<QTextEdit*>(mWidget)) {
         QTextCursor cursor = textEdit->textCursor();
         cursor.setPosition(position);
         textEdit->setTextCursor(cursor);
