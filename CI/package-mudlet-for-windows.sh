@@ -199,13 +199,35 @@ fi
 echo ""
 echo "Copying Qt GStreamer multimedia plugin..."
 # Ensure the Qt GStreamer multimedia plugin is available for backend detection
-if [ -f "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/gstreamermediaplugin.dll" ]; then
-  cp -v -p "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/gstreamermediaplugin.dll" ./multimedia/
-  echo "Qt GStreamer multimedia plugin copied successfully"
-else
-  echo "Warning: Qt GStreamer multimedia plugin not found at ${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/"
-  echo "Available Qt multimedia plugins:"
-  ls -la "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/" || echo "Multimedia plugins directory not found"
+# Try multiple possible locations for the Qt GStreamer plugin
+GSTREAMER_PLUGIN_FOUND=false
+POSSIBLE_PATHS=(
+  "${MINGW_INTERNAL_BASE_DIR}/share/qt6/plugins/multimedia/gstreamermediaplugin.dll"
+  "${MINGW_INTERNAL_BASE_DIR}/lib/qt6/plugins/multimedia/gstreamermediaplugin.dll"
+  "${MINGW_INTERNAL_BASE_DIR}/plugins/multimedia/gstreamermediaplugin.dll"
+  "${MINGW_INTERNAL_BASE_DIR}/share/qt/plugins/multimedia/gstreamermediaplugin.dll"
+  "${MINGW_INTERNAL_BASE_DIR}/lib/qt/plugins/multimedia/gstreamermediaplugin.dll"
+)
+
+for PLUGIN_PATH in "${POSSIBLE_PATHS[@]}"; do
+  if [ -f "$PLUGIN_PATH" ]; then
+    cp -v -p "$PLUGIN_PATH" ./multimedia/
+    echo "Qt GStreamer multimedia plugin copied successfully from: $PLUGIN_PATH"
+    GSTREAMER_PLUGIN_FOUND=true
+    break
+  fi
+done
+
+if [ "$GSTREAMER_PLUGIN_FOUND" = false ]; then
+  echo "Warning: Qt GStreamer multimedia plugin not found in any expected locations"
+  echo "Searched locations:"
+  for PLUGIN_PATH in "${POSSIBLE_PATHS[@]}"; do
+    echo "  $PLUGIN_PATH"
+  done
+  echo "Available Qt plugin directories:"
+  find "${MINGW_INTERNAL_BASE_DIR}" -type d -name "*multimedia*" 2>/dev/null || echo "  No multimedia plugin directories found"
+  echo "Available multimedia plugin files:"
+  find "${MINGW_INTERNAL_BASE_DIR}" -name "*mediaplugin*" -type f 2>/dev/null || echo "  No multimedia plugin files found"
 fi
 
 
