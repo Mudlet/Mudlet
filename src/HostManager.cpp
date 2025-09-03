@@ -132,7 +132,7 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    for (auto iHost& : mHostPool.values()) {
+    for (QSharedPointer<Host> iHost : mHostPool.values()) {
         iHost->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
         auto mapper = iHost->mpMap->mpMapper;
