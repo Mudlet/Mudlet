@@ -172,6 +172,9 @@ const char NEW_ENVIRON_USERVAR = 3;
 
 const char MCCP4_ACCEPT_ENCODING = 1;
 const char MCCP4_BEGIN_ENCODING = 2;
+const std::byte MCCP4_ENCODING_NONE {0};
+const std::byte MCCP4_ENCODING_ZSTD {1};
+const std::byte MCCP4_ENCODING_DEFLATE {2};
 
 // MCCP4 supported encodings
 const QStringList MCCP4_SUPPORTED_ENCODINGS{qsl("zstd"), qsl("deflate")};
@@ -398,7 +401,7 @@ private:
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
     bool mMCCP_version_4 = false;
-    int mMCCP4_encoding = 0;
+    std::byte mMCCP4_encoding {0};
 
 
     std::string mMudData;
