@@ -173,8 +173,8 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     labelText << tr("Author") << tr("Version") << tr("Created") << tr("Dependencies");
     details << qsl("author") << qsl("version") << qsl("created") << qsl("dependencies");
     int counter = 0;
-    for (const QString& detail : details) {
-        const QString valueText{packageInfo.take(detail)};
+    for (int i = 0; i < details.size(); i++) {
+        const QString valueText{packageInfo.take(details.at(i))};
         if (valueText.isEmpty()) {
             continue;
         }
