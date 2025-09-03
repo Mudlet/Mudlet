@@ -708,3 +708,147 @@ bool TextChangeCommand::mergeWith(const QUndoCommand* other)
     mNewText = textCmd->mNewText;
     return true;
 }
+
+// CheckboxChangeCommand implementation
+CheckboxChangeCommand::CheckboxChangeCommand(QCheckBox* checkbox, bool oldValue, bool newValue,
+                                           const QString& description, QUndoCommand* parent)
+    : QUndoCommand(parent), mCheckbox(checkbox), mOldValue(oldValue), mNewValue(newValue)
+{
+    QString desc = description.isEmpty() ? 
+                   QString("Change %1").arg(checkbox ? checkbox->objectName() : "checkbox") : 
+                   description;
+    setText(desc);
+}
+
+void CheckboxChangeCommand::undo()
+{
+    if (mCheckbox) {
+        const QSignalBlocker blocker(mCheckbox);
+        mCheckbox->setChecked(mOldValue);
+    }
+}
+
+void CheckboxChangeCommand::redo()
+{
+    if (mCheckbox) {
+        const QSignalBlocker blocker(mCheckbox);
+        mCheckbox->setChecked(mNewValue);
+    }
+}
+
+int CheckboxChangeCommand::id() const
+{
+    return reinterpret_cast<quintptr>(mCheckbox);
+}
+
+bool CheckboxChangeCommand::mergeWith(const QUndoCommand* other)
+{
+    if (id() != other->id()) {
+        return false;
+    }
+    
+    const CheckboxChangeCommand* checkboxCmd = static_cast<const CheckboxChangeCommand*>(other);
+    if (mCheckbox != checkboxCmd->mCheckbox) {
+        return false;
+    }
+    
+    // Merge by updating the new value (keep old value from first change)
+    mNewValue = checkboxCmd->mNewValue;
+    return true;
+}
+
+// SpinboxChangeCommand implementation
+SpinboxChangeCommand::SpinboxChangeCommand(QSpinBox* spinbox, int oldValue, int newValue,
+                                         const QString& description, QUndoCommand* parent)
+    : QUndoCommand(parent), mSpinbox(spinbox), mOldValue(oldValue), mNewValue(newValue)
+{
+    QString desc = description.isEmpty() ? 
+                   QString("Change %1").arg(spinbox ? spinbox->objectName() : "spinbox") : 
+                   description;
+    setText(desc);
+}
+
+void SpinboxChangeCommand::undo()
+{
+    if (mSpinbox) {
+        const QSignalBlocker blocker(mSpinbox);
+        mSpinbox->setValue(mOldValue);
+    }
+}
+
+void SpinboxChangeCommand::redo()
+{
+    if (mSpinbox) {
+        const QSignalBlocker blocker(mSpinbox);
+        mSpinbox->setValue(mNewValue);
+    }
+}
+
+int SpinboxChangeCommand::id() const
+{
+    return reinterpret_cast<quintptr>(mSpinbox);
+}
+
+bool SpinboxChangeCommand::mergeWith(const QUndoCommand* other)
+{
+    if (id() != other->id()) {
+        return false;
+    }
+    
+    const SpinboxChangeCommand* spinboxCmd = static_cast<const SpinboxChangeCommand*>(other);
+    if (mSpinbox != spinboxCmd->mSpinbox) {
+        return false;
+    }
+    
+    // Merge by updating the new value (keep old value from first change)
+    mNewValue = spinboxCmd->mNewValue;
+    return true;
+}
+
+// ComboboxChangeCommand implementation
+ComboboxChangeCommand::ComboboxChangeCommand(QComboBox* combobox, int oldIndex, int newIndex,
+                                           const QString& description, QUndoCommand* parent)
+    : QUndoCommand(parent), mCombobox(combobox), mOldIndex(oldIndex), mNewIndex(newIndex)
+{
+    QString desc = description.isEmpty() ? 
+                   QString("Change %1").arg(combobox ? combobox->objectName() : "combobox") : 
+                   description;
+    setText(desc);
+}
+
+void ComboboxChangeCommand::undo()
+{
+    if (mCombobox) {
+        const QSignalBlocker blocker(mCombobox);
+        mCombobox->setCurrentIndex(mOldIndex);
+    }
+}
+
+void ComboboxChangeCommand::redo()
+{
+    if (mCombobox) {
+        const QSignalBlocker blocker(mCombobox);
+        mCombobox->setCurrentIndex(mNewIndex);
+    }
+}
+
+int ComboboxChangeCommand::id() const
+{
+    return reinterpret_cast<quintptr>(mCombobox);
+}
+
+bool ComboboxChangeCommand::mergeWith(const QUndoCommand* other)
+{
+    if (id() != other->id()) {
+        return false;
+    }
+    
+    const ComboboxChangeCommand* comboCmd = static_cast<const ComboboxChangeCommand*>(other);
+    if (mCombobox != comboCmd->mCombobox) {
+        return false;
+    }
+    
+    // Merge by updating the new index (keep old index from first change)
+    mNewIndex = comboCmd->mNewIndex;
+    return true;
+}

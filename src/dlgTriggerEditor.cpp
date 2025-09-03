@@ -88,6 +88,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     
     // Configure all text widgets for better undo granularity
     QTimer::singleShot(100, this, &dlgTriggerEditor::configureTextWidgetUndoBehavior);
+    
+    // Set up undo support for UI elements after all widgets are created
+    QTimer::singleShot(200, this, &dlgTriggerEditor::setupUndoForUIElements);
 
     // clang-format off
     introAddItem.insert(EditorViewType::cmAliasView, {
@@ -1465,6 +1468,97 @@ void dlgTriggerEditor::slot_updateUndoRedoActions()
     }
 }
 
+void dlgTriggerEditor::setupUndoForUIElements()
+{
+    // Set up undo support for all checkboxes
+    connectCheckBoxWithUndo(mpActionsMainArea->checkBox_action_button_isPushDown, tr("Toggle Push Down Button"));
+    connectCheckBoxWithUndo(checkBox_displayAllVariables, tr("Toggle Hidden Variables"));
+    connectCheckBoxWithUndo(mpVarsMainArea->checkBox_variable_hidden, tr("Hide Variable"));
+    
+    // Find and connect additional UI elements in trigger areas
+    if (mpTriggersMainArea) {
+        QCheckBox* filterCheckBox = mpTriggersMainArea->findChild<QCheckBox*>(qsl("checkBox_filterTrigger"));
+        if (filterCheckBox) {
+            connectCheckBoxWithUndo(filterCheckBox, tr("Filter Trigger"));
+        }
+        
+        QCheckBox* perlSlashCheckBox = mpTriggersMainArea->findChild<QCheckBox*>(qsl("checkBox_perlSlashGOption"));
+        if (perlSlashCheckBox) {
+            connectCheckBoxWithUndo(perlSlashCheckBox, tr("Perl Slash G Option"));
+        }
+        
+        QSpinBox* stayOpenSpinBox = mpTriggersMainArea->findChild<QSpinBox*>(qsl("spinBox_stayOpen"));
+        if (stayOpenSpinBox) {
+            connectSpinBoxWithUndo(stayOpenSpinBox, tr("Stay Open Duration"));
+        }
+        
+        QSpinBox* lineMarginSpinBox = mpTriggersMainArea->findChild<QSpinBox*>(qsl("spinBox_lineMargin"));
+        if (lineMarginSpinBox) {
+            connectSpinBoxWithUndo(lineMarginSpinBox, tr("Line Margin"));
+        }
+    }
+}
+
+void dlgTriggerEditor::connectCheckBoxWithUndo(QCheckBox* checkBox, const QString& description)
+{
+    if (!checkBox || !mUndoStack) return;
+    
+    // Store initial value
+    mCheckBoxOldValues[checkBox] = checkBox->isChecked();
+    
+    // Connect to state change signal
+    connect(checkBox, &QCheckBox::toggled, this, [this, checkBox, description](bool checked) {
+        if (!mCreatingFromUndoCommand && mUndoStack) {
+            bool oldValue = mCheckBoxOldValues[checkBox];
+            if (oldValue != checked) {
+                CheckboxChangeCommand* cmd = new CheckboxChangeCommand(checkBox, oldValue, checked, description);
+                mUndoStack->push(cmd);
+                mCheckBoxOldValues[checkBox] = checked;
+            }
+        }
+    });
+}
+
+void dlgTriggerEditor::connectSpinBoxWithUndo(QSpinBox* spinBox, const QString& description)
+{
+    if (!spinBox || !mUndoStack) return;
+    
+    // Store initial value
+    mSpinBoxOldValues[spinBox] = spinBox->value();
+    
+    // Connect to value change signal
+    connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, [this, spinBox, description](int value) {
+        if (!mCreatingFromUndoCommand && mUndoStack) {
+            int oldValue = mSpinBoxOldValues[spinBox];
+            if (oldValue != value) {
+                SpinboxChangeCommand* cmd = new SpinboxChangeCommand(spinBox, oldValue, value, description);
+                mUndoStack->push(cmd);
+                mSpinBoxOldValues[spinBox] = value;
+            }
+        }
+    });
+}
+
+void dlgTriggerEditor::connectComboBoxWithUndo(QComboBox* comboBox, const QString& description)
+{
+    if (!comboBox || !mUndoStack) return;
+    
+    // Store initial value
+    mComboBoxOldValues[comboBox] = comboBox->currentIndex();
+    
+    // Connect to index change signal
+    connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, comboBox, description](int index) {
+        if (!mCreatingFromUndoCommand && mUndoStack) {
+            int oldIndex = mComboBoxOldValues[comboBox];
+            if (oldIndex != index) {
+                ComboboxChangeCommand* cmd = new ComboboxChangeCommand(comboBox, oldIndex, index, description);
+                mUndoStack->push(cmd);
+                mComboBoxOldValues[comboBox] = index;
+            }
+        }
+    });
+}
+
 void dlgTriggerEditor::slot_hideVariable(bool status)
 {
     LuaInterface* lI = mpHost->getLuaInterface();
@@ -1915,9 +2009,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         const QStringList varShort = pItem->data(0, IdRole).toStringList();
         QList<QTreeWidgetItem*> list;
         recurseVariablesDown(mpVarBaseItem, list);
-        QListIterator<QTreeWidgetItem*> it(list);
-        while (it.hasNext()) {
-            QTreeWidgetItem* treeWidgetItem = it.next();
+        for (QTreeWidgetItem* treeWidgetItem : list) {
             TVar* var = vu->getWVar(treeWidgetItem);
             if (vu->shortVarName(var) == varShort) {
                 show_vars();
@@ -2007,9 +2099,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     TVar* base = vu->getBase();
-    QListIterator<TVar*> itBaseVarChildren(base->getChildren(false));
-    while (itBaseVarChildren.hasNext()) {
-        TVar* var = itBaseVarChildren.next();
+    for (TVar* var : base->getChildren(false)) {
         // We do not search for hidden variables - probably because we would
         // have to unhide all of them to show the hidden ones found by
         // searching
@@ -2020,9 +2110,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
         //recurse down this variable
         QList<TVar*> list;
         recursiveSearchVariables(var, list, false);
-        QListIterator<TVar*> itVarDecendent(list);
-        while (itVarDecendent.hasNext()) {
-            TVar* varDecendent = itVarDecendent.next();
+        for (TVar* varDecendent : list) {
             if (!showHiddenVars && vu->isHidden(varDecendent)) {
                 continue;
             }
@@ -2040,9 +2128,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             if (idStringList.size() > 1) {
                 QStringList midStrings = idStringList;
                 idString = midStrings.takeFirst();
-                QStringListIterator itSubString(midStrings);
-                while (itSubString.hasNext()) {
-                    const QString intermediate = itSubString.next();
+                for (const QString& intermediate : midStrings) {
                     bool isOk = false;
                     const int numberValue = intermediate.toInt(&isOk);
                     if (isOk && QString::number(numberValue) == intermediate) {
@@ -5350,8 +5436,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
 void dlgTriggerEditor::selectTriggerByID(int id)
 {
     slot_showTriggers();
-    QTreeWidgetItemIterator it(treeWidget_triggers);
-    while (*it) {
+    for (QTreeWidgetItemIterator it(treeWidget_triggers); *it; ++it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_triggerSelected((*it));
             treeWidget_triggers->setCurrentItem((*it), 0);
@@ -5359,15 +5444,13 @@ void dlgTriggerEditor::selectTriggerByID(int id)
             mpCurrentTriggerItem = (*it);
             return;
         }
-        ++it;
     }
 }
 
 void dlgTriggerEditor::selectTimerByID(int id)
 {
     slot_showTimers();
-    QTreeWidgetItemIterator it(treeWidget_timers);
-    while (*it) {
+    for (QTreeWidgetItemIterator it(treeWidget_timers); *it; ++it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_timerSelected((*it));
             treeWidget_timers->setCurrentItem((*it), 0);
@@ -5375,15 +5458,13 @@ void dlgTriggerEditor::selectTimerByID(int id)
             mpCurrentTimerItem = (*it);
             return;
         }
-        ++it;
     }
 }
 
 void dlgTriggerEditor::selectAliasByID(int id)
 {
     slot_showAliases();
-    QTreeWidgetItemIterator it(treeWidget_aliases);
-    while (*it) {
+    for (QTreeWidgetItemIterator it(treeWidget_aliases); *it; ++it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_aliasSelected((*it));
             treeWidget_aliases->setCurrentItem((*it), 0);
@@ -5391,15 +5472,13 @@ void dlgTriggerEditor::selectAliasByID(int id)
             mpCurrentAliasItem = (*it);
             return;
         }
-        ++it;
     }
 }
 
 void dlgTriggerEditor::selectScriptByID(int id)
 {
     slot_showScripts();
-    QTreeWidgetItemIterator it(treeWidget_scripts);
-    while (*it) {
+    for (QTreeWidgetItemIterator it(treeWidget_scripts); *it; ++it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_scriptsSelected((*it));
             treeWidget_scripts->setCurrentItem((*it), 0);
@@ -5407,15 +5486,13 @@ void dlgTriggerEditor::selectScriptByID(int id)
             mpCurrentScriptItem = (*it);
             return;
         }
-        ++it;
     }
 }
 
 void dlgTriggerEditor::selectActionByID(int id)
 {
     slot_showActions();
-    QTreeWidgetItemIterator it(treeWidget_actions);
-    while (*it) {
+    for (QTreeWidgetItemIterator it(treeWidget_actions); *it; ++it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_actionSelected((*it));
             treeWidget_actions->setCurrentItem((*it), 0);
@@ -5423,15 +5500,13 @@ void dlgTriggerEditor::selectActionByID(int id)
             mpCurrentActionItem = (*it);
             return;
         }
-        ++it;
     }
 }
 
 void dlgTriggerEditor::selectKeyByID(int id)
 {
     slot_showKeys();
-    QTreeWidgetItemIterator it(treeWidget_keys);
-    while (*it) {
+    for (QTreeWidgetItemIterator it(treeWidget_keys); *it; ++it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_keySelected((*it));
             treeWidget_keys->setCurrentItem((*it), 0);
@@ -5439,7 +5514,6 @@ void dlgTriggerEditor::selectKeyByID(int id)
             mpCurrentKeyItem = (*it);
             return;
         }
-        ++it;
     }
 }
 
@@ -7139,9 +7213,8 @@ void dlgTriggerEditor::recurseVariablesDown(QTreeWidgetItem* const pItem, QList<
 void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, bool isSorted)
 {
     list.append(var);
-    QListIterator<TVar*> it(var->getChildren(isSorted));
-    while (it.hasNext()) {
-        recursiveSearchVariables(it.next(), list, isSorted);
+    for (TVar* child : var->getChildren(isSorted)) {
+        recursiveSearchVariables(child, list, isSorted);
     }
 }
 

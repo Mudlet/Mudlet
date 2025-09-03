@@ -657,6 +657,17 @@ private:
     friend class DeleteItemCommand;
     friend class AddItemCommand;
     friend class PropertyChangeCommand;
+    
+    // Helper methods for UI element undo support
+    void setupUndoForUIElements();
+    void connectCheckBoxWithUndo(QCheckBox* checkBox, const QString& description);
+    void connectSpinBoxWithUndo(QSpinBox* spinBox, const QString& description);
+    void connectComboBoxWithUndo(QComboBox* comboBox, const QString& description);
+    
+    // Storage for tracking old values for undo
+    QMap<QCheckBox*, bool> mCheckBoxOldValues;
+    QMap<QSpinBox*, int> mSpinBoxOldValues;
+    QMap<QComboBox*, int> mComboBoxOldValues;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

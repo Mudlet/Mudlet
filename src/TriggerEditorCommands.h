@@ -24,6 +24,12 @@
 #include <QTreeWidgetItem>
 #include <QVariant>
 #include <QString>
+#include <QCheckBox>
+#include <QSpinBox>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QTextEdit>
 #include <memory>
 
 class dlgTriggerEditor;
@@ -154,6 +160,66 @@ public:
 private:
     dlgTriggerEditor* mEditor;
     QList<DeleteItemCommand*> mDeleteCommands;
+};
+
+// Command for checkbox/toggle changes
+class CheckboxChangeCommand : public QUndoCommand
+{
+public:
+    CheckboxChangeCommand(QCheckBox* checkbox, bool oldValue, bool newValue,
+                         const QString& description = QString(), QUndoCommand* parent = nullptr);
+    ~CheckboxChangeCommand() override = default;
+
+    void undo() override;
+    void redo() override;
+    
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    QCheckBox* mCheckbox;
+    bool mOldValue;
+    bool mNewValue;
+};
+
+// Command for spinbox changes
+class SpinboxChangeCommand : public QUndoCommand
+{
+public:
+    SpinboxChangeCommand(QSpinBox* spinbox, int oldValue, int newValue,
+                        const QString& description = QString(), QUndoCommand* parent = nullptr);
+    ~SpinboxChangeCommand() override = default;
+
+    void undo() override;
+    void redo() override;
+    
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    QSpinBox* mSpinbox;
+    int mOldValue;
+    int mNewValue;
+};
+
+// Command for combobox changes
+class ComboboxChangeCommand : public QUndoCommand
+{
+public:
+    ComboboxChangeCommand(QComboBox* combobox, int oldIndex, int newIndex,
+                         const QString& description = QString(), QUndoCommand* parent = nullptr);
+    ~ComboboxChangeCommand() override = default;
+
+    void undo() override;
+    void redo() override;
+    
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    QComboBox* mCombobox;
+    int mOldIndex;
+    int mNewIndex;
 };
 
 #endif // MUDLET_TRIGGEREDITORCOMMANDS_H
