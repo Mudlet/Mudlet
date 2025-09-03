@@ -49,7 +49,7 @@ void markQString(QString* text)
     // Mark trailing spaces after $ with a middle dot
     if (trimmedText.back() == '$') {
         auto lastNonSpace = std::find_if_not(text->rbegin(), text->rend(), [](QChar c) {return c == QChar(' '); });
-        std::replace(text->end() - lastNonSpace, text->end(), QChar(' '), middleDot);
+        std::replace(lastNonSpace, text->end(), QChar(' '), middleDot);
     }
 }
 
