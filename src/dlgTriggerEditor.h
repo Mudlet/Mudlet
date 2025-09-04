@@ -328,6 +328,8 @@ private slots:
 public:
     TConsole* mpErrorConsole = nullptr;
     bool mNeedUpdateData = false;
+    bool mCreatingFromUndoCommand = false; // Flag to prevent recursion - public for undo commands
+    bool mIsLoadingItem = false; // Flag to prevent undo commands when loading UI
 
 private:
     void populateTriggers();
@@ -563,7 +565,6 @@ private:
     QAction* mUndoAction = nullptr;
     QAction* mRedoAction = nullptr;
     QUndoStack* mUndoStack = nullptr;
-    bool mCreatingFromUndoCommand = false; // Flag to prevent recursion
 
     SearchOptions mSearchOptions = SearchOptionNone;
     QSplitter* searchSplitter;

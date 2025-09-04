@@ -41,6 +41,9 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QClipboard>
+#include "edbee/models/textdocument.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/texteditorcontroller.h"
 
 // DeleteItemCommand implementation
 DeleteItemCommand::DeleteItemCommand(dlgTriggerEditor* editor, QTreeWidgetItem* item, 
@@ -850,5 +853,105 @@ bool ComboboxChangeCommand::mergeWith(const QUndoCommand* other)
     
     // Merge by updating the new index (keep old index from first change)
     mNewIndex = comboCmd->mNewIndex;
+    return true;
+}
+
+// LuaEditorChangeCommand implementation  
+LuaEditorChangeCommand::LuaEditorChangeCommand(dlgTriggerEditor* editor, edbee::TextEditorWidget* luaEditor,
+                                             const QString& description, QUndoCommand* parent)
+    : QUndoCommand(parent), mEditor(editor), mLuaEditor(luaEditor)
+{
+    QString desc = description.isEmpty() ? "Lua editor change" : description;
+    setText(desc);
+    
+    // Capture initial state
+    captureCurrentState();
+}
+
+void LuaEditorChangeCommand::captureCurrentState()
+{
+    if (!mLuaEditor) return;
+    
+    auto* controller = mLuaEditor->controller();
+    if (!controller) return;
+    
+    auto* document = controller->textDocument();
+    if (!document) return;
+    
+    // Store current state as "new" state (what we're changing to)
+    mNewText = document->text();
+    mNewCaretPos = 0; // Simplified for now - just focus on text content
+    
+    // The "old" state will be set when we have a reference point
+    // For now, assume we're starting fresh
+    if (mOldText.isEmpty()) {
+        mOldText = mNewText;
+        mOldCaretPos = 0;
+    }
+}
+
+void LuaEditorChangeCommand::restoreState(const QString& text, int caretPos)
+{
+    if (!mLuaEditor || !mEditor) return;
+    
+    auto* controller = mLuaEditor->controller();
+    if (!controller) return;
+    
+    auto* document = controller->textDocument();
+    if (!document) return;
+    
+    // Temporarily disable unified undo tracking during restoration
+    bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
+    mEditor->mCreatingFromUndoCommand = true;
+    
+    // Restore text (caret positioning simplified for now)
+    document->setText(text);
+    // TODO: Restore caret position when we figure out the correct API
+    
+    // Restore the flag
+    mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+}
+
+void LuaEditorChangeCommand::undo()
+{
+    qDebug() << "LuaEditorChangeCommand::undo() - Restoring Lua editor text";
+    restoreState(mOldText, mOldCaretPos);
+}
+
+void LuaEditorChangeCommand::redo()
+{
+    qDebug() << "LuaEditorChangeCommand::redo() - Applying Lua editor change (first:" << mIsFirstRedo << ")";
+    
+    if (mIsFirstRedo) {
+        // First redo (when command is initially pushed) - capture the change that was made
+        mIsFirstRedo = false;
+        // Text is already changed, just capture the new state
+        captureCurrentState();
+    } else {
+        // Subsequent redo operations - restore the "new" state
+        restoreState(mNewText, mNewCaretPos);
+    }
+}
+
+int LuaEditorChangeCommand::id() const
+{
+    // Use a unique ID for Lua editor changes
+    return reinterpret_cast<quintptr>(mLuaEditor) + 1000000; // Offset to avoid conflicts
+}
+
+bool LuaEditorChangeCommand::mergeWith(const QUndoCommand* other)
+{
+    if (id() != other->id()) {
+        return false;
+    }
+    
+    const LuaEditorChangeCommand* luaCmd = static_cast<const LuaEditorChangeCommand*>(other);
+    if (mLuaEditor != luaCmd->mLuaEditor) {
+        return false;
+    }
+    
+    // Merge by updating the new state (keep old state from first change)
+    mNewText = luaCmd->mNewText;
+    mNewCaretPos = luaCmd->mNewCaretPos;
     return true;
 }

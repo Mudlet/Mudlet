@@ -222,4 +222,39 @@ private:
     int mNewIndex;
 };
 
+// Forward declaration
+class dlgTriggerEditor;
+namespace edbee { class TextEditorWidget; }
+
+// Command for Lua editor changes to integrate with unified undo system
+class LuaEditorChangeCommand : public QUndoCommand
+{
+public:
+    LuaEditorChangeCommand(dlgTriggerEditor* editor, edbee::TextEditorWidget* luaEditor,
+                          const QString& description = QString(), QUndoCommand* parent = nullptr);
+    ~LuaEditorChangeCommand() override = default;
+
+    void undo() override;
+    void redo() override;
+    
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    dlgTriggerEditor* mEditor;
+    edbee::TextEditorWidget* mLuaEditor;
+    
+    // Store the state when the command is created
+    QString mOldText;
+    QString mNewText;
+    int mOldCaretPos;
+    int mNewCaretPos;
+    
+    // Track if this is the first redo (when command is initially executed)
+    bool mIsFirstRedo = true;
+    
+    void captureCurrentState();
+    void restoreState(const QString& text, int caretPos);
+};
+
 #endif // MUDLET_TRIGGEREDITORCOMMANDS_H
