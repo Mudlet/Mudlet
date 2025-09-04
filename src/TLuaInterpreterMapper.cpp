@@ -3971,8 +3971,37 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
-    const QString filePath = getVerifiedString(L, __func__, 2, "file path");
+    // Handle optional areaId parameter - default to current player's area
+    int areaId;
+    if (lua_gettop(L) < 1 || lua_isnil(L, 1)) {
+        // Get current player's room and area
+        auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
+        if (roomID == -1) {
+            return warnArgumentValue(L, __func__, "no areaID provided and the player does not have a valid roomID set");
+        }
+        TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+        if (!pR) {
+            return warnArgumentValue(L, __func__, "no areaID provided and the player's current room is invalid");
+        }
+        areaId = pR->getArea();
+    } else {
+        areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    }
+
+    // Handle optional filePath parameter - default to profile home directory
+    QString filePath;
+    if (lua_gettop(L) < 2 || lua_isnil(L, 2)) {
+        filePath = mudlet::getMudletPath(enums::profileHomePath, host.getName());
+        if (!filePath.endsWith('/') && !filePath.endsWith('\\')) {
+            filePath.append('/');
+        }
+    } else {
+        filePath = getVerifiedString(L, __func__, 2, "file path");
+        // Ensure trailing slash for user-provided paths
+        if (!filePath.endsWith('/') && !filePath.endsWith('\\')) {
+            filePath.append('/');
+        }
+    }
     
     std::optional<int> zLevel = std::nullopt;
     bool exportAllZLevels = false;
