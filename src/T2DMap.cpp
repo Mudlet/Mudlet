@@ -5426,6 +5426,12 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     // Flush symbol cache to ensure symbols are regenerated with export dimensions
     flushSymbolPixmapCache();
     
+    // Calculate if room IDs should be legible based on export room size
+    // Similar to logic in paintEvent, but using export dimensions
+    QRectF roomRect(0, 0, finalRoomSize, finalRoomSize);
+    QFont testFont = roomVNumFont;
+    bool areRoomIdsLegible = mShowRoomID && sizeFontToFitTextInRect(testFont, roomRect, qsl("12345"), 10, 7.0);
+    
     QPen pen;
     pen.setColor(mpHost->mFgColor_2);
     // Use the same exitWidth calculation as paintEvent (Qt handles scaling via devicePixelRatio)
@@ -5963,7 +5969,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         
         // Use the existing drawRoom method!
         drawRoom(painter, roomVNumFont, mapNameFont, pen, pRoom, pArea->gridMode, 
-                false /* areRoomIdsLegible */, false /* showRoomNames */, 
+                areRoomIdsLegible, false /* showRoomNames */, 
                 -1 /* speedWalkStartRoomId */, rx, ry, areaExitsMap, false /* showRoomCollision */);
         
         roomsDrawn++;
