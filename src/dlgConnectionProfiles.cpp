@@ -1889,7 +1889,8 @@ bool dlgConnectionProfiles::validateProfile()
              */
             notificationAreaMessageBox->setText(qsl("%1%2\n\n%3").arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
                                                                       tr("Please enter the URL of the Game server.\n\n"
-                                                                         "<i>SSL connections require the URL of the Game server.</i>"),
+                                                                         "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
+                                                                         "identifier for the certification of the Game Server.</i>"),
                                                                       check.errorString()));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
