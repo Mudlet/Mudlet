@@ -247,14 +247,12 @@ private:
     // Store the state when the command is created
     QString mOldText;
     QString mNewText;
-    int mOldCaretPos;
-    int mNewCaretPos;
     
     // Track if this is the first redo (when command is initially executed)
     bool mIsFirstRedo = true;
     
     void captureCurrentState();
-    void restoreState(const QString& text, int caretPos);
+    void restoreState(const QString& text);
 };
 
 #endif // MUDLET_TRIGGEREDITORCOMMANDS_H

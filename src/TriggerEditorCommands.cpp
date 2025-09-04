@@ -880,17 +880,14 @@ void LuaEditorChangeCommand::captureCurrentState()
     
     // Store current state as "new" state (what we're changing to)
     mNewText = document->text();
-    mNewCaretPos = 0; // Simplified for now - just focus on text content
     
-    // The "old" state will be set when we have a reference point
-    // For now, assume we're starting fresh
+    // Initialize old state if empty
     if (mOldText.isEmpty()) {
         mOldText = mNewText;
-        mOldCaretPos = 0;
     }
 }
 
-void LuaEditorChangeCommand::restoreState(const QString& text, int caretPos)
+void LuaEditorChangeCommand::restoreState(const QString& text)
 {
     if (!mLuaEditor || !mEditor) return;
     
@@ -904,9 +901,8 @@ void LuaEditorChangeCommand::restoreState(const QString& text, int caretPos)
     bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
     mEditor->mCreatingFromUndoCommand = true;
     
-    // Restore text (caret positioning simplified for now)
+    // Restore text content
     document->setText(text);
-    // TODO: Restore caret position when we figure out the correct API
     
     // Restore the flag
     mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
@@ -915,7 +911,7 @@ void LuaEditorChangeCommand::restoreState(const QString& text, int caretPos)
 void LuaEditorChangeCommand::undo()
 {
     qDebug() << "LuaEditorChangeCommand::undo() - Restoring Lua editor text";
-    restoreState(mOldText, mOldCaretPos);
+    restoreState(mOldText);
 }
 
 void LuaEditorChangeCommand::redo()
@@ -929,7 +925,7 @@ void LuaEditorChangeCommand::redo()
         captureCurrentState();
     } else {
         // Subsequent redo operations - restore the "new" state
-        restoreState(mNewText, mNewCaretPos);
+        restoreState(mNewText);
     }
 }
 
@@ -952,6 +948,5 @@ bool LuaEditorChangeCommand::mergeWith(const QUndoCommand* other)
     
     // Merge by updating the new state (keep old state from first change)
     mNewText = luaCmd->mNewText;
-    mNewCaretPos = luaCmd->mNewCaretPos;
     return true;
 }
