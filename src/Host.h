@@ -42,10 +42,19 @@
 #include "enums.h"
 
 #include "pre_guard.h"
+#include <QColor>
+#include <QFile>
+#include <QFont>
 #include <QString>
 #include <QList>
+#include <QMargins>
 #include <QPointer>
+#include <QStack>
+#include <QTextStream>
 #include "post_guard.h"
+
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
 
 // Forward declaration for TutorialProfile
 class TutorialProfile;

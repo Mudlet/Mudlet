@@ -1358,6 +1358,21 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
     }
 }
+
+
+QPair<int, QString> Host::createStopWatch(const QString& name)
+{
+    if (mResetProfile || mBlockStopWatchCreation) {
+        // Don't create stopwatches when test loading scripts or during a profile reset:
+        return qMakePair(0, qsl("unable to create a stopwatch at this time"));
+    }
+
+    if (!mStopWatchMap.isEmpty() && !name.isEmpty()) {
+        QMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
+        while (itStopWatch.hasNext()) {
+            itStopWatch.next();
+            if (itStopWatch.value()->name() == name) {
+
                 return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
