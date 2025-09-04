@@ -45,6 +45,7 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
+#include <QStandardPaths>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -6072,6 +6073,9 @@ void T2DMap::slot_exportAreaToImage()
         areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAreaID, areaName);
     }
 
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value("lastExportAreaImageDirectory", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).toString();
+
     QString defaultFileName;
     if (!areaName.isEmpty()) {
         // Use sanitized area name for filename
@@ -6080,14 +6084,20 @@ void T2DMap::slot_exportAreaToImage()
         // Fall back to area ID if no area name
         defaultFileName = tr("area_%1.png").arg(mAreaID);
     }
+    
+    QString fullPath = qsl("%1/%2").arg(lastDir, defaultFileName);
     QString filePath = QFileDialog::getSaveFileName(this,
                                                     tr("Export Area %1 to Image").arg(areaName),
-                                                    defaultFileName,
+                                                    fullPath,
                                                     tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tiff);;All Files (*)"));
     
     if (filePath.isEmpty()) {
         return;
     }
+
+    // Remember the directory for next time
+    QString selectedDir = QFileInfo(filePath).absolutePath();
+    settings.setValue("lastExportAreaImageDirectory", selectedDir);
 
     auto result = exportAreaToImage(mAreaID, filePath);
     
