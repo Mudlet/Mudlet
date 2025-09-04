@@ -410,13 +410,13 @@ void ModernGLWidget::renderRooms()
         if (isCurrentRoom) {
             // Current room: red
             QMatrix4x4 transform = QMatrix4x4();
-            transform.translate(rx,ry,rz);
+            transform.translate(rx, ry, rz);
             transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
         } else if (isTargetRoom) {
             // Target room: green
             QMatrix4x4 transform = QMatrix4x4();
-            transform.translate(rx,ry,rz);
+            transform.translate(rx, ry, rz);
             transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             targetRoomInstances.append(CubeInstanceData(transform, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
@@ -470,7 +470,7 @@ void ModernGLWidget::renderRooms()
             }
             
             QMatrix4x4 transform = QMatrix4x4();
-            transform.translate(rx,ry,rz);
+            transform.translate(rx, ry, rz);
             transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             mainRoomInstances.append(CubeInstanceData(transform, redComponent, greenComponent, blueComponent, roomAlpha));
         }
@@ -516,7 +516,7 @@ void ModernGLWidget::renderRooms()
         }
         
         QMatrix4x4 transform = QMatrix4x4();
-        transform.translate(rx,ry,overlayZ);
+        transform.translate(rx, ry, overlayZ);
         transform.scale(0.75f / scale, 0.75f / scale, 1.0f / scale / zFlattening);
         overlayInstances.append(CubeInstanceData(transform, envRed, envGreen, envBlue, overlayAlpha));
 
@@ -580,7 +580,7 @@ void ModernGLWidget::renderConnections()
     }
 
     QVector<CubeInstanceData> roomConnectionInstances;
-    const QVector3D zVector = QVector3D(0,0,1);
+    const QVector3D zVector = QVector3D(0, 0, 1);
 
     float pz = static_cast<float>(mMapCenterZ);
 
@@ -751,7 +751,7 @@ void ModernGLWidget::renderConnections()
 
                 // Render green area exit cube at the destination position with translucency and darkening
                 transform.setToIdentity();
-                transform.translate(dx,dy,dz);
+                transform.translate(dx, dy, dz);
                 transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
                 areaExitInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
 
@@ -774,7 +774,7 @@ void ModernGLWidget::renderConnections()
                 }
                 
                 transform.setToIdentity();
-                transform.translate(dx,dy,overlayZ);
+                transform.translate(dx, dy, overlayZ);
                 transform.scale(0.5f/scale, 0.5f/scale, 1.0f/scale/zFlattening);
                 areaExitInstances.append(CubeInstanceData(transform, exitEnvRed, exitEnvGreen, exitEnvBlue, overlayAlpha));
             }

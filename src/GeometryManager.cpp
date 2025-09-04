@@ -142,7 +142,7 @@ GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, fl
     }
     
     QMatrix4x4 transform = QMatrix4x4();
-    transform.translate(x,y,z);
+    transform.translate(x, y, z);
     transform.scale(size);
     return transformCubeTemplate(transform, r, g, b, a);
 }
