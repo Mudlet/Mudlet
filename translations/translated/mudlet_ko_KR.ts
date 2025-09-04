@@ -105,7 +105,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1922"/>
       <source>Module &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
-      <translation type="unfinished"/>
+      <translation>모듈 &quot;%1&quot; 가 이미 설치되어 있습니다. 먼저 제거하거나 다른 이름을 선택하십시오.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1965"/>
@@ -1750,7 +1750,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="534"/>
       <source>Show Connection Indicators on Tabs</source>
       <extracomment>This is an item in the context menu when clicked on a detached tab.</extracomment>
-      <translation type="unfinished"/>
+      <translation>탭에 연결 표시기 표시</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="595"/>
@@ -8549,13 +8549,13 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="238"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
       <source>Join our community on &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt; or in &lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;Mudlet forums&lt;/a&gt; - See you there!</source>
-      <translation type="unfinished"/>
+      <translation>커뮤니티에 가입하세요 &lt;a href="https://www.mudlet.org/chat">디스코드&lt;/a> 또는 &lt;a href="https://forums.mudlet.org/">Mudlet 포럼&lt;/a> - 거기서 만나요!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="124"/>
       <source>How to add a new trigger from the input line</source>
       <extracomment>Name of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>입력 라인에서 새 트리거를 추가하는 방법</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="129"/>
@@ -8573,13 +8573,13 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="134"/>
       <source>You are thirsty.</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the text from game which will be triggered on, and reacted to with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>당신은 목이 마릅니다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="136"/>
       <source>drink water</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text &quot;You are thirsty.&quot; from game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>물을 마시다.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="143"/>
@@ -8670,7 +8670,7 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2907"/>
       <source>Delete Alias(es)</source>
-      <translation type="unfinished"/>
+      <translation>줄임말 삭제</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2973"/>
@@ -8688,12 +8688,12 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2980"/>
       <source>Delete Button(s)</source>
-      <translation type="unfinished"/>
+      <translation>버튼 삭제</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3057"/>
       <source>Do you really want to delete variable &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>"%1" 변수를 정말 삭제 하시겠습니까?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
@@ -8701,12 +8701,15 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 변수를 정말 삭제 하시겠습니까?
+
+삭제 할 항목:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3064"/>
       <source>Delete Variable(s)</source>
-      <translation type="unfinished"/>
+      <translation>변수 삭제</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3137"/>
@@ -9286,7 +9289,7 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9674"/>
       <source>No valid actions found to export.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9684"/>
