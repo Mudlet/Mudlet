@@ -535,7 +535,7 @@ void ModernGLWidget::renderRooms()
                                                                     mCameraController.getModelMatrix());
         mRenderCommandQueue.addCommand(std::move(command));
     }
-
+    
     if (!overlayInstances.isEmpty()) {
         // Disable depth testing for overlays like the original
         auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
@@ -565,6 +565,10 @@ void ModernGLWidget::renderConnections()
     }
 
     float pz = static_cast<float>(mMapCenterZ);
+
+    // Initialize instance queues
+    QVector<CubeInstanceData> areaExitInstances;
+    QVector<CubeInstanceData> overlayInstances;
 
     // Collect all lines to draw
     QVector<float> lineVertices;
@@ -709,7 +713,10 @@ void ModernGLWidget::renderConnections()
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
 
                 // Render green area exit cube at the destination position with translucency and darkening
-                renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
+                QMatrix4x4 transform = QMatrix4x4();
+                transform.translate(dx,dy,dz);
+                transform.scale(1.0f / scale);
+                areaExitInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
                 QColor envColor = getEnvironmentColor(pExit);
@@ -729,14 +736,10 @@ void ModernGLWidget::renderConnections()
                     exitEnvBlue *= darkenFactor;
                 }
                 
-                renderCube(dx,
-                           dy,
-                           overlayZ,
-                           0.5f / scale, // Much smaller overlay
-                           exitEnvRed,
-                           exitEnvGreen,
-                           exitEnvBlue,
-                           overlayAlpha);
+                transform.setToIdentity();
+                transform.translate(dx,dy,overlayZ);
+                transform.scale(0.5f / scale);
+                overlayInstances.append(CubeInstanceData(transform, exitEnvRed, exitEnvGreen, exitEnvBlue, overlayAlpha));
             }
         }
     }
@@ -744,6 +747,30 @@ void ModernGLWidget::renderConnections()
     // Render all collected lines
     if (!lineVertices.isEmpty()) {
         renderLines(lineVertices, lineColors);
+    }
+
+    if (!areaExitInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(areaExitInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!overlayInstances.isEmpty()) {
+        // Disable depth testing for overlays like the original
+        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+
+        auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+
+        // Re-enable depth testing for subsequent rendering
+        auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+        mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
     }
 }
 
