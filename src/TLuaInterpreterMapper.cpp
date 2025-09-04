@@ -3966,7 +3966,7 @@ int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportAreaImage
 int TLuaInterpreter::exportAreaImage(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (!host.mpMap) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
