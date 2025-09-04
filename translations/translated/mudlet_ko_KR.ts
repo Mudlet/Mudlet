@@ -4583,7 +4583,8 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="596"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 소켓 연결이 끊어졌습니다.
+이유: %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="644"/>
@@ -6731,7 +6732,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="190"/>
