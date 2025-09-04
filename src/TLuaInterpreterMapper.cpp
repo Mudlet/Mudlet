@@ -3988,20 +3988,8 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         areaId = getVerifiedInt(L, __func__, 1, "areaID");
     }
 
-    // Handle optional filePath parameter - default to profile home directory
-    QString filePath;
-    if (lua_gettop(L) < 2 || lua_isnil(L, 2)) {
-        filePath = mudlet::getMudletPath(enums::profileHomePath, host.getName());
-        if (!filePath.endsWith('/') && !filePath.endsWith('\\')) {
-            filePath.append('/');
-        }
-    } else {
-        filePath = getVerifiedString(L, __func__, 2, "file path");
-        // Ensure trailing slash for user-provided paths
-        if (!filePath.endsWith('/') && !filePath.endsWith('\\')) {
-            filePath.append('/');
-        }
-    }
+    // filePath parameter is required
+    const QString filePath = getVerifiedString(L, __func__, 2, "file path");
     
     std::optional<int> zLevel = std::nullopt;
     bool exportAllZLevels = false;
