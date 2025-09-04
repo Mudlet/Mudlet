@@ -475,17 +475,12 @@ int main(int argc, char* argv[])
 #endif
 
     QStringList cliProfiles = parser.values(profileToOpen);
-    qDebug() << "Got CLI profiles:" << cliProfiles;
 
     if (cliProfiles.isEmpty()) {
-        qDebug() << "No CLI profiles specified, checking environment variable";
         const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
-        qDebug() << "Environment MUDLET_PROFILES value:" << envProfiles;
         if (!envProfiles.isEmpty()) {
-            qDebug() << "Found environment profiles, splitting on ':'";
             // : is not an allowed character in a profile name, so we can use it to split the list
             cliProfiles = envProfiles.split(':');
-            qDebug() << "Final profile list from environment:" << cliProfiles;
         }
     }
 
