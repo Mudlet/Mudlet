@@ -1631,7 +1631,21 @@ void T2DMap::paintEvent(QPaintEvent* e)
         infoColor = QColor(Qt::white);
     }
 
-    paintMapInfo(renderTimer, painter, mAreaID, infoColor);
+    int roomID = mRoomID;
+    if (!isCenterViewCall && !mMultiSelectionSet.empty()) {
+        if (mpMap->mpRoomDB->getRoom(*(mMultiSelectionSet.constBegin()))) {
+            roomID = mMultiSelectionHighlightRoomId;
+        }
+    }
+    
+    int xOffset = 10;
+    if (mMultiSelectionListWidget.isVisible()) {
+        xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
+    }
+    
+    dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, 
+                            roomID, mAreaID, mMultiSelectionSet.size(), infoColor, 
+                            xOffset, 20, width(), mFontHeight);
 
     static bool isAreaWidgetValid = true; // Remember between uses
     QFont _f = mpMap->mpMapper->comboBox_showArea->font();
@@ -2408,109 +2422,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
     } // end of loop for every room in area
 }
 
-// Work out text for information box, need to offset if room selection widget is present
-void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor)
-{
-    QList<QString> contributorList = mpMap->mMapInfoContributorManager->getContributorKeys();
-    QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
-    if (!contributorKeys.intersects(mpHost->mMapInfoContributors)) {
-        return;
-    }
 
-    int roomID = mRoomID;
-    if (!isCenterViewCall && !mMultiSelectionSet.empty()) {
-        if (mpMap->mpRoomDB->getRoom(*(mMultiSelectionSet.constBegin()))) {
-            roomID = mMultiSelectionHighlightRoomId;
-        }
-    }
-
-    TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomID);
-    if (!pRoom) {
-        // Can't call pRoom->getArea() further down without a valid pRoom!
-        return;
-    }
-
-    painter.save();
-    painter.setFont(mpHost->getDisplayFont());
-
-    int yOffset = 20;
-    const int initialYOffset = yOffset;
-    // Left margin for info widget:
-    int xOffset = 10;
-    if (mMultiSelectionListWidget.isVisible()) {
-        // Room Selection Widget showing, so increase margin to avoid:
-        xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
-    }
-
-    for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
-        if (mpHost->mMapInfoContributors.contains(key)) {
-            auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), pRoom->getArea(), displayAreaId, infoColor);
-            if (!properties.color.isValid()) {
-                properties.color = infoColor;
-            }
-            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties);
-        }
-    }
-
-#ifdef QT_DEBUG
-    yOffset += paintMapInfoContributor(painter,
-                         xOffset,
-                         yOffset,
-                         {false,
-                          false,
-                          (tr("render time: %1S mO: (%2,%3,%4)",
-                                  // Intentional comment to separate arguments
-                              "This is debug information that is not expected to be seen in release versions, "
-                              "%1 is a decimal time period and %2-%4 are the x,y and z coordinates at the "
-                              "center of the view (but y will be negative compared to previous room related "
-                              "ones as it represents the real coordinate system for this widget which has "
-                              "y increasing in a downward direction!)")
-                                  .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
-                                  .arg(QString::number(mMapCenterX), QString::number(mMapCenterY), QString::number(mMapCenterZ))),
-                          infoColor});
-#else
-    Q_UNUSED(renderTimer)
-#endif
-
-    if (yOffset > initialYOffset) {
-        painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
-    }
-
-    painter.restore();
-}
-
-int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
-{
-
-    if (properties.text.isEmpty()) {
-        return 0;
-    }
-
-    painter.save();
-    auto infoText = properties.text.trimmed();
-
-    auto font = painter.font();
-    font.setBold(properties.isBold);
-    font.setItalic(properties.isItalic);
-    painter.setFont(font);
-
-    const int infoHeight = mFontHeight; // Account for first iteration
-    QRect testRect;
-
-    // infoRect has a 10 margin on either side and on top to widget frame.
-    mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), infoText);
-    mMapInfoRect.setHeight(testRect.height() + 10);
-
-    // Restore Grey translucent background, was useful for debugging!
-    painter.fillRect(mMapInfoRect, mpHost->mMapInfoBg);
-    painter.setPen(properties.color);
-    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces), infoText);
-    //forget about font size changing and bolding/italicisation:
-    painter.restore();
-
-    return mMapInfoRect.height();
-}
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {

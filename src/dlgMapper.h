@@ -33,6 +33,7 @@
 
 class Host;
 class TMap;
+struct MapInfoProperties;
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 class QOpenGLWidget;
@@ -73,6 +74,13 @@ public slots:
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
+    
+    static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
+                            int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
+                            int xOffset, int yOffset, int widgetWidth, int fontHeight);
+    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
+                                      const MapInfoProperties& properties, QColor bgColor, int fontHeight,
+                                      int widgetWidth);
 
 private:
     TMap* mpMap = nullptr;
