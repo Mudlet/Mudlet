@@ -66,6 +66,8 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    void shiftCamera(float, float, float);
+    void setCameraPosition(float, float, float);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -75,6 +77,10 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
+    void slot_shiftCameraUp();
+    void slot_shiftCameraDown();
+    void slot_shiftCameraLeft();
+    void slot_shiftCameraRight();
     void slot_shiftZup();
     void slot_shiftZdown();
     void slot_setCameraPositionX(int angle);
