@@ -25,6 +25,7 @@
 
 #include "Host.h"
 
+#include "TutorialProfile.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -448,6 +449,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto settings = mudlet::self()->getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
+    
+    // Initialize tutorial profile if this is the tutorial profile
+    mIsTutorialProfile = (mHostName == "Mudlet Tutorial");
+    if (mIsTutorialProfile) {
+        initializeTutorialProfile();
+    }
 }
 
 Host::~Host()
@@ -1298,6 +1305,12 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
+    // For tutorial profiles, handle commands locally instead of sending to server
+    if (mIsTutorialProfile) {
+        handleTutorialCommand(cmd);
+        return;
+    }
+
     if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
@@ -1345,19 +1358,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
     }
 }
-
-QPair<int, QString> Host::createStopWatch(const QString& name)
-{
-    if (mResetProfile || mBlockStopWatchCreation) {
-        // Don't create stopwatches when test loading scripts or during a profile reset:
-        return qMakePair(0, qsl("unable to create a stopwatch at this time"));
-    }
-
-    if (!mStopWatchMap.isEmpty() && !name.isEmpty()) {
-        QMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
-        while (itStopWatch.hasNext()) {
-            itStopWatch.next();
-            if (itStopWatch.value()->name() == name) {
                 return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
@@ -4531,3 +4531,18 @@ QFont Host::getAndClearTempDisplayFont()
     mTempDisplayFontAttributes.reset();
     return tempFont;
 }
+
+void Host::handleTutorialCommand(const QString& command)
+{
+    if (mpTutorialProfile) {
+        mpTutorialProfile->handleUserCommand(command);
+    }
+}
+
+void Host::initializeTutorialProfile()
+{
+    // Create and initialize the tutorial profile
+    mpTutorialProfile = new TutorialProfile(this);
+    mpTutorialProfile->initializeTutorialContent();
+}
+

@@ -42,18 +42,21 @@
 #include "enums.h"
 
 #include "pre_guard.h"
-#include <QColor>
-#include <QFile>
-#include <QFont>
+#include <QString>
 #include <QList>
-#include <QMargins>
 #include <QPointer>
-#include <QStack>
-#include <QTextStream>
 #include "post_guard.h"
 
-#include "TMxpMudlet.h"
-#include "TMxpProcessor.h"
+// Forward declaration for TutorialProfile
+class TutorialProfile;
+
+struct GameDetail
+{
+    QString name;
+    QString version;
+    QString author;
+    QString description;
+};
 
 class QDialog;
 class QDockWidget;
@@ -797,6 +800,12 @@ private:
     TCommandLine* activeCommandLine();
     void closeChildren();
     void setupSandboxedLuaState(lua_State* L);
+    
+    // Tutorial profile functionality
+    QPointer<TutorialProfile> mpTutorialProfile;
+    bool mIsTutorialProfile;
+    void initializeTutorialProfile();
+    void handleTutorialCommand(const QString& command);
 
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;

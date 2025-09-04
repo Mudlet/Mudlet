@@ -554,7 +554,18 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "minimize griefing and ensure that all kills have sufficient in-character cause."
                  "\n\n"
                  "What role will you play? The legend awaits!")},
-
+            
+             // Tutorial profile for new Mudlet users
+            {qsl("Mudlet Tutorial"),
+             qsl("localhost"),
+             23,
+             false,
+             qsl("<a href='https://www.mudlet.org'>www.mudlet.org</a>"),
+             qsl(":/icons/mudlet_main_16px.png"),
+             qsl("A special profile designed to teach you how to use Mudlet. Learn about triggers, "
+                 "aliases, scripts, and other features in an interactive, safe environment. "
+                 "No risk of making mistakes - it's all part of the learning process!")},
+     
             {qsl("CoreMUD"),
              qsl("coremud.org"),
              4020,
