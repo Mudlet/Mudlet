@@ -4560,4 +4560,3 @@ void Host::initializeTutorialProfile()
     mpTutorialProfile = new TutorialProfile(this);
     mpTutorialProfile->initializeTutorialContent();
 }
-
