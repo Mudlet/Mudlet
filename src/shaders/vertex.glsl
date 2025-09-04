@@ -55,7 +55,7 @@ void main()
     
     vec3 finalColorRGB = ambientContrib + diffuseContrib;
     
-    vertexColor = vec4(finalColor.rgb, finalColor.a);
+    vertexColor = vec4(finalColorRGB, finalColor.a);
     
         gl_Position = uMVP * finalPos;
 
