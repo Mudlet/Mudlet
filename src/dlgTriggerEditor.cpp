@@ -3304,9 +3304,17 @@ void dlgTriggerEditor::delete_trigger()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    bool currentItemBeingDeleted = false;
+    
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParent = pItem->parent();
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        
+        // Check if we're deleting the current trigger item
+        if (pItem == mpCurrentTriggerItem) {
+            currentItemBeingDeleted = true;
+            mpCurrentTriggerItem = nullptr; // Clear immediately to prevent use-after-free
+        }
         
         if (pT) {
             if (pParent && !newSelection) {
@@ -3319,14 +3327,16 @@ void dlgTriggerEditor::delete_trigger()
         }
     }
 
-    // Set new selection
-    if (newSelection) {
+    // Set new selection - handle case where current item was deleted
+    if (newSelection && !currentItemBeingDeleted) {
         mpCurrentTriggerItem = newSelection;
         treeWidget_triggers->setCurrentItem(newSelection);
         slot_triggerSelected(newSelection);
     } else {
-        mpCurrentTriggerItem = nullptr;
-        clearTriggerForm();
+        // Either no new selection or current item was deleted - clear everything
+        if (!mpCurrentTriggerItem) {
+            clearTriggerForm();
+        }
     }
 }
 
@@ -5146,11 +5156,25 @@ void dlgTriggerEditor::saveTrigger()
         return;
     }
     
-    // Additional safety check: ensure the item's parent is still valid
-    // and that the item is still part of the tree widget
-    if (!pItem->parent() || pItem->treeWidget() != treeWidget_triggers) {
+    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    // Use tree widget's iterator to check if item still exists (avoids virtual method calls on deleted objects)
+    bool itemFound = false;
+    QTreeWidgetItemIterator iter(treeWidget_triggers);
+    while (*iter) {
+        if (*iter == pItem) {
+            itemFound = true;
+            break;
+        }
+        ++iter;
+    }
+    
+    if (!itemFound) {
+        qWarning() << "dlgTriggerEditor::saveTrigger() - mpCurrentTriggerItem points to deleted item, clearing pointer";
+        mpCurrentTriggerItem = nullptr;
         return;
     }
+    
+    // Item is confirmed valid - safe to proceed with trigger operations
 
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
@@ -5337,8 +5361,20 @@ void dlgTriggerEditor::saveTimer()
         return;
     }
     
-    // Ensure the item is still part of the tree widget
-    if (pItem->treeWidget() != treeWidget_timers) {
+    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    bool itemFound = false;
+    QTreeWidgetItemIterator iter(treeWidget_timers);
+    while (*iter) {
+        if (*iter == pItem) {
+            itemFound = true;
+            break;
+        }
+        ++iter;
+    }
+    
+    if (!itemFound) {
+        qWarning() << "dlgTriggerEditor::saveTimer() - mpCurrentTimerItem points to deleted item, clearing pointer";
+        mpCurrentTimerItem = nullptr;
         return;
     }
 
@@ -5459,8 +5495,20 @@ void dlgTriggerEditor::saveAlias()
         return;
     }
     
-    // Ensure the item is still part of the tree widget
-    if (pItem->treeWidget() != treeWidget_aliases) {
+    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    bool itemFound = false;
+    QTreeWidgetItemIterator iter(treeWidget_aliases);
+    while (*iter) {
+        if (*iter == pItem) {
+            itemFound = true;
+            break;
+        }
+        ++iter;
+    }
+    
+    if (!itemFound) {
+        qWarning() << "dlgTriggerEditor::saveAlias() - mpCurrentAliasItem points to deleted item, clearing pointer";
+        mpCurrentAliasItem = nullptr;
         return;
     }
 
@@ -5600,8 +5648,20 @@ void dlgTriggerEditor::saveAction()
         return;
     }
     
-    // Ensure the item is still part of the tree widget
-    if (pItem->treeWidget() != treeWidget_actions) {
+    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    bool itemFound = false;
+    QTreeWidgetItemIterator iter(treeWidget_actions);
+    while (*iter) {
+        if (*iter == pItem) {
+            itemFound = true;
+            break;
+        }
+        ++iter;
+    }
+    
+    if (!itemFound) {
+        qWarning() << "dlgTriggerEditor::saveAction() - mpCurrentActionItem points to deleted item, clearing pointer";
+        mpCurrentActionItem = nullptr;
         return;
     }
 
@@ -5782,8 +5842,20 @@ void dlgTriggerEditor::saveScript()
         return;
     }
     
-    // Ensure the item is still part of the tree widget
-    if (pItem->treeWidget() != treeWidget_scripts) {
+    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    bool itemFound = false;
+    QTreeWidgetItemIterator iter(treeWidget_scripts);
+    while (*iter) {
+        if (*iter == pItem) {
+            itemFound = true;
+            break;
+        }
+        ++iter;
+    }
+    
+    if (!itemFound) {
+        qWarning() << "dlgTriggerEditor::saveScript() - mpCurrentScriptItem points to deleted item, clearing pointer";
+        mpCurrentScriptItem = nullptr;
         return;
     }
 
@@ -6156,8 +6228,20 @@ void dlgTriggerEditor::saveKey()
         return;
     }
     
-    // Ensure the item is still part of the tree widget
-    if (pItem->treeWidget() != treeWidget_keys) {
+    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    bool itemFound = false;
+    QTreeWidgetItemIterator iter(treeWidget_keys);
+    while (*iter) {
+        if (*iter == pItem) {
+            itemFound = true;
+            break;
+        }
+        ++iter;
+    }
+    
+    if (!itemFound) {
+        qWarning() << "dlgTriggerEditor::saveKey() - mpCurrentKeyItem points to deleted item, clearing pointer";
+        mpCurrentKeyItem = nullptr;
         return;
     }
 
@@ -10412,7 +10496,16 @@ void dlgTriggerEditor::doCleanReset()
 
 void dlgTriggerEditor::runScheduledCleanReset()
 {
-    // Clear all current item pointers BEFORE attempting to save or clear tree widgets
+    // Block all tree widget signals to prevent race conditions during reset
+    QSignalBlocker triggerBlocker(treeWidget_triggers);
+    QSignalBlocker aliasBlocker(treeWidget_aliases);
+    QSignalBlocker actionBlocker(treeWidget_actions);
+    QSignalBlocker timerBlocker(treeWidget_timers);
+    QSignalBlocker keyBlocker(treeWidget_keys);
+    QSignalBlocker scriptBlocker(treeWidget_scripts);
+    QSignalBlocker variableBlocker(treeWidget_variables);
+    
+    // Clear all current item pointers BEFORE clearing tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
     mpCurrentTimerItem = nullptr;
@@ -10420,34 +10513,12 @@ void dlgTriggerEditor::runScheduledCleanReset()
     mpCurrentScriptItem = nullptr;
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
+    mpCurrentVarItem = nullptr;
 
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView:
-        saveTrigger();
-        break;
-    case EditorViewType::cmTimerView:
-        saveTimer();
-        break;
-    case EditorViewType::cmAliasView:
-        saveAlias();
-        break;
-    case EditorViewType::cmScriptView:
-        saveScript();
-        break;
-    case EditorViewType::cmActionView:
-        saveAction();
-        break;
-    case EditorViewType::cmKeysView:
-        saveKey();
-        break;
-    case EditorViewType::cmVarsView:
-        // FIXME: The switch in here need to handle (or at least treat correctly) the
-        // EditorViewType:cmVarsView case but how is not clear:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
-        break;
-    case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
-    }
+    // NOTE: Removed save function calls here as they are pointless and dangerous:
+    // - Current item pointers are already null, so save functions return immediately
+    // - Any queued UI signals calling save functions with old pointers would cause crashes
+    // - Package import should save before triggering reset, not after clearing pointers
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
@@ -10457,6 +10528,8 @@ void dlgTriggerEditor::runScheduledCleanReset()
     treeWidget_scripts->clear();
     fillout_form();
     slot_showTriggers();
+    
+    // Signal blockers automatically unblock when they go out of scope
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()
