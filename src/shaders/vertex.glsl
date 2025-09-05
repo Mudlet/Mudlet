@@ -57,6 +57,5 @@ void main()
     
     vertexColor = vec4(finalColorRGB, finalColor.a);
     
-        gl_Position = uMVP * finalPos;
-
+    gl_Position = uMVP * finalPos;
 }
