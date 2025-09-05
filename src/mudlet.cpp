@@ -6184,7 +6184,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
                                                       qsl("mud.morgengrauen.info"),
                                                       qsl("mg.morgengrauen.info"),
-                                                      qsl("morgengrauen.info")},
+                                                      qsl("morgengrauen.info")}},
         {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
