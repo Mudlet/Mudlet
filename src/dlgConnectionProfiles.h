@@ -29,11 +29,6 @@
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
-#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
-#else
-#include <qt6keychain/keychain.h>
-#endif
 #include "post_guard.h"
 
 class QDir;
@@ -93,6 +88,9 @@ public slots:
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
+    void loadPasswordFromSettings(const QString& profile_name);
+    void ensurePasswordLoadedThenConnect(bool alsoConnect);
+    bool hasPendingKeychainOperation(const QString& profile_name) const;
 
 
 private:
@@ -118,10 +116,14 @@ private:
     void deleteSecurePassword(const QString& profile) const;
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, 
+                           const QString& newProfileHost, const QString& newProfilePort, 
+                           const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
+    void loadPasswordAsync(const QString& profileName);
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -149,6 +151,12 @@ private:
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
     QString mSearchText;
+    QTimer* mPasswordSaveTimer = nullptr;
+    
+    // Async connection handling
+    QString mPendingProfileLoad;  // Profile name waiting for password load
+    bool mPendingConnect = false; // Whether to connect (true) or just load (false)
+    bool mKeychainOperationInProgress = false;  // Track if keychain op is active
 
 
 private slots:
@@ -157,9 +165,9 @@ private slots:
     void slot_setCustomColor();
     void slot_resetCustomIcon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_passwordSaved(QKeychain::Job* job);
-    void slot_passwordDeleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
+    void slot_loadPasswordAsync();
+    void slot_passwordTextChanged();
 };
 
 

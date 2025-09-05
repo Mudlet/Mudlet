@@ -57,7 +57,6 @@ set(mudlet_SRCS
     AliasUnit.cpp
     AltFocusMenuBarDisable.cpp
     ctelnet.cpp
-    DarkTheme.cpp
     discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
@@ -102,7 +101,9 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
+    CredentialManager.cpp
     ScriptUnit.cpp
+    SecureStringUtils.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
@@ -188,7 +189,6 @@ set(mudlet_SRCS
     XMLimport.cpp)
 
 if(APPLE)
-  list(APPEND mudlet_SRCS AnnouncerMac.mm)
   # Sparkle updater for macOS
   if(USE_UPDATER)
     list(APPEND mudlet_SRCS sparkleupdater.mm)
@@ -201,11 +201,6 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
-elseif(WIN32)
-  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
-  list(APPEND mudlet_SRCS uiawrapper.cpp)
-else()
-  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -242,9 +237,7 @@ set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
-    Announcer.h
     ctelnet.h
-    DarkTheme.h
     discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
@@ -291,6 +284,7 @@ set(mudlet_HDRS
     post_guard.h
     pre_guard.h
     ScriptUnit.h
+    SecureStringUtils.h
     ShortcutsManager.h
     SingleLineTextEdit.h
     T2DMap.h
@@ -374,9 +368,6 @@ set(mudlet_HDRS
     XMLimport.h
     enums.h)
 
-if(WIN32)
-  list(APPEND mudlet_HDRS uiawrapper.h)
-endif()
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
@@ -386,6 +377,22 @@ endif(USE_UPDATER)
 if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget.cpp)
   list(APPEND mudlet_HDRS glwidget.h)
+  list(APPEND mudlet_SRCS modern_glwidget.cpp)
+  list(APPEND mudlet_HDRS modern_glwidget.h)
+  list(APPEND mudlet_SRCS CameraController.cpp)
+  list(APPEND mudlet_HDRS CameraController.h)
+  list(APPEND mudlet_SRCS GeometryManager.cpp)
+  list(APPEND mudlet_HDRS GeometryManager.h)
+  list(APPEND mudlet_SRCS RenderCommand.cpp)
+  list(APPEND mudlet_HDRS RenderCommand.h)
+  list(APPEND mudlet_SRCS RenderCommandQueue.cpp)
+  list(APPEND mudlet_HDRS RenderCommandQueue.h)
+  list(APPEND mudlet_SRCS ResourceManager.cpp)
+  list(APPEND mudlet_HDRS ResourceManager.h)
+  list(APPEND mudlet_SRCS ShaderManager.cpp)
+  list(APPEND mudlet_HDRS ShaderManager.h)
+  list(APPEND mudlet_HDRS glwidget_integration.h)
+  list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
 # credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
@@ -588,6 +595,11 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# Define shader hot-reloading if enabled
+if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
+  target_compile_definitions(mudlet PRIVATE MUDLET_SHADER_HOT_RELOAD=1)
+endif()
+
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
 # for an #ifdef because we need a symbol that is defined BEFORE we include
@@ -632,6 +644,7 @@ if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
   target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
 endif()
+
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(mudlet PRIVATE INCLUDE_VARIABLE_SPLASH_SCREEN)

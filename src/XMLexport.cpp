@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "CredentialManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -37,6 +38,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QVersionNumber>
 #include <QtConcurrent>
 #include <QFile>
 #include <sstream>
@@ -382,7 +384,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
     host.append_attribute("HighlightHistory") = pHost->mHighlightHistory ? "yes" : "no";
-    host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
+    host.append_attribute("commandEchoMode") = QString::number(static_cast<int>(pHost->mCommandEchoMode)).toLatin1().data();
+    // Keep legacy attribute for backward compatibility
+    host.append_attribute("printCommand") = (pHost->mCommandEchoMode != Host::CommandEchoMode::Never) ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
     host.append_attribute("mUSE_UNIX_EOL") = pHost->mUSE_UNIX_EOL ? "yes" : "no";
@@ -437,6 +441,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
+    host.append_attribute("mShow3DView") = pHost->mShow3DView ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
@@ -450,7 +455,24 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
+    
+    // Handle proxy password based on application version for backward compatibility
+    // For version 4.20.0+, use secure storage and clear XML; for older versions, maintain plaintext in XML
+    const QString currentAppVersion = QString(APP_VERSION);
+    const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
+    const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+    const bool useSecureStorage = appVersion >= secureStorageVersion;
+    
+    if (useSecureStorage) {
+        // Modern versions: store in secure storage, clear from XML
+        if (!pHost->mProxyPassword.isEmpty()) {
+            CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword);
+        }
+        host.append_attribute("mProxyPassword") = "";
+    } else {
+        // Legacy versions: maintain plaintext password in XML for backward compatibility
+        host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
+    }
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
@@ -578,7 +600,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());
 
         host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
-        host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        auto mapBgColorNode = host.append_child("mBgColor2");
+        mapBgColorNode.text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        mapBgColorNode.append_attribute("alpha").set_value(pHost->mBgColor_2.alpha());
         host.append_child("mLowerLevelColor").text().set(pHost->mLowerLevelColor.name().toUtf8().constData());
         host.append_child("mUpperLevelColor").text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
@@ -648,6 +672,19 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+    
+    // Write experiments
+    {
+        QStringList allExperiments = pHost->getAllExperiments();
+        if (!allExperiments.isEmpty()) {
+            for (const auto& experimentKey : allExperiments) {
+                auto experiment = host.append_child("experiment");
+                experiment.append_attribute("key") = experimentKey.toUtf8().constData();
+                experiment.append_attribute("enabled") = "yes";
+            }
+        }
+    }
+    
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);
