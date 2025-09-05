@@ -118,6 +118,7 @@ private:
     QOpenGLBuffer mColorBuffer;
     QOpenGLBuffer mNormalBuffer;
     QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mInstanceBuffer;
     QOpenGLVertexArrayObject mVAO;
     
     // Geometry management
