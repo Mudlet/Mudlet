@@ -3304,7 +3304,6 @@ void dlgTriggerEditor::delete_trigger()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
-    bool currentItemBeingDeleted = false;
     
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParent = pItem->parent();
@@ -3312,7 +3311,6 @@ void dlgTriggerEditor::delete_trigger()
         
         // Check if we're deleting the current trigger item
         if (pItem == mpCurrentTriggerItem) {
-            currentItemBeingDeleted = true;
             mpCurrentTriggerItem = nullptr; // Clear immediately to prevent use-after-free
         }
         
@@ -3327,16 +3325,14 @@ void dlgTriggerEditor::delete_trigger()
         }
     }
 
-    // Set new selection - handle case where current item was deleted
-    if (newSelection && !currentItemBeingDeleted) {
+    // Set new selection
+    if (newSelection) {
         mpCurrentTriggerItem = newSelection;
         treeWidget_triggers->setCurrentItem(newSelection);
         slot_triggerSelected(newSelection);
     } else {
-        // Either no new selection or current item was deleted - clear everything
-        if (!mpCurrentTriggerItem) {
-            clearTriggerForm();
-        }
+        mpCurrentTriggerItem = nullptr;
+        clearTriggerForm();
     }
 }
 
