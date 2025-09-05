@@ -2621,7 +2621,9 @@ operation to complete (if it cannot be canceled) before retrying!</source>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Versuch, eine XML von einer ungültigen URL herunterzuladen. Die URL war:
+%1
+und die Fehlermeldung (kann technische Details enthalten) war:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2495"/>
@@ -4208,7 +4210,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="194"/>
       <source>error: this trigger has no patterns defined</source>
-      <translation type="unfinished"/>
+      <translation>Fehler: Dieser Trigger hat keine definierten Muster</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="226"/>
@@ -6654,7 +6656,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="400"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</source>
-      <translation type="unfinished"/>
+      <translation>Verwendet dieses Paket andere Pakete? Liste sie hier als Voraussetzungen auf. Drücke &apos;Löschen&apos;, um ein Paket zu entfernen.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="432"/>
@@ -6679,7 +6681,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="340"/>
       <source>Does this package make use of other packages? List them here as requirements.</source>
-      <translation type="unfinished"/>
+      <translation>Verwendet dieses Paket andere Pakete? Liste sie hier als Voraussetzungen auf.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="540"/>
@@ -6731,22 +6733,22 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="167"/>
       <source>Create Module - %1</source>
-      <translation type="unfinished"/>
+      <translation>Modul erstellen - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="170"/>
       <source>Enter module name</source>
-      <translation type="unfinished"/>
+      <translation>Modulnamen eingeben</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="173"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Modul erstellen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="176"/>
       <source>Select where to save module</source>
-      <translation type="unfinished"/>
+      <translation>Speicherort auswählen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
