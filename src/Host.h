@@ -67,7 +67,7 @@ struct GameDetail
     QString description;
 };
 
-class QDialog;
+class QDialog; 
 class QDockWidget;
 class QPushButton;
 class QListWidget;
