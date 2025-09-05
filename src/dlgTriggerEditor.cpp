@@ -3309,11 +3309,6 @@ void dlgTriggerEditor::delete_trigger()
         QTreeWidgetItem* pParent = pItem->parent();
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
         
-        // Check if we're deleting the current trigger item
-        if (pItem == mpCurrentTriggerItem) {
-            mpCurrentTriggerItem = nullptr; // Clear immediately to prevent use-after-free
-        }
-        
         if (pT) {
             if (pParent && !newSelection) {
                 newSelection = pParent;
@@ -5152,7 +5147,7 @@ void dlgTriggerEditor::saveTrigger()
         return;
     }
     
-    // validate pointer is still valid before calling ANY virtual methods
+    // validate pointer is still valid
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_triggers);
     while (*iter) {
