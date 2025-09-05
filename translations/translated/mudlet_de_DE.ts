@@ -209,20 +209,20 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/modern_glwidget.cpp" line="228"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>Keine Räume auf der Karte - lade eine andere oder beginne neu zu kartieren.</translation>
+      <translation>Keine Räume auf der Karte - Lade eine andere oder beginne neu zu kartieren.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/modern_glwidget.cpp" line="230"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
-        <numerusform>Du hast eine Karte geladen (mit %n Räumen), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
         <numerusform>Du hast eine Karte geladen (mit einem Raum), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
+        <numerusform>Du hast eine Karte geladen (mit %n Räumen), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
       </translation>
     </message>
     <message>
       <location filename="../src/modern_glwidget.cpp" line="233"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation>Du hast noch keine Karte - lade eine oder beginne neu zu kartographieren.</translation>
+      <translation>Du hast noch keine Karte - Lade eine oder beginne neu zu kartographieren.</translation>
     </message>
   </context>
   <context>
@@ -607,7 +607,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/dlgMapper.cpp" line="520"/>
       <source>render time: %1S</source>
-      <translation type="unfinished"/>
+      <translation>Render-Zeit: %1S</translation>
     </message>
   </context>
   <context>
@@ -2012,7 +2012,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="1013"/>
       <source>Connecting...</source>
       <extracomment>This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Connecting...&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Verbindung wird hergestellt...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1016"/>
