@@ -5156,8 +5156,7 @@ void dlgTriggerEditor::saveTrigger()
         return;
     }
     
-    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
-    // Use tree widget's iterator to check if item still exists (avoids virtual method calls on deleted objects)
+    // validate pointer is still valid before calling ANY virtual methods
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_triggers);
     while (*iter) {
@@ -5174,8 +5173,6 @@ void dlgTriggerEditor::saveTrigger()
         return;
     }
     
-    // Item is confirmed valid - safe to proceed with trigger operations
-
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
@@ -5361,7 +5358,7 @@ void dlgTriggerEditor::saveTimer()
         return;
     }
     
-    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    // validate pointer is still valid
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_timers);
     while (*iter) {
@@ -5495,7 +5492,7 @@ void dlgTriggerEditor::saveAlias()
         return;
     }
     
-    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    // validate pointer is still valid
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_aliases);
     while (*iter) {
@@ -5648,7 +5645,7 @@ void dlgTriggerEditor::saveAction()
         return;
     }
     
-    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    // validate pointer is still valid
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_actions);
     while (*iter) {
@@ -5842,7 +5839,7 @@ void dlgTriggerEditor::saveScript()
         return;
     }
     
-    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    // validate pointer is still valid
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_scripts);
     while (*iter) {
@@ -6228,7 +6225,7 @@ void dlgTriggerEditor::saveKey()
         return;
     }
     
-    // Critical safety check: Validate pointer is still valid before calling ANY virtual methods
+    // validate pointer is still valid
     bool itemFound = false;
     QTreeWidgetItemIterator iter(treeWidget_keys);
     while (*iter) {
@@ -10505,8 +10502,7 @@ void dlgTriggerEditor::runScheduledCleanReset()
     QSignalBlocker scriptBlocker(treeWidget_scripts);
     QSignalBlocker variableBlocker(treeWidget_variables);
     
-    // Clear all current item pointers BEFORE clearing tree widgets
-    // to prevent heap-use-after-free when the tree widgets are cleared
+    // Clear all current item pointers before clearing tree widgets
     mpCurrentTriggerItem = nullptr;
     mpCurrentTimerItem = nullptr;
     mpCurrentAliasItem = nullptr;
@@ -10514,11 +10510,6 @@ void dlgTriggerEditor::runScheduledCleanReset()
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
     mpCurrentVarItem = nullptr;
-
-    // NOTE: Removed save function calls here as they are pointless and dangerous:
-    // - Current item pointers are already null, so save functions return immediately
-    // - Any queued UI signals calling save functions with old pointers would cause crashes
-    // - Package import should save before triggering reset, not after clearing pointers
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
@@ -10528,8 +10519,6 @@ void dlgTriggerEditor::runScheduledCleanReset()
     treeWidget_scripts->clear();
     fillout_form();
     slot_showTriggers();
-    
-    // Signal blockers automatically unblock when they go out of scope
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()
