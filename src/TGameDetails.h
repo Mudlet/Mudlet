@@ -282,6 +282,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/aetolia_120_30.png"),
              QString()},
 
+            {qsl("Astaria"),
+             qsl("astaria.net"),
+             5000,
+             false,
+             qsl("<a href='https://astariamud.com'>astariamud.com</a>"),
+             qsl(":/icons/banner_astaria.png"),
+             qsl("Once more unto the breach, dear friends...\n\n"
+                 "Welcome Traveller, your sojourn awaits. Only one step remains between you and a realm where your mind can soar, unbound from the fetters of the mundane world.\n\n"
+                 "Let your spirit take shape in one of fifteen races, cast your will into one of nine guilds and begin your journey towards destiny. Forge friendships. Gain power. Vanquish enemies. Work with your allies toward goals greater than yourself. Become part of the rich history of adventurers who have made their home in a world that is immediately fun and will continue to challenge and stimulate for years to come. Step through the portal, and immerse yourself in the mythical world, Astaria.\n\n"
+                 "Astaria is a free-to-play MUD with an RP-optional atmosphere, set in a medieval fantasy world with a touch of cosmic horror. Active since 1994, it's a realm where dragons still roam, adventures await around every corner, and new heroes are always welcome.")},
+
             {qsl("Imperian"),
              qsl("imperian.com"),
              4000,
