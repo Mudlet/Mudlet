@@ -24,8 +24,8 @@
 
 
 #include "Host.h"
-
 #include "TutorialProfile.h"
+
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -52,6 +52,8 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "CredentialManager.h"
+#include "SecureStringUtils.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -244,7 +246,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
-, mPrintCommand(true)
+, mCommandEchoMode(CommandEchoMode::ScriptControl)
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
@@ -274,6 +276,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
+, mShow3DView(false)
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
@@ -345,7 +348,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         dirLogFile.mkpath(directoryLogFile);
     }
     mErrorLogFile.setFileName(logFileName);
-    mErrorLogFile.open(QIODevice::Append);
+    if (!mErrorLogFile.open(QIODevice::Append)) {
+        qWarning() << "Host: failed to open error log file for appending:" << mErrorLogFile.errorString();
+    }
      /*
      * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
      * since user-content can contain anything and someone else reviewing
@@ -455,7 +460,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mIsTutorialProfile) {
         initializeTutorialProfile();
     }
-}
 
 Host::~Host()
 {
@@ -1226,7 +1230,10 @@ void Host::check_for_mappingscript()
         QUiLoader loader;
 
         QFile file(":/ui/lacking_mapper_script.ui");
-        file.open(QFile::ReadOnly);
+        if (!file.open(QFile::ReadOnly)) {
+            qWarning() << "Host: failed to open lacking_mapper_script.ui for reading:" << file.errorString();
+            return;
+        }
 
         auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
         file.close();
@@ -1311,12 +1318,27 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         return;
     }
 
-    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
+    // Determine if we should print the command based on the echo mode
+    bool shouldPrint = false;
+    switch (mCommandEchoMode) {
+    case CommandEchoMode::Never:
+        shouldPrint = false;
+        break;
+    case CommandEchoMode::Always:
+        shouldPrint = true;
+        break;
+    case CommandEchoMode::ScriptControl:
+        shouldPrint = wantPrint;
+        break;
+    }
+
+    if (shouldPrint && !mIsRemoteEchoingActive) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
+
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
         if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
@@ -1326,7 +1348,9 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->update();
         }
     }
+
     QStringList commandList;
+
     if (!mCommandSeparator.isEmpty()) {
         commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
     } else if (!cmd.isEmpty()) {
@@ -1334,8 +1358,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         commandList << cmd;
     }
 
-        // allow sending blank commands
-
+    // allow sending blank commands
     if (commandList.empty()) {
         QString payload(QChar::LineFeed);
         mTelnet.sendData(payload);
@@ -1359,7 +1382,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
 }
 
-
 QPair<int, QString> Host::createStopWatch(const QString& name)
 {
     if (mResetProfile || mBlockStopWatchCreation) {
@@ -1372,7 +1394,6 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         while (itStopWatch.hasNext()) {
             itStopWatch.next();
             if (itStopWatch.value()->name() == name) {
-
                 return qMakePair(0, qsl("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
@@ -1898,6 +1919,20 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
+        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
+            // Check if this is just a stale reference by verifying if module files actually exist
+            QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+            QString moduleFile = mInstalledModules.value(packageName).value(0); // Get the actual file path from stored reference
+            
+            bool moduleExists = QDir(modulePath).exists() || QFile::exists(moduleFile);
+            if (!moduleExists) {
+                // Module files don't exist, clean up stale references
+                mInstalledModules.remove(packageName);
+                mActiveModules.removeAll(packageName);
+            } else {
+                // Module actually exists, show duplicate error
+                return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
+            }
         } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
             return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
         }
@@ -1922,35 +1957,44 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return {false, qsl("could not create destination folder")};
         }
 
-        QUiLoader loader(this);
-        QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
-        uiFile.open(QFile::ReadOnly);
-        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
-        uiFile.close();
-        if (!pUnzipDialog) {
-            return {false, qsl("could not load unpacking progress dialog")};
-        }
-
-        auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
-        if (pLabel) {
-            if (thing != enums::PackageModuleType::Package) {
-                pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
-            } else {
-                pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
+        // Skip the unpacking dialog for modules created from UI to avoid unwanted popups
+        if (thing != enums::PackageModuleType::ModuleFromUI) {
+            QUiLoader loader(this);
+            QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
+            if (!uiFile.open(QFile::ReadOnly)) {
+                qWarning() << "Host: failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
+                return {false, qsl("could not open unpacking progress dialog UI file")};
             }
+            pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
+            uiFile.close();
+            if (!pUnzipDialog) {
+                return {false, qsl("could not load unpacking progress dialog")};
+            }
+
+            auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
+            if (pLabel) {
+                if (thing != enums::PackageModuleType::Package) {
+                    pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
+                } else {
+                    pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
+                }
+            }
+            pUnzipDialog->hide(); // Must hide to change WindowModality
+            pUnzipDialog->setWindowTitle(tr("Unpacking"));
+            pUnzipDialog->setWindowModality(Qt::ApplicationModal);
+            pUnzipDialog->show();
+            qApp->processEvents();
+            pUnzipDialog->raise();
+            pUnzipDialog->repaint(); // Force a redraw
+            qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
         }
-        pUnzipDialog->hide(); // Must hide to change WindowModality
-        pUnzipDialog->setWindowTitle(tr("Unpacking"));
-        pUnzipDialog->setWindowModality(Qt::ApplicationModal);
-        pUnzipDialog->show();
-        qApp->processEvents();
-        pUnzipDialog->raise();
-        pUnzipDialog->repaint(); // Force a redraw
-        qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
         auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
-        pUnzipDialog->deleteLater();
-        pUnzipDialog = nullptr;
+        
+        if (pUnzipDialog) {
+            pUnzipDialog->deleteLater();
+            pUnzipDialog = nullptr;
+        }
         if (!unzipSuccessful) {
             return {false, qsl("could not unzip package")};
         }
@@ -1989,7 +2033,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
-            file2.open(QFile::ReadOnly | QFile::Text);
+            if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+                qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
+                continue;
+            }
             XMLimport reader(this);
             if (thing != enums::PackageModuleType::Package) {
                 QStringList moduleEntry;
@@ -2005,7 +2052,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     } else {
         file2.setFileName(fileName);
-        file2.open(QFile::ReadOnly | QFile::Text);
+        if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+            qWarning() << "Host: failed to open file for reading:" << fileName << file2.errorString();
+            return {false, qsl("could not open package file")};
+        }
         XMLimport reader(this);
         if (thing != enums::PackageModuleType::Package) {
             QStringList moduleEntry;
@@ -2067,6 +2117,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
     if (mpPackageManager) {
         mpPackageManager->resetPackageTable();
+    }
+    if (mpModuleManager) {
+        mpModuleManager->layoutModules();
+    }
+    
+    // Save profile to ensure modules persist and appear in module manager
+    if (thing != enums::PackageModuleType::Package) {
+        // Use a timer to save profile after module installation completes
+        QTimer::singleShot(100, this, [this]() {
+            saveProfile();
+        });
     }
 
     return {true, QString()};
@@ -3075,28 +3136,22 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 
 void Host::loadSecuredPassword()
 {
-    auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
-    job->setAutoDelete(false);
-    job->setInsecureFallback(false);
-
-    job->setKey(getName());
-
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=, this](QKeychain::Job* task) {
-        if (task->error()) {
-            const auto error = task->errorString();
-            if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
+    // Use async API for QtKeychain integration with file fallback
+    auto* credManager = new CredentialManager(this);
+    
+    credManager->retrieveCredential(getName(), "character", 
+        [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+            if (success && !password.isEmpty()) {
+                setPass(password);
+                QString passwordCopy = password; // Make a copy for secure clearing
+                SecureStringUtils::secureStringClear(passwordCopy);
+            } else if (!success && !errorMessage.isEmpty()) {
+                qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
             }
-
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
-            setPass(readJob->textData());
-        }
-
-        task->deleteLater();
-    });
-
-    job->start();
+            
+            // Clean up the credential manager
+            credManager->deleteLater();
+        });
 }
 
 // Only needed for places outside of this class:
@@ -4545,6 +4600,85 @@ QFont Host::getAndClearTempDisplayFont()
     mTempDisplayFont.reset();
     mTempDisplayFontAttributes.reset();
     return tempFont;
+}
+
+// Static whitelist of valid experiments
+const QSet<QString> Host::mValidExperiments = {
+    qsl("experiment.rendering.originalish"),
+    qsl("experiment.rendering.more-transparent"),
+    qsl("experiment.rendering-movement.smooth"),
+    qsl("experiment.3dmap.modernmapper"),
+};
+
+bool Host::experimentEnabled(const QString& experimentKey) const
+{
+    return mExperiments.value(experimentKey, false);
+}
+
+std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey, bool enabled)
+{
+    // Validate experiment key against whitelist
+    if (!mValidExperiments.contains(experimentKey)) {
+        return {false, qsl("Invalid experiment name: %1").arg(experimentKey)};
+    }
+    
+    if (enabled) {
+        // Check if this is a grouped experiment (contains dots beyond "experiment.")
+        if (experimentKey.count('.') >= 2) {
+            // Extract group (e.g., "experiment.rendering" from "experiment.rendering.originalish")
+            QString group = experimentKey.section('.', 0, 1);
+            
+            // Disable all other experiments in the same group
+            for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
+                if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
+                    it.value() = false;
+                }
+            }
+        }
+        mExperiments[experimentKey] = true;
+    } else {
+        mExperiments[experimentKey] = false;
+    }
+    
+#if defined(INCLUDE_3DMAPPER)
+    // Refresh maps if any experiments changed the 3D map
+    if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+        mpMap->mpMapper->mp2dMap->update();
+    }
+    if (mpMap && mpMap->mpM) {
+        mpMap->mpM->update();
+    }
+#endif
+    
+    return {true, QString()};
+}
+
+QString Host::getActiveExperimentInGroup(const QString& group) const
+{
+    QString groupPrefix = group + ".";
+    for (auto it = mExperiments.constBegin(); it != mExperiments.constEnd(); ++it) {
+        if (it.key().startsWith(groupPrefix) && it.value()) {
+            // Return just the experiment name without the group prefix
+            return it.key().mid(groupPrefix.length());
+        }
+    }
+    return QString(); // No active experiment in this group
+}
+
+QStringList Host::getAllExperiments() const
+{
+    QStringList result;
+    for (auto it = mExperiments.constBegin(); it != mExperiments.constEnd(); ++it) {
+        if (it.value()) {
+            result << it.key();
+        }
+    }
+    return result;
+}
+
+QStringList Host::getValidExperiments() const
+{
+    return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
 }
 
 void Host::handleTutorialCommand(const QString& command)

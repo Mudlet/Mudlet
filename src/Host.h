@@ -55,17 +55,11 @@
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
+#include "TutorialProfile.h"
+#include "TGameDetails.h"
 
 // Forward declaration for TutorialProfile
 class TutorialProfile;
-
-struct GameDetail
-{
-    QString name;
-    QString version;
-    QString author;
-    QString description;
-};
 
 class QDialog; 
 class QDockWidget;
