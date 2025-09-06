@@ -122,6 +122,7 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
     "mingw-w64-${BUILDCOMPONENT}-meson" \
     "mingw-w64-${BUILDCOMPONENT}-ninja" \
+    "mingw-w64-${BUILDCOMPONENT}-assimp" \
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
