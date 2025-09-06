@@ -21,7 +21,7 @@
  ***************************************************************************/
 
 #include "Host.h"
-#include "TTelnet.h"
+#include "ctelnet.h"
 
 #include "pre_guard.h"
 #include <QObject>
