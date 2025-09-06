@@ -38,7 +38,7 @@
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
-: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mpMap(pMap), mpHost(pHost)
+: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mInstanceBuffer(QOpenGLBuffer::VertexBuffer), mpMap(pMap), mpHost(pHost)
 {
     if (mpHost->mBgColor_2.alpha() < 255) {
         setAttribute(Qt::WA_OpaquePaintEvent, false);
@@ -70,6 +70,7 @@ void ModernGLWidget::cleanup()
     mColorBuffer.destroy();
     mNormalBuffer.destroy();
     mIndexBuffer.destroy();
+    mInstanceBuffer.destroy();
     mVAO.destroy();
     doneCurrent();
 }
@@ -167,14 +168,21 @@ void ModernGLWidget::setupBuffers()
     mIndexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Index buffer creation"));
 
+    // Create instance buffer for instanced rendering
+    mInstanceBuffer.create();
+    mResourceManager.onBufferCreated();
+    mInstanceBuffer.bind();
+    mInstanceBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    mResourceManager.checkGLError(qsl("Instance buffer creation"));
+
     // Configure vertex attribute pointers (will be set during rendering)
 }
 
 void ModernGLWidget::updateMatrices()
 {
     // Update camera controller with current state, but skip position updates during smooth animation
-    if (!mCameraSmoothAnimating) {
-        mCameraController.setPosition(static_cast<float>(mMapCenterX), static_cast<float>(mMapCenterY), static_cast<float>(mMapCenterZ));
+    if (!mCameraSmoothAnimating && !mPanMode) {
+        mCameraController.setTarget(static_cast<float>(mMapCenterX), static_cast<float>(mMapCenterY), static_cast<float>(mMapCenterZ));
     }
     mCameraController.setViewportSize(width(), height());
     mCameraController.updateMatrices();
@@ -208,7 +216,7 @@ void ModernGLWidget::paintGL()
     }
 
     int ox, oy, oz;
-    if (!mShiftMode && !mCameraSmoothAnimating) {
+    if (!mShiftMode) {
         mRID = mpMap->mRoomIdHash.value(mpMap->mProfileName);
         TRoom* pRID = mpMap->mpRoomDB->getRoom(mRID);
         if (!pRID) {
@@ -251,26 +259,19 @@ void ModernGLWidget::paintGL()
                      << "to (" << targetX << "," << targetY << "," << targetZ << ")";
             
             startSmoothTransition(targetAID, targetX, targetY, targetZ);
-            mPreviousRID = mRID; // Update tracking
-            
-            // Use current position for this frame while animation starts
-            ox = mMapCenterX;
-            oy = mMapCenterY;  
-            oz = mMapCenterZ;
-        } else {
-            // No room change or experiment disabled - use instant positioning
-            mAID = pRID->getArea();
-            ox = pRID->x();
-            oy = pRID->y();
-            oz = pRID->z();
-            mMapCenterX = ox;
-            mMapCenterY = oy;
-            mMapCenterZ = oz;
-            mPreviousRID = mRID; // Update tracking
-            
-            if (mRID != mPreviousRID) {
-                qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
-            }
+        }
+        // Instant update map (smooth transition only impacts camera position)
+        mAID = pRID->getArea();
+        ox = pRID->x();
+        oy = pRID->y();
+        oz = pRID->z();
+        mMapCenterX = ox;
+        mMapCenterY = oy;
+        mMapCenterZ = oz;
+        mPreviousRID = mRID; // Update tracking
+
+        if (mRID != mPreviousRID) {
+            qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
         }
 
     } else {
@@ -306,9 +307,9 @@ void ModernGLWidget::paintGL()
     // Use our shader program
     shaderProgram->bind();
 
-    // Build up render commands
-    renderRooms();
+    // Build up render commands - render connections first so rooms appear above them
     renderConnections();
+    renderRooms();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer);
@@ -320,6 +321,17 @@ void ModernGLWidget::paintGL()
     painter.setPen(QPen(QColor(255, 255, 255, 200))); // Semi-transparent white
     painter.setFont(QFont("Arial", 12, QFont::Bold));
     painter.drawText(10, height() - 20, "Modern OpenGL Mapper");
+    
+    // Draw map info using contributor manager
+    QColor infoColor;
+    if (mpHost->mBgColor_2.lightness() > 127) {
+        infoColor = QColor(Qt::black);
+    } else {
+        infoColor = QColor(Qt::white);
+    }
+    dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, 
+                           mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight);
+    
     painter.end();
     
     // Display instant frame time
@@ -343,6 +355,12 @@ void ModernGLWidget::renderRooms()
     float pz = static_cast<float>(mMapCenterZ);
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
+
+    // Batched instance data for instanced rendering
+    QVector<CubeInstanceData> mainRoomInstances;
+    QVector<CubeInstanceData> currentRoomInstances;
+    QVector<CubeInstanceData> targetRoomInstances;
+    QVector<CubeInstanceData> overlayInstances;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -372,14 +390,16 @@ void ModernGLWidget::renderRooms()
         bool isCurrentRoom = (rz == pz) && (rx == px) && (ry == py);
         bool isTargetRoom = (currentRoomId == mTargetRoomId);
         bool belowOrAtLevel = (rz <= pz);
+        float roomAlpha = 1.0f;
+        const float defaultSize = 1.0f / scale;
 
-        // 1. Render main room cube using correct planeColor logic
+        // 1. Collect main room cube data
         if (isCurrentRoom) {
             // Current room: red
-            renderCube(rx, ry, rz, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f);
+            currentRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f));
         } else if (isTargetRoom) {
             // Target room: green
-            renderCube(rx, ry, rz, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f);
+            targetRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
@@ -430,14 +450,10 @@ void ModernGLWidget::renderRooms()
                 }
             }
             
-            renderCube(rx, ry, rz, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha);
+            mainRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, redComponent, greenComponent, blueComponent, roomAlpha));
         }
 
-        // 2. Render thin environment color overlay on top
-        // Disable depth testing like the original to prevent clipping
-        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
-
+        // 2. Collect environment color overlay data
         QColor envColor = getEnvironmentColor(pR);
         float overlayZ = rz + 0.25f; // Slightly above the main cube
         float envRed = envColor.redF();
@@ -477,17 +493,47 @@ void ModernGLWidget::renderRooms()
             }
         }
         
-        renderCube(rx,
-                   ry,
-                   overlayZ,
-                   0.75f / scale, // Slightly smaller and thinner
-                   envRed,
-                   envGreen,
-                   envBlue,
-                   overlayAlpha);
+        overlayInstances.append(CubeInstanceData(rx, ry, overlayZ, 0.75f / scale, 0.75f / scale, 0.75f / scale, envRed, envGreen, envBlue, overlayAlpha));
 
-        // 3. Render up/down exit indicators on the overlay
+        // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
         renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f);
+    }
+
+    // Create instanced render commands for each batch
+    if (!mainRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(mainRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!currentRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(currentRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!targetRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(targetRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!overlayInstances.isEmpty()) {
+        // Disable depth testing for overlays like the original
+        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+
+        auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
 
         // Re-enable depth testing for subsequent rendering
         auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
@@ -654,8 +700,6 @@ void ModernGLWidget::renderConnections()
                 renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
-                auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(disableDepthCommand2));
                 QColor envColor = getEnvironmentColor(pExit);
                 float overlayZ = dz + 0.25f;
                 float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
@@ -681,8 +725,6 @@ void ModernGLWidget::renderConnections()
                            exitEnvGreen,
                            exitEnvBlue,
                            overlayAlpha);
-                auto enableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(enableDepthCommand2));
             }
         }
     }
@@ -696,13 +738,26 @@ void ModernGLWidget::renderConnections()
 void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a)
 {
     // Create render command and queue it
-    auto command = std::make_unique<RenderCubeCommand>(x, y, z, size, r, g, b, a, 
+    auto command = std::make_unique<RenderCubeCommand>(x, y, z, size, r, g, b, a,
                                                       mCameraController.getProjectionMatrix(), 
                                                       mCameraController.getViewMatrix(), 
                                                       mCameraController.getModelMatrix());
     mRenderCommandQueue.addCommand(std::move(command));
 }
 
+void ModernGLWidget::shiftCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
+{
+    mCameraController.shiftPerspective(verticalAngle, horizontalAngle, rotationAngle);
+    update();
+}
+
+void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
+{
+    mCameraController.setPosition(r, theta, phi);
+    update();
+}
+
+// Implement slot methods (same interface as original)
 void ModernGLWidget::slot_showAllLevels()
 {
     mShowTopLevels = 999999;
@@ -713,73 +768,43 @@ void ModernGLWidget::slot_showAllLevels()
 void ModernGLWidget::slot_shiftDown()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY - 1, mMapCenterZ);
-    } else {
-        mMapCenterY--;
-        update();
-    }
+    mCameraController.translateTargetBackward();
+    update();
 }
 
 void ModernGLWidget::slot_shiftUp()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY + 1, mMapCenterZ);
-    } else {
-        mMapCenterY++;
-        update();
-    }
+    mCameraController.translateTargetForward();
+    update();
 }
 
 void ModernGLWidget::slot_shiftLeft()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX - 1, mMapCenterY, mMapCenterZ);
-    } else {
-        mMapCenterX--;
-        update();
-    }
+    mCameraController.translateTargetLeft();
+    update();
 }
 
 void ModernGLWidget::slot_shiftRight()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX + 1, mMapCenterY, mMapCenterZ);
-    } else {
-        mMapCenterX++;
-        update();
-    }
+    mCameraController.translateTargetRight();
+    update();
 }
 
 void ModernGLWidget::slot_shiftZup()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY, mMapCenterZ + 1);
-    } else {
-        mMapCenterZ++;
-        update();
-    }
+    mCameraController.translateTargetUp();
+    update();
 }
 
 void ModernGLWidget::slot_shiftZdown()
 {
     mShiftMode = true;
-    
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        startSmoothTransition(mAID, mMapCenterX, mMapCenterY, mMapCenterZ - 1);
-    } else {
-        mMapCenterZ--;
-        update();
-    }
+    mCameraController.translateTargetDown();
+    update();
 }
 
 void ModernGLWidget::slot_singleLevelView()
@@ -849,30 +874,64 @@ void ModernGLWidget::slot_setScale(int angle)
 
 void ModernGLWidget::slot_setCameraPositionX(int angle)
 {
-    angle /= 10; // qNormalizeAngle equivalent
-    float currentY = mCameraController.getYRot();
-    float currentZ = mCameraController.getZRot();
-    mCameraController.setRotation(angle, currentY, currentZ);
+    angle *= 10;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
     update();
 }
 
 void ModernGLWidget::slot_setCameraPositionY(int angle)
 {
-    angle /= 10; // qNormalizeAngle equivalent
-    float currentX = mCameraController.getXRot();
-    float currentZ = mCameraController.getZRot();
-    mCameraController.setRotation(currentX, angle, currentZ);
+    angle *= 10;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], angle);
     is2DView = false;
     update();
 }
 
 void ModernGLWidget::slot_setCameraPositionZ(int angle)
 {
-    angle /= 10; // qNormalizeAngle equivalent
-    float currentX = mCameraController.getXRot();
-    float currentY = mCameraController.getYRot();
-    mCameraController.setRotation(currentX, currentY, angle);
+    angle *= 10;
+    angle = qBound(0, angle, 180);
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], angle, currentPosition[2]);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraDown()
+{
+    const float angle = 3.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1]+angle, currentPosition[2]);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraUp()
+{
+    const float angle = 3.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1]-angle, currentPosition[2]);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraLeft()
+{
+    const float angle = 3.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], currentPosition[2]-angle);
+    is2DView = false;
+    update();
+}
+
+void ModernGLWidget::slot_shiftCameraRight()
+{
+    const float angle = 3.0f;
+    QVector3D currentPosition = mCameraController.getPosition();
+    mCameraController.setPosition(currentPosition[0], currentPosition[1], currentPosition[2]+angle);
     is2DView = false;
     update();
 }
@@ -890,7 +949,7 @@ void ModernGLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
         mMapCenterX = xPos;
         mMapCenterY = yPos;
         mMapCenterZ = zPos;
-        mCameraController.setViewCenter(xPos, yPos, zPos);
+        mCameraController.setTarget(xPos, yPos, zPos);
         update();
     }
 }
@@ -912,19 +971,73 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
 void ModernGLWidget::mousePressEvent(QMouseEvent* event)
 {
     // Implement mouse handling (placeholder)
-    QOpenGLWidget::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
+    if (!mpMap||!mpMap->mpRoomDB) {
+        return;
+    }
+    if (event->buttons() & Qt::LeftButton) {        // translation on xy-plane
+        auto eventPos = event->position().toPoint();
+        const int x = eventPos.x();
+        const int y = height() - eventPos.y(); // the opengl origin is at bottom left
+        mPanMode = true;
+        mPanXStart = x;
+        mPanYStart = y;
+    } 
 }
 
 void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    // Implement mouse handling (placeholder)
+    if (!mpMap||!mpMap->mpRoomDB) {
+        return;
+    }
+    if (mPanMode) {
+        auto eventPos = event->position();
+        auto x = static_cast<float>(eventPos.x());
+        auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
+        if ((mPanXStart - x) > 1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraRight();
+            } else {
+                slot_shiftLeft();
+            }
+            mPanXStart = x;
+        } else if ((mPanXStart - x) < -1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraLeft();
+            } else {
+                slot_shiftRight();
+            }
+            mPanXStart = x;
+        }
+        if ((mPanYStart - y) > 1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraUp();
+            } else {
+                slot_shiftUp();
+            }
+            mPanYStart = y;
+        } else if ((mPanYStart - y) < -1.0f) {
+            if (event->modifiers() & Qt::ControlModifier) {
+                slot_shiftCameraDown();
+            } else {
+                slot_shiftDown();
+            }
+            mPanYStart = y;
+        }
+    }
     QOpenGLWidget::mouseMoveEvent(event);
 }
 
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    // Implement mouse handling (placeholder)
+    mPanMode = false;
+    mCameraController.snapTargetToGrid();
+    const QVector3D newCenter = mCameraController.getTarget();
+    mMapCenterX = newCenter.x();
+    mMapCenterY = newCenter.y();
+    mMapCenterZ = newCenter.z();
     QOpenGLWidget::mouseReleaseEvent(event);
+    update();
 }
 
 void ModernGLWidget::renderLines(const QVector<float>& vertices, const QVector<float>& colors)
@@ -1184,15 +1297,26 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     mTargetMapCenterZ = static_cast<float>(targetZ);
     
     // Store current position as start position
-    mStartMapCenterX = static_cast<float>(mMapCenterX);
-    mStartMapCenterY = static_cast<float>(mMapCenterY);
-    mStartMapCenterZ = static_cast<float>(mMapCenterZ);
+    if (mCameraSmoothAnimating) {
+        mStartMapCenterX = mCurrentAnimationX;
+        mStartMapCenterY = mCurrentAnimationY;
+        mStartMapCenterZ = mCurrentAnimationZ;
+    } else {
+        mStartMapCenterX = static_cast<float>(mMapCenterX);
+        mStartMapCenterY = static_cast<float>(mMapCenterY);
+        mStartMapCenterZ = static_cast<float>(mMapCenterZ);
+    }
     
     // Initialize current animation position
     mCurrentAnimationX = mStartMapCenterX;
     mCurrentAnimationY = mStartMapCenterY;
     mCurrentAnimationZ = mStartMapCenterZ;
     
+    // update map's actual position
+    mMapCenterX = static_cast<float>(targetX);
+    mMapCenterY = static_cast<float>(targetY);
+    mMapCenterZ = static_cast<float>(targetZ);
+
     // Reset animation progress
     mAnimationProgress = 0.0;
     
@@ -1216,9 +1340,7 @@ void ModernGLWidget::onCameraAnimationTick()
         mCameraAnimationTimer->stop();
         
         mAID = mTargetAID;
-        mMapCenterX = static_cast<int>(mTargetMapCenterX);
-        mMapCenterY = static_cast<int>(mTargetMapCenterY);
-        mMapCenterZ = static_cast<int>(mTargetMapCenterZ);
+        mCameraController.setTarget(static_cast<int>(mTargetMapCenterX), static_cast<int>(mTargetMapCenterY), static_cast<int>(mTargetMapCenterZ));
         
         // Set final floating-point position
         mCurrentAnimationX = mTargetMapCenterX;
@@ -1239,8 +1361,9 @@ void ModernGLWidget::onCameraAnimationTick()
     }
     
     // Update camera controller with current floating-point position
-    mCameraController.setViewCenter(mCurrentAnimationX, mCurrentAnimationY, mCurrentAnimationZ);
+    mCameraController.setTarget(mCurrentAnimationX, mCurrentAnimationY, mCurrentAnimationZ);
     
     // Trigger a repaint
     update();
 }
+

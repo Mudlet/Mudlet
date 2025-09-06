@@ -23,6 +23,8 @@
 #include "pre_guard.h"
 #include <QMatrix4x4>
 #include <QVector3D>
+#include <numbers>
+//#include <boost/math/constants/constants.hpp>
 #include "post_guard.h"
 
 class CameraController
@@ -32,11 +34,21 @@ public:
     ~CameraController();
 
     // Camera position and orientation
-    void setRotation(float xRot, float yRot, float zRot);
-    void setPosition(float centerX, float centerY, float centerZ);
+    void setPosition(float r, float theta, float phi);
     void setScale(float scale);
     void setViewportSize(int width, int height);
+    void shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle);
     
+    // Camera target control
+    void setTarget(float x, float y, float z);
+    void translateTargetUp();
+    void translateTargetDown();
+    void translateTargetLeft();
+    void translateTargetRight();
+    void translateTargetForward();
+    void translateTargetBackward();
+    void snapTargetToGrid();
+
     // View presets
     void setDefaultView();
     void setSideView();  
@@ -50,27 +62,23 @@ public:
     QMatrix4x4 getModelMatrix() const { return mModelMatrix; }
     
     // Camera state
-    float getXRot() const { return mXRot; }
-    float getYRot() const { return mYRot; }
-    float getZRot() const { return mZRot; }
-    float getScale() const { return mScale; }
-    float getCenterX() const { return mCenterX; }
-    float getCenterY() const { return mCenterY; }
-    float getCenterZ() const { return mCenterZ; }
+    QVector3D getPosition();
+    QVector3D getTarget() const { return mTarget; }
+    QVector3D getUp() const { return mUpVector; }
+    float getScale() const { return mDistance; }
     
     // View center (for external API compatibility)
     void setViewCenter(float x, float y, float z);
 
 private:
+    QVector3D rotateAround(QVector3D currentVector, QVector3D rotationAxis, float rotationAngle);
     // Camera parameters
-    float mXRot = 1.0f;
-    float mYRot = 5.0f; 
-    float mZRot = 10.0f;
-    float mScale = 1.0f;
-    
-    float mCenterX = 0.0f;
-    float mCenterY = 0.0f;
-    float mCenterZ = 0.0f;
+    float mDistance;
+    QVector3D mTarget;
+    // NOTE: all these three vectors are and must remain normalized
+    QVector3D mPositionVector;
+    QVector3D mRightVector;
+    QVector3D mUpVector;
     
     int mViewportWidth = 400;
     int mViewportHeight = 400;

@@ -1172,7 +1172,7 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     auto& mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
     while (!mxpEventQueue.isEmpty()) {
         const auto& event = mxpEventQueue.dequeue();
-        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
+        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
     }
 
     const double processT = mProcessingTimer.elapsed() / 1000.0;
