@@ -184,6 +184,7 @@ set(mudlet_SRCS
     TTreeWidget.cpp
     TTrigger.cpp
     TVar.cpp
+    TutorialProfile.cpp
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -361,6 +362,7 @@ set(mudlet_HDRS
     TTreeWidget.h
     TTrigger.h
     TVar.h
+    TutorialProfile.h
     utils.h
     VarUnit.h
     widechar_width.h
