@@ -39,7 +39,8 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& vertexBuffer,
                                QOpenGLBuffer& colorBuffer,
                                QOpenGLBuffer& normalBuffer,
-                               QOpenGLBuffer& indexBuffer)
+                               QOpenGLBuffer& indexBuffer,
+                               QOpenGLBuffer& texCoordBuffer)
 {    
     GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
     
@@ -48,6 +49,8 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUseTexture", false); // Cubes don't use textures
+    shader->setUniformValue("uUsePBR", false);
 
     // Normal matrix (inverse transpose of model matrix)
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
@@ -72,7 +75,8 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
                                 QOpenGLBuffer& vertexBuffer,
                                 QOpenGLBuffer& colorBuffer,
                                 QOpenGLBuffer& normalBuffer,
-                                QOpenGLBuffer& indexBuffer)
+                                QOpenGLBuffer& indexBuffer,
+                                QOpenGLBuffer& texCoordBuffer)
 {
     GeometryData lineGeometry = geometryManager->generateLineGeometry(mVertices, mColors);
     
@@ -85,6 +89,8 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUseTexture", false); // Lines don't use textures
+    shader->setUniformValue("uUsePBR", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -108,7 +114,8 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                     QOpenGLBuffer& vertexBuffer,
                                     QOpenGLBuffer& colorBuffer,
                                     QOpenGLBuffer& normalBuffer,
-                                    QOpenGLBuffer& indexBuffer)
+                                    QOpenGLBuffer& indexBuffer,
+                                    QOpenGLBuffer& texCoordBuffer)
 {
     GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
     
@@ -121,11 +128,70 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUseTexture", false); // Regular triangles don't use textures
+    shader->setUniformValue("uUsePBR", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+}
+
+// RenderTexturedTrianglesCommand implementation
+RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(const GeometryData& geometry,
+                                                              const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix,
+                                                              int textureDebugMode)
+    : mGeometry(geometry), mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix), mTextureDebugMode(textureDebugMode)
+{
+}
+
+void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
+                                           QOpenGLShaderProgram* shader,
+                                           GeometryManager* geometryManager,
+                                           ResourceManager* resourceManager,
+                                           QOpenGLVertexArrayObject& vao,
+                                           QOpenGLBuffer& vertexBuffer,
+                                           QOpenGLBuffer& colorBuffer,
+                                           QOpenGLBuffer& normalBuffer,
+                                           QOpenGLBuffer& indexBuffer,
+                                           QOpenGLBuffer& texCoordBuffer)
+{
+    if (mGeometry.isEmpty()) {
+        return;
+    }
+    
+    // Set uniforms
+    QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
+    shader->setUniformValue("uMVP", mvp);
+    shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
+    
+    // Set texture uniforms based on available textures
+    if (mGeometry.hasPBRTextures()) {
+        shader->setUniformValue("uUsePBR", true);
+        shader->setUniformValue("uUseTexture", false);
+        shader->setUniformValue("uTextureDebugMode", mTextureDebugMode);
+        shader->setUniformValue("uBaseColorTexture", 0);         // Texture unit 0
+        shader->setUniformValue("uMetallicRoughnessTexture", 1); // Texture unit 1  
+        shader->setUniformValue("uNormalTexture", 2);            // Texture unit 2
+        
+        // Set PBR material factors
+        shader->setUniformValue("uBaseColorFactor", QVector4D(mGeometry.baseColorFactor[0], mGeometry.baseColorFactor[1], mGeometry.baseColorFactor[2], mGeometry.baseColorFactor[3]));
+        shader->setUniformValue("uMetallicFactor", mGeometry.metallicFactor);
+        shader->setUniformValue("uRoughnessFactor", mGeometry.roughnessFactor);
+    } else {
+        shader->setUniformValue("uUsePBR", false);
+        shader->setUniformValue("uUseTexture", mGeometry.hasTexture());
+        shader->setUniformValue("uTextureDebugMode", 0); // Default to full rendering for non-PBR
+        shader->setUniformValue("uTexture", 0);          // Use texture unit 0
+    }
+
+    // Normal matrix (inverse transpose of model matrix)
+    QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
+    shader->setUniformValue("uNormalMatrix", normalMatrix);
+    
+    // Use the textured rendering method
+    geometryManager->renderGeometry(mGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, resourceManager, GL_TRIANGLES);
 }
 
 // RenderInstancedCubesCommand implementation
@@ -143,7 +209,8 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
                                          QOpenGLBuffer& vertexBuffer,
                                          QOpenGLBuffer& colorBuffer,
                                          QOpenGLBuffer& normalBuffer,
-                                         QOpenGLBuffer& indexBuffer)
+                                         QOpenGLBuffer& indexBuffer,
+                                         QOpenGLBuffer& texCoordBuffer)
 {
     if (mInstances.isEmpty()) {
         return;
@@ -154,6 +221,8 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", true);
+    shader->setUniformValue("uUseTexture", false); // Instanced cubes don't use textures
+    shader->setUniformValue("uUsePBR", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -182,7 +251,8 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
                             QOpenGLBuffer& vertexBuffer,
                             QOpenGLBuffer& colorBuffer,
                             QOpenGLBuffer& normalBuffer,
-                            QOpenGLBuffer& indexBuffer)
+                            QOpenGLBuffer& indexBuffer,
+                            QOpenGLBuffer& texCoordBuffer)
 {
     switch (mStateType) {
         case ENABLE_DEPTH_TEST:

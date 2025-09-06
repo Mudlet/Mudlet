@@ -26,19 +26,79 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
+#include <QOpenGLTexture>
+#include <optional>
+#ifdef INCLUDE_3DMAPPER
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#endif
 #include "post_guard.h"
 
 struct GeometryData {
     QVector<float> vertices;
     QVector<float> colors;
     QVector<float> normals;
+    QVector<float> textureCoords;
     QVector<unsigned int> indices;
+    
+    // PBR textures
+    unsigned int baseColorTextureId = 0;
+    unsigned int metallicRoughnessTextureId = 0;
+    unsigned int normalTextureId = 0;
+    
+    // PBR material factors
+    float baseColorFactor[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA
+    float metallicFactor = 1.0f;
+    float roughnessFactor = 1.0f;
+    
+    // Non-PBR texture support
+    unsigned int textureId = 0;
+    
+    mutable bool verticesUploaded = false;
+    mutable bool colorsUploaded = false;
+    mutable bool normalsUploaded = false;
+    mutable bool texCoordsUploaded = false;
+    mutable bool indicesUploaded = false;
     
     void clear() {
         vertices.clear();
         colors.clear();
         normals.clear();
+        textureCoords.clear();
         indices.clear();
+        textureId = 0;
+        baseColorTextureId = 0;
+        metallicRoughnessTextureId = 0;
+        normalTextureId = 0;
+        baseColorFactor[0] = baseColorFactor[1] = baseColorFactor[2] = baseColorFactor[3] = 1.0f;
+        metallicFactor = 1.0f;
+        roughnessFactor = 1.0f;
+        verticesUploaded = false;
+        colorsUploaded = false;
+        normalsUploaded = false;
+        texCoordsUploaded = false;
+        indicesUploaded = false;
+        // Note: texture cleanup should be handled explicitly by GeometryManager
+    }
+    
+    void clearTexture() {
+        if (textureId != 0) {
+            glDeleteTextures(1, &textureId);
+            textureId = 0;
+        }
+        if (baseColorTextureId != 0) {
+            glDeleteTextures(1, &baseColorTextureId);
+            baseColorTextureId = 0;
+        }
+        if (metallicRoughnessTextureId != 0) {
+            glDeleteTextures(1, &metallicRoughnessTextureId);
+            metallicRoughnessTextureId = 0;
+        }
+        if (normalTextureId != 0) {
+            glDeleteTextures(1, &normalTextureId);
+            normalTextureId = 0;
+        }
     }
     
     bool isEmpty() const {
@@ -55,6 +115,14 @@ struct GeometryData {
     
     bool hasIndices() const {
         return !indices.isEmpty();
+    }
+    
+    bool hasTexture() const {
+        return (textureId != 0 || baseColorTextureId != 0) && !textureCoords.isEmpty();
+    }
+    
+    bool hasPBRTextures() const {
+        return baseColorTextureId != 0 || metallicRoughnessTextureId != 0 || normalTextureId != 0;
     }
 };
 
@@ -86,6 +154,7 @@ public:
     GeometryData generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a);
     GeometryData generateLineGeometry(const QVector<float>& vertices, const QVector<float>& colors);
     GeometryData generateTriangleGeometry(const QVector<float>& vertices, const QVector<float>& colors);
+    GeometryData generatePlayerIconGeometry();
     
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry, 
@@ -96,6 +165,16 @@ public:
                        QOpenGLBuffer& indexBuffer,
                        GLenum drawMode = GL_TRIANGLES);
                        
+    // Render geometry with texture coordinate support
+    void renderGeometry(const GeometryData& geometry, 
+                       QOpenGLVertexArrayObject& vao,
+                       QOpenGLBuffer& vertexBuffer,
+                       QOpenGLBuffer& colorBuffer,
+                       QOpenGLBuffer& normalBuffer,
+                       QOpenGLBuffer& indexBuffer,
+                       QOpenGLBuffer& texCoordBuffer,
+                       GLenum drawMode = GL_TRIANGLES);
+                       
     // Render geometry with resource tracking
     void renderGeometry(const GeometryData& geometry, 
                        QOpenGLVertexArrayObject& vao,
@@ -103,6 +182,17 @@ public:
                        QOpenGLBuffer& colorBuffer,
                        QOpenGLBuffer& normalBuffer,
                        QOpenGLBuffer& indexBuffer,
+                       class ResourceManager* resourceManager,
+                       GLenum drawMode = GL_TRIANGLES);
+                       
+    // Render geometry with texture coordinate support and resource tracking
+    void renderGeometry(const GeometryData& geometry, 
+                       QOpenGLVertexArrayObject& vao,
+                       QOpenGLBuffer& vertexBuffer,
+                       QOpenGLBuffer& colorBuffer,
+                       QOpenGLBuffer& normalBuffer,
+                       QOpenGLBuffer& indexBuffer,
+                       QOpenGLBuffer& texCoordBuffer,
                        class ResourceManager* resourceManager,
                        GLenum drawMode = GL_TRIANGLES);
                        
@@ -132,6 +222,9 @@ private:
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
     
+    // Cached player icon geometry (sword model)
+    mutable std::optional<GeometryData> mPlayerIconTemplate;
+    
     // Function pointers for instancing (OpenGL 3.3+)
     typedef void (QOPENGLF_APIENTRYP PFNGLVERTEXATTRIBDIVISORPROC) (GLuint index, GLuint divisor);
     typedef void (QOPENGLF_APIENTRYP PFNGLDRAWELEMENTSINSTANCEDPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
@@ -141,6 +234,8 @@ private:
     
     void generateCubeTemplate();
     GeometryData transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a);
+    
+    void loadPlayerIconTemplate();
 };
 
 #endif // MUDLET_GEOMETRY_MANAGER_H

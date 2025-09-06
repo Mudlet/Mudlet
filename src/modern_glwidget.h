@@ -63,7 +63,7 @@ public:
     Q_DISABLE_COPY(ModernGLWidget)
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
-
+    
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
     void shiftCamera(float, float, float);
@@ -107,6 +107,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
@@ -118,6 +119,7 @@ private:
     QOpenGLBuffer mColorBuffer;
     QOpenGLBuffer mNormalBuffer;
     QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mTexCoordBuffer;
     QOpenGLBuffer mInstanceBuffer;
     QOpenGLVertexArrayObject mVAO;
     
@@ -152,7 +154,7 @@ private:
     int mMapCenterZ = 0;
     bool mShiftMode = false;
     int mFontHeight = 20;
-
+    
     // Scales the size of rooms compared to the space between them - currently
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
     // of "2.5"):

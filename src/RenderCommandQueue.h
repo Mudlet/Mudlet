@@ -52,7 +52,8 @@ public:
                    QOpenGLBuffer& vertexBuffer,
                    QOpenGLBuffer& colorBuffer,
                    QOpenGLBuffer& normalBuffer,
-                   QOpenGLBuffer& indexBuffer);
+                   QOpenGLBuffer& indexBuffer,
+                   QOpenGLBuffer& texCoordBuffer);
     
     // Clear the command queue
     void clear();

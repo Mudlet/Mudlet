@@ -34,6 +34,7 @@
 #include <QtEvents>
 #include <QDebug>
 #include <QPainter>
+#include <QKeyEvent>
 #include "post_guard.h"
 
 
@@ -167,6 +168,13 @@ void ModernGLWidget::setupBuffers()
     mIndexBuffer.bind();
     mIndexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Index buffer creation"));
+
+    // Create texture coordinate buffer
+    mTexCoordBuffer.create();
+    mResourceManager.onBufferCreated();
+    mTexCoordBuffer.bind();
+    mTexCoordBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    mResourceManager.checkGLError(qsl("Texture coordinate buffer creation"));
 
     // Create instance buffer for instanced rendering
     mInstanceBuffer.create();
@@ -312,7 +320,7 @@ void ModernGLWidget::paintGL()
     renderRooms();
 
     // Execute all queued commands
-    mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer);
+    mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
 
     shaderProgram->release();
     
@@ -333,10 +341,6 @@ void ModernGLWidget::paintGL()
                            mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight);
     
     painter.end();
-    
-    // Display instant frame time
-    qint64 frameTime = mFrameTimer.elapsed();
-    qDebug() << "[Modern GLWidget] Frame time:" << frameTime << "ms";
 }
 
 void ModernGLWidget::renderRooms()
@@ -397,6 +401,29 @@ void ModernGLWidget::renderRooms()
         if (isCurrentRoom) {
             // Current room: red
             currentRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 1.0f, 0.0f, 0.0f, 1.0f));
+
+            if (mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")) {
+                GeometryData playerIcon = mGeometryManager.generatePlayerIconGeometry();
+                if (!playerIcon.isEmpty()) {
+                    // Create modified geometry positioned slightly above the current room
+                    GeometryData positionedIcon = playerIcon;
+                    
+                    // Position above the room (orientation is handled in GeometryManager)
+                    for (int i = 2; i < positionedIcon.vertices.size(); i += 3) {
+                        positionedIcon.vertices[i] += (rz + 0.8f); // Elevated position above room
+                    }
+                    for (int i = 0; i < positionedIcon.vertices.size(); i += 3) {
+                        positionedIcon.vertices[i] += rx;     // Add room X position
+                        positionedIcon.vertices[i + 1] += ry; // Add room Y position
+                    }
+
+                    // Use textured rendering for the player icon
+                    auto command = std::make_unique<RenderTexturedTrianglesCommand>(
+                            positionedIcon, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(),
+                            0); // Default to full PBR rendering
+                    mRenderCommandQueue.addCommand(std::move(command));
+                }
+            }
         } else if (isTargetRoom) {
             // Target room: green
             targetRoomInstances.append(CubeInstanceData(rx, ry, rz, 1.0f / scale, 1.0f / scale, 1.0f / scale, 0.0f, 1.0f, 0.0f, 1.0f));
@@ -975,6 +1002,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (!mpMap||!mpMap->mpRoomDB) {
         return;
     }
+        
     if (event->buttons() & Qt::LeftButton) {        // translation on xy-plane
         auto eventPos = event->position().toPoint();
         const int x = eventPos.x();
@@ -1038,6 +1066,11 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     mMapCenterZ = newCenter.z();
     QOpenGLWidget::mouseReleaseEvent(event);
     update();
+}
+
+void ModernGLWidget::keyPressEvent(QKeyEvent* event)
+{
+    QOpenGLWidget::keyPressEvent(event);
 }
 
 void ModernGLWidget::renderLines(const QVector<float>& vertices, const QVector<float>& colors)
@@ -1366,4 +1399,3 @@ void ModernGLWidget::onCameraAnimationTick()
     // Trigger a repaint
     update();
 }
-
