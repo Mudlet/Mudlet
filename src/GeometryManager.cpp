@@ -23,8 +23,6 @@
 #include "pre_guard.h"
 #include <QDebug>
 #include <QFile>
-#include <QTemporaryDir>
-#include <QDir>
 #include <QImage>
 #include "post_guard.h"
 
@@ -58,7 +56,6 @@ void GeometryManager::initialize()
 
 void GeometryManager::cleanup()
 {
-    // Clean up any loaded textures
     if (mPlayerIconTemplate.has_value()) {
         mPlayerIconTemplate->clearTexture();
     }
@@ -533,7 +530,6 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     
     // Bind PBR textures if available
     if (geometry.hasPBRTextures()) {
-        // Bind PBR textures (removed debug spam)
         
         // Bind base color texture to unit 0
         if (geometry.baseColorTextureId != 0) {

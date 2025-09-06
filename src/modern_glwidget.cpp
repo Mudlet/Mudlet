@@ -419,8 +419,7 @@ void ModernGLWidget::renderRooms()
 
                     // Use textured rendering for the player icon
                     auto command = std::make_unique<RenderTexturedTrianglesCommand>(
-                            positionedIcon, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(),
-                            0); // Default to full PBR rendering
+                            positionedIcon, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
                     mRenderCommandQueue.addCommand(std::move(command));
                 }
             }

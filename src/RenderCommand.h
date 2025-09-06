@@ -138,13 +138,11 @@ private:
     QMatrix4x4 mModelMatrix;
 };
 
-// Command to render textured triangle geometry
 class RenderTexturedTrianglesCommand : public RenderCommand
 {
 public:
     RenderTexturedTrianglesCommand(const GeometryData& geometry,
-                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix,
-                                  int textureDebugMode = 0);
+                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
     
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -164,7 +162,6 @@ private:
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
-    int mTextureDebugMode;
 };
 
 // Command to render multiple cube instances in a single draw call

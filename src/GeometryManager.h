@@ -28,11 +28,9 @@
 #include <QOpenGLContext>
 #include <QOpenGLTexture>
 #include <optional>
-#ifdef INCLUDE_3DMAPPER
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#endif
 #include "post_guard.h"
 
 struct GeometryData {
@@ -79,7 +77,7 @@ struct GeometryData {
         normalsUploaded = false;
         texCoordsUploaded = false;
         indicesUploaded = false;
-        // Note: texture cleanup should be handled explicitly by GeometryManager
+        // Note: texture cleanup is handled by clearTexture()
     }
     
     void clearTexture() {
@@ -222,7 +220,7 @@ private:
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
     
-    // Cached player icon geometry (sword model)
+    // Cached player icon geometry
     mutable std::optional<GeometryData> mPlayerIconTemplate;
     
     // Function pointers for instancing (OpenGL 3.3+)

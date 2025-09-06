@@ -5,7 +5,6 @@ out vec4 FragColor;
 
 uniform bool uUseTexture = false;
 uniform bool uUsePBR = false;
-uniform int uTextureDebugMode = 0;    // 0=full PBR, 1=base only, 2=metallic/rough, 3=normal, 4=no textures
 uniform sampler2D uTexture;           // Legacy single texture or base color
 uniform sampler2D uBaseColorTexture;  // PBR base color
 uniform sampler2D uMetallicRoughnessTexture; // PBR metallic/roughness
@@ -19,24 +18,6 @@ uniform float uRoughnessFactor;
 void main()
 {
     if (uUsePBR) {
-        // Handle texture debug modes
-        if (uTextureDebugMode == 1) {
-            // Base color only
-            vec4 baseColor = texture(uBaseColorTexture, texCoord);
-            FragColor = baseColor * vertexColor;
-        } else if (uTextureDebugMode == 2) {
-            // Metallic/roughness only (show as grayscale)
-            vec4 metallicRoughness = texture(uMetallicRoughnessTexture, texCoord);
-            FragColor = vec4(metallicRoughness.rgb, 1.0) * vertexColor;
-        } else if (uTextureDebugMode == 3) {
-            // Normal map only (show as RGB)
-            vec4 normal = texture(uNormalTexture, texCoord);
-            FragColor = vec4(normal.rgb, 1.0) * vertexColor;
-        } else if (uTextureDebugMode == 4) {
-            // No textures, just vertex colors
-            FragColor = vertexColor;
-        } else {
-            // Full PBR (default mode)
             vec4 baseColor = texture(uBaseColorTexture, texCoord);
             // Convert base color from sRGB to linear (approximation)
             baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
@@ -107,7 +88,6 @@ void main()
             finalColor = pow(finalColor, vec3(1.0/2.2));
             
             FragColor = vec4(finalColor, baseColor.a * vertexColor.a);
-        }
     } else if (uUseTexture) {
         // Simple texture rendering
         vec4 textureColor = texture(uTexture, texCoord);
