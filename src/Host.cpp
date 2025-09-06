@@ -460,6 +460,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mIsTutorialProfile) {
         initializeTutorialProfile();
     }
+}
 
 Host::~Host()
 {
