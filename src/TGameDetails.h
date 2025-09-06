@@ -224,6 +224,14 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("<a href='http://www.petriamud.com'>www.petriamud.com</a><br>"
                  "<a href='https://www.youtube.com/channel/UCqXqG9qG6L1q3Q3F4F6Q6Nw'>Petria - YouTube</a>"),
              qsl(":/icons/banner_petria.jpg"),
+             /* English translation, provided by game:
+*              "Petria MUD, active since 1996, is one of the longest-running Spanish-language games with an active community to this day.
+*               A free fantasy world where you can play different races and classes, join clans, explore, participate in tournaments, and live epic adventures.
+*               • Free and in Spanish.
+*               • Dynamic events: Tournaments, Clan Raids, BattleGrounds (War of Flags), Quests, among others.
+*               • Over two decades of history, with constant improvements and new content.
+*               In Petria, you can forge your own path, defend your clan, and write your own legend."
+*/
              qsl("Petria MUD Activo desde 1996, es uno de los juegos en Español más longevos y con comunidad activa hasta hoy. "
                  "Un mundo de fantasía gratuito donde podrás jugar distintas razas y clases, unirte a clanes, explorar, participar en torneos y vivir aventuras épicas.\n\n"
                  "• Gratis y en Español.\n"
