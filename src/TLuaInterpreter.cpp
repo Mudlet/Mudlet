@@ -51,7 +51,7 @@
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
+#include "glwidget_integration.h"
 #endif
 
 #include <math.h>
@@ -3435,7 +3435,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions)
+void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions, const QString &caption)
 {
     lua_State *L = pGlobalLua;
     lua_getglobal(L, "mxp");
@@ -3471,6 +3471,10 @@ void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QS
         lua_pushstring(L, actions[i].toUtf8().constData());
         lua_rawseti(L, -2, i + 1);
     }
+    lua_pop(L, 1);
+
+    lua_pushstring(L, caption.toUtf8().constData());
+    lua_setfield(L, -2, "text");
 
     lua_pop(L, lua_gettop(L));
 
@@ -5277,6 +5281,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAreaRooms", TLuaInterpreter::getAreaRooms);
     lua_register(pGlobalLua, "getAreaRooms1", TLuaInterpreter::getAreaRooms1);
     lua_register(pGlobalLua, "getPath", TLuaInterpreter::getPath);
+#if defined(INCLUDE_3DMAPPER)
+    lua_register(pGlobalLua, "shiftMapPerspective", TLuaInterpreter::shiftMapPerspective);
+    lua_register(pGlobalLua, "setMapPerspective", TLuaInterpreter::setMapPerspective);
+#endif
     lua_register(pGlobalLua, "centerview", TLuaInterpreter::centerview);
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
@@ -7118,12 +7126,14 @@ int TLuaInterpreter::getMapBackgroundColor(lua_State* L)
     lua_pushnumber(L, color.red());
     lua_pushnumber(L, color.green());
     lua_pushnumber(L, color.blue());
-    return 3;
+    lua_pushnumber(L, color.alpha());
+    return 4;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapBackgroundColor
 int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
 {
+    int a = 255;
     const int r = getVerifiedInt(L, __func__, 1, "red component");
     if (r < 0 || r > 255) {
         return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
@@ -7139,8 +7149,15 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
     }
 
+    if (lua_gettop(L) > 3) {
+        a = getVerifiedInt(L, __func__, 4, "alpha", true);
+        if (a < 0 || a > 255) {
+            return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
+        }
+    }
+
     auto& host = getHostFromLua(L);
-    host.mBgColor_2 = QColor(r, g, b);
+    host.mBgColor_2 = QColor(r, g, b, a);
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -7296,10 +7313,12 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
-            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");;
-            if (host.mpMap->mpMapper->mp2dMap) {
+            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
+
+            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->update();
             }
+
             return success();
         }
     }
@@ -7363,7 +7382,26 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("showSentText")) {
-        host.mPrintCommand = getVerifiedBool(L, __func__, 2, "value");
+        // Handle both legacy boolean and new string values
+        if (lua_isboolean(L, 2)) {
+            bool value = getVerifiedBool(L, __func__, 2, "value");
+            host.mCommandEchoMode = value ? Host::CommandEchoMode::ScriptControl : Host::CommandEchoMode::Never;
+        } else if (lua_isstring(L, 2)) {
+            QString value = getVerifiedString(L, __func__, 2, "value");
+            if (value == "never") {
+                host.mCommandEchoMode = Host::CommandEchoMode::Never;
+            } else if (value == "always") {
+                host.mCommandEchoMode = Host::CommandEchoMode::Always;
+            } else if (value == "script") {
+                host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
+            } else {
+                lua_pushfstring(L, "setConfig: bad argument #2 value (expected 'never', 'always', or 'script', got '%s')", value.toUtf8().constData());
+                return warnArgumentValue(L, __func__, value);
+            }
+        } else {
+            lua_pushfstring(L, "setConfig: bad argument #2 type (expected boolean or string for 'showSentText', got %s)", luaL_typename(L, 2));
+            return warnArgumentValue(L, __func__, qsl("showSentText"));
+        }
         return success();
     }
     if (key == qsl("fixUnnecessaryLinebreaks")) {
@@ -7491,6 +7529,45 @@ int TLuaInterpreter::setConfig(lua_State * L)
         mudlet::self()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("ambiguousEAsianWidthCharacters")) {
+        static const QStringList values{"narrow", "wide", "auto"};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+
+        if (!values.contains(value)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"",
+                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            return 2;
+        }
+
+        if (value == qsl("narrow")) {
+            host.setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+        } else if (value == qsl("wide")) {
+            host.setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        } else {
+            host.setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        }
+        return success();
+    }
+    
+    // Handle experiment keys
+    if (key.startsWith(qsl("experiment."))) {
+        auto [result, errorMessage] = host.setExperimentEnabled(key, getVerifiedBool(L, __func__, 2, "value"));
+        if (!result) {
+            return warnArgumentValue(L, __func__, errorMessage);
+        }
+        
+        // Special handling for 3D mapper experiment
+        if (key == qsl("experiment.3dmap.modernmapper")) {
+#if defined(INCLUDE_3DMAPPER)
+            if (host.mpMap && host.mpMap->mpMapper) {
+                host.mpMap->mpMapper->recreate3DWidget();
+            }
+#endif
+        }
+        return success();
+    }
+    
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7527,6 +7604,12 @@ int TLuaInterpreter::getConfig(lua_State *L)
     const QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide a key");
+    }
+
+    // Check if second parameter requests string format (for enhanced API)
+    bool useStringFormat = false;
+    if (lua_gettop(L) >= 2 && lua_isboolean(L, 2)) {
+        useStringFormat = lua_toboolean(L, 2);
     }
 
     const std::unordered_map<QString, std::function<void()>> configMap = {
@@ -7570,7 +7653,34 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
-        { qsl("showSentText"), [&](){ lua_pushboolean(L, host.mPrintCommand); } },
+        { qsl("showSentText"), [&](){
+            if (useStringFormat) {
+                // Return string representation for new enhanced API
+                switch (host.mCommandEchoMode) {
+                case Host::CommandEchoMode::Never:
+                    lua_pushstring(L, "never");
+                    break;
+                case Host::CommandEchoMode::Always:
+                    lua_pushstring(L, "always");
+                    break;
+                case Host::CommandEchoMode::ScriptControl:
+                    lua_pushstring(L, "script");
+                    break;
+                }
+            } else {
+                // For backward compatibility, return boolean for legacy scripts
+                switch (host.mCommandEchoMode) {
+                case Host::CommandEchoMode::Never:
+                    lua_pushboolean(L, false);
+                    break;
+                case Host::CommandEchoMode::Always:
+                case Host::CommandEchoMode::ScriptControl:
+                    // Both modes map to true for backward compatibility
+                    lua_pushboolean(L, true);
+                    break;
+                }
+            }
+        } },
         { qsl("fixUnnecessaryLinebreaks"), [&](){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
         { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
@@ -7622,11 +7732,58 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
         { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } },
         { qsl("showTabConnectionIndicators"), [&](){ lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators); } },
+        { qsl("advertiseScreenReader"), [&](){ lua_pushboolean(L, host.mAdvertiseScreenReader); } },
+        { qsl("ambiguousEAsianWidthCharacters"), [&]() {
+            const auto ambiguousEAsianGlyphWidth = host.getWideAmbiguousEAsianGlyphsControlState();
+            switch (ambiguousEAsianGlyphWidth) {
+            case Qt::Unchecked:
+                lua_pushstring(L, "narrow");
+                break;
+            case Qt::Checked:
+                lua_pushstring(L, "wide");
+            break;
+            default:
+                lua_pushstring(L, "auto");
+            }
+        } },
+        { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
     };
 
     auto it = configMap.find(key);
     if (it != configMap.end()) {
         it->second();
+        return 1;
+    }
+    
+    // Handle experiment keys
+    if (key.startsWith(qsl("experiment."))) {
+        if (key == qsl("experiment.list")) {
+            // Special case: return list of all valid experiments
+            QStringList validExperiments = host.getValidExperiments();
+            lua_createtable(L, validExperiments.size(), 0);
+            for (int i = 0; i < validExperiments.size(); ++i) {
+                lua_pushstring(L, validExperiments.at(i).toUtf8().constData());
+                lua_rawseti(L, -2, i + 1);
+            }
+        } else if (key.endsWith(qsl(".active"))) {
+            // Handle special case: experiment.<group>.active returns active experiment name
+            QString group = key.left(key.length() - 7); // Remove ".active"
+            QString activeExperiment = host.getActiveExperimentInGroup(group);
+            if (activeExperiment.isEmpty()) {
+                lua_pushnil(L);
+            } else {
+                lua_pushstring(L, activeExperiment.toUtf8().constData());
+            }
+        } else {
+            // Regular experiment key - but only if it's valid
+            QStringList validExperiments = host.getValidExperiments();
+            if (validExperiments.contains(key)) {
+                lua_pushboolean(L, host.experimentEnabled(key));
+            } else {
+                lua_pushboolean(L, false);  // Invalid experiments are always false
+            }
+        }
         return 1;
     }
 

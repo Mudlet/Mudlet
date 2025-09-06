@@ -220,6 +220,14 @@ public:
     ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
+    bool            getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
+
+    // Experiment system methods
+    bool            experimentEnabled(const QString& experimentKey) const;
+    std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
+    QString         getActiveExperimentInGroup(const QString& group) const;
+    QStringList     getAllExperiments() const;
+    QStringList     getValidExperiments() const;
 
     void            forceClose();
     bool            isClosingDown() const { return mIsClosingDown; }
@@ -527,9 +535,13 @@ public:
     QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad;
 
-    // This is set when we want commands we typed to be shown on the main
-    // TConsole:
-    bool mPrintCommand;
+    // Controls how sent commands are displayed on the main TConsole:
+    enum class CommandEchoMode {
+        Never = 0,       // Never show sent commands regardless of script preferences
+        ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
+        Always = 2       // Always show sent commands regardless of script preferences
+    };
+    CommandEchoMode mCommandEchoMode;
 
     /*
      * This is set when the Server is remote echoing what WE send to it,
@@ -542,6 +554,16 @@ public:
      * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive = false;
+
+    // Command echo mode getters and setters
+    CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
+    void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
+    
+    // Backward compatibility methods - for existing code that expects boolean behavior
+    bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
+    void setPrintCommand(bool print) { 
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    }
 
 public:
     void setRemoteEchoingActive(bool active);
@@ -693,6 +715,7 @@ public:
     bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel;
+    bool mShow3DView;
     QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
@@ -812,6 +835,12 @@ private:
 
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
+
+    // Experiment system storage: key -> enabled state
+    QMap<QString, bool> mExperiments;
+    
+    // Static whitelist of valid experiments
+    static const QSet<QString> mValidExperiments;
 
     TriggerUnit mTriggerUnit;
     TimerUnit mTimerUnit;

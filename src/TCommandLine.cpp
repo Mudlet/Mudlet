@@ -34,6 +34,7 @@
 
 #include "pre_guard.h"
 #include <QKeyEvent>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
@@ -182,6 +183,7 @@ bool TCommandLine::event(QEvent* event)
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
             }
             mpConsole->mpBufferSearchBox->setFocus();
+            mpConsole->mpBufferSearchBox->selectAll();
             ke->accept();
             return true;
         }
@@ -966,7 +968,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mpHost->send(commandList.at(i));
         }
         // send command to your MiniConsole
-        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never){
             // This usage of commandList modifies the content!!!
             mpConsole->printCommand(commandList[i]);
         }

@@ -84,7 +84,7 @@ bool LlamafileManager::start(const Config& newConfig) {
 
     // Wait for startup with timeout
     if (!process->waitForStarted(config.startupTimeoutMs)) {
-        const QString error = QString("Failed to start llamafile: %1").arg(process->errorString());
+        const QString error = qsl("Failed to start llamafile: %1").arg(process->errorString());
         lastError = error;
         setStatus(Status::Error);
         emit processError(error);
@@ -258,7 +258,7 @@ QString LlamafileManager::findLlamafileExecutable(const QStringList& searchPaths
 }
 
 QUrl LlamafileManager::apiBaseUrl() const {
-    return QUrl(QString("http://%1:%2").arg(config.host).arg(config.port));
+    return QUrl(qsl("http://%1:%2").arg(config.host).arg(config.port));
 }
 
 // Private slots
@@ -282,9 +282,6 @@ void LlamafileManager::onProcessStarted() {
 }
 
 void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    qDebug() << "LlamafileManager: Process finished with exit code" << exitCode
-             << "status" << (exitStatus == QProcess::NormalExit ? "normal" : "crashed");
-
     // Capture any remaining output from the process
     QString stdoutOutput = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
     QString stderrOutput = QString::fromUtf8(process->readAllStandardError()).trimmed();
@@ -324,14 +321,14 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
             setStatus(Status::Stopped);
             attemptRestart();
         } else {
-            QString errorMsg = QString("Process exited unexpectedly (code: %1)").arg(exitCode);
+            QString errorMsg = qsl("Process exited unexpectedly (code: %1)").arg(exitCode);
 
             // Append recent output to error message
             if (!recentStderr.isEmpty()) {
-                errorMsg += QString("\nRecent stderr:\n%1").arg(recentStderr);
+                errorMsg += qsl("\nRecent stderr:\n%1").arg(recentStderr);
             }
             if (!recentStdout.isEmpty()) {
-                errorMsg += QString("\nRecent stdout:\n%1").arg(recentStdout);
+                errorMsg += qsl("\nRecent stdout:\n%1").arg(recentStdout);
             }
 
             setStatus(Status::Error);
@@ -344,6 +341,11 @@ void LlamafileManager::onProcessFinished(int exitCode, QProcess::ExitStatus exit
 }
 
 void LlamafileManager::onProcessError(QProcess::ProcessError error) {
+    // Llama seems to have issues erroring when shutting down, squelch such messages
+    if (currentStatus == Status::Stopping) {
+        return;
+    }
+
     QString errorString;
     switch (error) {
         case QProcess::FailedToStart:
@@ -412,7 +414,7 @@ void LlamafileManager::onHealthCheckReply() {
         }
     } else {
         healthy = false;
-        const QString reason = QString("HTTP %1: %2")
+        const QString reason = qsl("HTTP %1: %2")
                               .arg(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt())
                               .arg(reply->errorString());
 
@@ -533,7 +535,7 @@ QStringList LlamafileManager::buildProcessArguments() const {
 void LlamafileManager::attemptRestart() {
     if (restartAttempts >= config.maxRestartAttempts) {
         setStatus(Status::Error);
-        lastError = QString("Max restart attempts (%1) exceeded").arg(config.maxRestartAttempts);
+        lastError = qsl("Max restart attempts (%1) exceeded").arg(config.maxRestartAttempts);
         emit processError(lastError);
         return;
     }
@@ -565,7 +567,7 @@ bool LlamafileManager::validateConfig() {
     }
 
     if (config.port <= 0 || config.port > 65535) {
-        lastError = QString("Invalid port: %1").arg(config.port);
+        lastError = qsl("Invalid port: %1").arg(config.port);
         return false;
     }
 

@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
- *   Copyright (C) 2023 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,26 +17,41 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Announcer.h"
+#include "glwidget_integration.h"
+#include "Host.h"
 
-#include <AppKit/AppKit.h>
-#include <QDebug>
-
-Announcer::Announcer(QWidget *parent)
-: QWidget{parent}
+QOpenGLWidget* GLWidgetFactory::createGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 {
-    // Needed to prevent this (invisible) widget from being seen by itself in
-    // the top left corner of the main application window where it masks part of
-    // the main menu bar:
-    setVisible(false);
+    if (pHost && pHost->getUseModern3DMapper()) {
+        return new ModernGLWidget(pMap, pHost, parent);
+    } else {
+        return new GLWidget(pMap, pHost, parent);
+    }
 }
 
-void Announcer::announce(const QString& text, const QString& processing)
+bool GLWidgetFactory::isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost)
 {
-    Q_UNUSED(processing)
-    NSDictionary *announcementInfo = @{
-        NSAccessibilityAnnouncementKey : text.toNSString(),
-        NSAccessibilityPriorityKey : @(NSAccessibilityPriorityHigh),
-    };
-    NSAccessibilityPostNotificationWithUserInfo([NSApp mainWindow], NSAccessibilityAnnouncementRequestedNotification, announcementInfo);
+    if (!widget || !pHost) {
+        return false;
+    }
+    
+    bool shouldUseModern = pHost->getUseModern3DMapper();
+    bool isModern = dynamic_cast<ModernGLWidget*>(widget) != nullptr;
+    
+    return shouldUseModern == isModern;
+}
+
+QString GLWidgetFactory::getWidgetTypeName(QOpenGLWidget* widget)
+{
+    if (!widget) {
+        return QStringLiteral("null");
+    }
+    
+    if (dynamic_cast<ModernGLWidget*>(widget)) {
+        return QStringLiteral("ModernGLWidget");
+    } else if (dynamic_cast<GLWidget*>(widget)) {
+        return QStringLiteral("GLWidget");
+    } else {
+        return QStringLiteral("Unknown");
+    }
 }
