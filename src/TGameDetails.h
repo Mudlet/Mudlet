@@ -217,6 +217,28 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。")},
 
+            {qsl("Petria"),
+             qsl("game.petriamud.com"),
+             6600,
+             false,
+             qsl("<a href='http://www.petriamud.com'>www.petriamud.com</a><br>"
+                 "<a href='https://www.youtube.com/channel/UCqXqG9qG6L1q3Q3F4F6Q6Nw'>Petria - YouTube</a>"),
+             qsl(":/icons/banner_petria.jpg"),
+             /* English translation, provided by game:
+*              "Petria MUD, active since 1996, is one of the longest-running Spanish-language games with an active community to this day.
+*               A free fantasy world where you can play different races and classes, join clans, explore, participate in tournaments, and live epic adventures.
+*               • Free and in Spanish.
+*               • Dynamic events: Tournaments, Clan Raids, BattleGrounds (War of Flags), Quests, among others.
+*               • Over two decades of history, with constant improvements and new content.
+*               In Petria, you can forge your own path, defend your clan, and write your own legend."
+*/
+             qsl("Petria MUD Activo desde 1996, es uno de los juegos en Español más longevos y con comunidad activa hasta hoy. "
+                 "Un mundo de fantasía gratuito donde podrás jugar distintas razas y clases, unirte a clanes, explorar, participar en torneos y vivir aventuras épicas.\n\n"
+                 "• Gratis y en Español.\n"
+                 "• Eventos dinámicos: Torneos, Asaltos de Clanes, BattleGrounds (War of Flags), Quests, entre otros.\n"
+                 "• Más de dos décadas de historia, con constantes mejoras y nuevos contenidos.\n\n"
+                 "En Petria podrás forjar tu camino, defender a tu clan y escribir tu propia leyenda.")},
+
             {qsl("Realms of Despair"),
              qsl("realmsofdespair.com"),
              4000,
