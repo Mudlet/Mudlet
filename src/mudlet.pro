@@ -435,6 +435,9 @@ unix:!macx {
         -lpugixml \
         -lws2_32 \
         -loleaut32
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+        LIBS += -lassimp
+    }
 
     INCLUDEPATH += \
         $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
@@ -993,7 +996,8 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
 
     win32 {
         LIBS += -lopengl32 \
-                -lglu32
+                -lglu32 \
+                -lassimp
     }
 } else {
     !build_pass{
