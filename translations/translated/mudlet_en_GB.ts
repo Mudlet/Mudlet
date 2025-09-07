@@ -607,7 +607,7 @@ please wait...</translation>
     <message>
       <location filename="../src/dlgMapper.cpp" line="520"/>
       <source>render time: %1S</source>
-      <translation type="unfinished"/>
+      <translation>render time: %1S</translation>
     </message>
   </context>
   <context>
