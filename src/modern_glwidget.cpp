@@ -253,11 +253,7 @@ void ModernGLWidget::paintGL()
             int targetX = pRID->x();
             int targetY = pRID->y();
             int targetZ = pRID->z();
-            
-            qDebug() << "[Smooth Camera] Room ID changed from" << mPreviousRID << "to" << mRID 
-                     << "- starting smooth transition from (" << mMapCenterX << "," << mMapCenterY << "," << mMapCenterZ << ")"
-                     << "to (" << targetX << "," << targetY << "," << targetZ << ")";
-            
+
             startSmoothTransition(targetAID, targetX, targetY, targetZ);
         }
         // Instant update map (smooth transition only impacts camera position)
@@ -1374,7 +1370,6 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     
     // Start animation timer
     mCameraAnimationTimer->start();
-    qDebug() << "[Smooth Camera] Timer started, animating flag set to true";
 }
 
 void ModernGLWidget::onCameraAnimationTick()
