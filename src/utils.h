@@ -26,6 +26,7 @@
 #include <QApplication>
 #include <QEnterEvent>
 #include <QDir>
+#include <QRegularExpression>
 #include <QString>
 #include "post_guard.h"
 
@@ -76,6 +77,20 @@ public:
             return path;
         }
         return QDir::cleanPath(base + "/" + path);
+    }
+
+    // Sanitize a string for safe use as filename/path component
+    // Replaces filesystem-unsafe characters with underscores and limits length
+    static QString sanitizeForPath(const QString& input)
+    {
+        QString sanitized = input;
+        // Replace filesystem-unsafe characters with underscores
+        sanitized.replace(QRegularExpression(R"([/\\:*?"<>|])"), "_");
+        // Limit length to prevent filesystem issues
+        if (sanitized.length() > 50) {
+            sanitized = sanitized.left(50);
+        }
+        return sanitized;
     }
 };
 
