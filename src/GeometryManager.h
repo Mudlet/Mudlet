@@ -32,13 +32,11 @@
 struct GeometryData {
     QVector<float> vertices;
     QVector<float> colors;
-    QVector<float> normals;
     QVector<unsigned int> indices;
     
     void clear() {
         vertices.clear();
         colors.clear();
-        normals.clear();
         indices.clear();
     }
     
