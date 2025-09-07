@@ -130,7 +130,9 @@ private slots:
     void slot_showVariableDialog();
     void slot_showMapperDialog();
     void slot_showHelpDialog();
+    void slot_showConnectionDialog();
     void slot_showPreferencesDialog();
+    void slot_showEditorDialog();
     void slot_showNotesDialog();
     void slot_showReplayDialog();
     void slot_showPackageManagerDialog();
@@ -140,6 +142,17 @@ private slots:
     void slot_muteAPI();
     void slot_muteGame();
     void slot_showAboutDialog();
+    void slot_reportIssue();
+
+    // Additional slots for new menu actions
+    void slot_toggleMap();
+    void slot_toggleCompactInputLine();
+    void slot_toggleReplay();
+    void slot_toggleLogging();
+    void slot_toggleEmergencyStop();
+    void slot_toggleTimeStamp();
+    void slot_toggleMultiView();
+    void slot_toggleFullScreen();
 
     // Discord and IRC slots for detached window context
     void slot_profileDiscord();

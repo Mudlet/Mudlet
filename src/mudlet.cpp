@@ -1927,6 +1927,14 @@ void mudlet::closeHost(const QString& name)
         mMainWindowDockWidgetUserPreference.remove(mapKey);
     }
 
+    // Clean up detached window mapping for this profile
+    if (mDetachedWindows.contains(name)) {
+#if defined(DEBUG_WINDOW_HANDLING)
+        qDebug() << "mudlet::closeHost: Removing detached window mapping for profile" << name;
+#endif
+        mDetachedWindows.remove(name);
+    }
+
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
     int hostCount = mHostManager.getHostCount();
@@ -3969,9 +3977,19 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         updateDetachedWindowToolbars();
         updateMainWindowTabIndicators();
+        
+        // Bring main window to focus when new profile connects
+        show();
+        raise();
+        activateWindow();
     } else {
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+        
+        // Bring main window to focus when new profile loads offline
+        show();
+        raise();
+        activateWindow();
     }
 }
 
@@ -4321,6 +4339,15 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
     
     contextMenu.addAction(toggleToolbarAction);
+    
+    // Add connection indicator toggle
+    QAction* connectionIndicatorToggleAction = new QAction(tr("Show Connection Indicators on Tabs"), &contextMenu);
+    connectionIndicatorToggleAction->setCheckable(true);
+    connectionIndicatorToggleAction->setChecked(showTabConnectionIndicators());
+    connect(connectionIndicatorToggleAction, &QAction::triggered, this, [this](bool checked) {
+        setShowTabConnectionIndicators(checked);
+    });
+    contextMenu.addAction(connectionIndicatorToggleAction);
     
     contextMenu.addSeparator();
     
