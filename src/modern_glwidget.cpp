@@ -246,8 +246,8 @@ void ModernGLWidget::paintGL()
             return;
         }
         
-        // Check if room ID changed and smooth camera experiment is enabled
-        if (mRID != mPreviousRID && mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
+        // Check if room ID changed and start smooth transition
+        if (mRID != mPreviousRID) {
             // Room changed - start smooth transition
             int targetAID = pRID->getArea();
             int targetX = pRID->x();
@@ -270,9 +270,6 @@ void ModernGLWidget::paintGL()
         mMapCenterZ = oz;
         mPreviousRID = mRID; // Update tracking
 
-        if (mRID != mPreviousRID) {
-            qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
-        }
 
     } else {
         ox = mMapCenterX;
@@ -1002,18 +999,8 @@ void ModernGLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
     mShiftMode = true;
     
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        // Use smooth transition
-        startSmoothTransition(areaId, xPos, yPos, zPos);
-    } else {
-        // Original instant movement
-        mAID = areaId;
-        mMapCenterX = xPos;
-        mMapCenterY = yPos;
-        mMapCenterZ = zPos;
-        mCameraController.setTarget(xPos, yPos, zPos);
-        update();
-    }
+    // Use smooth transition
+    startSmoothTransition(areaId, xPos, yPos, zPos);
 }
 
 void ModernGLWidget::wheelEvent(QWheelEvent* e)
