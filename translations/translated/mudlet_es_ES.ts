@@ -601,7 +601,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/dlgMapper.cpp" line="520"/>
       <source>render time: %1S</source>
-      <translation type="unfinished"/>
+      <translation>tiempo de renderizado: %1S</translation>
     </message>
   </context>
   <context>
@@ -2008,7 +2008,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="1013"/>
       <source>Connecting...</source>
       <extracomment>This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Connecting...&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Conectando...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1016"/>
