@@ -35,6 +35,7 @@
 class TMainConsole;
 class Host;
 class TTabBar;
+class dlgTriggerEditor;
 
 class TDetachedWindow : public QMainWindow
 {
@@ -182,6 +183,9 @@ private:
 
     // Helper method to temporarily set the active host for actions
     void withCurrentProfileActive(const std::function<void()>& action);
+    
+    // Helper method for script editor dialogs to reduce code duplication
+    void showScriptEditorDialog(std::function<void(dlgTriggerEditor*)> showMethod);
 
     // Multiple profile data
     QMap<QString, QPointer<TMainConsole>> mProfileConsoleMap;
