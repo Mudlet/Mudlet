@@ -4313,101 +4313,88 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
 void dlgTriggerEditor::addTrigger(bool isFolder)
 {
     saveTrigger();
-    QString name;
-    if (isFolder) {
-        name = tr("New trigger group");
-    } else {
-        name = tr("New trigger");
-    }
+
+    QString name = isFolder ? tr("New trigger group") : tr("New trigger");
+    QStringList nameList { name };
     const QStringList patterns;
     QList<int> const patternKinds;
-    const QString script = "";
-    QStringList nameL;
-    nameL << name;
+    const QString script = QString();
 
-    QTreeWidgetItem* pParent = treeWidget_triggers->currentItem();
+    QTreeWidgetItem* pParentItem = treeWidget_triggers->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
-    TTrigger* pT = nullptr;
+    TTrigger* pNewTrigger = nullptr;
 
-    if (pParent) {
-        const int parentID = pParent->data(0, Qt::UserRole).toInt();
-
-        TTrigger* pParentTrigger = mpHost->getTriggerUnit()->getTrigger(parentID);
-        if (pParentTrigger) {
-            // insert new items as siblings unless the parent is a folder
-            if (!pParentTrigger->isFolder()) {
-                // handle root items
-                if (!pParentTrigger->getParent()) {
-                    goto ROOT_TRIGGER;
-                } else {
-                    // insert new item as sibling of the clicked item
-                    if (pParent->parent()) {
-                        pT = new TTrigger(pParentTrigger->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
-                        pParent->parent()->insertChild(0, pNewItem);
-                    }
-                }
-            } else {
-                pT = new TTrigger(pParentTrigger, mpHost);
-                pNewItem = new QTreeWidgetItem(pParent, nameL);
-                pParent->insertChild(0, pNewItem);
-            }
+    QTreeWidgetItem* createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) {
+        QTreeWidgetItem* item = new QTreeWidgetItem(parent, nameList);
+        if (parent != mpTriggerBaseItem) {
+            parent.insertChild(0, item);
         } else {
-            goto ROOT_TRIGGER;
+            treeWidget_triggers->insertTopLevelItem(0, item);
         }
-    } else {
-    //insert a new root item
-    ROOT_TRIGGER:
-        pT = new TTrigger(name, patterns, patternKinds, false, mpHost);
-        pNewItem = new QTreeWidgetItem(mpTriggerBaseItem, nameL);
-        treeWidget_triggers->insertTopLevelItem(0, pNewItem);
+        pNewItem->setData(0, Qt::UserRole, trigger->getID());
+        pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
+            qsl(":/icons/folder-red.png") :
+            qsl(":/icons/document-save-as.png"))));
+        pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
     }
 
-    if (!pT) {
+    if (pParentItem) {
+        const int parentID = pParentItem->data(0, Qt::UserRole).toInt();
+        TTrigger* pParentTrigger = mpHost->getTriggerUnit()->getTrigger(parentID);
+
+        if (pParentTrigger) {
+            // insert new items as siblings unless the parent is a folder
+            if (pParentTrigger->isFolder()) {
+                pNewTrigger = new TTrigger(pParentTrigger, mpHost);
+                pNewItem = createTreeItem(pParentItem, nameList);
+            } else if (pParentTrigger->getParent() && pParentItem->parent()) {
+                pNewTrigger = new TTrigger(pParentTrigger->getParent(), mpHost);
+                pNewItem = createTreeItem(pParentItem->parent(), nameList);
+            }
+        }
+    } 
+
+    if (!pNewTrigger) {
+        // Fallback to insert a new root item
+        pNewTrigger = new TTrigger(name, patterns, patternKinds, false, mpHost);
+        pNewItem = createTreeItem(mpTriggerBaseItem, nameList);
+    }
+
+
+    if (!pNewTrigger) {
         return;
     }
 
+    // Initialize trigger properties
+    pNewTrigger->setName(name);
+    pNewTrigger->setRegexCodeList(patterns, patternKinds, false);
+    pNewTrigger->setScript(script);
+    pNewTrigger->setIsFolder(isFolder);
+    pNewTrigger->setIsActive(false);
+    pNewTrigger->setIsMultiline(false);
+    pNewTrigger->mStayOpen = 0;
+    pNewTrigger->setConditionLineDelta(0);
+    pNewTrigger->registerTrigger();
 
-    pT->setName(name);
-    pT->setRegexCodeList(patterns, patternKinds, false);
-    pT->setScript(script);
-    pT->setIsFolder(isFolder);
-    pT->setIsActive(false);
-    pT->setIsMultiline(false);
-    pT->mStayOpen = 0;
-    pT->setConditionLineDelta(0);
-    pT->registerTrigger();
-    const int childID = pT->getID();
-    pNewItem->setData(0, Qt::UserRole, childID);
-    QIcon icon;
-    QString itemDescription;
-    if (isFolder) {
-        itemDescription = descNewFolder;
-        icon.addPixmap(QPixmap(qsl(":/icons/folder-red.png")), QIcon::Normal, QIcon::Off);
-    } else {
-        itemDescription = descNewItem;
-        icon.addPixmap(QPixmap(qsl(":/icons/document-save-as.png")), QIcon::Normal, QIcon::Off);
+    // Expand parent if applicable
+    if (pParentItem) {
+        pParentItem->setExpanded(true);
     }
-    pNewItem->setIcon(0, icon);
-    pNewItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-    if (pParent) {
-        pParent->setExpanded(true);
-    }
+
+    // Reset UI
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->label_idNumber->clear();
     mpTriggersMainArea->checkBox_perlSlashGOption->setChecked(false);
-
     clearDocument(mpSourceEditorEdbee); // New Trigger
-
     mpTriggersMainArea->lineEdit_trigger_command->clear();
     mpTriggersMainArea->checkBox_filterTrigger->setChecked(false);
     mpTriggersMainArea->spinBox_stayOpen->setValue(0);
     mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
-
     mpTriggersMainArea->pushButtonFgColor->setChecked(false);
     mpTriggersMainArea->pushButtonBgColor->setChecked(false);
     mpTriggersMainArea->groupBox_triggerColorizer->setChecked(false);
 
+    // Finalize selection
     mpCurrentTriggerItem = pNewItem;
     treeWidget_triggers->setCurrentItem(pNewItem);
     slot_triggerSelected(treeWidget_triggers->currentItem());
@@ -4417,17 +4404,11 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 void dlgTriggerEditor::addTimer(bool isFolder)
 {
     saveTimer();
-    QString name;
-    if (isFolder) {
-        name = tr("New timer group");
-    } else {
-        name = tr("New timer");
-    }
+    QString name = isFolder ? tr("New timer group") : tr("New timer");
+    QStringList nameList = { name };
     const QString command = "";
     const QTime time;
     const QString script = "";
-    QStringList nameL;
-    nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_timers->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
@@ -4447,13 +4428,13 @@ void dlgTriggerEditor::addTimer(bool isFolder)
                     // insert new item as sibling of the clicked item
                     if (pParent->parent()) {
                         pT = new TTimer(pParentTrigger->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameList);
                         pParent->parent()->insertChild(0, pNewItem);
                     }
                 }
             } else {
                 pT = new TTimer(pParentTrigger, mpHost);
-                pNewItem = new QTreeWidgetItem(pParent, nameL);
+                pNewItem = new QTreeWidgetItem(pParent, nameList);
                 pParent->insertChild(0, pNewItem);
             }
         } else {
@@ -4463,7 +4444,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     //insert a new root item
     ROOT_TIMER:
         pT = new TTimer(name, time, mpHost);
-        pNewItem = new QTreeWidgetItem(mpTimerBaseItem, nameL);
+        pNewItem = new QTreeWidgetItem(mpTimerBaseItem, nameList);
         treeWidget_timers->insertTopLevelItem(0, pNewItem);
     }
 
@@ -4528,9 +4509,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
 
-    QStringList nameL;
-    nameL << QString(isFolder ? tr("New table name") : tr("New variable name"));
-
+    QStringList nameList = { QString(isFolder ? tr("New table name") : tr("New variable name")) };
     QTreeWidgetItem* pParent = nullptr;
     QTreeWidgetItem* pNewItem;
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
@@ -4549,14 +4528,14 @@ void dlgTriggerEditor::addVar(bool isFolder)
         TVar* parent = vu->getWVar(pParent);
         if (parent && parent->getValueType() == LUA_TTABLE) {
             //create it under the parent
-            pNewItem = new QTreeWidgetItem(pParent, nameL);
+            pNewItem = new QTreeWidgetItem(pParent, nameList);
             newVar->setParent(parent);
         } else {
-            pNewItem = new QTreeWidgetItem(mpVarBaseItem, nameL);
+            pNewItem = new QTreeWidgetItem(mpVarBaseItem, nameList);
             newVar->setParent(vu->getBase());
         }
     } else {
-        pNewItem = new QTreeWidgetItem(mpVarBaseItem, nameL);
+        pNewItem = new QTreeWidgetItem(mpVarBaseItem, nameList);
         newVar->setParent(vu->getBase());
     }
 
@@ -4576,15 +4555,9 @@ void dlgTriggerEditor::addVar(bool isFolder)
 void dlgTriggerEditor::addKey(bool isFolder)
 {
     saveKey();
-    QString name;
-    if (isFolder) {
-        name = tr("New key group");
-    } else {
-        name = tr("New key");
-    }
+    QString name = isFolder? tr("New key group") : tr("New key");
+    QStringList nameList = { name };
     const QString script = "";
-    QStringList nameL;
-    nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_keys->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
@@ -4604,13 +4577,13 @@ void dlgTriggerEditor::addKey(bool isFolder)
                     // insert new item as sibling of the clicked item
                     if (pParent->parent()) {
                         pT = new TKey(pParentTrigger->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameList);
                         pParent->parent()->insertChild(0, pNewItem);
                     }
                 }
             } else {
                 pT = new TKey(pParentTrigger, mpHost);
-                pNewItem = new QTreeWidgetItem(pParent, nameL);
+                pNewItem = new QTreeWidgetItem(pParent, nameList);
                 pParent->insertChild(0, pNewItem);
             }
         } else {
@@ -4620,7 +4593,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     //insert a new root item
     ROOT_KEY:
         pT = new TKey(name, mpHost);
-        pNewItem = new QTreeWidgetItem(mpKeyBaseItem, nameL);
+        pNewItem = new QTreeWidgetItem(mpKeyBaseItem, nameList);
         treeWidget_keys->insertTopLevelItem(0, pNewItem);
     }
 
@@ -4663,17 +4636,12 @@ void dlgTriggerEditor::addKey(bool isFolder)
 void dlgTriggerEditor::addAlias(bool isFolder)
 {
     saveAlias();
-    QString name;
-    if (isFolder) {
-        name = tr("New alias group");
-    } else {
-        name = tr("New alias");
-    }
+
+    QString name = isFolder ? tr("New alias group") : tr("New alias");
+    QStringList nameList = { name };
     const QString regex = "";
     const QString command = "";
     const QString script = "";
-    QStringList nameL;
-    nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_aliases->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
@@ -4693,13 +4661,13 @@ void dlgTriggerEditor::addAlias(bool isFolder)
                     // insert new item as sibling of the clicked item
                     if (pParent->parent()) {
                         pT = new TAlias(pParentTrigger->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameList);
                         pParent->parent()->insertChild(0, pNewItem);
                     }
                 }
             } else {
                 pT = new TAlias(pParentTrigger, mpHost);
-                pNewItem = new QTreeWidgetItem(pParent, nameL);
+                pNewItem = new QTreeWidgetItem(pParent, nameList);
                 pParent->insertChild(0, pNewItem);
             }
         } else {
@@ -4710,7 +4678,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     ROOT_ALIAS:
         pT = new TAlias(name, mpHost);
         pT->setRegexCode(regex); // Empty regex will always succeed to compile
-        pNewItem = new QTreeWidgetItem(mpAliasBaseItem, nameL);
+        pNewItem = new QTreeWidgetItem(mpAliasBaseItem, nameList);
         treeWidget_aliases->insertTopLevelItem(0, pNewItem);
     }
 
@@ -4759,17 +4727,11 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 void dlgTriggerEditor::addAction(bool isFolder)
 {
     saveAction();
-    QString name;
-    if (isFolder) {
-        name = tr("New menu");
-    } else {
-        name = tr("New button");
-    }
+    QString name = isFolder ? tr("New menu") : tr("New button");
+    QStringList nameList = { name };
     const QString cmdButtonUp = "";
     const QString cmdButtonDown = "";
     const QString script = "";
-    QStringList nameL;
-    nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_actions->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
@@ -4783,11 +4745,11 @@ void dlgTriggerEditor::addAction(bool isFolder)
             // insert new items as siblings unless the parent is a folder
             if (pParentAction->isFolder()) {
                 pT = new TAction(pParentAction, mpHost);
-                pNewItem = new QTreeWidgetItem(pParent, nameL);
+                pNewItem = new QTreeWidgetItem(pParent, nameList);
                 pParent->insertChild(0, pNewItem);
             } else if (pParentAction->getParent() && pParent->parent()) {
                 pT = new TAction(pParentAction->getParent(), mpHost);
-                pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                pNewItem = new QTreeWidgetItem(pParent->parent(), nameList);
                 pParent->parent()->insertChild(0, pNewItem);
             }
         }
@@ -4848,15 +4810,9 @@ void dlgTriggerEditor::addAction(bool isFolder)
 void dlgTriggerEditor::addScript(bool isFolder)
 {
     saveScript();
-    QString name;
-    if (isFolder) {
-        name = tr("New script group");
-    } else {
-        name = tr("New script");
-    }
+    QString name = isFolder ? tr("New script group") : tr("New script");
+    QStringList nameList = { name };
     const QString script;
-    QStringList nameL;
-    nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_scripts->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
@@ -4876,13 +4832,13 @@ void dlgTriggerEditor::addScript(bool isFolder)
                     // insert new item as sibling of the clicked item
                     if (pParent->parent()) {
                         pT = new TScript(pParentTrigger->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameList);
                         pParent->parent()->insertChild(0, pNewItem);
                     }
                 }
             } else {
                 pT = new TScript(pParentTrigger, mpHost);
-                pNewItem = new QTreeWidgetItem(pParent, nameL);
+                pNewItem = new QTreeWidgetItem(pParent, nameList);
                 pParent->insertChild(0, pNewItem);
             }
         } else {
@@ -4892,7 +4848,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     //insert a new root item
     ROOT_SCRIPT:
         pT = new TScript(name, mpHost);
-        pNewItem = new QTreeWidgetItem(mpScriptsBaseItem, nameL);
+        pNewItem = new QTreeWidgetItem(mpScriptsBaseItem, nameList);
         treeWidget_scripts->insertTopLevelItem(0, pNewItem);
     }
 
