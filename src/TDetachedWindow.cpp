@@ -540,6 +540,7 @@ void TDetachedWindow::createMenus()
     connect(aboutAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showAboutDialog);
     aboutMenu->addAction(aboutAction);
 
+#if defined(INCLUDE_UPDATER)
     //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
     auto updateAction = new QAction(tr("&Check for updates..."), this);
     //: This explains the "Check for updates..." item in the "About" menu in the menubar of a detached Mudlet window.
@@ -553,6 +554,7 @@ void TDetachedWindow::createMenus()
     changelogAction->setStatusTip(tr("Show the changelog for this version"));
     connect(changelogAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showFullChangelog);
     aboutMenu->addAction(changelogAction);
+#endif
 
     //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
     auto reportIssueAction = new QAction(tr("&Report an issue"), this);
