@@ -251,3 +251,11 @@ void dlgModuleManager::slot_helpModule()
         }
     }
 }
+
+void dlgModuleManager::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit moduleManagerClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
+}

@@ -30,6 +30,7 @@
 #include <QDialog>
 #include <QFileInfo>
 #include <QTextEdit>
+#include <QCloseEvent>
 #include <zip.h>
 #include "post_guard.h"
 #include <zip.h>
@@ -117,6 +118,7 @@ private slots:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void appendToDetails(const QString&, const QString&);
@@ -173,6 +175,7 @@ private:
 
 signals:
     void signal_exportLocationChanged(const QString& location);
+    void packageExporterClosing(const QString& profileName);
 };
 
 class dlgPackageExporterDescription : public QTextEdit

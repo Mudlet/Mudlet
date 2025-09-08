@@ -1528,6 +1528,9 @@ void mudlet::slot_moduleManager()
     if (!moduleManager){
         moduleManager = new dlgModuleManager(this, pH);
         pH->mpModuleManager = moduleManager;
+        
+        // Set up focus restoration for when this module manager is closed
+        setupModuleManagerFocusRestoration(moduleManager);
     }
     moduleManager->raise();
     moduleManager->show();
@@ -1556,6 +1559,9 @@ void mudlet::slot_packageManager()
     if (!packageManager) {
         packageManager = new dlgPackageManager(this, pH);
         pH->mpPackageManager = packageManager;
+        
+        // Set up focus restoration for when this package manager is closed
+        setupPackageManagerFocusRestoration(packageManager);
     }
     packageManager->raise();
     packageManager->showNormal();
@@ -1569,6 +1575,10 @@ void mudlet::slot_packageExporter()
         return;
     }
     auto d = new dlgPackageExporter(this, pH);
+    
+    // Set up focus restoration for when this package exporter is closed
+    setupPackageExporterFocusRestoration(d);
+    
     d->show();
 }
 
@@ -3138,6 +3148,70 @@ void mudlet::setupNotepadFocusRestoration(dlgNotepad* pNotepad)
     });
 }
 
+void mudlet::setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager)
+{
+    if (!pPackageManager) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this package manager
+    disconnect(pPackageManager, &dlgPackageManager::packageManagerClosing, nullptr, nullptr);
+    
+    // Connect to our custom packageManagerClosing signal which is emitted from closeEvent
+    connect(pPackageManager, &dlgPackageManager::packageManagerClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager)
+{
+    if (!pModuleManager) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this module manager
+    disconnect(pModuleManager, &dlgModuleManager::moduleManagerClosing, nullptr, nullptr);
+    
+    // Connect to our custom moduleManagerClosing signal which is emitted from closeEvent
+    connect(pModuleManager, &dlgModuleManager::moduleManagerClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter)
+{
+    if (!pPackageExporter) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this package exporter
+    disconnect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, nullptr, nullptr);
+    
+    // Connect to our custom packageExporterClosing signal which is emitted from closeEvent
+    connect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences)
+{
+    if (!pPreferences) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this preferences dialog
+    disconnect(pPreferences, &dlgProfilePreferences::preferencesClosing, nullptr, nullptr);
+    
+    // Connect to our custom preferencesClosing signal which is emitted from closeEvent
+    connect(pPreferences, &dlgProfilePreferences::preferencesClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
 void mudlet::slot_showScriptDialog()
 {
     Host* pHost = getActiveHost();
@@ -3280,6 +3354,9 @@ void mudlet::showOptionsDialog(const QString& tab)
         } else {
             mpDlgProfilePreferences = pPrefs;
         }
+
+        // Set up focus restoration for when this preferences dialog is closed
+        setupPreferencesFocusRestoration(pPrefs);
 
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
