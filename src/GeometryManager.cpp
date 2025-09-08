@@ -40,6 +40,14 @@ void GeometryManager::initialize()
     }
     
     initializeOpenGLFunctions();
+    
+    // Get function pointers for instancing (OpenGL 3.3+)
+    QOpenGLContext* context = QOpenGLContext::currentContext();
+    if (context) {
+        glVertexAttribDivisor = reinterpret_cast<PFNGLVERTEXATTRIBDIVISORPROC>(context->getProcAddress("glVertexAttribDivisor"));
+        glDrawElementsInstanced = reinterpret_cast<PFNGLDRAWELEMENTSINSTANCEDPROC>(context->getProcAddress("glDrawElementsInstanced"));
+    }
+    
     generateCubeTemplate();
     mInitialized = true;
 }
@@ -98,16 +106,18 @@ void GeometryManager::generateCubeTemplate()
     // Colors will be set per instance, so we don't populate them in the template
 }
 
-GeometryData GeometryManager::transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a)
+GeometryData GeometryManager::transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a)
 {
     GeometryData result;
     
     // Transform vertices and copy normals
     for (int i = 0; i < mCubeTemplate.vertices.size(); i += 3) {
         // Scale and translate vertex
-        result.vertices << (mCubeTemplate.vertices[i] * size + x);
-        result.vertices << (mCubeTemplate.vertices[i + 1] * size + y);  
-        result.vertices << (mCubeTemplate.vertices[i + 2] * size + z);
+        QVector3D vertex = QVector3D(mCubeTemplate.vertices[i], mCubeTemplate.vertices[i+1], mCubeTemplate.vertices[i+2]);
+        vertex = transform.map(vertex);
+        result.vertices << vertex.x();
+        result.vertices << vertex.y();
+        result.vertices << vertex.z();
         
         // Copy normal (no transformation needed since it's a uniform scale)
         result.normals << mCubeTemplate.normals[i];
@@ -131,7 +141,10 @@ GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, fl
         return GeometryData();
     }
     
-    return transformCubeTemplate(x, y, z, size, r, g, b, a);
+    QMatrix4x4 transform = QMatrix4x4();
+    transform.translate(x, y, z);
+    transform.scale(size);
+    return transformCubeTemplate(transform, r, g, b, a);
 }
 
 GeometryData GeometryManager::generateLineGeometry(const QVector<float>& vertices, const QVector<float>& colors)
@@ -246,5 +259,110 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
         } else {
             resourceManager->onDrawCall(geometry.vertexCount());
         }
+    }
+}
+
+void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& instances,
+                                          QOpenGLVertexArrayObject& vao,
+                                          QOpenGLBuffer& vertexBuffer,
+                                          QOpenGLBuffer& colorBuffer,
+                                          QOpenGLBuffer& normalBuffer,
+                                          QOpenGLBuffer& indexBuffer,
+                                          QOpenGLBuffer& instanceBuffer,
+                                          GLenum drawMode)
+{
+    if (!mInitialized || instances.isEmpty()) {
+        return;
+    }
+    
+    // Check if instancing functions are available
+    if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
+        qWarning() << "GeometryManager: Instancing functions not available, falling back to individual cubes";
+        // Fallback to individual cube rendering
+        for (const auto& instance : instances) {
+            GeometryData cubeGeometry = transformCubeTemplate(instance.transform, instance.color[0], instance.color[1], instance.color[2], instance.color[3]);
+            renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
+        }
+        return;
+    }
+
+    QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
+    
+    // Upload cube template vertex data
+    vertexBuffer.bind();
+    vertexBuffer.allocate(mCubeTemplate.vertices.data(), mCubeTemplate.vertices.size() * sizeof(float));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
+    
+    // Upload cube template normal data
+    normalBuffer.bind();
+    normalBuffer.allocate(mCubeTemplate.normals.data(), mCubeTemplate.normals.size() * sizeof(float));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(2);
+    
+    // Upload cube template index data
+    indexBuffer.bind();
+    indexBuffer.allocate(mCubeTemplate.indices.data(), mCubeTemplate.indices.size() * sizeof(unsigned int));
+    
+    // Upload instance data to GPU
+    instanceBuffer.bind();
+    instanceBuffer.allocate(instances.data(), instances.size() * sizeof(CubeInstanceData));
+    
+    // Set up instance attributes
+    // Color: location 3
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(0));
+    glVertexAttribDivisor(3, 1);
+
+    // Transform matrix: location 4-7
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(4*sizeof(float)));
+    glVertexAttribDivisor(4, 1);
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(8*sizeof(float)));
+    glVertexAttribDivisor(5, 1);
+    glEnableVertexAttribArray(6);
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(12*sizeof(float)));
+    glVertexAttribDivisor(6, 1);
+    glEnableVertexAttribArray(7);
+    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(16*sizeof(float)));
+    glVertexAttribDivisor(7, 1);
+    
+    // Draw all instances with a single call
+    glDrawElementsInstanced(drawMode, mCubeTemplate.indexCount(), GL_UNSIGNED_INT, nullptr, instances.size());
+    
+    // Clean up instance attributes
+    glVertexAttribDivisor(3, 0);
+    glVertexAttribDivisor(4, 0);
+    glVertexAttribDivisor(5, 0);
+    glVertexAttribDivisor(6, 0);
+    glVertexAttribDivisor(7, 0);
+    glDisableVertexAttribArray(3);
+    glDisableVertexAttribArray(4);
+    glDisableVertexAttribArray(5);
+    glDisableVertexAttribArray(6);
+    glDisableVertexAttribArray(7);
+}
+
+void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& instances,
+                                          QOpenGLVertexArrayObject& vao,
+                                          QOpenGLBuffer& vertexBuffer,
+                                          QOpenGLBuffer& colorBuffer,
+                                          QOpenGLBuffer& normalBuffer,
+                                          QOpenGLBuffer& indexBuffer,
+                                          QOpenGLBuffer& instanceBuffer,
+                                          ResourceManager* resourceManager,
+                                          GLenum drawMode)
+{
+    if (instances.isEmpty()) {
+        return;
+    }
+    
+    // Call the original instanced render method
+    renderInstancedCubes(instances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, drawMode);
+    
+    // Track draw call statistics - one draw call for all instances
+    if (resourceManager) {
+        resourceManager->onDrawCall(instances.size() * (mCubeTemplate.indexCount() / 3)); // Count triangles for all instances
     }
 }

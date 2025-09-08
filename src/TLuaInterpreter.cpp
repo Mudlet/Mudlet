@@ -1320,8 +1320,17 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     if (lua_isstring(L, 1)) {
         saveToDir = lua_tostring(L, 1);
     }
+    QString saveAsFile;
+    if (!lua_isnoneornil(L, 2)) {
+        saveAsFile = getVerifiedString(L, __func__, 2, "file name", true);
+        if (!saveAsFile.endsWith(".xml", Qt::CaseInsensitive)) {
+            saveAsFile = saveAsFile + ".xml";
+        }
+    }
 
-    auto [ok, filename, error] = host.saveProfile(saveToDir);
+    auto [ok, filename, error] = (saveAsFile.isNull())
+                               ? host.saveProfile(saveToDir)
+                               : host.saveProfileAs(saveToDir + "/" + saveAsFile);
 
     if (ok) {
         lua_pushboolean(L, true);
@@ -5562,6 +5571,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadProfile", TLuaInterpreter::loadProfile);
     lua_register(pGlobalLua, "closeProfile", TLuaInterpreter::closeProfile);
     lua_register(pGlobalLua, "getCollisionLocationsInArea", TLuaInterpreter::getCollisionLocationsInArea);
+    lua_register(pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage);
     lua_register(pGlobalLua, "disableTimeStamps", TLuaInterpreter::disableTimeStamps);
     lua_register(pGlobalLua, "enableTimeStamps", TLuaInterpreter::enableTimeStamps);
     lua_register(pGlobalLua, "timeStampsEnabled", TLuaInterpreter::timeStampsEnabled);
