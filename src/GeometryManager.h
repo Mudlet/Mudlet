@@ -22,6 +22,7 @@
 
 #include "pre_guard.h"
 #include <QVector>
+#include <QMatrix4x4>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLFunctions>
@@ -60,16 +61,14 @@ struct GeometryData {
 
 // Instance data for instanced cube rendering
 struct CubeInstanceData {
-    float position[3];  // x, y, z world position
-    float size[3];      // sx, sy, sz scale factors
-    float color[4];     // r, g, b, a color components
+    float color[4];             // r, g, b, a color components
+    QMatrix4x4 transform;       // encodes scale -> rotate -> translate
     
     CubeInstanceData() = default;
     
-    CubeInstanceData(float x, float y, float z, float sx, float sy, float sz, float r, float g, float b, float a) {
-        position[0] = x; position[1] = y; position[2] = z;
-        size[0] = sx; size[1] = sy; size[2] = sz;
+    CubeInstanceData(QMatrix4x4 trafo, float r, float g, float b, float a) {
         color[0] = r; color[1] = g; color[2] = b; color[3] = a;
+        transform = trafo;
     }
 };
 
@@ -140,7 +139,7 @@ private:
     PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
     
     void generateCubeTemplate();
-    GeometryData transformCubeTemplate(float x, float y, float z, float size, float r, float g, float b, float a);
+    GeometryData transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a);
 };
 
 #endif // MUDLET_GEOMETRY_MANAGER_H
