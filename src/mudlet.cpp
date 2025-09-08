@@ -2911,6 +2911,26 @@ void mudlet::slot_showEditorDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->showCurrentTriggerItem();
     pEditor->raise();
     pEditor->showNormal();
@@ -2927,6 +2947,26 @@ void mudlet::slot_showTriggerDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showTriggers();
     pEditor->raise();
     pEditor->showNormal();
@@ -2943,6 +2983,26 @@ void mudlet::slot_showAliasDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showAliases();
     pEditor->raise();
     pEditor->showNormal();
@@ -2959,10 +3019,80 @@ void mudlet::slot_showTimerDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showTimers();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
+}
+
+// Centralized focus restoration for script editor dialogs
+// This function handles focus restoration for both main window and detached windows
+void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow)
+{
+    if (!pEditor) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this editor
+    disconnect(pEditor, &dlgTriggerEditor::editorClosing, nullptr, nullptr);
+    
+    // Connect to our custom editorClosing signal which is emitted from closeEvent
+    connect(pEditor, &dlgTriggerEditor::editorClosing, [profileName, targetWindow]() {
+        // Small delay to ensure the editor window is fully processed
+        QTimer::singleShot(50, [profileName, targetWindow]() {
+            auto mudletInstance = mudlet::self();
+            if (!mudletInstance) {
+                return;
+            }
+            
+            // If a specific target window is provided (detached window), focus that
+            if (targetWindow) {
+                targetWindow->show();
+                targetWindow->raise();
+                targetWindow->activateWindow();
+                
+                // For detached windows, we need to find and activate the specific profile tab
+                auto detachedWindow = qobject_cast<TDetachedWindow*>(targetWindow);
+                if (detachedWindow && !profileName.isEmpty()) {
+                    detachedWindow->switchToProfile(profileName);
+                }
+            }
+            // Otherwise, focus the main window
+            else {
+                mudletInstance->show();
+                mudletInstance->raise();
+                mudletInstance->activateWindow();
+                
+                // Focus the current profile in main window
+                if (mudletInstance->mpTabBar && mudletInstance->mpTabBar->currentIndex() >= 0) {
+                    Host* currentHost = mudletInstance->getActiveHost();
+                    if (currentHost && currentHost->mpConsole) {
+                        currentHost->mpConsole->setFocus();
+                    }
+                }
+            }
+        });
+    });
 }
 
 void mudlet::slot_showScriptDialog()
@@ -2975,6 +3105,10 @@ void mudlet::slot_showScriptDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Use centralized focus restoration (no target window = main window)
+    setupEditorFocusRestoration(pEditor, pHost->getName(), nullptr);
+    
     pEditor->slot_showScripts();
     pEditor->raise();
     pEditor->showNormal();
@@ -2991,6 +3125,26 @@ void mudlet::slot_showKeyDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showKeys();
     pEditor->raise();
     pEditor->showNormal();
@@ -3007,6 +3161,26 @@ void mudlet::slot_showVariableDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showVariables();
     pEditor->raise();
     pEditor->showNormal();
@@ -3023,6 +3197,26 @@ void mudlet::slot_showActionDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showActions();
     pEditor->raise();
     pEditor->showNormal();

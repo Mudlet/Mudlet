@@ -501,6 +501,7 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
     void slot_toggleMainToolBar();

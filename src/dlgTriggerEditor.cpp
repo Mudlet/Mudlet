@@ -1201,6 +1201,7 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
+    emit editorClosing();
     writeSettings();
     event->accept();
 }

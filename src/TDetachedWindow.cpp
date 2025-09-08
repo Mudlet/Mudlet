@@ -2124,7 +2124,6 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             if (mpTabBar->currentIndex() != i) {
                 mpTabBar->setCurrentIndex(i);
             }
-
             break;
         }
     }
@@ -2157,6 +2156,11 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             console->repaint();
         }
     });
+    
+    // Ensure the detached window itself gets focus and is brought to the front
+    raise();
+    activateWindow();
+    show();
 }
 
 void TDetachedWindow::slot_tabChanged(int index)
@@ -2451,7 +2455,10 @@ void TDetachedWindow::slot_closeApplication()
 
 void TDetachedWindow::slot_showTriggerDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
         if (mudletInstance) {
             // Use the main window's method to create and show the trigger editor
@@ -2460,18 +2467,42 @@ void TDetachedWindow::slot_showTriggerDialog()
             // Get the editor from the current host and set up focus restoration
             if (auto pHost = mudletInstance->getActiveHost()) {
                 if (auto pEditor = pHost->mpEditorDialog) {
+                    
                     // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
+                    connect(pEditor, &QObject::destroyed, this, [this, originatingProfile]() {
+                        QTimer::singleShot(50, this, [this, originatingProfile]() {
+                            // Activate this detached window
                             this->show();
                             this->raise();
                             this->activateWindow();
+                            
+                            // If the originating profile is still in this window, switch to it
+                            if (!originatingProfile.isEmpty() && mProfileConsoleMap.contains(originatingProfile)) {
+                                // Find the tab index for this profile
+                                for (int i = 0; i < mpTabBar->count(); ++i) {
+                                    if (mpTabBar->tabData(i).toString() == originatingProfile) {
+                                        mpTabBar->setCurrentIndex(i);
+                                        // Trigger the tab change logic to ensure the profile is properly activated
+                                        slot_tabChanged(i);
+                                        break;
+                                    }
+                                }
+                            }
+                            // Force a second activation attempt slightly later
+                            QTimer::singleShot(100, this, [this]() {
+                                this->raise();
+                                this->activateWindow();
+                            });
                         });
                     });
                     
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
+                    // Ensure the editor is properly focused with a small delay
+                    // to allow the window system to fully create and show the window
+                    QTimer::singleShot(100, pEditor, [pEditor]() {
+                        pEditor->show();
+                        pEditor->raise();
+                        pEditor->activateWindow();
+                    });
                 }
             }
         }
@@ -2480,175 +2511,265 @@ void TDetachedWindow::slot_showTriggerDialog()
 
 void TDetachedWindow::slot_showAliasDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the alias editor
-            mudletInstance->slot_showAliasDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the alias editor
+        pEditor->slot_showAliases();
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
 void TDetachedWindow::slot_showTimerDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the timer editor
-            mudletInstance->slot_showTimerDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the timer editor
+        pEditor->slot_showTimers();
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
 void TDetachedWindow::slot_showActionDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the action editor
-            mudletInstance->slot_showActionDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the action editor
+        pEditor->slot_showActions();
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
 void TDetachedWindow::slot_showScriptDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the script editor
-            mudletInstance->slot_showScriptDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the script editor
+        pEditor->slot_showScripts();
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
 void TDetachedWindow::slot_showKeyDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the key editor
-            mudletInstance->slot_showKeyDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the key editor
+        pEditor->slot_showKeys();
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
 void TDetachedWindow::slot_showVariableDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the variable editor
-            mudletInstance->slot_showVariableDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the variable editor
+        pEditor->slot_showVariables();
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
@@ -2911,30 +3032,44 @@ void TDetachedWindow::slot_showConnectionDialog()
 
 void TDetachedWindow::slot_showEditorDialog()
 {
-    withCurrentProfileActive([this]() {
+    // Store the originating profile for focus restoration
+    QString originatingProfile = mCurrentProfileName;
+    
+    withCurrentProfileActive([this, originatingProfile]() {
         auto mudletInstance = mudlet::self();
-        if (mudletInstance) {
-            // Use the main window's method to create and show the general editor dialog
-            mudletInstance->slot_showEditorDialog();
-            
-            // Get the editor from the current host and set up focus restoration
-            if (auto pHost = mudletInstance->getActiveHost()) {
-                if (auto pEditor = pHost->mpEditorDialog) {
-                    // Connect to restore focus when dialog closes
-                    connect(pEditor, &QObject::destroyed, this, [this]() {
-                        QTimer::singleShot(0, this, [this]() {
-                            this->show();
-                            this->raise();
-                            this->activateWindow();
-                        });
-                    });
-                    
-                    // Ensure the editor is properly focused
-                    pEditor->raise();
-                    pEditor->activateWindow();
-                }
-            }
+        if (!mudletInstance) {
+            return;
         }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Create or get the editor directly, avoiding the main window's focus restoration logic
+        dlgTriggerEditor* pEditor = nullptr;
+        if (pHost->mpEditorDialog != nullptr) {
+            pEditor = pHost->mpEditorDialog;
+        } else {
+            // Create a new editor directly without using the main window's method
+            pEditor = new dlgTriggerEditor(pHost);
+            pHost->mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            pEditor->fillout_form();
+        }
+        
+        if (!pEditor) {
+            return;
+        }
+        
+        // Use centralized focus restoration with this detached window as target
+        mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);
+        
+        // Show the general editor (errors view)
+        pEditor->raise();
+        pEditor->showNormal();
+        pEditor->activateWindow();
     });
 }
 
