@@ -636,6 +636,7 @@ SOURCES += \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
+    TriggerEditorCommands.cpp \
     dlgTriggerPatternEdit.cpp \
     dlgTriggersMainArea.cpp \
     dlgVarsMainArea.cpp \
@@ -770,6 +771,7 @@ HEADERS += \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
     dlgTriggerEditor.h \
+    TriggerEditorCommands.h \
     dlgTriggerPatternEdit.h \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
