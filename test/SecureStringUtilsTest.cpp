@@ -256,12 +256,19 @@ void SecureStringUtilsTest::testCorruptedDataDecryption()
     QString decrypted1 = SecureStringUtils::decryptStringForProfile(invalid1, profile);
     QVERIFY(decrypted1.isEmpty()); // Should return empty for invalid format
     
-    // Test with corrupted encrypted data (modify a character in the middle)
+    // Test with corrupted encrypted data (corrupt the raw binary data, not Base64)
     if (encrypted.length() > 10) {
-        QString corrupted = encrypted;
-        corrupted[encrypted.length() / 2] = 'X'; // Corrupt middle character
-        QString decrypted2 = SecureStringUtils::decryptStringForProfile(corrupted, profile);
-        QVERIFY(decrypted2.isEmpty() || decrypted2 != password); // Should fail due to corruption
+        // Decode to binary, corrupt a byte, re-encode to Base64
+        QByteArray binaryData = QByteArray::fromBase64(encrypted.toLatin1());
+        if (binaryData.size() > 10) {
+            // Corrupt a byte in the middle of the binary data
+            int corruptIndex = binaryData.size() / 2;
+            char originalByte = binaryData[corruptIndex];
+            binaryData[corruptIndex] = static_cast<char>(originalByte ^ 0xFF); // Flip all bits
+            QString corrupted = QString::fromLatin1(binaryData.toBase64());
+            QString decrypted2 = SecureStringUtils::decryptStringForProfile(corrupted, profile);
+            QVERIFY(decrypted2.isEmpty() || decrypted2 != password); // Should fail due to corruption
+        }
     }
     
     // Test with truncated encrypted data

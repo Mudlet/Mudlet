@@ -134,6 +134,32 @@ private:
     QMatrix4x4 mModelMatrix;
 };
 
+// Command to render multiple cube instances in a single draw call
+class RenderInstancedCubesCommand : public RenderCommand
+{
+public:
+    RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
+                               const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    
+    void execute(QOpenGLFunctions* gl,
+                QOpenGLShaderProgram* shader,
+                GeometryManager* geometryManager,
+                ResourceManager* resourceManager,
+                QOpenGLVertexArrayObject& vao,
+                QOpenGLBuffer& vertexBuffer,
+                QOpenGLBuffer& colorBuffer,
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer) override;
+                
+    const char* getCommandName() const override { return "RenderInstancedCubes"; }
+
+private:
+    QVector<CubeInstanceData> mInstances;
+    QMatrix4x4 mProjectionMatrix;
+    QMatrix4x4 mViewMatrix;
+    QMatrix4x4 mModelMatrix;
+};
+
 // Command to change OpenGL state
 class GLStateCommand : public RenderCommand
 {

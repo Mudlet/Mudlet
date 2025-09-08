@@ -568,6 +568,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="pushButton_exportArea">
+           <property name="text">
+            <string>Export</string>
+           </property>
+           <property name="toolTip">
+            <string>Export current area to image</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkBox_showRoomIds">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
