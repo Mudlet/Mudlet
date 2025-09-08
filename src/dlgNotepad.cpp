@@ -26,6 +26,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QCloseEvent>
 #include <QDir>
 #include <QTextCodec>
 #include "post_guard.h"
@@ -139,4 +140,12 @@ void dlgNotepad::timerEvent(QTimerEvent* event)
     }
 
     save();
+}
+
+void dlgNotepad::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit notepadClosing(mpHost->getName());
+    }
+    QMainWindow::closeEvent(event);
 }

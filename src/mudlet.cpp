@@ -3095,6 +3095,59 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
     });
 }
 
+void mudlet::setupNotepadFocusRestoration(dlgNotepad* pNotepad)
+{
+    if (!pNotepad) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this notepad
+    disconnect(pNotepad, &dlgNotepad::notepadClosing, nullptr, nullptr);
+    
+    // Connect to our custom notepadClosing signal which is emitted from closeEvent
+    connect(pNotepad, &dlgNotepad::notepadClosing, [](const QString& profileName) {
+        // Small delay to ensure the notepad window is fully processed
+        QTimer::singleShot(50, [profileName]() {
+            auto mudletInstance = mudlet::self();
+            if (!mudletInstance) {
+                return;
+            }
+            
+            // Check if there are any detached windows for this profile
+            auto detachedWindows = mudletInstance->mDetachedWindows;
+            TDetachedWindow* detachedWindow = nullptr;
+            
+            for (auto window : detachedWindows) {
+                if (window && window->getProfileNames().contains(profileName)) {
+                    detachedWindow = window;
+                    break;
+                }
+            }
+            
+            if (detachedWindow) {
+                detachedWindow->show();
+                detachedWindow->raise();
+                detachedWindow->activateWindow();
+                detachedWindow->switchToProfile(profileName);
+            } else {
+                mudletInstance->show();
+                mudletInstance->raise();
+                mudletInstance->activateWindow();
+                
+                // Focus the specific profile in main window by finding its tab
+                for (int i = 0; i < mudletInstance->mpTabBar->count(); ++i) {
+                    if (mudletInstance->mpTabBar->tabData(i).toString() == profileName) {
+                        mudletInstance->mpTabBar->setCurrentIndex(i);
+                        // Trigger tab change to ensure proper focus
+                        mudletInstance->slot_tabChanged(i);
+                        break;
+                    }
+                }
+            }
+        });
+    });
+}
+
 void mudlet::slot_showScriptDialog()
 {
     Host* pHost = getActiveHost();
@@ -3755,6 +3808,9 @@ void mudlet::slot_notes()
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
         pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
+        
+        // Set up focus restoration for the notepad
+        setupNotepadFocusRestoration(pNotes);
     }
 
     pNotes->raise();
