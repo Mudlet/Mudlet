@@ -393,7 +393,7 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS ResourceManager.h)
   list(APPEND mudlet_SRCS ShaderManager.cpp)
   list(APPEND mudlet_HDRS ShaderManager.h)
-  list(APPEND mudlet_HDRS glwidget_integration.h)
+  list(APPEND mudlet_SRCS glwidget_integration.h)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
@@ -573,7 +573,6 @@ target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.q
 
 # Ensure TutorialProfile.h gets processed by moc on all platforms
 target_sources(mudlet PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TutorialProfile.h")
-target_sources(mudlet PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TutorialProfile.cpp")
 
 set_target_properties(mudlet PROPERTIES
   AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"

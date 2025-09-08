@@ -18,10 +18,21 @@
  ***************************************************************************/
 
 #include "TutorialProfile.h"
+
+// Include Qt headers first to avoid conflicts
+#include "pre_guard.h"
+#include <QMap>
+#include <QTime>
+#include <QStringList>
+#include "post_guard.h"
+
+// Include the necessary header files for the tutorial profile implementation
+#include "Host.h"
 #include "TTrigger.h"
 #include "TAlias.h"
 #include "TScript.h"
 #include "TTimer.h"
+// Include map-related headers last to avoid conflicts
 #include "TMap.h"
 #include "TRoom.h"
 #include "TArea.h"

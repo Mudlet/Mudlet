@@ -20,13 +20,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Host.h"
-#include "ctelnet.h"
-
+// Include guards first
 #include "pre_guard.h"
 #include <QObject>
 #include <QString>
+#include <QMap>
 #include "post_guard.h"
+
+// Forward declarations
+class Host;
+class TTrigger;
+class TAlias;
+class TScript;
+class TTimer;
+class TMap;
+class TRoom;
+class TArea;
 
 class TutorialProfile : public QObject
 {
