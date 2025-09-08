@@ -4324,7 +4324,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     QTreeWidgetItem* pNewItem = nullptr;
     TTrigger* pNewTrigger = nullptr;
 
-    auto createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) {
+    std::function<QTreeWidgetItem*(QTreeWidgetItem*, TTrigger*)> createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) -> QTreeWidgetItem* {
         QTreeWidgetItem* item = new QTreeWidgetItem(parent, nameList);
         if (parent != mpTriggerBaseItem) {
             parent->insertChild(0, item);
@@ -4346,10 +4346,10 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
             // insert new items as siblings unless the parent is a folder
             if (pParentTrigger->isFolder()) {
                 pNewTrigger = new TTrigger(pParentTrigger, mpHost);
-                pNewItem = createTreeItem(pParentItem, nameList);
+                pNewItem = createTreeItem(pParentItem, pNewTrigger);
             } else if (pParentTrigger->getParent() && pParentItem->parent()) {
                 pNewTrigger = new TTrigger(pParentTrigger->getParent(), mpHost);
-                pNewItem = createTreeItem(pParentItem->parent(), nameList);
+                pNewItem = createTreeItem(pParentItem->parent(), pNewTrigger);
             }
         }
     } 
@@ -4357,7 +4357,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     if (!pNewTrigger) {
         // Fallback to insert a new root item
         pNewTrigger = new TTrigger(name, patterns, patternKinds, false, mpHost);
-        pNewItem = createTreeItem(mpTriggerBaseItem, nameList);
+        pNewItem = createTreeItem(mpTriggerBaseItem, pNewTrigger);
     }
 
 
