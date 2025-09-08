@@ -67,12 +67,12 @@ void TutorialProfile::handleUserCommand(const QString& command)
                            "  hint <task> - Get a hint for a task\n"
                            "  north, south, east, west - Move in directions (for task 1)\n");
     } else if (command == "progress") {
-        sendTutorialResponse("Tutorial Progress:\n"
-                           "Task 1 (Basic Movement): " + (isTaskCompleted("task1") ? "Completed" : "Not completed") + "\n"
-                           "Task 2 (Creating a Trigger): " + (isTaskCompleted("task2") ? "Completed" : "Not completed") + "\n"
-                           "Task 3 (Creating an Alias): " + (isTaskCompleted("task3") ? "Completed" : "Not completed") + "\n"
-                           "Task 4 (Creating a Script): " + (isTaskCompleted("task4") ? "Completed" : "Not completed") + "\n"
-                           "Task 5 (Using the Mapper): " + (isTaskCompleted("task5") ? "Completed" : "Not completed") + "\n");
+        sendTutorialResponse(QString("Tutorial Progress:\n"
+                           "Task 1 (Basic Movement): " + (isTaskCompleted("task1") ? QString("Completed") : QString("Not completed")) + "\n"
+                           "Task 2 (Creating a Trigger): " + (isTaskCompleted("task2") ? QString("Completed") : QString("Not completed")) + "\n"
+                           "Task 3 (Creating an Alias): " + (isTaskCompleted("task3") ? QString("Completed") : QString("Not completed")) + "\n"
+                           "Task 4 (Creating a Script): " + (isTaskCompleted("task4") ? QString("Completed") : QString("Not completed")) + "\n"
+                           "Task 5 (Using the Mapper): " + (isTaskCompleted("task5") ? QString("Completed") : QString("Not completed")) + "\n"));
     } else if (command.startsWith("hint ")) {
         QString task = command.mid(5).trimmed();
         sendTutorialResponse(getHintForTask(task));
@@ -104,9 +104,9 @@ void TutorialProfile::handleUserCommand(const QString& command)
                            "You find yourself back where you started.");
     } else {
         // For non-tutorial commands, simulate a MUD response
-        sendTutorialResponse("You entered: " + command + "\n"
+        sendTutorialResponse(QString("You entered: " + command + "\n"
                            "In a real MUD, this command would be sent to the server.\n"
-                           "In this tutorial, we're simulating MUD responses to teach you Mudlet features.\n");
+                           "In this tutorial, we're simulating MUD responses to teach you Mudlet features.\n"));
     }
 }
 
