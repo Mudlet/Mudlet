@@ -503,6 +503,7 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    static void restoreProfileFocus(const QString& profileName);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     static void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void slot_showTimerDialog();

@@ -3047,6 +3047,49 @@ void mudlet::slot_showTimerDialog()
 
 // Centralized focus restoration for script editor dialogs
 // This function handles focus restoration for both main window and detached windows
+void mudlet::restoreProfileFocus(const QString& profileName)
+{
+    // Small delay to ensure the dialog window is fully processed
+    QTimer::singleShot(50, [profileName]() {
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        // Check if there are any detached windows for this profile
+        auto detachedWindows = mudletInstance->mDetachedWindows;
+        TDetachedWindow* detachedWindow = nullptr;
+        
+        for (auto window : detachedWindows) {
+            if (window && window->getProfileNames().contains(profileName)) {
+                detachedWindow = window;
+                break;
+            }
+        }
+        
+        if (detachedWindow) {
+            detachedWindow->show();
+            detachedWindow->raise();
+            detachedWindow->activateWindow();
+            detachedWindow->switchToProfile(profileName);
+        } else {
+            mudletInstance->show();
+            mudletInstance->raise();
+            mudletInstance->activateWindow();
+            
+            // Focus the specific profile in main window by finding its tab
+            for (int i = 0; i < mudletInstance->mpTabBar->count(); ++i) {
+                if (mudletInstance->mpTabBar->tabData(i).toString() == profileName) {
+                    mudletInstance->mpTabBar->setCurrentIndex(i);
+                    // Trigger tab change to ensure proper focus
+                    mudletInstance->slot_tabChanged(i);
+                    break;
+                }
+            }
+        }
+    });
+}
+
 void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow)
 {
     if (!pEditor) {
@@ -3058,15 +3101,10 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
     
     // Connect to our custom editorClosing signal which is emitted from closeEvent
     connect(pEditor, &dlgTriggerEditor::editorClosing, [profileName, targetWindow]() {
-        // Small delay to ensure the editor window is fully processed
-        QTimer::singleShot(50, [profileName, targetWindow]() {
-            auto mudletInstance = mudlet::self();
-            if (!mudletInstance) {
-                return;
-            }
-            
-            // If a specific target window is provided (detached window), focus that
-            if (targetWindow) {
+        // If a specific target window is provided (detached window), focus that
+        if (targetWindow) {
+            // Small delay to ensure the editor window is fully processed
+            QTimer::singleShot(50, [profileName, targetWindow]() {
                 targetWindow->show();
                 targetWindow->raise();
                 targetWindow->activateWindow();
@@ -3076,22 +3114,11 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
                 if (detachedWindow && !profileName.isEmpty()) {
                     detachedWindow->switchToProfile(profileName);
                 }
-            }
-            // Otherwise, focus the main window
-            else {
-                mudletInstance->show();
-                mudletInstance->raise();
-                mudletInstance->activateWindow();
-                
-                // Focus the current profile in main window
-                if (mudletInstance->mpTabBar && mudletInstance->mpTabBar->currentIndex() >= 0) {
-                    Host* currentHost = mudletInstance->getActiveHost();
-                    if (currentHost && currentHost->mpConsole) {
-                        currentHost->mpConsole->setFocus();
-                    }
-                }
-            }
-        });
+            });
+        } else {
+            // Use the common focus restoration logic
+            restoreProfileFocus(profileName);
+        }
     });
 }
 
@@ -3106,45 +3133,8 @@ void mudlet::setupNotepadFocusRestoration(dlgNotepad* pNotepad)
     
     // Connect to our custom notepadClosing signal which is emitted from closeEvent
     connect(pNotepad, &dlgNotepad::notepadClosing, [](const QString& profileName) {
-        // Small delay to ensure the notepad window is fully processed
-        QTimer::singleShot(50, [profileName]() {
-            auto mudletInstance = mudlet::self();
-            if (!mudletInstance) {
-                return;
-            }
-            
-            // Check if there are any detached windows for this profile
-            auto detachedWindows = mudletInstance->mDetachedWindows;
-            TDetachedWindow* detachedWindow = nullptr;
-            
-            for (auto window : detachedWindows) {
-                if (window && window->getProfileNames().contains(profileName)) {
-                    detachedWindow = window;
-                    break;
-                }
-            }
-            
-            if (detachedWindow) {
-                detachedWindow->show();
-                detachedWindow->raise();
-                detachedWindow->activateWindow();
-                detachedWindow->switchToProfile(profileName);
-            } else {
-                mudletInstance->show();
-                mudletInstance->raise();
-                mudletInstance->activateWindow();
-                
-                // Focus the specific profile in main window by finding its tab
-                for (int i = 0; i < mudletInstance->mpTabBar->count(); ++i) {
-                    if (mudletInstance->mpTabBar->tabData(i).toString() == profileName) {
-                        mudletInstance->mpTabBar->setCurrentIndex(i);
-                        // Trigger tab change to ensure proper focus
-                        mudletInstance->slot_tabChanged(i);
-                        break;
-                    }
-                }
-            }
-        });
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
     });
 }
 
