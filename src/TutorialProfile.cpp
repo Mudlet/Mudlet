@@ -67,25 +67,52 @@ void TutorialProfile::handleUserCommand(const QString& command)
                            "  hint <task> - Get a hint for a task\n"
                            "  north, south, east, west - Move in directions (for task 1)\n");
     } else if (command == "progress") {
-        sendTutorialResponse(QString("Tutorial Progress:\n"
-                           "Task 1 (Basic Movement): " + (isTaskCompleted("task1") ? QString("Completed") : QString("Not completed")) + "\n"
-                           "Task 2 (Creating a Trigger): " + (isTaskCompleted("task2") ? QString("Completed") : QString("Not completed")) + "\n"
-                           "Task 3 (Creating an Alias): " + (isTaskCompleted("task3") ? QString("Completed") : QString("Not completed")) + "\n"
-                           "Task 4 (Creating a Script): " + (isTaskCompleted("task4") ? QString("Completed") : QString("Not completed")) + "\n"
-                           "Task 5 (Using the Mapper): " + (isTaskCompleted("task5") ? QString("Completed") : QString("Not completed")) + "\n"));
+        QString progressMessage = "Tutorial Progress:\n";
+        progressMessage += "Task 1 (Basic Movement): ";
+        progressMessage += isTaskCompleted("task1") ? "Completed" : "Not completed";
+        progressMessage += "\n";
+        progressMessage += "Task 2 (Creating a Trigger): ";
+        progressMessage += isTaskCompleted("task2") ? "Completed" : "Not completed";
+        progressMessage += "\n";
+        progressMessage += "Task 3 (Creating an Alias): ";
+        progressMessage += isTaskCompleted("task3") ? "Completed" : "Not completed";
+        progressMessage += "\n";
+        progressMessage += "Task 4 (Creating a Script): ";
+        progressMessage += isTaskCompleted("task4") ? "Completed" : "Not completed";
+        progressMessage += "\n";
+        progressMessage += "Task 5 (Using the Mapper): ";
+        progressMessage += isTaskCompleted("task5") ? "Completed" : "Not completed";
+        progressMessage += "\n";
+        sendTutorialResponse(progressMessage);
     } else if (command.startsWith("hint ")) {
         QString task = command.mid(5).trimmed();
         sendTutorialResponse(getHintForTask(task));
     } else if (command == "task1") {
         sendTutorialResponse(getTaskDescription("task1"));
     } else if (command == "task2") {
-        sendTutorialResponse(getTaskDescription("task2"));
+        if (isTaskCompleted("task1")) {
+            sendTutorialResponse(getTaskDescription("task2"));
+        } else {
+            sendTutorialResponse("You need to complete Task 1 (Basic Movement) first. Type 'north' or 'n' to move north and complete Task 1.");
+        }
     } else if (command == "task3") {
-        sendTutorialResponse(getTaskDescription("task3"));
+        if (isTaskCompleted("task2")) {
+            sendTutorialResponse(getTaskDescription("task3"));
+        } else {
+            sendTutorialResponse("You need to complete Task 2 (Creating a Trigger) first. Type 'task2' to see instructions for creating a trigger.");
+        }
     } else if (command == "task4") {
-        sendTutorialResponse(getTaskDescription("task4"));
+        if (isTaskCompleted("task3")) {
+            sendTutorialResponse(getTaskDescription("task4"));
+        } else {
+            sendTutorialResponse("You need to complete Task 3 (Creating an Alias) first. Type 'task3' to see instructions for creating an alias.");
+        }
     } else if (command == "task5") {
-        sendTutorialResponse(getTaskDescription("task5"));
+        if (isTaskCompleted("task4")) {
+            sendTutorialResponse(getTaskDescription("task5"));
+        } else {
+            sendTutorialResponse("You need to complete Task 4 (Creating a Script) first. Type 'task4' to see instructions for creating a script.");
+        }
     } else if (command == "north" || command == "n") {
         if (!isTaskCompleted("task1")) {
             markTaskCompleted("task1");
@@ -102,11 +129,36 @@ void TutorialProfile::handleUserCommand(const QString& command)
     } else if (command == "west" || command == "w") {
         sendTutorialResponse("You move west.\n"
                            "You find yourself back where you started.");
+    } else if (command == "h") {
+        // This is the alias test command for task 3
+        if (!isTaskCompleted("task3")) {
+            validateUserWork("task3", command);
+        }
+        // Still send the normal response for help
+        sendTutorialResponse("This is the help command. In a real MUD, this would show help information.\n"
+                           "In this tutorial, typing 'h' tests your alias. You've just used your alias!");
+    } else if (command == "someone says hello") {
+        // This is the trigger test command for task 2
+        if (!isTaskCompleted("task2")) {
+            validateUserWork("task2", command);
+        }
+        // The trigger will handle the response, but we still send a message
+        sendTutorialResponse("In a real MUD, this text would trigger your response.\n"
+                           "In this tutorial, we're simulating that behavior.");
+    } else if (command == "lua Tutorial Script()") {
+        // This is the script test command for task 4
+        if (!isTaskCompleted("task4")) {
+            validateUserWork("task4", command);
+        }
+        // The script will handle the response, but we still send a message
+        sendTutorialResponse("In a real Mudlet, this would run your script.\n"
+                           "In this tutorial, we're simulating that behavior.");
     } else {
         // For non-tutorial commands, simulate a MUD response
-        sendTutorialResponse(QString("You entered: " + command + "\n"
-                           "In a real MUD, this command would be sent to the server.\n"
-                           "In this tutorial, we're simulating MUD responses to teach you Mudlet features.\n"));
+        QString responseMessage = "You entered: " + command + "\n";
+        responseMessage += "In a real MUD, this command would be sent to the server.\n";
+        responseMessage += "In this tutorial, we're simulating MUD responses to teach you Mudlet features.\n";
+        sendTutorialResponse(responseMessage);
     }
 }
 
@@ -115,6 +167,12 @@ void TutorialProfile::handleTutorialTrigger(const QString& triggerName)
     if (triggerName == "tutorial_welcome") {
         sendTutorialResponse("Welcome to the Mudlet Tutorial!\n"
                            "Type 'help' to see available tutorial commands.\n");
+    } else if (triggerName == "Tutorial Detection Trigger") {
+        // This is triggered when the user types "someone says hello"
+        validateUserWork("task2", "someone says hello");
+    } else if (triggerName == "Script Detection Trigger") {
+        // This is triggered when the user runs the tutorial script
+        validateUserWork("task4", "lua Tutorial Script()");
     }
 }
 
@@ -127,8 +185,16 @@ bool TutorialProfile::validateUserWork(const QString& task, const QString& userS
         if (pTrigger) {
             QStringList patterns = pTrigger->getPatternsList();
             if (patterns.contains("*says hello*")) {
+                if (!isTaskCompleted("task2")) {
+                    markTaskCompleted("task2");
+                }
                 return true;
             }
+        }
+        // Also check for the pattern the user would type in the tutorial
+        if (userSolution.contains("someone says hello") && !isTaskCompleted("task2")) {
+            markTaskCompleted("task2");
+            return true;
         }
         return false;
     } else if (task == "task3") {
@@ -136,15 +202,36 @@ bool TutorialProfile::validateUserWork(const QString& task, const QString& userS
         TAlias* pAlias = mpHost->getAliasUnit()->findFirstAlias("Tutorial Alias");
         if (pAlias) {
             if (pAlias->getRegexCode() == "h") {
+                if (!isTaskCompleted("task3")) {
+                    markTaskCompleted("task3");
+                }
                 return true;
             }
+        }
+        // Also check for the pattern the user would type in the tutorial
+        if (userSolution == "h" && !isTaskCompleted("task3")) {
+            markTaskCompleted("task3");
+            return true;
         }
         return false;
     } else if (task == "task4") {
         // Check if user created a script with the expected name
         TScript* pScript = mpHost->getScriptUnit()->getScript(mpHost->getScriptUnit()->getNewID() - 1);
         // This is a simplified check - in a real implementation we would search for a script with a specific name
-        return pScript != nullptr;
+        if (pScript != nullptr && !isTaskCompleted("task4")) {
+            // Check if it's a tutorial script by looking for specific content
+            QString scriptContent = pScript->getScript();
+            if (scriptContent.contains("Hello from the tutorial script!")) {
+                markTaskCompleted("task4");
+                return true;
+            }
+        }
+        // Also check for the command the user would type in the tutorial
+        if (userSolution.contains("lua Tutorial Script()") && !isTaskCompleted("task4")) {
+            markTaskCompleted("task4");
+            return true;
+        }
+        return false;
     }
     return false;
 }
@@ -280,6 +367,13 @@ void TutorialProfile::setupTutorialTriggers()
     pScriptTrigger->setScript("tutorial.markTaskCompleted('task4')");
     pScriptTrigger->setIsActive(true);
     mpHost->getTriggerUnit()->registerTrigger(pScriptTrigger);
+    
+    // Create a trigger to detect when the user types "h" (for task 3 completion)
+    TTrigger* pAliasTrigger = new TTrigger("Alias Detection Trigger", QStringList() << "^h$", QList<int>() << REGEX_EXACT_MATCH, false, mpHost);
+    pAliasTrigger->setScript("mmp.echo('You used your alias! This is your alias working.')\n"
+                             "tutorial.markTaskCompleted('task3')");
+    pAliasTrigger->setIsActive(true);
+    mpHost->getTriggerUnit()->registerTrigger(pAliasTrigger);
 }
 
 void TutorialProfile::setupTutorialAliases()
@@ -291,13 +385,6 @@ void TutorialProfile::setupTutorialAliases()
     pAlias->setCommand("help");
     pAlias->setIsActive(true);
     mpHost->getAliasUnit()->registerAlias(pAlias);
-    
-    // Create an alias to detect when the user types "h" and mark task 3 as completed
-    TAlias* pTaskAlias = new TAlias("Task Completion Alias", mpHost);
-    pTaskAlias->setRegexCode("h");
-    pTaskAlias->setScript("tutorial.markTaskCompleted('task3')");
-    pTaskAlias->setIsActive(true);
-    mpHost->getAliasUnit()->registerAlias(pTaskAlias);
 }
 
 void TutorialProfile::setupTutorialScripts()
@@ -337,24 +424,36 @@ void TutorialProfile::setupTask2()
 {
     // Setup content for task 2
     // This will be called when task 1 is completed
+    sendTutorialResponse("Great! You've learned how to move around.\n"
+                         "Now let's learn about triggers. Triggers automatically respond to text from the MUD.\n"
+                         "Type 'task2' to see instructions for creating your first trigger.");
 }
 
 void TutorialProfile::setupTask3()
 {
     // Setup content for task 3
     // This will be called when task 2 is completed
+    sendTutorialResponse("Excellent! You've created your first trigger.\n"
+                         "Now let's learn about aliases. Aliases let you create shortcuts for complex commands.\n"
+                         "Type 'task3' to see instructions for creating your first alias.");
 }
 
 void TutorialProfile::setupTask4()
 {
     // Setup content for task 4
     // This will be called when task 3 is completed
+    sendTutorialResponse("Well done! You've created your first alias.\n"
+                         "Now let's learn about scripts. Scripts are blocks of Lua code that can automate tasks.\n"
+                         "Type 'task4' to see instructions for creating your first script.");
 }
 
 void TutorialProfile::setupTask5()
 {
     // Setup content for task 5
     // This will be called when task 4 is completed
+    sendTutorialResponse("Fantastic! You've created your first script.\n"
+                         "Now let's learn about the mapper. The mapper helps you navigate MUD worlds visually.\n"
+                         "Type 'task5' to see instructions for using the mapper.");
 }
 
 void TutorialProfile::sendTutorialResponse(const QString& response)
@@ -370,15 +469,19 @@ void TutorialProfile::sendTaskCompletionMessage(const QString& taskName)
     if (taskName == "task1") {
         message = "Congratulations! You've completed Task 1: Basic Movement.\n"
                   "You can now move around in MUDs. Type 'task2' to continue with the tutorial.";
+        setupTask2();  // Setup the next task
     } else if (taskName == "task2") {
         message = "Congratulations! You've completed Task 2: Creating a Trigger.\n"
                   "You can now automatically respond to text from the MUD. Type 'task3' to continue.";
+        setupTask3();  // Setup the next task
     } else if (taskName == "task3") {
         message = "Congratulations! You've completed Task 3: Creating an Alias.\n"
                   "You can now create shortcuts for complex commands. Type 'task4' to continue.";
+        setupTask4();  // Setup the next task
     } else if (taskName == "task4") {
         message = "Congratulations! You've completed Task 4: Creating a Script.\n"
                   "You can now write custom Lua code. Type 'task5' to continue.";
+        setupTask5();  // Setup the next task
     } else if (taskName == "task5") {
         message = "Congratulations! You've completed Task 5: Using the Mapper.\n"
                   "You can now navigate MUDs visually.\n\n"

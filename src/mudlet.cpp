@@ -1,4 +1,3 @@
-
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2025 by Stephen Lyons - slysven@virginmedia.com    *
