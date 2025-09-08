@@ -4324,7 +4324,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     QTreeWidgetItem* pNewItem = nullptr;
     TTrigger* pNewTrigger = nullptr;
 
-    QTreeWidgetItem createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) {
+    auto createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) {
         QTreeWidgetItem* item = new QTreeWidgetItem(parent, nameList);
         if (parent != mpTriggerBaseItem) {
             parent->insertChild(0, item);
