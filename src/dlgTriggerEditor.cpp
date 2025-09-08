@@ -4324,10 +4324,10 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     QTreeWidgetItem* pNewItem = nullptr;
     TTrigger* pNewTrigger = nullptr;
 
-    QTreeWidgetItem* createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) {
+    QTreeWidgetItem createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) {
         QTreeWidgetItem* item = new QTreeWidgetItem(parent, nameList);
         if (parent != mpTriggerBaseItem) {
-            parent.insertChild(0, item);
+            parent->insertChild(0, item);
         } else {
             treeWidget_triggers->insertTopLevelItem(0, item);
         }
@@ -4336,7 +4336,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
             qsl(":/icons/folder-red.png") :
             qsl(":/icons/document-save-as.png"))));
         pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
-    }
+    };
 
     if (pParentItem) {
         const int parentID = pParentItem->data(0, Qt::UserRole).toInt();
