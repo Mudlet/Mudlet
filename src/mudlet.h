@@ -117,7 +117,6 @@ class dlgPackageManager;
 class dlgModuleManager;
 class dlgPackageExporter;
 class dlgProfilePreferences;
-class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
