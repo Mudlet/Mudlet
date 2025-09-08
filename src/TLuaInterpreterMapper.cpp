@@ -3962,3 +3962,69 @@ int TLuaInterpreter::getCollisionLocationsInArea(lua_State* L)
     return 1;
 
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportAreaImage
+int TLuaInterpreter::exportAreaImage(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    // Handle optional areaId parameter - default to current player's area
+    int areaId;
+    if (lua_gettop(L) < 1 || lua_isnil(L, 1)) {
+        // Get current player's room and area
+        auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
+        if (roomID == -1) {
+            return warnArgumentValue(L, __func__, "no areaID provided and the player does not have a valid roomID set");
+        }
+        TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+        if (!pR) {
+            return warnArgumentValue(L, __func__, "no areaID provided and the player's current room is invalid");
+        }
+        areaId = pR->getArea();
+    } else {
+        areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    }
+
+    // filePath parameter is required
+    const QString filePath = getVerifiedString(L, __func__, 2, "file path");
+    
+    std::optional<int> zLevel = std::nullopt;
+    bool exportAllZLevels = false;
+    
+    if (lua_gettop(L) > 2) {
+        // Check if the third parameter is a boolean (true means export all Z levels)
+        if (lua_type(L, 3) == LUA_TBOOLEAN) {
+            exportAllZLevels = lua_toboolean(L, 3);
+            if (!exportAllZLevels) {
+                return warnArgumentValue(L, __func__, "zLevel parameter when boolean must be true to export all Z levels");
+            }
+        } else {
+            // Traditional behavior: integer Z level
+            zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
+        }
+    }
+    
+    // NOTE: Zoom parameter temporarily disabled due to blurry room symbol rendering at zoom > 2.0
+    qreal zoom = 2.0;
+
+    if (!host.mpMap->mpRoomDB->getArea(areaId)) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(areaId)));
+    }
+
+    // Get the T2DMap instance from the mapper
+    if (!host.mpMap->mpMapper || !host.mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "map needs to be open");
+    }
+
+    auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
+    
+    lua_pushboolean(L, success);
+    if (!success) {
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    return 1;
+}
