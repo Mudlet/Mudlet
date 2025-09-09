@@ -4,9 +4,8 @@ layout (location = 1) in vec4 aColor;
 layout (location = 2) in vec3 aNormal;
 
 // Per-instance attributes (for instanced rendering)
-layout (location = 3) in vec3 aInstancePos;   // Per-instance position
-layout (location = 4) in vec3 aInstanceSize;  // Per-instance scale  
-layout (location = 5) in vec4 aInstanceColor; // Per-instance color
+layout (location = 3) in vec4 aInstanceColor; // Per-instance color
+layout (location = 4) in mat4 aInstanceTransform;   // Per-instance transformation matrix (scale -> rotate -> translate)
 
 // Texture coordinates (for textured rendering)
 layout (location = 6) in vec2 aTexCoord;
@@ -30,16 +29,15 @@ out vec2 texCoord;
 void main()
 {
     // Determine position and color based on whether we're using instanced rendering
-    vec3 finalPos = aPos;
+    vec4 finalPos = vec4(aPos, 1.0);
     vec4 finalColor = aColor;
-    
     if (uUseInstancing) {
-        // Instanced rendering mode: transform position and use instance color
-        finalPos = aPos * aInstanceSize + aInstancePos;
+        finalPos = aInstanceTransform * finalPos;
         finalColor = aInstanceColor;
     }
+
     
-    vec4 worldPos = uModel * vec4(finalPos, 1.0);
+    vec4 worldPos = uModel * finalPos;
     vec3 worldNormal = normalize(uNormalMatrix * aNormal);
     
     vec3 ambient = uLight0Ambient + uLight1Ambient;
@@ -67,5 +65,5 @@ void main()
     // Pass texture coordinates to fragment shader
     texCoord = aTexCoord;
     
-    gl_Position = uMVP * vec4(finalPos, 1.0);
+    gl_Position = uMVP * finalPos;
 }
