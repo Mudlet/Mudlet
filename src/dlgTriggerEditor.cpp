@@ -4454,7 +4454,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTimer->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isfolder ? 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
         qsl(":/icons/folder-red.png") : 
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
