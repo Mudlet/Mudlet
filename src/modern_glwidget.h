@@ -34,6 +34,8 @@
 #include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMatrix4x4>
+#include <QVector3D>
+#include <QQuaternion>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
@@ -157,6 +159,8 @@ private:
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
     // of "2.5"):
     float scale = 4;
+    // Room size reduction factor on the z-axis (stacks with scale -> 1/32)
+    float zFlattening = 8;
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
     int mTargetRoomId = 0;
