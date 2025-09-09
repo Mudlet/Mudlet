@@ -210,68 +210,64 @@ void GeometryManager::loadPlayerIconTemplate()
         mPlayerIconTemplate = result;
         return;
     }
-    
+
     QByteArray modelData = file.readAll();
     file.close();
-    
+
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFileFromMemory(
-        modelData.constData(), 
-        modelData.size(),
-        aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs
-    );
-    
+    const aiScene* scene = importer.ReadFileFromMemory(modelData.constData(), modelData.size(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs);
+
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
         qWarning() << "GeometryManager: Failed to load sword model:" << importer.GetErrorString();
         mPlayerIconTemplate = result;
         return;
     }
-    
+
     // Process the first mesh in model
     if (scene->mNumMeshes > 0) {
         const aiMesh* mesh = scene->mMeshes[0];
-                
+
         // Scale factor to make the sword a reasonable size for a player icon
         const float scale = 0.005f;
-        
+
         // Extract vertices, normals, and texture coordinates
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             // Apply 90-degree rotation around Z-axis to make sword point upward and scale
-            float x = -mesh->mVertices[i].y * scale;  // -Y becomes X
-            float y = mesh->mVertices[i].x * scale;   // X becomes Y (upward)
-            float z = mesh->mVertices[i].z * scale;   // Z stays Z
-            
+            float x = -mesh->mVertices[i].y * scale; // -Y becomes X
+            float y = mesh->mVertices[i].x * scale;  // X becomes Y (upward)
+            float z = mesh->mVertices[i].z * scale;  // Z stays Z
+
             result.vertices << x << y << z;
-            
+
             // Apply same rotation to normals (normals shouldn't be scaled)
             if (mesh->HasNormals()) {
-                float nx = -mesh->mNormals[i].y;  // -Y becomes X
-                float ny = mesh->mNormals[i].x;   // X becomes Y (upward)
-                float nz = mesh->mNormals[i].z;   // Z stays Z
+                float nx = -mesh->mNormals[i].y; // -Y becomes X
+                float ny = mesh->mNormals[i].x;  // X becomes Y (upward)
+                float nz = mesh->mNormals[i].z;  // Z stays Z
                 result.normals << nx << ny << nz;
             } else {
                 result.normals << 0.0f << 0.0f << 1.0f;
             }
-            
+
             // Extract texture coordinates if available
             if (mesh->mTextureCoords[0]) {
                 float u = mesh->mTextureCoords[0][i].x;
                 float v = 1.0f - mesh->mTextureCoords[0][i].y; // Flip V coordinate for OpenGL
                 result.textureCoords << u << v;
-                
+
                 // UV coordinates processed
             } else {
                 result.textureCoords << 0.0f << 0.0f;
             }
-            
+
             // Set color to white for textured rendering (texture will provide color)
             result.colors << 1.0f << 1.0f << 1.0f << 1.0f;
         }
-        
+
         // Extract indices - ensure we have triangulated faces
         for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
             const aiFace& face = mesh->mFaces[i];
-            if (face.mNumIndices == 3) {  // Only process triangles
+            if (face.mNumIndices == 3) { // Only process triangles
                 result.indices.append(face.mIndices[0]);
                 result.indices.append(face.mIndices[1]);
                 result.indices.append(face.mIndices[2]);
@@ -279,22 +275,22 @@ void GeometryManager::loadPlayerIconTemplate()
                 qWarning() << "GeometryManager: Non-triangular face found with" << face.mNumIndices << "indices";
             }
         }
-        
+
         // Process material textures
         if (mesh->mMaterialIndex < scene->mNumMaterials) {
             const aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            
+
             // Check for diffuse/base color texture
             aiTextureType textureType = aiTextureType_DIFFUSE;
             if (material->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
                 textureType = aiTextureType_BASE_COLOR;
             }
-            
+
             if (material->GetTextureCount(textureType) > 0) {
                 aiString texturePath;
                 material->GetTexture(textureType, 0, &texturePath);
                 // Processing texture reference
-                
+
                 // Check if it's an embedded texture reference (format: *0, *1, etc.)
                 QString texturePathStr = QString::fromStdString(texturePath.C_Str());
                 if (texturePathStr.startsWith("*")) {
@@ -307,11 +303,11 @@ void GeometryManager::loadPlayerIconTemplate()
                 }
             }
         }
-        
+
         // Load PBR textures if available
         if (mesh->mMaterialIndex < scene->mNumMaterials) {
             const aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            
+
             // Helper function to load a texture by type
             auto loadTextureByType = [&](aiTextureType textureType, unsigned int& textureId, const QString& typeName) {
                 if (material->GetTextureCount(textureType) > 0) {
@@ -321,25 +317,25 @@ void GeometryManager::loadPlayerIconTemplate()
                     ai_real blend;
                     aiTextureOp op;
                     aiTextureMapMode mapMode;
-                    
+
                     material->GetTexture(textureType, 0, &texturePath, &mapping, &uvIndex, &blend, &op, &mapMode);
                     // Texture uses UV channel
-                    
+
                     QString texturePathStr = QString::fromStdString(texturePath.C_Str());
-                    
+
                     if (texturePathStr.startsWith("*")) {
                         bool ok;
                         int materialTextureIndex = texturePathStr.mid(1).toInt(&ok);
                         if (ok && materialTextureIndex >= 0 && materialTextureIndex < static_cast<int>(scene->mNumTextures)) {
                             // Loading texture from index
-                            
+
                             const aiTexture* texture = scene->mTextures[materialTextureIndex];
-                            
+
                             // Create OpenGL texture
                             GLuint newTextureId;
                             glGenTextures(1, &newTextureId);
                             glBindTexture(GL_TEXTURE_2D, newTextureId);
-                            
+
                             // Create QImage from embedded texture data
                             QImage image;
                             if (texture->mHeight == 0) {
@@ -351,13 +347,12 @@ void GeometryManager::loadPlayerIconTemplate()
                                 const unsigned char* data = reinterpret_cast<const unsigned char*>(texture->pcData);
                                 image = QImage(data, texture->mWidth, texture->mHeight, QImage::Format_RGBA8888);
                             }
-                            
+
                             if (!image.isNull()) {
                                 // Convert to OpenGL format and upload
                                 QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).mirrored();
-                                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(), 
-                                            0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
-                                
+                                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
+
                                 // Set texture parameters based on texture type
                                 if (typeName == "base color") {
                                     // Base color textures benefit from mipmapping for distance
@@ -375,9 +370,9 @@ void GeometryManager::loadPlayerIconTemplate()
                                 }
                                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                                
+
                                 // Set texture filtering
-                                
+
                                 textureId = newTextureId;
                                 // Texture loaded successfully
                             } else {
@@ -388,7 +383,7 @@ void GeometryManager::loadPlayerIconTemplate()
                     }
                 }
             };
-            
+
             // Load all PBR texture types
             loadTextureByType(aiTextureType_BASE_COLOR, result.baseColorTextureId, "base color");
             if (result.baseColorTextureId == 0) {
@@ -396,7 +391,7 @@ void GeometryManager::loadPlayerIconTemplate()
             }
             loadTextureByType(aiTextureType_METALNESS, result.metallicRoughnessTextureId, "metallic roughness");
             loadTextureByType(aiTextureType_NORMALS, result.normalTextureId, "normal");
-            
+
             // Extract PBR material factors
             aiColor4D baseColor;
             if (material->Get(AI_MATKEY_BASE_COLOR, baseColor) == AI_SUCCESS) {
@@ -405,25 +400,24 @@ void GeometryManager::loadPlayerIconTemplate()
                 result.baseColorFactor[2] = baseColor.b;
                 result.baseColorFactor[3] = baseColor.a;
             }
-            
+
             material->Get(AI_MATKEY_METALLIC_FACTOR, result.metallicFactor);
-            
+
             material->Get(AI_MATKEY_ROUGHNESS_FACTOR, result.roughnessFactor);
-            
+
             // Check for emissive factor (material self-illumination)
             aiColor3D emissive;
             material->Get(AI_MATKEY_COLOR_EMISSIVE, emissive);
-            
+
             // Check for opacity/transparency
             float opacity = 1.0f;
             material->Get(AI_MATKEY_OPACITY, opacity);
-            
+
             // Set legacy textureId for backward compatibility with non-PBR rendering
             result.textureId = result.baseColorTextureId;
         }
-        
     }
-    
+
     qDebug() << "Loaded model" << file.fileName();
 
     mPlayerIconTemplate = std::move(result);
