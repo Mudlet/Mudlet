@@ -213,6 +213,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                               "will be run.</p>"
                                               "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
                                               "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                            "<p>This control has three settings:"
+                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                            "full support for languages other than English.</i></p>"));
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
                                                "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
                                                "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
@@ -413,6 +425,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     label_controlCharacterHandling->setEnabled(false);
     comboBox_controlCharacterHandling->setEnabled(false);
 
@@ -537,6 +550,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     label_controlCharacterHandling->setEnabled(true);
     comboBox_controlCharacterHandling->setEnabled(true);
 
@@ -659,6 +673,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         radioButton_userDictionary_common->setChecked(false);
     }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
@@ -3019,7 +3034,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
+        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3200,17 +3215,12 @@ void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
     if (pHost) {
         pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
-        // When this was a tri-state checkbox setting we would store the
-        // partially checked setting (only, not the checked or unchecked values)
-        // into the Host class in order to cause the encoding to be checked so
-        // that it would determine what the (bool) Host::mWideAmbigousWidthGlyphs
-        // value should be.
-        // Since the control has been removed we now need to examine the value
-        // stored and if THAT equates to "Qt::PartiallyChecked" then do the same:
-        if (pHost->getWideAmbiguousEAsianGlyphsControlState()  == Qt::PartiallyChecked) {
-            // We are linking the Server encoding to this setting but we only
-            // need to refresh the setting for this if it is set to be automatic
-            // changed as necessary:
+        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting currently
+            // - eventually it would move to the locale/language control when it
+            // goes in, but we only need to change the setting for this if it is
+            // set to be automatic changed as necessary:
+
             pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
         }
     }

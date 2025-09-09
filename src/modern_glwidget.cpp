@@ -246,18 +246,14 @@ void ModernGLWidget::paintGL()
             return;
         }
         
-        // Check if room ID changed and smooth camera experiment is enabled
-        if (mRID != mPreviousRID && mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
+        // Check if room ID changed and start smooth transition
+        if (mRID != mPreviousRID) {
             // Room changed - start smooth transition
             int targetAID = pRID->getArea();
             int targetX = pRID->x();
             int targetY = pRID->y();
             int targetZ = pRID->z();
-            
-            qDebug() << "[Smooth Camera] Room ID changed from" << mPreviousRID << "to" << mRID 
-                     << "- starting smooth transition from (" << mMapCenterX << "," << mMapCenterY << "," << mMapCenterZ << ")"
-                     << "to (" << targetX << "," << targetY << "," << targetZ << ")";
-            
+
             startSmoothTransition(targetAID, targetX, targetY, targetZ);
         }
         // Instant update map (smooth transition only impacts camera position)
@@ -270,9 +266,6 @@ void ModernGLWidget::paintGL()
         mMapCenterZ = oz;
         mPreviousRID = mRID; // Update tracking
 
-        if (mRID != mPreviousRID) {
-            qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
-        }
 
     } else {
         ox = mMapCenterX;
@@ -307,12 +300,8 @@ void ModernGLWidget::paintGL()
     // Use our shader program
     shaderProgram->bind();
 
-    // Set room flattening if enabled
-    if (mpHost && mpHost->experimentEnabled("experiment.flat-rooms")) {
-        zFlattening = 8.0f;
-    } else {
-        zFlattening = 1.0f;
-    }
+    // Enable room flattening
+    zFlattening = 8.0f;
 
     // Build up render commands - render connections first so rooms appear above them
     renderConnections();
@@ -359,11 +348,9 @@ void ModernGLWidget::renderRooms()
         return;
     }
 
-    if (mpHost && mpHost->experimentEnabled("experiment.always-depth-test")) {
-        // Enable depth testing
-        auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
-    }
+    // Always enable depth testing
+    auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
 
     float pz = static_cast<float>(mMapCenterZ);
     float px = static_cast<float>(mMapCenterX);
@@ -550,11 +537,7 @@ void ModernGLWidget::renderRooms()
     }
     
     if (!overlayInstances.isEmpty()) {
-        // Disable depth testing for overlays like the original
-        if (mpHost && !mpHost->experimentEnabled("experiment.always-depth-test")) {
-            auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-            mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
-        }
+        // Keep depth testing enabled for overlays (was conditional with experiment.always-depth-test)
 
         auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, 
                                                                     mCameraController.getProjectionMatrix(), 
@@ -781,15 +764,12 @@ void ModernGLWidget::renderConnections()
         }
     }
 
+    // Always enable depth testing
+    auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
 
-    if (!roomConnectionInstances.isEmpty() && mpHost && mpHost->experimentEnabled("experiment.room-connection-volume.basic")) {
-
-        if (mpHost && mpHost->experimentEnabled("experiment.always-depth-test")) {
-            // Enable depth testing
-            auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-            mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
-        }
-
+    // Always render room connection volumes
+    if (!roomConnectionInstances.isEmpty()) {
         auto command = std::make_unique<RenderInstancedCubesCommand>(roomConnectionInstances, 
                                                                     mCameraController.getProjectionMatrix(), 
                                                                     mCameraController.getViewMatrix(), 
@@ -1018,18 +998,8 @@ void ModernGLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
     mShiftMode = true;
     
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        // Use smooth transition
-        startSmoothTransition(areaId, xPos, yPos, zPos);
-    } else {
-        // Original instant movement
-        mAID = areaId;
-        mMapCenterX = xPos;
-        mMapCenterY = yPos;
-        mMapCenterZ = zPos;
-        mCameraController.setTarget(xPos, yPos, zPos);
-        update();
-    }
+    // Use smooth transition
+    startSmoothTransition(areaId, xPos, yPos, zPos);
 }
 
 void ModernGLWidget::wheelEvent(QWheelEvent* e)
@@ -1403,7 +1373,6 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     
     // Start animation timer
     mCameraAnimationTimer->start();
-    qDebug() << "[Smooth Camera] Timer started, animating flag set to true";
 }
 
 void ModernGLWidget::onCameraAnimationTick()

@@ -35,16 +35,16 @@ void main()
     }
 
     
-    vec4 worldPos = uModel * finalPos;
+    vec3 worldPos = vec3(uModel * finalPos);
     vec3 worldNormal = normalize(uNormalMatrix * vec3(finalNormal));
     
     vec3 ambient = uLight0Ambient + uLight1Ambient;
     
-    vec3 lightDir0 = normalize(uLight0Pos);
+    vec3 lightDir0 = normalize(uLight0Pos - worldPos);
     float diff0 = max(dot(worldNormal, lightDir0), 0.0);
     vec3 diffuse0 = diff0 * uLight0Diffuse;
     
-    vec3 lightDir1 = normalize(uLight1Pos);
+    vec3 lightDir1 = normalize(uLight1Pos - worldPos);
     float diff1 = max(dot(worldNormal, lightDir1), 0.0);
     vec3 diffuse1 = diff1 * uLight1Diffuse;
     
@@ -60,6 +60,5 @@ void main()
     
     vertexColor = vec4(finalColorRGB, finalColor.a);
     
-        gl_Position = uMVP * finalPos;
-
+    gl_Position = uMVP * finalPos;
 }

@@ -297,15 +297,14 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
     
-    // Upload cube template vertex data
+    // Upload cube template vertex and normal data
     vertexBuffer.bind();
     vertexBuffer.allocate(mCubeTemplate.vertices.data(), mCubeTemplate.vertices.size() * sizeof(float));
+    // Pointer to vertices
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
-    // Upload cube template normal data
-    //normalBuffer.bind();
-    //normalBuffer.allocate(mCubeTemplate.normals.data(), mCubeTemplate.normals.size() * sizeof(float));
+    // Pointer to normals
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
