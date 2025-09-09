@@ -697,6 +697,7 @@ public:
     static int loadProfile(lua_State*);
     static int closeProfile(lua_State*);
     static int getCollisionLocationsInArea(lua_State*);
+    static int exportAreaImage(lua_State*);
     static int disableTimeStamps(lua_State*);
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);

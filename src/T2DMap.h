@@ -32,11 +32,13 @@
 #include <QCache>
 #include <QColor>
 #include <QFont>
+#include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
+#include <QtConcurrent>
 #include "post_guard.h"
 
 class Host;
@@ -87,6 +89,7 @@ public:
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
     void clearSelection();
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
 
@@ -99,6 +102,7 @@ public:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom = csmDefaultXYZoom;
+    QFutureWatcher<std::pair<bool, QString>>* mpExportWatcher = nullptr;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
@@ -239,11 +243,13 @@ public slots:
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
+    void slot_exportAreaToImage();
 
 private:
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
+    std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);
