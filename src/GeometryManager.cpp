@@ -253,17 +253,17 @@ void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY
         // Create transformation matrices for the additional rotations
         QMatrix4x4 rotationX;
         rotationX.rotate(rotX, 1.0f, 0.0f, 0.0f);
-        
-        QMatrix4x4 rotationY; 
+
+        QMatrix4x4 rotationY;
         rotationY.rotate(rotY, 0.0f, 1.0f, 0.0f);
-        
+
         QMatrix4x4 rotationZ;
         rotationZ.rotate(rotZ, 0.0f, 0.0f, 1.0f);
-        
+
         // Base rotation to make sword point upward (90 degrees around Z)
         QMatrix4x4 baseRotation;
         baseRotation.rotate(90.0f, 0.0f, 0.0f, 1.0f);
-        
+
         // Combined transformation: scale * user rotations * base rotation
         QMatrix4x4 combinedTransform = rotationZ * rotationY * rotationX;
 
@@ -271,13 +271,13 @@ void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             // Original vertex
             QVector3D vertex(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-            
+
             // Apply base rotation first (90-degree rotation around Z-axis to make sword point upward)
             QVector3D rotatedVertex(-vertex.y(), vertex.x(), vertex.z());
-            
+
             // Apply user rotations
             rotatedVertex = combinedTransform.map(rotatedVertex);
-            
+
             // Apply scaling
             rotatedVertex *= scale;
 
@@ -290,7 +290,7 @@ void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY
                 QVector3D rotatedNormal(-normal.y(), normal.x(), normal.z());
                 // Apply user rotations
                 rotatedNormal = combinedTransform.map(rotatedNormal);
-                
+
                 result.normals << rotatedNormal.x() << rotatedNormal.y() << rotatedNormal.z();
             } else {
                 result.normals << 0.0f << 0.0f << 1.0f;
