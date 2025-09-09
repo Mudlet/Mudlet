@@ -243,6 +243,7 @@ public:
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
+    void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
     Host* getActiveHost();
