@@ -4691,7 +4691,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Alias
     mpAliasMainArea->lineEdit_alias_name->setText(name);
-    mpAliasMainArea->label_idNumber->setText(QString::number(childID));
+    mpAliasMainArea->label_idNumber->setText(QString::number(pNewAlias->getID()));
     
     // Finalize selection
     mpCurrentAliasItem = pNewItem;
@@ -4754,7 +4754,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     pNewAction->registerAction();
 
     // Initialize tree item properties
-    pNewItem->setData(0, Qt::UserRole, ction->getID());
+    pNewItem->setData(0, Qt::UserRole, pNewAction->getID());
     pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
         qsl(":/icons/folder-red.png") : 
         qsl(":/icons/document-save-as.png"))));
