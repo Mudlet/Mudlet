@@ -509,6 +509,9 @@ void ModernGLWidget::renderRooms()
 
         // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
         renderUpDownIndicators(pR, rx, ry, overlayZ + (1.0f / scale / zFlattening) + 0.1f/zFlattening);
+        
+        // 4. Render in/out exit indicators on the overlay (keep individual rendering for now)
+        renderInOutIndicators(pR, rx, ry, overlayZ + (1.0f / scale / zFlattening) + 0.1f/zFlattening);
     }
 
     // Create instanced render commands for each batch
@@ -609,6 +612,8 @@ void ModernGLWidget::renderConnections()
         exitList.push_back(pR->getNorthwest());
         exitList.push_back(pR->getUp());
         exitList.push_back(pR->getDown());
+        exitList.push_back(pR->getIn());
+        exitList.push_back(pR->getOut());
 
         // Check if this is the current room
         bool isCurrentRoom = (rz == pz) && (rx == static_cast<float>(mMapCenterX)) && (ry == static_cast<float>(mMapCenterY));
@@ -637,6 +642,7 @@ void ModernGLWidget::renderConnections()
             }
 
             bool areaExit = (pExit->getArea() != mAID);
+            bool inOut = ((i == 10 || i == 11) && mpHost && mpHost->experimentEnabled("experiment.render-in-out-exits"));
 
             if (!areaExit) {
                 // Normal connection within same area
@@ -660,11 +666,19 @@ void ModernGLWidget::renderConnections()
                 const QVector3D exitVector = QVector3D(ex-rx, ey-ry, ez-rz);
                 const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
                 QMatrix4x4 transform = QMatrix4x4();
-                transform.translate(exitVector/4.0f);
-                transform.translate(rx, ry, rz);
-                transform.rotate(alignmentQuat);
-                transform.scale(0.02f, 0.02f, exitVector.length()/4.0f);
-                roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                if (inOut) {
+                    transform.translate(3.0f*exitVector/8.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                } else {
+                    transform.translate(exitVector/4.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/4.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                }
             } else {
                 // Area exit - draw directional stub
                 float dx = rx, dy = ry, dz = rz;
@@ -694,6 +708,12 @@ void ModernGLWidget::renderConnections()
                     dz += 1.0f;
                 } else if (i == 9) { // Down
                     dz -= 1.0f;
+                } else if (i == 10) { // In
+                    dx -= 1.0f;
+                    dy += 0.5f;
+                } else if (i == 11) { // Out
+                    dx += 1.0f;
+                    dy -= 0.5f;
                 }
 
                 // Add line from current room to direction offset
@@ -724,13 +744,27 @@ void ModernGLWidget::renderConnections()
                 // for volume exits we calculate the cube transformation we need
                 const QVector3D exitVector = QVector3D(dx-rx, dy-ry, dz-rz);
                 const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
-                QMatrix4x4 transform = QMatrix4x4();
                 // double length of normal exits since this exit is one sided
-                transform.translate(exitVector/2.0f);
-                transform.translate(rx, ry, rz);
-                transform.rotate(alignmentQuat);
-                transform.scale(0.02f, 0.02f, exitVector.length()/2.0f); 
-                roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                QMatrix4x4 transform = QMatrix4x4();
+                if (inOut) {
+                    transform.translate(3.0f*exitVector/8.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    transform.setToIdentity();
+                    transform.translate(5.0f*exitVector/8.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                } else {
+                    transform.translate(exitVector/2.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/2.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                }
 
                 // Render green area exit cube at the destination position with translucency and darkening
                 transform.setToIdentity();
@@ -1154,6 +1188,62 @@ void ModernGLWidget::renderUpDownIndicators(TRoom* pRoom, float x, float y, floa
 
         // Add gray color for all three vertices
         for (int i = 0; i < 3; ++i) {
+            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
+        }
+    }
+
+    // Render the triangles if we have any
+    if (!triangleVertices.isEmpty()) {
+        renderTriangles(triangleVertices, triangleColors);
+    }
+}
+
+void ModernGLWidget::renderInOutIndicators(TRoom* pRoom, float x, float y, float z)
+{
+    if (!pRoom || !(mpHost && mpHost->experimentEnabled("experiment.render-in-out-exits"))) {
+        return;
+    }
+
+    QVector<float> triangleVertices;
+    QVector<float> triangleColors;
+
+    // Gray color for indicators (same as original)
+    float gray[] = {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f};
+
+    // Triangle size
+    float halfHeight = 0.25f / scale;
+    float width = 0.5f / scale;
+
+    // In arrows (if room has in exit)
+    if (pRoom->getIn() > -1) {
+        // triangle pointing inwards: top-left, bottom-left, mid-center
+        triangleVertices << (x - width) << (y + halfHeight) << z; // Top-left
+        triangleVertices << (x - width) << (y - halfHeight) << z; // Bottom-left
+        triangleVertices << x << y << z;              // Mid-center
+        // triangle pointing inwards: top-right, bottom-right, mid-center
+        triangleVertices << (x + width) << (y + halfHeight) << z; // Top-right
+        triangleVertices << (x + width) << (y - halfHeight) << z; // Bottom-right
+        triangleVertices << x << y << z;              // Mid-center
+
+        // Add gray color for all six vertices
+        for (int i = 0; i < 6; ++i) {
+            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
+        }
+    }
+
+    // Out arrows (if room has out exit)
+    if (pRoom->getOut() > -1) {
+        // triangle pointing outwards: top-left, bottom-left, out-center
+        triangleVertices << (x - width) << (y + halfHeight) << z; // Top-left
+        triangleVertices << (x - width) << (y - halfHeight) << z; // Bottom-left
+        triangleVertices << x - 1.0f/scale << y << z;              // Outside-center
+        // triangle pointing outwards: top-right, bottom-right, out-center
+        triangleVertices << (x + width) << (y + halfHeight) << z; // Top-right
+        triangleVertices << (x + width) << (y - halfHeight) << z; // Bottom-right
+        triangleVertices << x + 1.0f/scale << y << z;              // Outside-center
+
+        // Add gray color for all six vertices
+        for (int i = 0; i < 6; ++i) {
             triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
         }
     }
