@@ -45,7 +45,7 @@ struct GeometryData {
     }
     
     int vertexCount() const {
-        return vertices.size() / 3;
+        return vertices.size() / 6;
     }
     
     int indexCount() const {

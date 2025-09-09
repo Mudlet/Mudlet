@@ -191,8 +191,13 @@ GeometryData GeometryManager::generateTriangleGeometry(const QVector<float>& ver
     }
     
     GeometryData result;
-    result.vertices = vertices;
+    //result.vertices = vertices;
     result.colors = colors;
+
+    // add normals pointing up
+    for (int i=0; i < vertices.size(); i+=3) {
+        result.vertices << vertices[i] << vertices[i+1] << vertices[i+2] << 0.0f << 0.0f << 1.0f;
+    }
     
     return result;
 }
@@ -214,14 +219,11 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     // Upload vertex data
     vertexBuffer.bind();
     vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
-    // Upload normal data
-    //normalBuffer.bind();
-    //normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
-    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    //glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     
     // Upload color data
     colorBuffer.bind();
@@ -238,7 +240,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
         // Draw using indices
         glDrawElements(drawMode, geometry.indexCount(), GL_UNSIGNED_INT, nullptr);
     } else {
-        // Draw using vertex arrays (for lines and triangles)
+        // Draw using vertex arrays (for flat triangles)
         glDrawArrays(drawMode, 0, geometry.vertexCount());
     }
 }
