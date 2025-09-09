@@ -245,7 +245,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Games" menu in the menubar of a detached Mudlet window.
     auto connectAction = new QAction(tr("&Play"), this);
+#if defined(Q_OS_MACOS)
     connectAction->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C));
+#else
+    connectAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_C));
+#endif
     //: This explains the "Play" item in the "Games" menu in the menubar of a detached Mudlet window.
     connectAction->setStatusTip(tr("Configure connection details of, and make a connection to, game servers."));
     connect(connectAction, &QAction::triggered, this, &TDetachedWindow::slot_showConnectionDialog);
@@ -255,7 +259,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Games" menu in the menubar of a detached Mudlet window.
     auto disconnectAction = new QAction(tr("&Disconnect"), this);
+#if defined(Q_OS_MACOS)
     disconnectAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
+#else
+    disconnectAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_D));
+#endif
     //: This explains the "Disconnect" item in the "Games" menu in the menubar of a detached Mudlet window.
     disconnectAction->setStatusTip(tr("Disconnect from the current game server."));
     connect(disconnectAction, &QAction::triggered, this, &TDetachedWindow::slot_disconnectProfile);
@@ -263,7 +271,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Games" menu in the menubar of a detached Mudlet window.
     auto reconnectAction = new QAction(tr("&Reconnect"), this);
+#if defined(Q_OS_MACOS)
     reconnectAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
+#else
+    reconnectAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_R));
+#endif
     //: This explains the "Reconnect" item in the "Games" menu in the menubar of a detached Mudlet window.
     reconnectAction->setStatusTip(tr("Disconnect and then reconnect to the current game server."));
     connect(reconnectAction, &QAction::triggered, this, &TDetachedWindow::slot_reconnectProfile);
@@ -273,7 +285,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Games" menu in the menubar of a detached Mudlet window.
     auto closeProfileAction = new QAction(tr("&Close Profile"), this);
+#if defined(Q_OS_MACOS)
     closeProfileAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
+#else
+    closeProfileAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_W));
+#endif
     //: This explains the "Close Profile" item in the "Games" menu in the menubar of a detached Mudlet window.
     closeProfileAction->setStatusTip(tr("Close the current profile"));
     connect(closeProfileAction, &QAction::triggered, this, &TDetachedWindow::slot_closeCurrentProfile);
@@ -292,7 +308,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto scriptEditorAction = new QAction(tr("&Script editor"), this);
+#if defined(Q_OS_MACOS)
     scriptEditorAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+#else
+    scriptEditorAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_E));
+#endif
     //: This explains the "Script editor" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     scriptEditorAction->setStatusTip(tr("Opens the Editor for the different types of things that can be scripted by the user."));
     connect(scriptEditorAction, &QAction::triggered, this, &TDetachedWindow::slot_showTriggerDialog);
@@ -307,7 +327,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto showMapAction = new QAction(tr("Show &map"), this);
+#if defined(Q_OS_MACOS)
     showMapAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+#else
+    showMapAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_M));
+#endif
     //: This explains the "Show map" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     showMapAction->setStatusTip(tr("Show or hide the game map."));
     connect(showMapAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMap);
@@ -315,7 +339,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto inputLineAction = new QAction(tr("Compact &input line"), this);
+#if defined(Q_OS_MACOS)
     inputLineAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
+#else
+    inputLineAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_L));
+#endif
     //: This explains the "Compact input line" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     inputLineAction->setStatusTip(tr("Hide / show the search area and buttons at the bottom of the screen."));
     inputLineAction->setCheckable(true);
@@ -324,7 +352,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto notepadAction = new QAction(tr("&Notepad"), this);
+#if defined(Q_OS_MACOS)
     notepadAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_N));
+#else
+    notepadAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_N));
+#endif
     //: This explains the "Notepad" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     notepadAction->setStatusTip(tr("Opens a free form text editor window for this profile that is saved between sessions."));
     connect(notepadAction, &QAction::triggered, this, &TDetachedWindow::slot_showNotesDialog);
@@ -339,7 +371,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto packageManagerAction = new QAction(tr("&Package manager"), this);
+#if defined(Q_OS_MACOS)
     packageManagerAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
+#else
+    packageManagerAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_O));
+#endif
     //: This explains the "Package manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     packageManagerAction->setStatusTip(tr("Install and remove collections of Mudlet lua items (packages)."));
     connect(packageManagerAction, &QAction::triggered, this, &TDetachedWindow::slot_showPackageManagerDialog);
@@ -354,7 +390,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto moduleManagerAction = new QAction(tr("&Module manager"), this);
+#if defined(Q_OS_MACOS)
     moduleManagerAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+#else
+    moduleManagerAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_I));
+#endif
     //: This explains the "Module manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     moduleManagerAction->setStatusTip(tr("Install and remove (share- & sync-able) collections of Mudlet lua items (modules)."));
     connect(moduleManagerAction, &QAction::triggered, this, &TDetachedWindow::slot_showModuleManagerDialog);
@@ -369,7 +409,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto toggleReplayAction = new QAction(tr("Record replay"), this);
+#if defined(Q_OS_MACOS)
     toggleReplayAction->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R));
+#else
+    toggleReplayAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_R));
+#endif
     //: This explains the "Record replay" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     toggleReplayAction->setStatusTip(tr("Toggle recording of replays."));
     connect(toggleReplayAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleReplay);
@@ -377,7 +421,11 @@ void TDetachedWindow::createMenus()
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     auto toggleLoggingAction = new QAction(tr("Record log"), this);
+#if defined(Q_OS_MACOS)
     toggleLoggingAction->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L));
+#else
+    toggleLoggingAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_L));
+#endif
     //: This explains the "Record log" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     toggleLoggingAction->setStatusTip(tr("Toggle logging facilities."));
     connect(toggleLoggingAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleLogging);
