@@ -4365,7 +4365,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         return;
     }
 
-    // Initialize trigger properties
+    // Initialize logic object properties
     pNewTrigger->setName(name);
     pNewTrigger->setRegexCodeList(patterns, patternKinds, false);
     pNewTrigger->setScript(script);
@@ -4420,29 +4420,24 @@ void dlgTriggerEditor::addTimer(bool isFolder)
         TTimer* pParentTrigger = mpHost->getTimerUnit()->getTimer(parentID);
         if (pParentTrigger) {
             // insert new items as siblings unless the parent is a folder
-            if (!pParentTrigger->isFolder()) {
-                // handle root items
-                if (!pParentTrigger->getParent()) {
-                    goto ROOT_TIMER;
-                } else {
-                    // insert new item as sibling of the clicked item
-                    if (pParentItem->parent()) {
-                        pNewTimer = new TTimer(pParentTrigger->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
-                        pParentItem->parent()->insertChild(0, pNewItem);
-                    }
-                }
-            } else {
+            if (pParentTrigger->isFolder()) {
                 pNewTimer = new TTimer(pParentTrigger, mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem, nameList);
                 pParentItem->insertChild(0, pNewItem);
-            }
-        } else {
-            goto ROOT_TIMER;
-        }
-    } else {
-    //insert a new root item
-    ROOT_TIMER:
+            } else {
+                // handle root items
+                if (pParentTrigger->getParent() && pParentItem->parent()) {
+                    // insert new item as sibling of the clicked item
+                    pNewTimer = new TTimer(pParentTrigger->getParent(), mpHost);
+                    pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
+                    pParentItem->parent()->insertChild(0, pNewItem);
+                }
+            } 
+        } 
+    } 
+
+    if (!pNewTimer) {
+        //insert a new root item
         pNewTimer = new TTimer(name, time, mpHost);
         pNewItem = new QTreeWidgetItem(mpTimerBaseItem, nameList);
         treeWidget_timers->insertTopLevelItem(0, pNewItem);
@@ -4452,33 +4447,30 @@ void dlgTriggerEditor::addTimer(bool isFolder)
         return;
     }
 
+    // Initialize logic object properties
     pNewTimer->setName(name);
     pNewTimer->setCommand(command);
     pNewTimer->setScript(script);
     pNewTimer->setIsFolder(isFolder);
     pNewTimer->setIsActive(false);
     mpHost->getTimerUnit()->registerTimer(pNewTimer);
-    const int childID = pNewTimer->getID();
-    pNewItem->setData(0, Qt::UserRole, childID);
-    QIcon icon;
+    pNewItem->setData(0, Qt::UserRole, pNewTimer->getID());
+    pNewItem->setIcon(0, QIcon(QPixmap(isfolder ? 
+        qsl(":/icons/folder-red.png") : 
+        qsl(":/icons/document-save-as.png"))));
+    pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
-    QString itemDescription;
-    if (isFolder) {
-        itemDescription = descNewFolder;
-        icon.addPixmap(QPixmap(qsl(":/icons/folder-red.png")), QIcon::Normal, QIcon::Off);
-    } else {
-        itemDescription = descNewItem;
-        icon.addPixmap(QPixmap(qsl(":/icons/document-save-as.png")), QIcon::Normal, QIcon::Off);
-    }
-    pNewItem->setIcon(0, icon);
-    pNewItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+    // Expand parent if applicable
     if (pParentItem) {
         pParentItem->setExpanded(true);
     }
+
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_timer_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Timer
+
+    // Finalize selection
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem(pNewItem);
     slot_timerSelected(treeWidget_timers->currentItem());
