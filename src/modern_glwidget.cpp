@@ -419,13 +419,27 @@ void ModernGLWidget::renderRooms()
                     // Create modified geometry positioned slightly above the current room
                     GeometryData positionedIcon = playerIcon;
                     
+                    // Determine player icon position based on whether smooth animation is active
+                    float playerX, playerY, playerZ;
+                    if (mCameraSmoothAnimating && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
+                        // Use animated coordinates during smooth transition
+                        playerX = mCurrentAnimationX;
+                        playerY = mCurrentAnimationY;
+                        playerZ = mCurrentAnimationZ;
+                    } else {
+                        // Use actual room coordinates when not animating
+                        playerX = rx;
+                        playerY = ry;
+                        playerZ = rz;
+                    }
+                    
                     // Position above the room using the adjustable height
                     for (int i = 2; i < positionedIcon.vertices.size(); i += 3) {
-                        positionedIcon.vertices[i] += (rz + mPlayerIconHeight); // Use adjustable height
+                        positionedIcon.vertices[i] += (playerZ + mPlayerIconHeight); // Use adjustable height
                     }
                     for (int i = 0; i < positionedIcon.vertices.size(); i += 3) {
-                        positionedIcon.vertices[i] += rx;     // Add room X position
-                        positionedIcon.vertices[i + 1] += ry; // Add room Y position
+                        positionedIcon.vertices[i] += playerX;     // Add player X position
+                        positionedIcon.vertices[i + 1] += playerY; // Add player Y position
                     }
 
                     // Use textured rendering for the player icon
