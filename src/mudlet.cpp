@@ -1595,11 +1595,12 @@ void mudlet::slot_closeProfileRequested(int tab)
 
     QTimer::singleShot(0, this, [this, name] {
         closeHost(name);
+        // Update main window title based on remaining profiles
+        updateMainWindowTitle();
         // Check to see if there are any profiles left...
         if (!mHostManager.getHostCount() && !mIsGoingDown) {
             disableToolbarButtons();
             slot_showConnectionDialog();
-            setWindowTitle(scmVersion);
         }
     });
 }
@@ -1619,11 +1620,12 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
         closeHost(profileName);
         // Update main window toolbar state in case this was the active profile
         updateMainWindowToolbarState();
+        // Update main window title based on remaining profiles
+        updateMainWindowTitle();
         // Check to see if there are any profiles left...
         if (!mHostManager.getHostCount() && !mIsGoingDown) {
             disableToolbarButtons();
             slot_showConnectionDialog();
-            setWindowTitle(scmVersion);
         }
     });
 }
@@ -1935,6 +1937,8 @@ void mudlet::closeHost(const QString& name)
     mHostManager.deleteHost(name);
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
+    // Update main window title since a profile was closed
+    updateMainWindowTitle();
 }
 
 void mudlet::updateMultiViewControls()
@@ -2044,11 +2048,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpTabBar->setTabData(newTabID, tabName);
 
     // update the window title for the currently selected profile
-    // Potential to be translated in the future if the need arises, with the following disambiguation:
-    // "Title for the main window when a profile is loaded or active, %1 is the name "
-    // "of the profile and %2 is the Mudlet version string."
-    setWindowTitle(qsl("%1 - %2")
-                           .arg(pH->getName(), scmVersion));
+    updateMainWindowTitle();
 
     mpSplitter_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost && !mMultiView) {
@@ -2292,6 +2292,44 @@ void mudlet::updateMainWindowToolbarState()
     
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
+}
+
+void mudlet::updateMainWindowTitle()
+{
+    QString mainWindowActiveProfileName;
+    
+    // Find the currently active profile that's displayed in the main window
+    if (mpTabBar->count() > 0) {
+        if (mpCurrentActiveHost) {
+            QString currentActiveProfileName = mpCurrentActiveHost->getName();
+            bool currentProfileInMainWindow = !mDetachedWindows.contains(currentActiveProfileName);
+            
+            if (currentProfileInMainWindow) {
+                // The globally active profile is in the main window
+                mainWindowActiveProfileName = currentActiveProfileName;
+            } else {
+                // The globally active profile is detached, find which profile is 
+                // currently selected in the main window tab bar
+                int currentTabIndex = mpTabBar->currentIndex();
+
+                if (currentTabIndex >= 0) {
+                    QString tabProfileName = mpTabBar->tabData(currentTabIndex).toString();
+
+                    if (!mDetachedWindows.contains(tabProfileName)) {
+                        mainWindowActiveProfileName = tabProfileName;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Set window title based on whether we have an active profile in the main window
+    if (!mainWindowActiveProfileName.isEmpty()) {
+        setWindowTitle(qsl("%1 - %2").arg(mainWindowActiveProfileName, scmVersion));
+    } else {
+        // No active profiles in main window, show just the version
+        setWindowTitle(scmVersion);
+    }
 }
 
 void mudlet::enableToolbarButtons()
@@ -6062,12 +6100,8 @@ void mudlet::activateProfile(Host* pHost)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 
-    // update the main application window title for the currently selected profile
-    // Potential to be translated in the future if the need arises, with the following disambiguation:
-    // "Title for the main window when a profile is loaded or active, %1 is the name "
-    // "of the profile and %2 is the Mudlet version string."
-    setWindowTitle(qsl("%1 - %2")
-                           .arg(mpCurrentActiveHost->getName(), scmVersion));
+    // Update the main application window title based on active profiles in main window
+    updateMainWindowTitle();
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
@@ -6581,6 +6615,9 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
         // Update the window menu to reflect the removed window
         updateWindowMenu();
 
+        // Update main window title in case the detached window was affecting it
+        updateMainWindowTitle();
+
         // Properly close the host to avoid dangling connections
         Host* pHost = mHostManager.getHost(profileName);
         if (pHost) {
@@ -6729,12 +6766,14 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Update main window toolbar state since we may have no more tabs
     updateMainWindowToolbarState();
 
+    // Update main window title to reflect changed tab state
+    updateMainWindowTitle();
+
     // Only show connection dialog if there are no profiles loaded anywhere,
     // not just when the main window is empty (profiles might be in detached windows)
     if (mpTabBar->count() == 0 && mHostManager.getHostCount() == 0 && !mIsGoingDown) {
         disableToolbarButtons();
         slot_showConnectionDialog();
-        setWindowTitle(scmVersion);
     }
 }
 
@@ -6900,9 +6939,8 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // Update main window toolbar state to reflect the reattached profile
     updateMainWindowToolbarState();
 
-    if (pHost) {
-        setWindowTitle(QString("%1 - %2").arg(safeProfileName, scmVersion));
-    }
+    // Update main window title to reflect the reattached profile
+    updateMainWindowTitle();
 }
 
 TMainConsole* mudlet::removeConsoleFromSplitter(const QString& profileName)
@@ -7556,9 +7594,8 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     updateMainWindowTabBarAutoHide();
     enableToolbarButtons();
 
-    if (pHost) {
-        setWindowTitle(QString("%1 - %2").arg(profileName, scmVersion));
-    }
+    // Update main window title to reflect moved profile
+    updateMainWindowTitle();
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)
