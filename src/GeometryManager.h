@@ -151,7 +151,8 @@ public:
     GeometryData generateCubeGeometry(float x, float y, float z, float size, float r, float g, float b, float a);
     GeometryData generateLineGeometry(const QVector<float>& vertices, const QVector<float>& colors);
     GeometryData generateTriangleGeometry(const QVector<float>& vertices, const QVector<float>& colors);
-    GeometryData generatePlayerIconGeometry();
+    GeometryData generatePlayerIconGeometry(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
+    void clearPlayerIconTemplate(); // Clear cached template to free memory
     
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry, 
@@ -232,7 +233,7 @@ private:
     void generateCubeTemplate();
     GeometryData transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a);
     
-    void loadPlayerIconTemplate();
+    void loadPlayerIconTemplate(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
 };
 
 #endif // MUDLET_GEOMETRY_MANAGER_H

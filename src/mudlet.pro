@@ -347,6 +347,10 @@ DEFINES+=DEBUG_TELNET=1
 # * Produce qDebug() messages about window handling operations like dock widget
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
+#
+# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# alignment purposes - these are normally hidden in production builds:
+# DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted

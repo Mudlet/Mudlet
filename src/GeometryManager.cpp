@@ -197,16 +197,34 @@ GeometryData GeometryManager::generateTriangleGeometry(const QVector<float>& ver
     return result;
 }
 
-GeometryData GeometryManager::generatePlayerIconGeometry()
+GeometryData GeometryManager::generatePlayerIconGeometry(float scale, float rotX, float rotY, float rotZ)
 {
-    if (!mPlayerIconTemplate.has_value()) {
-        loadPlayerIconTemplate();
+    // Check if we need to regenerate the template
+    static float lastScale = -1.0f;
+    static float lastRotX = -999.0f;
+    static float lastRotY = -999.0f; 
+    static float lastRotZ = -999.0f;
+    
+    bool parametersChanged = (scale != lastScale || rotX != lastRotX || rotY != lastRotY || rotZ != lastRotZ);
+    
+    // Only regenerate if parameters changed or template doesn't exist
+    if (parametersChanged || !mPlayerIconTemplate.has_value()) {
+        loadPlayerIconTemplate(scale, rotX, rotY, rotZ);
+        lastScale = scale;
+        lastRotX = rotX;
+        lastRotY = rotY;
+        lastRotZ = rotZ;
     }
     
     return mPlayerIconTemplate.value_or(GeometryData{});
 }
 
-void GeometryManager::loadPlayerIconTemplate()
+void GeometryManager::clearPlayerIconTemplate()
+{
+    mPlayerIconTemplate.reset();
+}
+
+void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)
 {
     GeometryData result;
     QFile file(":/3d-models/sword/sword.glb");
@@ -232,24 +250,48 @@ void GeometryManager::loadPlayerIconTemplate()
     if (scene->mNumMeshes > 0) {
         const aiMesh* mesh = scene->mMeshes[0];
 
-        // Scale factor to make the sword a reasonable size for a player icon
-        const float scale = 0.005f;
+        // Create transformation matrices for the additional rotations
+        QMatrix4x4 rotationX;
+        rotationX.rotate(rotX, 1.0f, 0.0f, 0.0f);
+        
+        QMatrix4x4 rotationY; 
+        rotationY.rotate(rotY, 0.0f, 1.0f, 0.0f);
+        
+        QMatrix4x4 rotationZ;
+        rotationZ.rotate(rotZ, 0.0f, 0.0f, 1.0f);
+        
+        // Base rotation to make sword point upward (90 degrees around Z)
+        QMatrix4x4 baseRotation;
+        baseRotation.rotate(90.0f, 0.0f, 0.0f, 1.0f);
+        
+        // Combined transformation: scale * user rotations * base rotation
+        QMatrix4x4 combinedTransform = rotationZ * rotationY * rotationX;
 
         // Extract vertices, normals, and texture coordinates
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-            // Apply 90-degree rotation around Z-axis to make sword point upward and scale
-            float x = -mesh->mVertices[i].y * scale; // -Y becomes X
-            float y = mesh->mVertices[i].x * scale;  // X becomes Y (upward)
-            float z = mesh->mVertices[i].z * scale;  // Z stays Z
+            // Original vertex
+            QVector3D vertex(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+            
+            // Apply base rotation first (90-degree rotation around Z-axis to make sword point upward)
+            QVector3D rotatedVertex(-vertex.y(), vertex.x(), vertex.z());
+            
+            // Apply user rotations
+            rotatedVertex = combinedTransform.map(rotatedVertex);
+            
+            // Apply scaling
+            rotatedVertex *= scale;
 
-            result.vertices << x << y << z;
+            result.vertices << rotatedVertex.x() << rotatedVertex.y() << rotatedVertex.z();
 
-            // Apply same rotation to normals (normals shouldn't be scaled)
+            // Apply same transformations to normals (normals shouldn't be scaled)
             if (mesh->HasNormals()) {
-                float nx = -mesh->mNormals[i].y; // -Y becomes X
-                float ny = mesh->mNormals[i].x;  // X becomes Y (upward)
-                float nz = mesh->mNormals[i].z;  // Z stays Z
-                result.normals << nx << ny << nz;
+                QVector3D normal(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+                // Apply base rotation
+                QVector3D rotatedNormal(-normal.y(), normal.x(), normal.z());
+                // Apply user rotations
+                rotatedNormal = combinedTransform.map(rotatedNormal);
+                
+                result.normals << rotatedNormal.x() << rotatedNormal.y() << rotatedNormal.z();
             } else {
                 result.normals << 0.0f << 0.0f << 1.0f;
             }

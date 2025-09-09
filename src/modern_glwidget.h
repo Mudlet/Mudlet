@@ -98,6 +98,15 @@ public slots:
     void slot_defaultView();
     void slot_sideView();
     void slot_topView();
+    void slot_setPlayerIconHeight(int value);
+    void slot_setPlayerIconRotationX(int angle);
+    void slot_setPlayerIconRotationY(int angle);
+    void slot_setPlayerIconRotationZ(int angle);
+    void slot_setPlayerIconScale(int value);
+    void slot_resetPlayerIcon();
+
+signals:
+    void resetPlayerIconSliders(int height, int rotX, int rotY, int rotZ, int scale);
 
 private slots:
     void onCameraAnimationTick();
@@ -166,6 +175,13 @@ private:
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
     int mTargetRoomId = 0;
+    
+    // Player icon adjustment settings
+    float mPlayerIconHeight = 0.51f;     // Default height above room (in units)
+    float mPlayerIconRotationX = 1.0f;   // Rotation around X axis (degrees)
+    float mPlayerIconRotationY = -56.0f; // Rotation around Y axis (degrees)
+    float mPlayerIconRotationZ = 20.0f;  // Rotation around Z axis (degrees) - default sword upright
+    float mPlayerIconScale = 0.0055f;    // Default scale factor
     
     // Frame timing for benchmarking
     QElapsedTimer mFrameTimer;

@@ -567,6 +567,10 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Produce qDebug() messages about window handling operations like dock widget
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(mudlet PRIVATE DEBUG_WINDOW_HANDLING)
+#
+# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+#   alignment purposes - these are normally hidden in production builds:
+# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
