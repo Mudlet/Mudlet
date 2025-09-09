@@ -638,10 +638,10 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "inception in the fall of 1991.")},
 
             {qsl("MorgenGrauen"),
-             qsl("mg.mud.de"),
-             4711,
-             false,
-             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+             qsl("mud.morgengrauen.info"),
+             4712,
+             true,
+             qsl("<a href='http://morgengrauen.info/'>MorgenGrauen Webseite</a><br>"
                  "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
                  "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),
