@@ -219,10 +219,10 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     // Upload vertex data
     vertexBuffer.bind();
     vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(0);
     
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
     // Upload color data
@@ -301,11 +301,11 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     vertexBuffer.bind();
     vertexBuffer.allocate(mCubeTemplate.vertices.data(), mCubeTemplate.vertices.size() * sizeof(float));
     // Pointer to vertices
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(0);
     
     // Pointer to normals
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
     // Upload cube template index data
@@ -324,16 +324,16 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     // Transform matrix: location 4-7
     glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(4*sizeof(float)));
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(4 * sizeof(float)));
     glVertexAttribDivisor(4, 1);
     glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(8*sizeof(float)));
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(8 * sizeof(float)));
     glVertexAttribDivisor(5, 1);
     glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(12*sizeof(float)));
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(12 * sizeof(float)));
     glVertexAttribDivisor(6, 1);
     glEnableVertexAttribArray(7);
-    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(16*sizeof(float)));
+    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(16 * sizeof(float)));
     glVertexAttribDivisor(7, 1);
     
     // Draw all instances with a single call
