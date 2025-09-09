@@ -1,3 +1,4 @@
+#error "COMPILING TUTORIALPROFILE.CPP"
 /***************************************************************************
  *   Copyright (C) 2025 by Mudlet Team                                     *
  *                                                                         *
