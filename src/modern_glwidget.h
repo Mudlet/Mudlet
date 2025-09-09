@@ -177,10 +177,10 @@ private:
     int mTargetRoomId = 0;
     
     // Player icon adjustment settings
-    float mPlayerIconHeight = 0.51f;     // Default height above room (in units)
-    float mPlayerIconRotationX = 1.0f;   // Rotation around X axis (degrees)
-    float mPlayerIconRotationY = -56.0f; // Rotation around Y axis (degrees)
-    float mPlayerIconRotationZ = 20.0f;  // Rotation around Z axis (degrees) - default sword upright
+    float mPlayerIconHeight = 0.41f;     // Default height above room (in units)
+    float mPlayerIconRotationX = -54.0f; // Rotation around X axis (degrees)
+    float mPlayerIconRotationY = 100.0f; // Rotation around Y axis (degrees)
+    float mPlayerIconRotationZ = 37.0f;  // Rotation around Z axis (degrees)
     float mPlayerIconScale = 0.0055f;    // Default scale factor
     
     // Frame timing for benchmarking
