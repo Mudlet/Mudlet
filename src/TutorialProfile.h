@@ -39,7 +39,6 @@ class TArea;
 
 class TutorialProfile : public QObject
 {
-    Q_OBJECT
 
 public:
     explicit TutorialProfile(Host* host);

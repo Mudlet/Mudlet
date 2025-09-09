@@ -571,11 +571,8 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
-# Ensure TutorialProfile files are included in the build
-target_sources(mudlet PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/TutorialProfile.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/TutorialProfile.cpp"
-)
+# Ensure TutorialProfile.h gets processed by moc on all platforms
+target_sources(mudlet PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TutorialProfile.h")
 
 set_target_properties(mudlet PROPERTIES
   AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
