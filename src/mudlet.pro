@@ -734,6 +734,7 @@ SOURCES += \
     TToolBar.cpp \
     TTreeWidget.cpp \
     TTrigger.cpp \
+    TutorialProfile.cpp \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
@@ -870,6 +871,7 @@ HEADERS += \
     TToolBar.h \
     TTreeWidget.h \
     TTrigger.h \
+    TutorialProfile.h \
     TVar.h \
     VarUnit.h \
     utils.h \
