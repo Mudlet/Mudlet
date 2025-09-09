@@ -350,7 +350,7 @@ void GeometryManager::loadPlayerIconTemplate()
 
                             if (!image.isNull()) {
                                 // Convert to OpenGL format and upload
-                                QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).mirrored();
+                                QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).flipped(Qt::Vertical);
                                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
 
                                 // Set texture parameters based on texture type
