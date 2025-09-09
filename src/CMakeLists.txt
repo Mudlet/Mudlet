@@ -377,6 +377,22 @@ endif(USE_UPDATER)
 if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget.cpp)
   list(APPEND mudlet_HDRS glwidget.h)
+  list(APPEND mudlet_SRCS modern_glwidget.cpp)
+  list(APPEND mudlet_HDRS modern_glwidget.h)
+  list(APPEND mudlet_SRCS CameraController.cpp)
+  list(APPEND mudlet_HDRS CameraController.h)
+  list(APPEND mudlet_SRCS GeometryManager.cpp)
+  list(APPEND mudlet_HDRS GeometryManager.h)
+  list(APPEND mudlet_SRCS RenderCommand.cpp)
+  list(APPEND mudlet_HDRS RenderCommand.h)
+  list(APPEND mudlet_SRCS RenderCommandQueue.cpp)
+  list(APPEND mudlet_HDRS RenderCommandQueue.h)
+  list(APPEND mudlet_SRCS ResourceManager.cpp)
+  list(APPEND mudlet_HDRS ResourceManager.h)
+  list(APPEND mudlet_SRCS ShaderManager.cpp)
+  list(APPEND mudlet_HDRS ShaderManager.h)
+  list(APPEND mudlet_HDRS glwidget_integration.h)
+  list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
 # credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
@@ -579,6 +595,11 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# Define shader hot-reloading if enabled
+if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
+  target_compile_definitions(mudlet PRIVATE MUDLET_SHADER_HOT_RELOAD=1)
+endif()
+
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WINDOWS
 # for an #ifdef because we need a symbol that is defined BEFORE we include
@@ -623,6 +644,7 @@ if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
   target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
 endif()
+
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(mudlet PRIVATE INCLUDE_VARIABLE_SPLASH_SCREEN)

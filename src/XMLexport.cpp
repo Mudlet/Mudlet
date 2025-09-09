@@ -441,6 +441,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
+    host.append_attribute("mShow3DView") = pHost->mShow3DView ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
@@ -671,6 +672,19 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+    
+    // Write experiments
+    {
+        QStringList allExperiments = pHost->getAllExperiments();
+        if (!allExperiments.isEmpty()) {
+            for (const auto& experimentKey : allExperiments) {
+                auto experiment = host.append_child("experiment");
+                experiment.append_attribute("key") = experimentKey.toUtf8().constData();
+                experiment.append_attribute("enabled") = "yes";
+            }
+        }
+    }
+    
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);

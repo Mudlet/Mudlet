@@ -249,7 +249,9 @@ int main(int argc, char* argv[])
     app->setOrganizationName(qsl("Mudlet"));
 
     QFile gitShaFile(":/app-build.txt");
-    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "main: failed to open app-build.txt for reading:" << gitShaFile.errorString();
+    }
     const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     const bool releaseVersion = appBuild.isEmpty();
@@ -473,17 +475,12 @@ int main(int argc, char* argv[])
 #endif
 
     QStringList cliProfiles = parser.values(profileToOpen);
-    qDebug() << "Got CLI profiles:" << cliProfiles;
 
     if (cliProfiles.isEmpty()) {
-        qDebug() << "No CLI profiles specified, checking environment variable";
         const QString envProfiles = QString::fromLocal8Bit(qgetenv("MUDLET_PROFILES"));
-        qDebug() << "Environment MUDLET_PROFILES value:" << envProfiles;
         if (!envProfiles.isEmpty()) {
-            qDebug() << "Found environment profiles, splitting on ':'";
             // : is not an allowed character in a profile name, so we can use it to split the list
             cliProfiles = envProfiles.split(':');
-            qDebug() << "Final profile list from environment:" << cliProfiles;
         }
     }
 

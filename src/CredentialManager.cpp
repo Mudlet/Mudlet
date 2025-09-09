@@ -952,20 +952,8 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         return QString();
     }
     
-    auto sanitizeForPath = [](const QString& input) -> QString {
-        QString sanitized = input;
-        // Replace filesystem-unsafe characters with underscores
-        sanitized.replace(QRegularExpression(R"([/\\:*?"<>|])"), "_");
-        // Limit length to prevent filesystem issues
-        if (sanitized.length() > 50) {
-            sanitized = sanitized.left(50);
-        }
-
-        return sanitized;
-    };
-    
-    QString sanitizedProfile = sanitizeForPath(profileName);
-    QString sanitizedKey = sanitizeForPath(key);
+    QString sanitizedProfile = utils::sanitizeForPath(profileName);
+    QString sanitizedKey = utils::sanitizeForPath(key);
     
     // QStandardPaths automatically handles portable mode configuration paths
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);

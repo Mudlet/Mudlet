@@ -256,6 +256,9 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 
 void GLWidget::paintGL()
 {
+    // Start frame timing
+    mFrameTimer.start();
+    
     if (!mpMap) {
         return;
     }
@@ -2035,6 +2038,11 @@ void GLWidget::paintGL()
         zPlane += 1.0;
     }
     glFlush();
+    
+    // End frame timing and store result
+    // Display instant frame time
+    qint64 frameTime = mFrameTimer.elapsed();
+    qDebug() << "[Legacy GLWidget] Frame time:" << frameTime << "ms";
 }
 
 void GLWidget::resizeGL(int w, int h)

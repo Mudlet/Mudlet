@@ -153,7 +153,11 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
 void TTextEdit::focusOutEvent(QFocusEvent* event)
 {
     // Safety check: during destruction, mpHost might be null
-    if (mpHost && mpHost->caretEnabled()) {
+    // Avoid disabling caret mode when the window is merely deactivated
+    // (e.g., user Alt+Tabs away). This preserves focus for screen reader
+    // users like NVDA so returning to Mudlet restores the original widget
+    // rather than forcing focus to the command line.
+    if (mpHost && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 

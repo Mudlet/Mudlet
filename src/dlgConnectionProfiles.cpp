@@ -615,10 +615,70 @@ void dlgConnectionProfiles::slot_saveName()
         return;
     }
 
+    // Check for orphaned keychain entries when creating a new profile with a name 
+    // that doesn't exist as a directory but might have keychain entries from 
+    // a previously deleted profile (deleted outside Mudlet interface)
+    if (mudlet::self()->storingPasswordsSecurely() && 
+        currentProfileEditName == tr("new profile name") && 
+        !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
+        
+        // Check if there are orphaned keychain entries for this profile name
+        auto* credManager = new CredentialManager(this);
+        credManager->retrieveCredential(newProfileName, "character", 
+            [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl]
+            (bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
+                Q_UNUSED(characterPassword)
+                Q_UNUSED(errorMessage)
+                
+                credManager->retrieveCredential(newProfileName, "proxy", 
+                    [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry]
+                    (bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
+                        Q_UNUSED(proxyPassword)
+                        Q_UNUSED(errorMessage)
+                        
+                        // If we found any orphaned entries, clean them up
+                        if (foundCharacterEntry || foundProxyEntry) {
+                            if (foundCharacterEntry) {
+                                credManager->removeCredential(newProfileName, "character", 
+                                    [newProfileName](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                    });
+                            }
+                            
+                            if (foundProxyEntry) {
+                                credManager->removeCredential(newProfileName, "proxy", 
+                                    [newProfileName](bool success, const QString& errorMessage) {
+                                        if (!success) {
+                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
+                                        }
+                                    });
+                            }
+                        }
+                        
+                        credManager->deleteLater();
+                        
+                        // Continue with normal profile creation flow
+                        continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+                    });
+            });
+        
+        return; // Exit here - continueProfileSave will be called from the callback
+    }
+
     if (mudlet::self()->storingPasswordsSecurely()) {
         migrateSecuredPassword(currentProfileEditName, newProfileName);
     }
 
+    continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+}
+
+void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, 
+                                               const QString& newProfileHost, const QString& newProfilePort, 
+                                               const int newProfileSslTsl)
+{
+    const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     setItemName(pItem, newProfileName);
 
     const QDir currentPath(mudlet::getMudletPath(enums::profileHomePath, currentProfileEditName));
@@ -664,7 +724,7 @@ void dlgConnectionProfiles::slot_saveName()
         fillout_form();
         // and re-select the profile since focus is lost
         auto pRestoredItems = findData(*profiles_tree_widget, newProfileName, csmNameRole);
-        Q_ASSERT_X(pRestoredItems.count() == 1, "dlgConnectionProfiles::slot_saveName", "Couldn't find exactly 1 restored profile to select");
+        Q_ASSERT_X(pRestoredItems.count() == 1, "dlgConnectionProfiles::continueProfileSave", "Couldn't find exactly 1 restored profile to select");
 
         // As we are using QAbstractItemView::SingleSelection this will
         // automatically unselect the previous item:
@@ -745,6 +805,30 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     QDir dir(mudlet::getMudletPath(enums::profileHomePath, profile));
     dir.removeRecursively();
 
+    // Clean up keychain entries for the deleted profile
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        auto* credManager = new CredentialManager(this);
+        
+        // Clean up character password entry
+        credManager->removeCredential(profile, "character", 
+            [profile](bool success, const QString& errorMessage) {
+                if (!success) {
+                    qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
+                }
+            });
+        
+        // Clean up proxy password entry (if any)
+        credManager->removeCredential(profile, "proxy", 
+            [credManager, profile](bool success, const QString& errorMessage) {
+                if (!success) {
+                    qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
+                }
+                
+                // Clean up the credential manager after both operations
+                credManager->deleteLater();
+            });
+    }
+
     // record the deleted default profile so it does not get re-created in the future
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
@@ -782,7 +866,10 @@ void dlgConnectionProfiles::slot_deleteProfile()
     QUiLoader loader;
 
     QFile file(qsl(":/ui/delete_profile_confirmation.ui"));
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "dlgConnectionProfiles: failed to open UI file for reading:" << file.errorString();
+        return;
+    }
 
     auto* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
@@ -1375,7 +1462,10 @@ void dlgConnectionProfiles::slot_setCustomColor()
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QSaveFile file(profileColorPath);
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qWarning() << "dlgConnectionProfiles: failed to open profile color file for writing:" << file.errorString();
+            return;
+        }
         auto colorName = color.name();
         file.write(colorName.toUtf8(), colorName.length());
         if (!file.commit()) {

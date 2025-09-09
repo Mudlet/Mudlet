@@ -30,6 +30,7 @@ struct TMxpEvent
     QString name;
     QMap<QString, QString> attrs;
     QStringList actions;
+    QString caption;
 };
 
 #endif //MUDLET_TMXPEVENT_H
