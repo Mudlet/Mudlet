@@ -607,7 +607,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/dlgMapper.cpp" line="520"/>
       <source>render time: %1S</source>
-      <translation type="unfinished"/>
+      <translation>tempo di render: %1S</translation>
     </message>
   </context>
   <context>
@@ -8592,25 +8592,25 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="96"/>
       <source>My greetings</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the name of the alias which reacts on the player typing &quot;hi&quot; by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Alias saluto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="98"/>
       <source>hi</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the text input from the player which will be reacted on by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>saluta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
       <source>say Greetings, traveller!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the command that Mudlet will send to the game after the player typed &quot;hi&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>dico Saluti, viaggiatori!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
       <source>We said hi!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the confirmation text shown to the player after they typed &quot;hi&quot; and we said &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Saluti allegramente!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="105"/>
@@ -8621,7 +8621,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="233"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="259"/>
       <source>Where to find more information</source>
-      <translation type="unfinished"/>
+      <translation>Dove trovare maggiori informazioni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="107"/>
@@ -8674,19 +8674,19 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="133"/>
       <source>My drink trigger</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the name of the trigger which reacts on &quot;You are thirsty&quot; with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Trigger per assetato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="135"/>
       <source>You are thirsty.</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the text from game which will be triggered on, and reacted to with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hai sete.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="137"/>
       <source>drink water</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text &quot;You are thirsty.&quot; from game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>bevo acqua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
@@ -8759,12 +8759,12 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2865"/>
       <source>Don&apos;t ask again</source>
-      <translation type="unfinished"/>
+      <translation>Non chiedere di nuovo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2902"/>
       <source>Do you really want to delete alias &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare l'alias &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2904"/>
@@ -8772,17 +8772,20 @@ Help contents of a selectable option for the Trigger intro</extracomment>
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 alias?
+
+Alias da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2909"/>
       <source>Delete Alias(es)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2975"/>
       <source>Do you really want to delete button &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare il bottone &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2977"/>
@@ -8790,17 +8793,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 bottoni?
+
+Bottoni da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2982"/>
       <source>Delete Button(s)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina bottone</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3059"/>
       <source>Do you really want to delete variable &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare la variabile &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3061"/>
@@ -8808,17 +8814,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 variabili?
+
+Variabili da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3066"/>
       <source>Delete Variable(s)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina variabili</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3139"/>
       <source>Do you really want to delete script &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare lo script &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3141"/>
@@ -8826,17 +8835,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 script?
+
+Script da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3146"/>
       <source>Delete Script(s)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3212"/>
       <source>Do you really want to delete key &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare il tasto &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3214"/>
@@ -8844,17 +8856,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 tasti?
+
+Tasti da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3219"/>
       <source>Delete Key(s)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3285"/>
       <source>Do you really want to delete trigger &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare il trigger &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3287"/>
@@ -8862,17 +8877,20 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 trigger?
+
+Trigger da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3292"/>
       <source>Delete Trigger(s)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3358"/>
       <source>Do you really want to delete timer &quot;%1&quot;?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare il timer &quot;%1&quot;?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3360"/>
@@ -8880,12 +8898,15 @@ Items to be deleted:
 
 Items to be deleted:
 %2</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi davvero eliminare %1 timer?
+
+Timer da eliminare:
+%2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3365"/>
       <source>Delete Timer(s)</source>
-      <translation type="unfinished"/>
+      <translation>Elimina Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3478"/>
@@ -9353,7 +9374,7 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9528"/>
       <source>No valid triggers found to export.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun trigger valido da esportare.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9536"/>
@@ -9368,57 +9389,57 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9540"/>
       <source>Copied %1 triggers to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiati %1 trigger negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9592"/>
       <source>No valid timers found to export.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun timer valido da esportare.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9602"/>
       <source>Copied %1 timers to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiati %1 timer negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9648"/>
       <source>No valid aliases found to export.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun alias valido da esportare.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9658"/>
       <source>Copied %1 aliases to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiati %1 alias negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9704"/>
       <source>No valid actions found to export.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun trigger valido da esportare.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9714"/>
       <source>Copied %1 actions to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiati %1 trigger negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9760"/>
       <source>No valid scripts found to export.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun script valido da esportare.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9770"/>
       <source>Copied %1 scripts to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiati %1 script negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9816"/>
       <source>No valid keys found to export.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun tasto valido da esportare.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9826"/>
       <source>Copied %1 keys to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiati %1 tasti negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9860"/>
@@ -9445,7 +9466,7 @@ Items to be deleted:
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10098"/>
       <source>Pasted %1 items successfully</source>
-      <translation type="unfinished"/>
+      <translation>Incollato con successo %1 elementi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10368"/>
@@ -9640,13 +9661,13 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="198"/>
       <source>Buttons react on mouse clicks.</source>
       <extracomment>Headline for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>I bottoni si attivano al click del mouse.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="200"/>
       <source>How to add a new button now</source>
       <extracomment>Name of a selectable option for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo bottone</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="202"/>
@@ -9658,13 +9679,13 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="219"/>
       <source>Keys react on keyboard presses.</source>
       <extracomment>Headline for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>I tasti si attivano alla pressione della tastiera.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="221"/>
       <source>How to add a new keybinding now</source>
       <extracomment>Name of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Come aggiungere un nuovo tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="223"/>
@@ -9682,7 +9703,7 @@ Items to be deleted:
       <location filename="../src/dlgTriggerEditor.cpp" line="243"/>
       <source>Variables store information.</source>
       <extracomment>Headline for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Archivio variabili.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="245"/>
@@ -10679,32 +10700,32 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Multiview</source>
-      <translation type="unfinished"/>
+      <translation>Visualizzazione multipla</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="488"/>
       <source>Timestamps</source>
-      <translation type="unfinished"/>
+      <translation>Mostra data/ora</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="496"/>
       <source>Record replay</source>
-      <translation type="unfinished"/>
+      <translation>Registra replay</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="504"/>
       <source>Record log</source>
-      <translation type="unfinished"/>
+      <translation>Registra log</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="512"/>
       <source>Emergency stop</source>
-      <translation type="unfinished"/>
+      <translation>Arresto d'emergenza</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="515"/>
       <source>&lt;p&gt;Toggle all triggers, aliases, timers, etc. on or off&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Attiva o disattiva tutti i trigger, alias, timer, ecc.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="390"/>
@@ -10897,7 +10918,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="379"/>
       <source>Fullscreen</source>
-      <translation type="unfinished"/>
+      <translation>Schermo intero</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="418"/>
@@ -13887,7 +13908,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2396"/>
       <source>Invert zoom direction</source>
-      <translation type="unfinished"/>
+      <translation>Inverti direzione zoom</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3266"/>
