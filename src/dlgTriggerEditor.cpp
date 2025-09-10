@@ -4333,7 +4333,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
             if (pParentTrigger->isFolder()) {
                 pNewTrigger = new TTrigger(pParentTrigger, mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem, nameList);
-                pParentTrigger->insertChild(0, pNewItem);
+                pParentItem->insertChild(0, pNewItem);
             } else if (pParentTrigger->getParent() && pParentItem->parent()) {
                 pNewTrigger = new TTrigger(pParentTrigger->getParent(), mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
