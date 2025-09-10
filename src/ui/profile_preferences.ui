@@ -1291,6 +1291,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
+            <property name="text">
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
@@ -4470,6 +4480,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>hanging_indent_wrapped_spinBox</tabstop>
   <tabstop>doubleclick_ignore_lineedit</tabstop>
   <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
+  <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
