@@ -181,8 +181,7 @@ public:
         const QPoint centerPoint = screenGeometry.center();
         const QPoint newPos(
             centerPoint.x() - dialogSize.width() / 2,
-            centerPoint.y() - dialogSize.height() / 2
-        );
+            centerPoint.y() - dialogSize.height() / 2);
         
         // Ensure dialog stays within screen bounds
         QPoint constrainedPos = newPos;
