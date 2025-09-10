@@ -4324,20 +4324,6 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     QTreeWidgetItem* pNewItem = nullptr;
     TTrigger* pNewTrigger = nullptr;
 
-    std::function<QTreeWidgetItem*(QTreeWidgetItem*, TTrigger*)> createTreeItem = [&](QTreeWidgetItem* parent, TTrigger* trigger) -> QTreeWidgetItem* {
-        QTreeWidgetItem* item = new QTreeWidgetItem(parent, nameList);
-        if (parent != mpTriggerBaseItem) {
-            parent->insertChild(0, item);
-        } else {
-            treeWidget_triggers->insertTopLevelItem(0, item);
-        }
-        pNewItem->setData(0, Qt::UserRole, trigger->getID());
-        pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-            qsl(":/icons/folder-red.png") :
-            qsl(":/icons/document-save-as.png"))));
-        pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
-    };
-
     if (pParentItem) {
         const int parentID = pParentItem->data(0, Qt::UserRole).toInt();
         TTrigger* pParentTrigger = mpHost->getTriggerUnit()->getTrigger(parentID);
@@ -4346,10 +4332,12 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
             // insert new items as siblings unless the parent is a folder
             if (pParentTrigger->isFolder()) {
                 pNewTrigger = new TTrigger(pParentTrigger, mpHost);
-                pNewItem = createTreeItem(pParentItem, pNewTrigger);
+                pNewItem = new QTreeWidgetItem(pParentTrigger, nameList);
+                pParentTrigger->insertChild(0, pNewItem);
             } else if (pParentTrigger->getParent() && pParentItem->parent()) {
                 pNewTrigger = new TTrigger(pParentTrigger->getParent(), mpHost);
-                pNewItem = createTreeItem(pParentItem->parent(), pNewTrigger);
+                pNewItem = new QTreeWidgetItem(pParentTrigger->getParent(), nameList);
+                pParentItem->parent()->insertChild(0, pNewItem);
             }
         }
     } 
@@ -4357,7 +4345,8 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     if (!pNewTrigger) {
         // Fallback to insert a new root item
         pNewTrigger = new TTrigger(name, patterns, patternKinds, false, mpHost);
-        pNewItem = createTreeItem(mpTriggerBaseItem, pNewTrigger);
+        pNewItem = new QTreeWidgetItem(mpTriggerBaseItem, nameList);
+        treeWidget_triggers->insertTopLevelItem(0, pNewItem);
     }
 
 
@@ -4375,6 +4364,13 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     pNewTrigger->mStayOpen = 0;
     pNewTrigger->setConditionLineDelta(0);
     pNewTrigger->registerTrigger();
+
+    // Initialize tree item properties
+    pNewItem->setData(0, Qt::UserRole, pNewTrigger->getID());
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
+        qsl(":/icons/folder-red.png") :
+        qsl(":/icons/document-save-as.png"))));
+    pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
     // Expand parent if applicable
     if (pParentItem) {
