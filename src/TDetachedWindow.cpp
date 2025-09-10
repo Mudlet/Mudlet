@@ -2838,7 +2838,7 @@ void TDetachedWindow::slot_showPreferencesDialog()
             utils::positionDialogOnParentScreen(pPrefs, this);
             
             // Set up focus restoration for the preferences dialog to return to this detached window
-            mudlet::self()->setupPreferencesFocusRestoration(pPrefs);
+            mudletInstance->setupPreferencesFocusRestoration(pPrefs);
         }
     });
 }
@@ -2867,7 +2867,7 @@ void TDetachedWindow::slot_showNotesDialog()
             utils::positionDialogOnParentScreen(pHost->mpNotePad, this);
             
             // Set up focus restoration for the notepad to return to this detached window
-            mudlet::self()->setupNotepadFocusRestoration(pHost->mpNotePad);
+            mudletInstance->setupNotepadFocusRestoration(pHost->mpNotePad);
         }
     });
 }
@@ -2903,7 +2903,7 @@ void TDetachedWindow::slot_showPackageManagerDialog()
             utils::positionDialogOnParentScreen(pHost->mpPackageManager, this);
             
             // Set up focus restoration for the package manager to return to this detached window
-            mudlet::self()->setupPackageManagerFocusRestoration(pHost->mpPackageManager);
+            mudletInstance->setupPackageManagerFocusRestoration(pHost->mpPackageManager);
         }
     });
 }
@@ -2932,7 +2932,7 @@ void TDetachedWindow::slot_showModuleManagerDialog()
             utils::positionDialogOnParentScreen(pHost->mpModuleManager, this);
             
             // Set up focus restoration for the module manager to return to this detached window
-            mudlet::self()->setupModuleManagerFocusRestoration(pHost->mpModuleManager);
+            mudletInstance->setupModuleManagerFocusRestoration(pHost->mpModuleManager);
         }
     });
 }
