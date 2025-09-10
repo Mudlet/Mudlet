@@ -1532,8 +1532,16 @@ void mudlet::slot_moduleManager()
         // Set up focus restoration for when this module manager is closed
         setupModuleManagerFocusRestoration(moduleManager);
     }
+    
     moduleManager->raise();
     moduleManager->show();
+    
+    // Force reposition after showing, since module manager is a singleton per profile
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -1563,9 +1571,17 @@ void mudlet::slot_packageManager()
         // Set up focus restoration for when this package manager is closed
         setupPackageManagerFocusRestoration(packageManager);
     }
+    
     packageManager->raise();
     packageManager->showNormal();
     packageManager->activateWindow();
+    
+    // Force reposition after showing, since package manager is a singleton per profile
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
 }
 
 void mudlet::slot_packageExporter()
@@ -1580,6 +1596,12 @@ void mudlet::slot_packageExporter()
     setupPackageExporterFocusRestoration(d);
     
     d->show();
+    
+    // Force reposition after showing to ensure correct screen placement
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(d, referenceWidget);
 }
 
 void mudlet::slot_closeCurrentProfile()
@@ -2983,6 +3005,13 @@ void mudlet::slot_showEditorDialog()
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
+    
+    // Force reposition after showing, since script editor is a singleton
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
 }
 
 void mudlet::slot_showTriggerDialog()
@@ -3014,6 +3043,9 @@ void mudlet::slot_showTriggerDialog()
             }
         });
     });
+    
+    // Position dialog on the same screen as the main window for better multi-monitor UX
+    utils::positionDialogOnParentScreen(pEditor, this);
     
     pEditor->slot_showTriggers();
     pEditor->raise();
@@ -3410,8 +3442,16 @@ void mudlet::showOptionsDialog(const QString& tab)
         pPrefs->setStyleSheet(pHost->mProfileStyleSheet);
     }
     pPrefs->setTab(tab);
+    
     pPrefs->raise();
     pPrefs->show();
+    
+    // Force reposition after showing, since preferences dialog may be a singleton
+    // that restores its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
 void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
@@ -3920,6 +3960,13 @@ void mudlet::slot_notes()
 
     pNotes->raise();
     pNotes->show();
+    
+    // Force reposition after showing, since notepad is a singleton per profile
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
 }
 
 // This opens a profile specific IRC client for that client so should only be

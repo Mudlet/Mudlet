@@ -178,6 +178,7 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void showEvent(QShowEvent* event) override;
     void enterEvent(TEnterEvent* event) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;

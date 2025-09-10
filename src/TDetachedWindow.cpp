@@ -28,6 +28,10 @@
 #include "dlgMapper.h"
 #include "TRoomDB.h"
 #include "TMap.h"
+#include "dlgProfilePreferences.h"
+#include "dlgNotepad.h"
+#include "dlgPackageManager.h"
+#include "dlgModuleManager.h"
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QAction>
@@ -2509,6 +2513,9 @@ void TDetachedWindow::showScriptEditorDialog(std::function<void(dlgTriggerEditor
             showMethod(pEditor);
         }
         
+        // Position dialog on the same screen as this detached window
+        utils::positionDialogOnParentScreen(pEditor, this);
+        
         // Show and activate the editor
         pEditor->raise();
         pEditor->showNormal();
@@ -2812,14 +2819,56 @@ void TDetachedWindow::slot_showHelpDialog()
 void TDetachedWindow::slot_showPreferencesDialog()
 {
     withCurrentProfileActive([this]() {
-        mudlet::self()->slot_showPreferencesDialog();
+        // Store originating profile for focus restoration
+        QString originatingProfile = mCurrentProfileName;
+        
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        
+        // Open preferences dialog
+        mudletInstance->slot_showPreferencesDialog();
+        
+        // Position the preferences dialog on the same screen as this detached window
+        auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mudletInstance->mpDlgProfilePreferences;
+        if (pPrefs) {
+            utils::positionDialogOnParentScreen(pPrefs, this);
+            
+            // Set up focus restoration for the preferences dialog to return to this detached window
+            mudlet::self()->setupPreferencesFocusRestoration(pPrefs);
+        }
     });
 }
 
 void TDetachedWindow::slot_showNotesDialog()
 {
     withCurrentProfileActive([this]() {
-        mudlet::self()->slot_notes();
+        // Store originating profile for focus restoration
+        QString originatingProfile = mCurrentProfileName;
+        
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Open notes dialog
+        mudletInstance->slot_notes();
+        
+        // Position the notes dialog on the same screen as this detached window
+        if (pHost->mpNotePad) {
+            utils::positionDialogOnParentScreen(pHost->mpNotePad, this);
+            
+            // Set up focus restoration for the notepad to return to this detached window
+            mudlet::self()->setupNotepadFocusRestoration(pHost->mpNotePad);
+        }
     });
 }
 
@@ -2833,14 +2882,58 @@ void TDetachedWindow::slot_showReplayDialog()
 void TDetachedWindow::slot_showPackageManagerDialog()
 {
     withCurrentProfileActive([this]() {
-        mudlet::self()->slot_packageManager();
+        // Store originating profile for focus restoration
+        QString originatingProfile = mCurrentProfileName;
+        
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Open package manager dialog
+        mudletInstance->slot_packageManager();
+        
+        // Position the package manager dialog on the same screen as this detached window
+        if (pHost->mpPackageManager) {
+            utils::positionDialogOnParentScreen(pHost->mpPackageManager, this);
+            
+            // Set up focus restoration for the package manager to return to this detached window
+            mudlet::self()->setupPackageManagerFocusRestoration(pHost->mpPackageManager);
+        }
     });
 }
 
 void TDetachedWindow::slot_showModuleManagerDialog()
 {
     withCurrentProfileActive([this]() {
-        mudlet::self()->slot_moduleManager();
+        // Store originating profile for focus restoration
+        QString originatingProfile = mCurrentProfileName;
+        
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        Host* pHost = mudletInstance->getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        
+        // Open module manager dialog
+        mudletInstance->slot_moduleManager();
+        
+        // Position the module manager dialog on the same screen as this detached window
+        if (pHost->mpModuleManager) {
+            utils::positionDialogOnParentScreen(pHost->mpModuleManager, this);
+            
+            // Set up focus restoration for the module manager to return to this detached window
+            mudlet::self()->setupModuleManagerFocusRestoration(pHost->mpModuleManager);
+        }
     });
 }
 
