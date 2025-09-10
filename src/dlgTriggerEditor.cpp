@@ -4332,11 +4332,11 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
             // insert new items as siblings unless the parent is a folder
             if (pParentTrigger->isFolder()) {
                 pNewTrigger = new TTrigger(pParentTrigger, mpHost);
-                pNewItem = new QTreeWidgetItem(pParentTrigger, nameList);
+                pNewItem = new QTreeWidgetItem(pParentItem, nameList);
                 pParentTrigger->insertChild(0, pNewItem);
             } else if (pParentTrigger->getParent() && pParentItem->parent()) {
                 pNewTrigger = new TTrigger(pParentTrigger->getParent(), mpHost);
-                pNewItem = new QTreeWidgetItem(pParentTrigger->getParent(), nameList);
+                pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
         }
