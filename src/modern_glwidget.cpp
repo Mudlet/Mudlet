@@ -764,6 +764,9 @@ void ModernGLWidget::renderConnections()
         }
     }
 
+    // Always enable depth testing
+    auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
 
     // Always render room connection volumes
     if (!roomConnectionInstances.isEmpty()) {
