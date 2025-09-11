@@ -2012,7 +2012,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="1013"/>
       <source>Connecting...</source>
       <extracomment>This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Connecting...&quot;</extracomment>
-      <translation>Verbindung wird hergestellt...</translation>
+      <translation>Verbinde...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1016"/>
@@ -5865,19 +5865,23 @@ Nutzungen</translation>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                          Diese formidablen Leute bleiben für immer in liebevoller Erinnerung&lt;br&gt;für ihre großzügige finanzielle Unterstützung an Mudlet&apos;s Patreon:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1094"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                          Diese formidablen Leute bleiben für immer in liebevoller Erinnerung&lt;br&gt;für ihre großzügige finanzielle Unterstützung an &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s Patreon&lt;/a&gt;:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1130"/>
       <source>You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet&apos;s website).</source>
-      <translation type="unfinished"/>
+      <translation>Du verwendest die 32-Bit-Version von Mudlet auf einer 64-Bit-Version von Windows. Du kannst ein Upgrade durchführen (indem Du die 64-Bit-Version, die jetzt auf Mudlet&apos;s Website verfügbar ist, herunterlädst und dann installierst).</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1133"/>
@@ -6753,17 +6757,17 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
       <source>Select items to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Elemente, die in das Modul aufgenommen werden sollen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="187"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Modulbeschreibung, Symbol und Assets hinzufügen (optional)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="190"/>
       <source>Module location</source>
-      <translation type="unfinished"/>
+      <translation>Ort des Moduls</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
@@ -6898,48 +6902,48 @@ Weiteres Lesematerial, z.B. Links zu Dokumentation oder Forumbeiträgen.
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="947"/>
       <source>Module Already Exists</source>
-      <translation type="unfinished"/>
+      <translation>Modul existiert bereits</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="948"/>
       <source>A module named &quot;%1&quot; is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Ein Modul namens &quot;%1&quot; ist bereits installiert.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="949"/>
       <source>Do you want to overwrite the existing module?</source>
-      <translation type="unfinished"/>
+      <translation>Möchtest Du das bestehende Modul überschreiben?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="961"/>
       <source>Module Overwritten</source>
-      <translation type="unfinished"/>
+      <translation>Modul überschrieben</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="962"/>
       <source>Module &quot;%1&quot; overwritten successfully!</source>
-      <translation type="unfinished"/>
+      <translation>Modul &quot;%1&quot; wurde erfolgreich überschrieben!</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="963"/>
       <source>The existing module has been replaced.</source>
-      <translation type="unfinished"/>
+      <translation>Das vorhandene Modul wurde ersetzt.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="971"/>
       <location filename="../src/dlgPackageExporter.cpp" line="987"/>
       <source>Module &quot;%1&quot; exported but installation failed: %2</source>
-      <translation type="unfinished"/>
+      <translation>Modul &quot;%1&quot; exportiert, aber Installation fehlgeschlagen: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="976"/>
       <source>Module &quot;%1&quot; exported but failed to uninstall existing version</source>
-      <translation type="unfinished"/>
+      <translation>Modul &quot;%1&quot; exportiert, aber die vorhandene Version konnte nicht deinstalliert werden</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Module &quot;%1&quot; exported successfully but not installed (already exists)</source>
-      <translation type="unfinished"/>
+      <translation>Modul &quot;%1&quot; erfolgreich exportiert, aber nicht installiert (bereits vorhanden)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1316"/>
@@ -6957,7 +6961,7 @@ Weiteres Lesematerial, z.B. Links zu Dokumentation oder Forumbeiträgen.
       <location filename="../src/dlgPackageExporter.cpp" line="1903"/>
       <source>Why not &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Warum nicht das Modul für andere Mudlet-Benutzer &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;hochladen&lt;/a&gt;?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageExporter.cpp" line="1921"/>
@@ -6993,7 +6997,7 @@ Weiteres Lesematerial, z.B. Links zu Dokumentation oder Forumbeiträgen.
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1284"/>
       <source>cannot copy %1 to the temporary location %2 - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>kann %1 nicht an den temporären Ort %2 kopieren - bitte überprüfen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="616"/>
@@ -7289,13 +7293,13 @@ Weiteres Lesematerial, z.B. Links zu Dokumentation oder Forumbeiträgen.
       <location filename="../src/dlgProfilePreferences.cpp" line="674"/>
       <source>Enable spell check using Mudlet dictionary:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rechtschreibprüfung mit Mudlet-Wörterbuch aktivieren:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="677"/>
       <source>Enable spell check using System dictionary:</source>
       <extracomment>On *nix systems where we find the system ones we use them</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rechtschreibprüfung mit System-Wörterbuch aktivieren:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="870"/>
