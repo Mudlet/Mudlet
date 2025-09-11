@@ -6614,7 +6614,31 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>(empfohlen)
+
+Diese Paketbeschreibung wird im Paketmanager angezeigt. Der Editor unterstützt Commonmark markdown. Folge der folgenden Beschreibung als genaues Beispiel dafür, was Du in Deine Paketbeschreibung aufnehmen solltest.
+
+### Beschreibung
+
+Eine vollständige Beschreibung dessen, was dieses Paket kann. Wenn das Paket spielspezifisch ist, dann erwähne das hier. Gib an, ob sich das Paket automatisch aktualisiert oder füge sonst einen Link in der Sektion "Siehe Auch" unten in das Code-Repository hinzu.
+
+### Verwendung
+
+Wenn dieses Paket Aliase nutzt, zeigen einige Beispiele und erwartete Ausgaben.
+
+`&gt; alias_1`
+
+    Ausgabe von alias_1 -- Einzug um vier Leerzeichen
+    weitere Ausgabe -- für Code-Blöcke
+
+Wenn dieses Paket eine GUI implementiert, füge vielleicht Screenshots hinzu. Dazu einfach Bilder direkt in diesen Editor ziehen und fallen lassen.
+
+### Siehe auch
+
+Weitere Lese-Materialien, z.B. ein Link zum Mudlet Wiki, Forum, Paketverwaltung oder Webseite.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [Link 2 könnte eine Webseite sein](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="330"/>
@@ -8518,37 +8542,37 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <extracomment>Help contents of a selectable option for the Alias intro
 ----------
 Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Es gibt da &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;einige&lt;/a&gt; &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;Pakete&lt;/a&gt;, die Dir helfen können.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="93"/>
       <source>Alias can also be defined from the input line in the main profile window like this:</source>
       <extracomment>Part of the Alias intro - This introductory text will be followed by a Lua code example for a trigger.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Alias können auch aus der Eingabezeile im Hauptfenster des Profils definiert werden:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="96"/>
       <source>My greetings</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the name of the alias which reacts on the player typing &quot;hi&quot; by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Grüße</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="98"/>
       <source>hi</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the text input from the player which will be reacted on by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>hi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
       <source>say Greetings, traveller!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the command that Mudlet will send to the game after the player typed &quot;hi&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>sag Seid gegrüßt, Reisender!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="102"/>
       <source>We said hi!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the confirmation text shown to the player after they typed &quot;hi&quot; and we said &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wir haben gegrüßt!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="105"/>
@@ -8559,7 +8583,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="233"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="259"/>
       <source>Where to find more information</source>
-      <translation type="unfinished"/>
+      <translation>Wo finden sich weitere Informationen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="107"/>
@@ -8567,12 +8591,12 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="167"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="235"/>
       <source>Watch a &lt;a href=&apos;%1&apos;&gt;video demonstration&lt;/a&gt; of the basic functionality.</source>
-      <translation type="unfinished"/>
+      <translation>Schau Dir ein &lt;a href=&apos;%1&apos;&gt;Demo-Video&lt;/a&gt; der Grundfunktionen an.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="109"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Introduction to Aliases&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lies die &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Einführung in Aliase&lt;/a&gt; für eine detaillierte Übersicht.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
@@ -8583,7 +8607,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="238"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
       <source>Do you maybe have any other suggestions, questions or doubts?</source>
-      <translation type="unfinished"/>
+      <translation>Hast Du vielleicht noch andere Fragen, Anregungen oder Zweifel?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="111"/>
@@ -8594,7 +8618,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="263"/>
       <source>Join our community on &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt; or in &lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;Mudlet forums&lt;/a&gt; - See you there!</source>
-      <translation type="unfinished"/>
+      <translation>Werde Teil unserer Community bei &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt; oder den &lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;Mudlet-Foren&lt;/a&gt; - Wir sehen uns dort!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="125"/>
@@ -8606,35 +8630,35 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
       <source>Triggers can also be defined from the input line in the main profile window like this:</source>
       <extracomment>Part of the Trigger intro - This introductory text will be followed by a Lua code example for a trigger.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Trigger können auch aus der Eingabezeile im Hauptfenster des Profils definiert werden:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="133"/>
       <source>My drink trigger</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the name of the trigger which reacts on &quot;You are thirsty&quot; with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mein Getränke-Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="135"/>
       <source>You are thirsty.</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the text from game which will be triggered on, and reacted to with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Du hast Durst.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="137"/>
       <source>drink water</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text &quot;You are thirsty.&quot; from game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>trinke wasser</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Introduction to Triggers&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lies die &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Trigger&apos;&gt;Einführung in Trigger&lt;/a&gt; für eine detaillierte Übersicht.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="169"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Introduction to Scripts&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lies die &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Einführung in Skripte&lt;/a&gt; für eine detaillierte Übersicht.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="185"/>
