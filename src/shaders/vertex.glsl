@@ -1,7 +1,7 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec4 aColor;
-layout (location = 2) in vec3 aNormal;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec4 aColor;
 
 // Per-instance attributes (for instanced rendering)
 layout (location = 3) in vec4 aInstanceColor; // Per-instance color
@@ -25,23 +25,26 @@ void main()
 {
     // Determine position and color based on whether we're using instanced rendering
     vec4 finalPos = vec4(aPos, 1.0);
+    vec4 finalNormal = vec4(aNormal, 0.0);
     vec4 finalColor = aColor;
     if (uUseInstancing) {
         finalPos = aInstanceTransform * finalPos;
+        // rotation without translation, since cube normals on perpendicular or parallel to stretches, we don't need to worry about that
+        finalNormal = normalize(aInstanceTransform * finalNormal); 
         finalColor = aInstanceColor;
     }
 
     
-    vec4 worldPos = uModel * finalPos;
-    vec3 worldNormal = normalize(uNormalMatrix * aNormal);
+    vec3 worldPos = vec3(uModel * finalPos);
+    vec3 worldNormal = normalize(uNormalMatrix * vec3(finalNormal));
     
     vec3 ambient = uLight0Ambient + uLight1Ambient;
     
-    vec3 lightDir0 = normalize(uLight0Pos);
+    vec3 lightDir0 = normalize(uLight0Pos - worldPos);
     float diff0 = max(dot(worldNormal, lightDir0), 0.0);
     vec3 diffuse0 = diff0 * uLight0Diffuse;
     
-    vec3 lightDir1 = normalize(uLight1Pos);
+    vec3 lightDir1 = normalize(uLight1Pos - worldPos);
     float diff1 = max(dot(worldNormal, lightDir1), 0.0);
     vec3 diffuse1 = diff1 * uLight1Diffuse;
     
