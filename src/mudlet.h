@@ -690,6 +690,7 @@ private:
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
     QPointer<QLabel> mpLabelReplayTime;
+    QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
     // a list of character passwords currently being migrated to secure storage
