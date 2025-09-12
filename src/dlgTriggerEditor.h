@@ -241,6 +241,7 @@ public slots:
     void slot_showVariables();
     void slot_viewErrorsAction();
     void slot_setupPatternControls(const int);
+    void slot_patternTypeChanged(int row, int oldType, int newType);
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
@@ -555,6 +556,22 @@ private:
     edbee::TextEditorWidget* mpSourceEditorEdbee = nullptr;
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
+    
+    // Separate editor widgets for each tab to maintain independent undo/redo stacks
+    edbee::TextEditorWidget* mpTriggerEditorEdbee = nullptr;
+    edbee::TextEditorWidget* mpTimerEditorEdbee = nullptr;
+    edbee::TextEditorWidget* mpAliasEditorEdbee = nullptr;
+    edbee::TextEditorWidget* mpScriptEditorEdbee = nullptr;
+    edbee::TextEditorWidget* mpActionEditorEdbee = nullptr;
+    edbee::TextEditorWidget* mpKeyEditorEdbee = nullptr;
+    
+    // Separate undo stacks for each tab
+    QUndoStack* mpTriggerUndoStack = nullptr;
+    QUndoStack* mpTimerUndoStack = nullptr;
+    QUndoStack* mpAliasUndoStack = nullptr;
+    QUndoStack* mpScriptUndoStack = nullptr;
+    QUndoStack* mpActionUndoStack = nullptr;
+    QUndoStack* mpKeyUndoStack = nullptr;
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
@@ -653,6 +670,12 @@ private:
     QTreeWidgetItem* findScriptItemById(int id);
     QTreeWidgetItem* findActionItemById(int id);
     QTreeWidgetItem* findKeyItemById(int id);
+    
+    // Helper methods for managing separate editor widgets
+    void initializeTabSpecificEditors();
+    void switchToTabEditor(EditorViewType viewType);
+    edbee::TextEditorWidget* getCurrentTabEditor();
+    QUndoStack* getCurrentTabUndoStack();
 
     // Undo commands for various operations
     friend class DeleteItemCommand;

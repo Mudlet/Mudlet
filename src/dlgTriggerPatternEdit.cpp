@@ -39,6 +39,23 @@ dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
 
 void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 {
+    // Get the old index from the stored property (if it exists)
+    int oldIndex = comboBox_patternType->property("previousIndex").toInt();
+    
+    // Store the new index for future reference
+    comboBox_patternType->setProperty("previousIndex", index);
+    
+    // Emit signal for undo tracking (only if this is not the initial setup)
+    if (comboBox_patternType->property("initialized").toBool() && oldIndex != index) {
+        emit signal_patternTypeChanged(mRow, oldIndex, index);
+    }
+    
+    // Mark as initialized after first call
+    if (!comboBox_patternType->property("initialized").toBool()) {
+        comboBox_patternType->setProperty("initialized", true);
+        comboBox_patternType->setProperty("previousIndex", index);
+    }
+    
     label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
 
     const bool firstRow = comboBox_patternType->itemData(0).toInt() == 0;

@@ -40,6 +40,9 @@ public:
     int mRow = 0;
 
 
+signals:
+    void signal_patternTypeChanged(int row, int oldType, int newType);
+
 public slots:
     void slot_triggerTypeComboBoxChanged(const int);
 

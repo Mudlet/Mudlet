@@ -540,6 +540,25 @@ void PropertyChangeCommand::applyValue(const QVariant& value)
                 trigger->setSound(value.toString());
             } else if (mPropertyName == qsl("isActive")) {
                 trigger->setIsActive(value.toBool());
+            } else if (mPropertyName.startsWith(qsl("PatternType_"))) {
+                // Handle pattern type changes for specific patterns
+                bool ok;
+                int patternIndex = mPropertyName.mid(12).toInt(&ok); // Extract index after "PatternType_"
+                if (ok && patternIndex >= 0) {
+                    QList<int> patternKinds = trigger->getRegexCodePropertyList();
+                    QStringList patterns = trigger->getPatternsList();
+                    
+                    // Ensure the pattern lists are large enough
+                    while (patternKinds.size() <= patternIndex) {
+                        patternKinds.append(0); // Default to REGEX_SUBSTRING
+                    }
+                    while (patterns.size() <= patternIndex) {
+                        patterns.append(QString()); // Empty pattern
+                    }
+                    
+                    patternKinds[patternIndex] = value.toInt();
+                    trigger->setRegexCodeList(patterns, patternKinds);
+                }
             }
         }
         
