@@ -2591,7 +2591,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="0">
            <widget class="QLabel" name="label_39">
             <property name="text">
-             <string>Link color</string>
+             <string>Link color:</string>
             </property>
             <property name="buddy">
              <cstring>pushButton_foreground_color_2</cstring>
@@ -2720,6 +2720,26 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="3" column="1">
            <widget class="QPushButton" name="pushButton_roomCollisionBorderColor">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLabel" name="label_newRoomColor">
+            <property name="text">
+             <string>Default color for new rooms:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_newRoomColor</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="pushButton_newRoomColor">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
