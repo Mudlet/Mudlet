@@ -607,6 +607,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mUpperLevelColor").text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
+        host.append_child("mNewRoomColor").text().set(pHost->mNewRoomColor.name().toUtf8().constData());
         auto mapInfoBgNode = host.append_child("mMapInfoBg");
         mapInfoBgNode.text().set(pHost->mMapInfoBg.name().toUtf8().constData());
         mapInfoBgNode.append_attribute("alpha").set_value(pHost->mMapInfoBg.alpha());

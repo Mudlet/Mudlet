@@ -1256,6 +1256,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
                 pHost->mRoomCollisionBorderColor.setNamedColor(readElementText());
+            } else if (name() == qsl("mNewRoomColor")) {
+                pHost->mNewRoomColor.setNamedColor(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg.setNamedColor(readElementText());
@@ -1306,6 +1308,8 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mRoomBorderColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
                 pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mNewRoomColor")) {
+                pHost->mNewRoomColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg = QColor::fromString(readElementText());

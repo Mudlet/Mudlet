@@ -1767,6 +1767,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mUpperLevelColor = QColorConstants::White;
     pHost->mRoomBorderColor = QColorConstants::LightGray;
     pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
+    pHost->mNewRoomColor = QColorConstants::DarkRed;
     pHost->mBlack_2 = QColorConstants::Black;
     pHost->mLightBlack_2 = QColorConstants::DarkGray;
     pHost->mRed_2 = QColorConstants::DarkRed;
@@ -1806,7 +1807,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     if (!color.isValid()) {
         return; 
     }
-    
+
     presentColor = color;
 
     auto console = pHost->mpConsole;

@@ -678,6 +678,7 @@ public:
     QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+    QColor mNewRoomColor{QColorConstants::DarkRed};
 
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
