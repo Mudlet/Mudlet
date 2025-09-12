@@ -27,14 +27,10 @@
 #include "TAccessibleTextEdit.h"
 #include "TTextEdit.h"
 
-#include "Announcer.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
-#if defined(Q_OS_WINDOWS)
-#include "uiawrapper.h"
-#endif
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
@@ -157,7 +153,11 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
 void TTextEdit::focusOutEvent(QFocusEvent* event)
 {
     // Safety check: during destruction, mpHost might be null
-    if (mpHost && mpHost->caretEnabled()) {
+    // Avoid disabling caret mode when the window is merely deactivated
+    // (e.g., user Alt+Tabs away). This preserves focus for screen reader
+    // users like NVDA so returning to Mudlet restores the original widget
+    // rather than forcing focus to the command line.
+    if (mpHost && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -323,11 +323,7 @@ void TTextEdit::showNewLines()
 
 
     if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
-        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost
-#if defined (Q_OS_WINDOWS)
-            && UiaWrapper::self()->clientsAreListening()
-#endif
-            ) {
+        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
         // content has been deleted

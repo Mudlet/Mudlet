@@ -29,6 +29,7 @@
 #include "pre_guard.h"
 #include <QList>
 #include <QQueue>
+#include <QStack>
 #include "post_guard.h"
 
 class Host;
@@ -128,6 +129,10 @@ public:
 
     // Shouldn't be here, look for a better solution
     QQueue<TMxpEvent> mMxpEvents;
+
+    void setCaptionForSendEvent(const QString& caption) override;
+
+    QStack<TMxpEvent> mPendingSendEvents;
 
 private:
     Host* mpHost;

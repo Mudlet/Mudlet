@@ -83,6 +83,8 @@ public:
     // Tab indicator methods
     void updateAllTabIndicators();  // Update all tab indicators in this window
 
+    void saveWindowGeometry();
+
 protected:
     void closeEvent(QCloseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -160,7 +162,6 @@ private:
     void updateDiscordNamedIcon();
     void updateTabIndicator(int tabIndex = -1);  // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName);  // Show/hide docked widgets based on active profile
-    void saveWindowGeometry();
     void restoreWindowGeometry();
     void checkForWindowMergeOpportunity();  // Check if this window overlaps with another detached window
     void performWindowMerge(TDetachedWindow* otherWindow);  // Automatically merge with another window
