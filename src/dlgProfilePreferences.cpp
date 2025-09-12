@@ -4,6 +4,7 @@
  *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1239,6 +1240,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomBorderColor);
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor);
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
+    connect(pushButton_newRoomColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setNewRoomColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1362,6 +1364,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_newRoomColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
@@ -1657,6 +1660,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
+        setButtonColor(pushButton_newRoomColor, pHost->mNewRoomColor);
     } else {
         // Using QColor() gives an "invalid" color:
         setButtonColor(pushButton_black_2, QColor());
@@ -1683,6 +1687,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_roomBorderColor, QColor());
         setButtonColor(pushButton_mapInfoBg, QColor());
         setButtonColor(pushButton_roomCollisionBorderColor, QColor());
+        setButtonColor(pushButton_newRoomColor, QColor());
     }
 }
 
@@ -1798,66 +1803,68 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     //: Generic pick color dialog title
     auto color = QColorDialog::getColor(presentColor, this, tr("Pick color"),
                                         allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
-    if (color.isValid()) {
-        presentColor = color;
-
-        auto console = pHost->mpConsole;
-        if (console) {
-            console->changeColors();
-            // update the display properly when color selections change.
-            console->mUpperPane->updateScreenView();
-            console->mUpperPane->forceUpdate();
-            if (console->mUpperPane->mIsTailMode) {
-                // The upper pane having mIsTailMode true means lower pane is hidden
-                console->mLowerPane->updateScreenView();
-                console->mLowerPane->forceUpdate();
-            }
-        }
-
-        if (button == pushButton_black || button == pushButton_lBlack
-            || button == pushButton_red || button == pushButton_lRed
-            || button == pushButton_green || button == pushButton_lGreen
-            || button == pushButton_yellow || button == pushButton_lYellow
-            || button == pushButton_blue || button == pushButton_lBlue
-            || button == pushButton_magenta || button == pushButton_lMagenta
-            || button == pushButton_cyan || button == pushButton_lCyan
-            || button == pushButton_white || button == pushButton_lWhite) {
-
-            pHost->updateAnsi16ColorsInTable();
-        }
-
-        const bool isAMapEnvColor = (button == pushButton_black_2 || button == pushButton_Lblack_2
-                                     || button == pushButton_red_2 || button == pushButton_Lred_2
-                                     || button == pushButton_green_2 || button == pushButton_Lgreen_2
-                                     || button == pushButton_yellow_2 || button == pushButton_Lyellow_2
-                                     || button == pushButton_blue_2 || button == pushButton_Lblue_2
-                                     || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2
-                                     || button == pushButton_cyan_2 || button == pushButton_Lcyan_2
-                                     || button == pushButton_white_2 || button == pushButton_Lwhite_2);
-
-        if (isAMapEnvColor
-                || button == pushButton_foreground_color_2
-                || button == pushButton_background_color_2
-                || button == pushButton_lowerLevelColor
-                || button == pushButton_upperLevelColor
-                || button == pushButton_mapInfoBg
-                || button == pushButton_roomBorderColor
-                || button == pushButton_roomCollisionBorderColor) {
-
-            if (pHost->mpMap) {
-                // Update the custom environment (room colors)
-                if (isAMapEnvColor) {
-                    pHost->mpMap->restore16ColorSet();
-                }
-                // Redraw the map with the modified color:
-                pHost->mpMap->update();
-            }
-        }
-
-        // Also set a contrasting foreground color so text will always be
-        // visible:
-        setButtonColor(button, color, allowAlpha);
+    if (!color.isValid()) {
+        return; 
     }
+    
+    presentColor = color;
+
+    auto console = pHost->mpConsole;
+    if (console) {
+        console->changeColors();
+        // update the display properly when color selections change.
+        console->mUpperPane->updateScreenView();
+        console->mUpperPane->forceUpdate();
+        if (console->mUpperPane->mIsTailMode) {
+            // The upper pane having mIsTailMode true means lower pane is hidden
+            console->mLowerPane->updateScreenView();
+            console->mLowerPane->forceUpdate();
+        }
+    }
+
+    if (button == pushButton_black || button == pushButton_lBlack
+        || button == pushButton_red || button == pushButton_lRed
+        || button == pushButton_green || button == pushButton_lGreen
+        || button == pushButton_yellow || button == pushButton_lYellow
+        || button == pushButton_blue || button == pushButton_lBlue
+        || button == pushButton_magenta || button == pushButton_lMagenta
+        || button == pushButton_cyan || button == pushButton_lCyan
+        || button == pushButton_white || button == pushButton_lWhite) {
+
+        pHost->updateAnsi16ColorsInTable();
+    }
+
+    const bool isAMapEnvColor = (button == pushButton_black_2 || button == pushButton_Lblack_2
+                                    || button == pushButton_red_2 || button == pushButton_Lred_2
+                                    || button == pushButton_green_2 || button == pushButton_Lgreen_2
+                                    || button == pushButton_yellow_2 || button == pushButton_Lyellow_2
+                                    || button == pushButton_blue_2 || button == pushButton_Lblue_2
+                                    || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2
+                                    || button == pushButton_cyan_2 || button == pushButton_Lcyan_2
+                                    || button == pushButton_white_2 || button == pushButton_Lwhite_2);
+
+    if (isAMapEnvColor
+            || button == pushButton_foreground_color_2
+            || button == pushButton_background_color_2
+            || button == pushButton_lowerLevelColor
+            || button == pushButton_upperLevelColor
+            || button == pushButton_mapInfoBg
+            || button == pushButton_roomBorderColor
+            || button == pushButton_roomCollisionBorderColor) {
+
+        if (pHost->mpMap) {
+            // Update the custom environment (room colors)
+            if (isAMapEnvColor) {
+                pHost->mpMap->restore16ColorSet();
+            }
+            // Redraw the map with the modified color:
+            pHost->mpMap->update();
+        }
+    }
+
+    // Also set a contrasting foreground color so text will always be
+    // visible:
+    setButtonColor(button, color, allowAlpha);
 }
 
 void dlgProfilePreferences::slot_setFgColor()
@@ -2097,6 +2104,14 @@ void dlgProfilePreferences::slot_setMapRoomCollisionBorderColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
+    }
+}
+
+void dlgProfilePreferences::slot_setNewRoomColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_newRoomColor, pHost->mNewRoomColor);
     }
 }
 

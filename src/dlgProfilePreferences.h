@@ -103,6 +103,7 @@ public slots:
     void slot_setMapRoomBorderColor();
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
+    void slot_setNewRoomColor();
     void slot_setLowerLevelColor();
     void slot_setUpperLevelColor();
     void slot_resetMapColors();
