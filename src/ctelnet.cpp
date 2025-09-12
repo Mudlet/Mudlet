@@ -432,7 +432,6 @@ void cTelnet::connectIt(const QString& address, int port)
 
     mHostName = address;
     mHostPort = port;
-    postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
 }
@@ -497,9 +496,9 @@ void cTelnet::slot_socketConnected()
 
     if (mpHost->mSslTsl)
     {
-        msg = tr("[ INFO ]  - A secure connection has been established successfully.");
+        msg = tr("[ INFO ]  - Connected securely.");
     } else {
-        msg = tr("[ INFO ]  - A connection has been established successfully.");
+        msg = tr("[ INFO ]  - Connected.");
     }
     msg.append(qsl("\n    \n    "));
     postMessage(msg);
@@ -641,26 +640,22 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 {
 #if !defined(QT_NO_SSL)
     if (mpHost->mSslTsl) {
-        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(mHostPort))));
+        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Connecting securely to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort))));
         mpSocket.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite);
 
     } else {
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(mHostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
-                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(mHostPort))));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Connecting to %1:%2 ...").arg(mHostName, QString::number(mHostPort))));
             } else {
-                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(mHostPort))));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Connecting to %1:%2 via proxy...").arg(mHostName, QString::number(mHostPort))));
             }
             mpSocket.connectToHost(mHostAddress, mHostPort);
         } else {
             mpSocket.connectToHost(hostInfo.hostName(), mHostPort);
-            postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
-                           "Connection cannot be established.\n"
-                           "The server name is not correct, not working properly,\n"
-                           "or your nameservers are not working properly."));
+            postMessage(qsl("%1\n").arg(tr("[ ERROR ] - Unable to connect to %1, check your internet connection and game address.").arg(mHostName)));
             return;
         }
 #if !defined(QT_NO_SSL)
@@ -918,13 +913,13 @@ QString cTelnet::formatShortTelnetCommand(const std::string& telnetCommand, cons
     QByteArray cmdBytes(telnetCommand.data(), telnetCommand.size());
     QString hexStr = cmdBytes.toHex(' ');
     QString decoded = QString(" (IAC %1").arg(commandName);
-    
+
     if (telnetCommand.size() == 2 && !commandName.isEmpty()) {
         decoded += " <missing option>)";
     } else {
         decoded += ")";
     }
-    
+
     return QString("hex: %1%2").arg(hexStr, decoded);
 }
 
@@ -1666,7 +1661,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
         return;
     }
-    
+
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
     QString commandType;
@@ -2875,7 +2870,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(event);
         }
-        
+
     }
 }
 
