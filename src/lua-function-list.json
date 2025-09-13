@@ -405,7 +405,7 @@
     "roomLocked": "locked = roomLocked(roomID)",
     "saveJsonMap": "saveJsonMap([pathFileName])",
     "saveMap": "saveMap([location], [version])",
-    "saveProfile": "saveProfile([location, [filename]])",
+    "saveProfile": "saveProfile(location)",
     "saveWindowLayout": "saveWindowLayout()",
     "scaleMovie": "scaleMovie(label name, [autoscale])",
     "scrollDown": "scrollDown([windowName,] [lines])",
