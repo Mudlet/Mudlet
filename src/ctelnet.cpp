@@ -33,6 +33,7 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEvent.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -432,6 +433,7 @@ void cTelnet::connectIt(const QString& address, int port)
 
     mHostName = address;
     mHostPort = port;
+    TDebug(Qt::blue, Qt::white) << tr("Looking up the IP address of server: %1:%2\n").arg(address, QString::number(port)) >> mpHost;
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
 }
@@ -647,14 +649,19 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
+            TDebug(Qt::blue, Qt::white) << tr("The IP address of %1 has been found. It is: %2\n").arg(mHostName, mHostAddress.toString()) >> mpHost;
+
             if (!mConnectViaProxy) {
+                TDebug(Qt::blue, Qt::white) << tr("Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(mHostPort)) >> mpHost;
                 postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Connecting to %1:%2 ...").arg(mHostName, QString::number(mHostPort))));
             } else {
+                TDebug(Qt::blue, Qt::white) << tr("Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(mHostPort)) >> mpHost;
                 postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Connecting to %1:%2 via proxy...").arg(mHostName, QString::number(mHostPort))));
             }
             mpSocket.connectToHost(mHostAddress, mHostPort);
         } else {
             mpSocket.connectToHost(hostInfo.hostName(), mHostPort);
+            TDebug(Qt::blue, Qt::white) << tr("Host name lookup Failure! Connection cannot be established. The server name is not correct, not working properly or your nameservers are not working properly.\n") >> mpHost;
             postMessage(qsl("%1\n").arg(tr("[ ERROR ] - Unable to connect to %1, check your internet connection and game address.").arg(mHostName)));
             return;
         }
