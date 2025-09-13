@@ -184,6 +184,7 @@ public:
     void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
     void            setPass(const QString& password) { mPass = password; }
+    bool            hasAutoLoginCredentials() const  { return !mLogin.isEmpty() && !mPass.isEmpty(); }
     int             getRetries()                     { return mRetries;}
     void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
@@ -472,6 +473,7 @@ public:
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    bool mDisablePasswordMasking;
     bool mHighlightHistory;
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared

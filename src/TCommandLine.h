@@ -157,6 +157,8 @@ private:
     QString mTextToRestoreAfterEchoSuppression;
     // Track whether the preserved text was originally selected (for auto-clear OFF)
     bool mRestoredTextShouldBeSelected = false;
+    // Track whether user typed anything during echo suppression mode
+    bool mUserTypedDuringEchoSuppression = false;
 
 private slots:
     void slot_togglePasswordVisibility();
