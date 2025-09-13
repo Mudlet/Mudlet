@@ -62,8 +62,20 @@ public:
     }
 
     // clang-format off
-    // games are to be added here in alphabetical order
+    // games are to be added here in alphabetical order, except the tutorial which should be first
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Mudlet Tutorial"),
+            qsl("localhost"),
+            0,
+            false,
+            qsl("<a href='https://mudlet.org'>Website</a><br>"
+                "<a href='https://wiki.mudlet.org'>Wiki</a>"),
+            qsl(":/icons/mudlet-tutorial.png"),
+            qsl("Mudlet provides a simple tutorial to help you get familiar with playing MUDs using Mudlet."
+                 "\n\n"
+                 "You play a young adventurer who has recently graduated from the adventuring school.  "
+                 "You must aid the Sheriff in a series of tasks for the townfolk and become a local hero.")
+            },
             { qsl("Abandoned Realms"),
             qsl("abandonedrealms.com"),
             9000,
