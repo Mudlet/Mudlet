@@ -7390,10 +7390,6 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAutoClearCommandLineAfterSend = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("disablePasswordMasking")) {
-        host.mDisablePasswordMasking = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
     if (key == qsl("showSentText")) {
         // Handle both legacy boolean and new string values
         if (lua_isboolean(L, 2)) {
@@ -7666,7 +7662,6 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
-        { qsl("disablePasswordMasking"), [&](){ lua_pushboolean(L, host.mDisablePasswordMasking); } },
         { qsl("showSentText"), [&](){
             if (useStringFormat) {
                 // Return string representation for new enhanced API
