@@ -595,11 +595,7 @@ void TMap::audit()
         appendErrorMsg(infoMsg);
     }
 
-    auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
-    if (loadTime != -1.0) {
-        const QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
-        postMessage(msg);
-    }
+    mpHost->getLuaInterpreter()->condenseMapLoad();
 }
 
 // This may be duplicating TArea class functionality:
