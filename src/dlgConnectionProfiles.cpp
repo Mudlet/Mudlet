@@ -100,12 +100,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
     auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
-                                    "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
-                                    "<p>To play a game not in the list, click on %1 "
-                                    "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
-                                    "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
-                                    "<p>After that, click %2 <span style=\" color:#555753;\">Connect</span> "
-                                    "to play.</p>"
+                                    "<p><center><b>To get started, double-click on </b>Mudlet Tutorial<b> or select a game from the list.</b></center></p>"
+                                    "<p>Want to play a game that’s not listed?</p>"
+                                    "<p>Click %1 <span style=\" color:#555753;\">New</span>, then enter the <i>Profile Name</i>, <i>Server Address</i>, and <i>Port</i> in the required fields.</p>"
+                                    "<p>Once you're ready, click %2 <span style=\" color:#555753;\">Connect</span> to begin your adventure.</p>"
                                     "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
                                     "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
                                     "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
@@ -242,7 +240,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // Refresh the current profile's password field after migration
         slot_itemClicked(profiles_tree_widget->currentItem());
     });
-    
+
     // Listen for character password migration completion to refresh the form
     connect(mudlet::self(), &mudlet::signal_characterPasswordsMigrated, this, [this]() {
         // Refresh the current profile's password field after migration
@@ -308,7 +306,7 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     // Clear any pending operation flags
     mKeychainOperationInProgress = false;
     mPendingProfileLoad.clear();
-    
+
     QCoreApplication::instance()->removeEventFilter(this);
 }
 
@@ -320,7 +318,7 @@ void dlgConnectionProfiles::accept()
         setVisible(false);
         // This is needed to make the above take effect as fast as possible:
         qApp->processEvents();
-        
+
         // Check if keychain authentication is pending - if so, wait for it
         ensurePasswordLoadedThenConnect(true);
     }
@@ -331,7 +329,7 @@ void dlgConnectionProfiles::slot_load()
     setVisible(false);
     // This is needed to make the above take effect as fast as possible:
     qApp->processEvents();
-    
+
     // Check if keychain authentication is pending - if so, wait for it
     ensurePasswordLoadedThenConnect(false);
 }
@@ -339,12 +337,12 @@ void dlgConnectionProfiles::slot_load()
 void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
 {
     const QString profile_name = profile_name_entry->text().trimmed();
-    
+
     if (profile_name.isEmpty()) {
         QDialog::accept();
         return;
     }
-    
+
     // Check if we have any pending keychain operations for this profile
     if (hasPendingKeychainOperation(profile_name)) {
         // Queue the profile loading until keychain completes
@@ -352,7 +350,7 @@ void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
         mPendingProfileLoad = profile_name;
         return; // Will be handled by keychain callback
     }
-    
+
     // No pending keychain operations, proceed immediately
     loadProfile(alsoConnect);
     QDialog::accept();
@@ -417,7 +415,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 
     const QString profileName = pItem->data(csmNameRole).toString();
-    
+
     if (mudlet::self()->storingPasswordsSecurely()) {
         if (pass.trimmed().isEmpty()) {
             // If password is empty, remove it from secure storage
@@ -441,18 +439,18 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
         qDebug() << "dlgConnectionProfiles: Skipping storage of empty password for profile" << profile;
         return;
     }
-    
+
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
-    
-    credManager->storeCredential(profile, "character", pass, 
+
+    credManager->storeCredential(profile, "character", pass,
         [credManager, profile](bool success, const QString& errorMessage) {
             if (success) {
                 qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
             } else {
                 qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
             }
-            
+
             // Clean up the credential manager
             credManager->deleteLater();
         });
@@ -462,15 +460,15 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
 {
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
-    
-    credManager->removeCredential(profile, "character", 
+
+    credManager->removeCredential(profile, "character",
         [credManager, profile](bool success, const QString& errorMessage) {
             if (success) {
                 qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
             } else {
                 qWarning() << "dlgConnectionProfiles: Failed to remove password for profile" << profile << ":" << errorMessage;
             }
-            
+
             // Clean up the credential manager
             credManager->deleteLater();
         });
@@ -615,40 +613,40 @@ void dlgConnectionProfiles::slot_saveName()
         return;
     }
 
-    // Check for orphaned keychain entries when creating a new profile with a name 
-    // that doesn't exist as a directory but might have keychain entries from 
+    // Check for orphaned keychain entries when creating a new profile with a name
+    // that doesn't exist as a directory but might have keychain entries from
     // a previously deleted profile (deleted outside Mudlet interface)
-    if (mudlet::self()->storingPasswordsSecurely() && 
-        currentProfileEditName == tr("new profile name") && 
+    if (mudlet::self()->storingPasswordsSecurely() &&
+        currentProfileEditName == tr("new profile name") &&
         !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
-        
+
         // Check if there are orphaned keychain entries for this profile name
         auto* credManager = new CredentialManager(this);
-        credManager->retrieveCredential(newProfileName, "character", 
+        credManager->retrieveCredential(newProfileName, "character",
             [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl]
             (bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
                 Q_UNUSED(characterPassword)
                 Q_UNUSED(errorMessage)
-                
-                credManager->retrieveCredential(newProfileName, "proxy", 
+
+                credManager->retrieveCredential(newProfileName, "proxy",
                     [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry]
                     (bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
                         Q_UNUSED(proxyPassword)
                         Q_UNUSED(errorMessage)
-                        
+
                         // If we found any orphaned entries, clean them up
                         if (foundCharacterEntry || foundProxyEntry) {
                             if (foundCharacterEntry) {
-                                credManager->removeCredential(newProfileName, "character", 
+                                credManager->removeCredential(newProfileName, "character",
                                     [newProfileName](bool success, const QString& errorMessage) {
                                         if (!success) {
                                             qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
                                         }
                                     });
                             }
-                            
+
                             if (foundProxyEntry) {
-                                credManager->removeCredential(newProfileName, "proxy", 
+                                credManager->removeCredential(newProfileName, "proxy",
                                     [newProfileName](bool success, const QString& errorMessage) {
                                         if (!success) {
                                             qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
@@ -656,14 +654,14 @@ void dlgConnectionProfiles::slot_saveName()
                                     });
                             }
                         }
-                        
+
                         credManager->deleteLater();
-                        
+
                         // Continue with normal profile creation flow
                         continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
                     });
             });
-        
+
         return; // Exit here - continueProfileSave will be called from the callback
     }
 
@@ -674,8 +672,8 @@ void dlgConnectionProfiles::slot_saveName()
     continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
 }
 
-void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, 
-                                               const QString& newProfileHost, const QString& newProfilePort, 
+void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName,
+                                               const QString& newProfileHost, const QString& newProfilePort,
                                                const int newProfileSslTsl)
 {
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
@@ -808,22 +806,22 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     // Clean up keychain entries for the deleted profile
     if (mudlet::self()->storingPasswordsSecurely()) {
         auto* credManager = new CredentialManager(this);
-        
+
         // Clean up character password entry
-        credManager->removeCredential(profile, "character", 
+        credManager->removeCredential(profile, "character",
             [profile](bool success, const QString& errorMessage) {
                 if (!success) {
                     qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
                 }
             });
-        
+
         // Clean up proxy password entry (if any)
-        credManager->removeCredential(profile, "proxy", 
+        credManager->removeCredential(profile, "proxy",
             [credManager, profile](bool success, const QString& errorMessage) {
                 if (!success) {
                     qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
                 }
-                
+
                 // Clean up the credential manager after both operations
                 credManager->deleteLater();
             });
@@ -1348,7 +1346,7 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
     const auto& password = character_password_entry->text().trimmed();
 
     deleteSecurePassword(oldProfile);
-    
+
     // Only store the password if it's not empty
     if (!password.isEmpty()) {
         writeSecurePassword(newProfile, password);
@@ -1360,8 +1358,8 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 {
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
-    
-    credManager->retrieveCredential(profile, "character", 
+
+    credManager->retrieveCredential(profile, "character",
         [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
             if (success) {
                 callback(password);
@@ -1373,7 +1371,7 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
                 }
                 callback(QString()); // Call with empty string on failure
             }
-            
+
             // Clean up the credential manager
             credManager->deleteLater();
         });
@@ -1709,7 +1707,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     if (pHost) {
 
         Host* pActiveHost = mudlet::self()->getActiveHost();
-        
+
         if (pActiveHost && pActiveHost->getName() == profile_name) {
             // Skip reconnect if mudlet::loadProfile already connected for existing hosts
             if (alsoConnect && hostExistedBefore) {
@@ -1721,7 +1719,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             QDialog::accept();
             return;
         }
-        
+
         // Skip signal emission if mudlet::loadProfile already handled the connection
         if (alsoConnect && hostExistedBefore) {
             QDialog::accept();
@@ -2258,15 +2256,15 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     if (mudlet::self()->storingPasswordsSecurely()) {
         mKeychainOperationInProgress = true;
         auto* credManager = new CredentialManager(this);
-        credManager->retrieveCredential(profile_name, "character", 
+        credManager->retrieveCredential(profile_name, "character",
             [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
                 // Clear the operation flag first
                 mKeychainOperationInProgress = false;
-                
+
                 // Check if profile selection has changed while we were waiting
-                if (profiles_tree_widget->currentItem() && 
+                if (profiles_tree_widget->currentItem() &&
                     profiles_tree_widget->currentItem()->data(csmNameRole).toString() == profile_name) {
-                    
+
                     if (success) {
                         // Keychain operation succeeded - set the password (even if empty)
                         character_password_entry->setText(retrievedPassword);
@@ -2279,37 +2277,37 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                         qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
                     }
                 }
-                
+
                 // Check if there's a pending connection waiting for this password load
                 // (do this regardless of profile selection state to avoid hanging)
                 if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
                     qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
-                    
+
                     // Clear pending state
                     QString profileToLoad = mPendingProfileLoad;
                     bool shouldConnect = mPendingConnect;
                     mPendingProfileLoad.clear();
-                    
+
                     // Proceed with the connection
                     loadProfile(shouldConnect);
                     QDialog::accept();
                 }
-                
+
                 credManager->deleteLater();
             });
     } else {
         // Secure storage disabled, use QSettings directly
         loadPasswordFromSettings(profile_name);
-        
+
         // Check if there's a pending connection waiting
         if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
             qDebug() << "dlgConnectionProfiles: Password loaded from settings, proceeding with pending connection for" << profile_name;
-            
+
             // Clear pending state
             QString profileToLoad = mPendingProfileLoad;
             bool shouldConnect = mPendingConnect;
             mPendingProfileLoad.clear();
-            
+
             // Proceed with the connection
             loadProfile(shouldConnect);
             QDialog::accept();

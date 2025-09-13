@@ -62,8 +62,20 @@ public:
     }
 
     // clang-format off
-    // games are to be added here in alphabetical order
+    // games are to be added here in alphabetical order, except the tutorial which should be first
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Mudlet Tutorial"),
+            qsl("localhost"),
+            0,
+            false,
+            qsl("<a href='https://mudlet.org'>Website</a><br>"
+                "<a href='https://wiki.mudlet.org'>Wiki</a>"),
+            qsl(":/icons/mudlet-tutorial.png"),
+            qsl("Mudlet provides a simple tutorial to help you get familiar with playing MUDs using Mudlet."
+                 "\n\n"
+                 "You play a young adventurer who has recently graduated from the adventuring school.  "
+                 "You must aid the Sheriff in a series of tasks for the townfolk and become a local hero.")
+            },
             { qsl("Abandoned Realms"),
             qsl("abandonedrealms.com"),
             9000,
@@ -638,10 +650,10 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "inception in the fall of 1991.")},
 
             {qsl("MorgenGrauen"),
-             qsl("mg.mud.de"),
-             4711,
-             false,
-             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+             qsl("mud.morgengrauen.info"),
+             4712,
+             true,
+             qsl("<a href='http://morgengrauen.info/'>MorgenGrauen Webseite</a><br>"
                  "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
                  "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),
