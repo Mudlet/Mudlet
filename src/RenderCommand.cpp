@@ -47,6 +47,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
 
     // Normal matrix (inverse transpose of model matrix)
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
@@ -83,6 +84,7 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -118,11 +120,52 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
     
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+}
+
+// RenderInstancedCubesCommand implementation
+RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
+                                                       const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+    : mInstances(instances), mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+{
+}
+
+void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
+                                         QOpenGLShaderProgram* shader,
+                                         GeometryManager* geometryManager,
+                                         ResourceManager* resourceManager,
+                                         QOpenGLVertexArrayObject& vao,
+                                         QOpenGLBuffer& vertexBuffer,
+                                         QOpenGLBuffer& colorBuffer,
+                                         QOpenGLBuffer& normalBuffer,
+                                         QOpenGLBuffer& indexBuffer)
+{
+    if (mInstances.isEmpty()) {
+        return;
+    }
+    
+    // Set uniforms
+    QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
+    shader->setUniformValue("uMVP", mvp);
+    shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", true);
+
+    QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
+    shader->setUniformValue("uNormalMatrix", normalMatrix);
+    
+    // For now, we need to create a temporary instance buffer
+    // This will be improved when we add the instance buffer to ModernGLWidget
+    QOpenGLBuffer instanceBuffer(QOpenGLBuffer::VertexBuffer);
+    instanceBuffer.create();
+    
+    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, resourceManager, GL_TRIANGLES);
+    
+    instanceBuffer.destroy();
 }
 
 // GLStateCommand implementation
