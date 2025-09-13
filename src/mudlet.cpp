@@ -6215,6 +6215,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
+        {qsl(":/mudlet-tutorial.mpackage"),          {qsl("localhost")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
                                                       qsl("mud.morgengrauen.info"),
                                                       qsl("mg.morgengrauen.info"),
