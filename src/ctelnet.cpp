@@ -33,6 +33,7 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEvent.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -474,13 +475,15 @@ void cTelnet::connectIt(const QString& address, int port)
      * want to show it with a port number appended (as a colon and then an
      * integer between 1 and 65535) we need to wrap it with '['...']' to
      * separate the latter from the former, however some Far-East locales may
-     * wish to use the wide versions of these character which can be used here.
+     * expect to use the wide versions of these character here.
      */
     const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
     /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
      * of the Game Server (or Proxy); %2 is the port number.
      */
-    postMessage(tr("[ INFO ]  - Looking up the details of server: %1:%2 ...").arg(displayAddress, QString::number(port)));
+    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Looking up the details of server: %1:%2 ...\n")
+                                                             .arg(displayAddress, QString::number(port))
+                                                          >> mpHost;
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
     // Qt 5.12.5:
@@ -619,22 +622,22 @@ void cTelnet::slot_socketConnected()
 #if !defined(QT_NO_SSL)
     if (mCurrent_sslTsl) {
         if (&mSocket_ipV6 == mpSocket) {
-            postMessage(tr("[  OK  ]  - A secure IPv6 connection has been established successfully."));
+            postMessage(tr("[  OK  ]  - Secure connection made (IPv6)."));
         } else {
-            postMessage(tr("[  OK  ]  - A secure IPv4 connection has been established successfully."));
+            postMessage(tr("[  OK  ]  - Secure connection made (IPv4)."));
         }
     } else {
         if (&mSocket_ipV6 == mpSocket) {
-            postMessage(tr("[  OK  ]  - An open IPv6 connection has been established successfully."));
+            postMessage(tr("[  OK  ]  - Open connection made (IPv6)."));
         } else {
-            postMessage(tr("[  OK  ]  - An open IPv4 connection has been established successfully."));
+            postMessage(tr("[  OK  ]  - Open connection made (IPv4)."));
         }
     }
 #else
     if (&mSocket_ipV6 == mpSocket) {
-        postMessage(tr("[  OK  ]  - An IPv6 connection has been established successfully."));
+        postMessage(tr("[  OK  ]  - Connection made (IPv6)."));
     } else {
-        postMessage(tr("[  OK  ]  - An IPv4 connection has been established successfully."));
+        postMessage(tr("[  OK  ]  - Connection made (IPv4)."));
     }
 #endif
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
@@ -923,9 +926,14 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
          * After a DNS lookup however, we have NOT found any IP addresses which
          * means that we cannot proceed further to connect to the Game server.
          */
-        postMessage(tr("[ ERROR ] - Host name lookup Failure! A connection cannot be established.\n"
-                                   "The server name is not correct, or your nameservers are not\n"
-                                   "working properly."));
+        TDebug(QColorConstants::Red, QColorConstants::White) << tr("Host name lookup Failure! A connection cannot be established.\n"
+                                                                    "The server name is not correct, or your nameservers are not\n"
+                                                                    "working properly.\n")
+                                                              >> mpHost;
+        //: %1 is the URL of the Game Server
+        postMessage(tr("[ ERROR ] - Unable to connect to \"%1\".\n"
+                       "Check your internet connection and the details entered for the game server.")
+                    .arg(mHostUrl));
         return;
     }
 
@@ -934,7 +942,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     for (const auto& address : addressList_ipV6) {
         /*: Used to add an IPv6 address line to the list displayed during
          * connecting to a Host. Some, e.g. Far Eastern locales may require a
-         * different text here if they do not use spaces, or "wide" '('...')'
+         * different text here if they do not use spaces, or need "wide" '(' ')'s
          */
         addressesToReport << tr("%1 (IPv6)").arg(address);
     }
@@ -958,42 +966,54 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
              * perform a "reverse-lookup" to see if we can identify the URL that
              * matches it - but nothing useful was found.
              */
-            postMessage(tr("[ INFO ]  - No further details have been found."));
+            TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.\n")
+                                                                         >> mpHost;
         } else {
             /*: This text is used when the user has provided a raw IP address
-             * (%1) for the Game Server rather than a URL. In this case we try
-             * to perform a "reverse-lookup" to see if we can identify the URL
-             * that matches it - and this is used when we have something (%2)
-             * to show.
+             * for the Game Server rather than a URL. In this case we try to
+             * perform a "reverse-lookup" to see if we can identify the URL that
+             * matches it - and this is used when we have something (%1) to
+             * show.
              */
-            postMessage(tr("[ INFO ]  - A host name for IP address %1 has been found.\n"
-                           "It is: %2").arg(mHostUrl, hostInfo.hostName()));
+            TDebug(QColorConstants::Blue, QColorConstants::White) << tr("A host name for the IP address has been found.\n"
+                                                                        "It is: \"%1\"\n")
+                                                                     .arg(hostInfo.hostName())
+                                                                  >> mpHost;
         }
     } else {
         /*: This text is used in the (expected) case when the user has provided
          * a URL (%1) for the Game Server rather than (unusually) an IP address.
          * After a DNS lookup we have found at least one but possibly more (%n)
-         * IP addresses, which will be listed (one per line) as %2.
+         * IP addresses, which will be listed (one per line) immediately
+         * afterwards.
          */
-        postMessage(tr("[ INFO ]  - The %n IP address(es) of %1 has/have been found. It/They are:\n"
-                       "%2",
-                       // Intentional comment to separate arguments
-                       "",
-                       addressesToReport.count())
-                            .arg(hostInfo.hostName(), addressesToReport.join(QChar::LineFeed)));
+        TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:\n"
+                                                                    "%2",
+                                                                    // Intentional comment to separate arguments
+                                                                    "",
+                                                                    addressesToReport.count())
+                                                                 .arg(hostInfo.hostName())
+                                                                 .append(QChar::LineFeed)
+                                                              >> mpHost;
+        TDebug(QColorConstants::Green, QColorConstants::White) << addressesToReport.join(QChar::LineFeed)
+                                                                  .prepend(TDebug::csmContinue)
+                                                                  .append(QChar::LineFeed)
+                                                               >> mpHost;
     }
 
 #if !defined(QT_NO_SSL)
-    // This is the only point where we sample the state of the "use secure
-    // connection" setting - so that if it gets changed whilst connected
-    // (currently it can be done in the "Profile preferences") it doesn't modify
-    // the execution of code in this class until it is safe to do so:
+    /* This is the only point where we sample the state of the "use secure
+     * connection" setting - so that if it gets changed whilst connected
+     * (currently it can be done in the "Profile preferences") it doesn't modify
+     * the execution of code in this class until it is safe to do so:
+     */
     mCurrent_sslTsl = mpHost->mSslTsl;
     if (mCurrent_sslTsl) {
         if (hasIPv4_address && hasIPv6_address) {
-            // Got both, do the happy eyeballs stuff
-            // Use Qt::UniqueConnection so that duplicate ones are not made
-            // if/when this code is re-run:
+            /* Got both types of IP address so do the happy eyeballs stuff.
+             * Use Qt::UniqueConnection so that duplicate ones are not made
+             * if/when this code is re-run:
+             */
             connect(&mSocket_ipV6, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
             connect(&mSocket_ipV4, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
             connect(&mSocket_ipV6, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError, Qt::UniqueConnection);
@@ -1005,19 +1025,36 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 
             if (mConnectViaProxy) {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
-                 * case. %1 is the URL for the proxy and %2 is the port number
+                 * case. %1 is the URL for the server and %2 is the port number
                  * (on BOTH addresses) for the connection.
                  */
-                postMessage(tr("[ INFO ]  - Trying secure (IPv4 and IPv6) connections to %1:%2 via proxy...")
-                                    .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
+                                                                      >> mpHost;
+                /* We don't need to worry about %1 being a raw IPv6 address here
+                 * as we prohibit IP addresses for secure connections so it is
+                 * a URL; %2 is the port number.
+                 */
+                postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
                  * case. %1 is the URL for the Server and %2 is the port number
                  * (on BOTH addresses) for the connection.
                  */
-                postMessage(tr("[ INFO ]  - Trying secure (IPv4 and IPv6) connections to %1:%2 ...")
-                                    .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
+                                                                      >> mpHost;
+                /* We don't need to worry about %1 being a raw IPv6 address here
+                 * as we prohibit IP addresses for secure connections so it is
+                 * a URL; %2 is the port number.
+                 */
+                postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
             }
+
             mSocket_ipV6.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
             mSocket_ipV4.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
         } else {
@@ -1029,17 +1066,33 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
                 if (mConnectViaProxy) {
-                    /*: %1 is the URL for the proxy for the Game Server and %2
-                     * is the port number for the connection.
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying secure (IPv6) connection to %1:%2 via proxy...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv6) connection to %1:%2 via proxy...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /* We don't need to worry about %1 being a raw IPv6 address here
+                     * as we prohibit IP addresses for secure connections so it is
+                     * a URL; %2 is the port number.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
                     /*: %1 is the URL for the Server and %2 is the port number
                      * for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying secure (IPv6) connection to %1:%2 ...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /* We don't need to worry about %1 being a raw IPv6 address here
+                     * as we prohibit IP addresses for secure connections so it is
+                     * a URL; %2 is the port number.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
                 mSocket_ipV6.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
             }
@@ -1050,17 +1103,26 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
                 if (mConnectViaProxy) {
-                    /*: %1 is the URL for the proxy for the Game Server and %2
-                     * is the port number for the connection.
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying secure (IPv4) connection to %1:%2 via proxy...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4) connection to %1:%2 via proxy...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    //: %1 is a URL for the Game Server; %2 is the port number.
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 } else {
                     /*: %1 is the URL for the Server and %2 is the port number
                      * for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying secure (IPv4) connection to %1:%2 ...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4) connection to %1:%2 ...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                          >> mpHost;
+                    //: %1 is a URL for the Game Server; %2 is the port number.
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
                 mSocket_ipV4.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
             }
@@ -1081,15 +1143,23 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                  * case. %1 is the URL for the proxy and %2 is the port number
                  * (on BOTH addresses) for the connection.
                  */
-                postMessage(tr("[ INFO ]  - Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...")
-                                    .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                      >> mpHost;
+                //: %1 is a URL for the Game Server; %2 is the port number.
+                postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
                  * case. %1 is the URL for the Server and %2 is the port number
                  * (on BOTH addresses) for the connection.
                  */
-                postMessage(tr("[ INFO ]  - Trying open (IPv4 and IPv6) connections to %1:%2 ...")
-                                    .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4 and IPv6) connections to %1:%2 ...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                      >> mpHost;
+                //: %1 is a URL for the Game Server; %2 is the port number.
+                postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
             }
 
             mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
@@ -1104,17 +1174,28 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 const QString displayAddress = isRawIPv6Address(hostInfo.hostName()) ? tr("[%1]").arg(hostInfo.hostName()) : hostInfo.hostName();
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
-                     * proxy for the Game Server and %2 is the port number for
-                     * the connection.
+                     * Game Server and %2 is the port number for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying open (IPv6) connection to %1:%2 via proxy...")
-                                        .arg(displayAddress, QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 via proxy...")
+                                                                             .arg(displayAddress, QString::number(mHostPort))
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
+                                .arg(displayAddress, QString::number(mHostPort)));
                 } else {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
                      * Game Server and %2 is the port number for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying open (IPv6) connection to %1:%2 ...")
-                                        .arg(displayAddress, QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 ...")
+                                                                             .arg(displayAddress, QString::number(mHostPort))
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number for the connection.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
+                                .arg(displayAddress, QString::number(mHostPort)));
                 }
 
                 mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
@@ -1125,17 +1206,30 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
 
                 if (mConnectViaProxy) {
-                    /*: %1 is the URL or IPv4 address for the proxy for the Game
-                     * Server and %2 is the port number for the connection.
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying open (IPv4) connection to %1:%2 via proxy...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 via proxy...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
                      * is the port number for the connection.
                      */
-                    postMessage(tr("[ INFO ]  - Trying open (IPv4) connection to %1:%2 ...")
-                                        .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
                 }
 
                 mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
@@ -2122,7 +2216,10 @@ void cTelnet::autoEnableTTYPEVersion()
     // Automatically enable TTYPE version compatibility
     disconnectIt();
     mpHost->mVersionInTTYPE = true;
-    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting..."));
+    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best\n"
+                    "when Mudlet reports its version number during connection. Version\n"
+                    "reporting in terminal type has been automatically enabled for\n"
+                    "improved color support. Reconnecting..."));
     reconnect();
 }
 
@@ -2133,7 +2230,10 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     mpHost->setForceMXPProcessorOn(true);
-    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but hasn't turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but\n"
+                    "has not turned it on properly. MXP processing has been automatically\n"
+                    "enabled for clickable links, room info, and richer interactions.\n"
+                    "You can disable this setting in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -3137,7 +3237,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     downloadAndInstallGUIPackage(packageName, fileName, url);
                 } else if (mpHost->mServerGUI_Package_version != version) {
                     // Check if the version is different and handle the upgrade
-                    postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
+                    postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2'\n"
+                                   "(url='%3').")
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
 
                     // Uninstall the old version
@@ -3463,7 +3564,8 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json)
 // Helper function to download and install the GUI package
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url)
 {
-    postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
+    postMessage(tr("[ INFO ]  - Downloading and installing package '%1'\n"
+                   "(url='%2').").arg(packageName, url));
 
     mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
@@ -3515,7 +3617,8 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
         downloadAndInstallGUIPackage(packageName, fileName, url);
     } else if (mpHost->mServerGUI_Package_version != version) {
         // Check if the version is different and handle the upgrade
-        postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
+        postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2'\n"
+                       "(url='%3').")
                     .arg(version, mpHost->mServerGUI_Package_version, url));
 
         // Uninstall the old version
@@ -3783,7 +3886,8 @@ void cTelnet::promptTlsConnectionAvailable()
         && (mpHost->mMSSPHostName.isEmpty()
             || mpHost->mMSSPHostName.compare(mHostUrl, Qt::CaseInsensitive) == 0)) {
 
-        postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
+        postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.")
+                    .arg(QString::number(mpHost->mMSSPTlsPort)));
 
         // This QMessageBox is application modal and because we use ::exec() it
         // spins up it's own event loop - this is not recommended by the Qt
