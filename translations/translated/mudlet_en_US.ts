@@ -29,7 +29,7 @@
     <message numerus="yes">
         <location filename="../../src/modern_glwidget.cpp" line="238"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
             <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
