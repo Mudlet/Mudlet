@@ -159,6 +159,7 @@
         <file>icons/mudlet_notepad.png</file>
         <file>icons/mudlet_ptb_256px.png</file>
         <file>icons/mudlet_room_exits.png</file>
+        <file>icons/mudlet-tutorial.png</file>
         <file>icons/mume.png</file>
         <file>icons/mudren.png</file>
         <file>icons/mute.png</file>
@@ -221,6 +222,7 @@
         <file>run-tests.xml</file>
         <file>shaders/vertex.glsl</file>
         <file>shaders/fragment.glsl</file>
+        <file>mudlet-tutorial.mpackage</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>
         <file>ui/delete_profile_confirmation.ui</file>
