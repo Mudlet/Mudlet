@@ -609,7 +609,7 @@ please wait...</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="522"/>
       <source>render time: %1S</source>
-      <translation type="unfinished"/>
+      <translation>czas renderowania: %1S</translation>
     </message>
   </context>
   <context>
@@ -815,13 +815,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2785"/>
       <source>Export area to image...</source>
       <extracomment>2D Mapper context menu (area) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eksportuj obszar do obrazu...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2787"/>
       <source>Export the current area as an image file</source>
       <extracomment>2D Mapper context menu (area) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eksportuj bieżący obszar jako plik graficzny</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2794"/>
@@ -1009,32 +1009,32 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="6046"/>
       <source>[MAP]: %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAPA]: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6076"/>
       <source>Unknown Area</source>
-      <translation type="unfinished"/>
+      <translation>Nieznany Obszar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6091"/>
       <source>area_%1.png</source>
-      <translation type="unfinished"/>
+      <translation>obszar_%1.png</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6096"/>
       <source>Export Area %1 to Image</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj obszar %1 do obrazka</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6098"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tiff);;All Files (*)</source>
-      <translation type="unfinished"/>
+      <translation>Pliki obrazów (*.png *.jpg *.jpeg *.bmp *.tiff);;Wszystkie pliki (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6111"/>
       <source>[MAP]: Export failed - %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP]: Eksport nieudany - %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="577"/>
@@ -2053,7 +2053,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="1013"/>
       <source>Connecting...</source>
       <extracomment>This text will be part of the title of a detached Mudlet window, if it is about to be connected. The whole title will be like &quot;Mudlet PROFILENAME (Detached) - Connecting...&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Łączenie...</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1016"/>
