@@ -813,13 +813,13 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="2785"/>
       <source>Export area to image...</source>
       <extracomment>2D Mapper context menu (area) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Export area to image...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2787"/>
       <source>Export the current area as an image file</source>
       <extracomment>2D Mapper context menu (area) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Export the current area as an image file</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2794"/>
@@ -1007,32 +1007,32 @@ please wait...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="6046"/>
       <source>[MAP]: %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP]: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6076"/>
       <source>Unknown Area</source>
-      <translation type="unfinished"/>
+      <translation>Unknown Area</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6091"/>
       <source>area_%1.png</source>
-      <translation type="unfinished"/>
+      <translation>area_%1.png</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6096"/>
       <source>Export Area %1 to Image</source>
-      <translation type="unfinished"/>
+      <translation>Export Area %1 to Image</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6098"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tiff);;All Files (*)</source>
-      <translation type="unfinished"/>
+      <translation>Image Files (*.png *.jpg *.jpeg *.bmp *.tiff);;All Files (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6111"/>
       <source>[MAP]: Export failed - %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP]: Export failed - %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="577"/>
@@ -7316,7 +7316,7 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="216"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; or &lt;b&gt;EUC-KR&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to choose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; or &lt;b&gt;EUC-KR&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="362"/>
@@ -11026,7 +11026,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/mapper.ui" line="576"/>
       <source>Export current area to image</source>
-      <translation type="unfinished"/>
+      <translation>Export current area to image</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="592"/>
