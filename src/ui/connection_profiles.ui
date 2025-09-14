@@ -95,7 +95,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QListWidget" name="profiles_tree_widget">
+          <widget class="QListWidget" name="listWidget_profiles">
            <property name="minimumSize">
             <size>
              <width>365</width>
@@ -940,7 +940,7 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>profiles_tree_widget</tabstop>
+  <tabstop>listWidget_profiles</tabstop>
   <tabstop>welcome_message</tabstop>
   <tabstop>profile_name_entry</tabstop>
   <tabstop>host_name_entry</tabstop>
