@@ -834,7 +834,7 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
     }
 
     QList<QByteArray> pixmapData;
-    for (auto const image : labelObj.value(QLatin1String("image")).toArray()) {
+    for (const auto& image : labelObj.value(QLatin1String("image")).toArray()) {
         pixmapData.append(image.toString().toLatin1());
     }
     label.pix = convertBase64DataToImage(pixmapData);
