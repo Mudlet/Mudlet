@@ -4587,8 +4587,8 @@ QFont Host::getAndClearTempDisplayFont()
 const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.originalish"),
     qsl("experiment.rendering.more-transparent"),
-    qsl("experiment.rendering-movement.smooth"),
     qsl("experiment.3dmap.modernmapper"),
+    qsl("experiment.render-in-out-exits"),
 };
 
 bool Host::experimentEnabled(const QString& experimentKey) const

@@ -3672,30 +3672,30 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
 void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
 {
     Host& host = getHostFromLua(pGlobalLua);
-    
+
     QJsonParseError parseError;
     QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData.toUtf8(), &parseError);
-    
+
     if (parseError.error != QJsonParseError::NoError) {
         qDebug() << "IRE Composer: JSON parse error:" << parseError.errorString();
         return;
     }
-    
+
     if (!jsonDoc.isObject()) {
         qDebug() << "IRE Composer: JSON is not an object";
         return;
     }
-    
+
     QJsonObject jsonObj = jsonDoc.object();
-    
+
     if (!jsonObj.contains("title") || !jsonObj.contains("text")) {
         qDebug() << "IRE Composer: Missing required 'title' or 'text' fields";
         return;
     }
-    
+
     const QString title = jsonObj["title"].toString();
     const QString initialText = jsonObj["text"].toString();
-    
+
     if (host.mTelnet.mpComposer) {
         return;
     }
@@ -5989,7 +5989,6 @@ void TLuaInterpreter::loadGlobal()
 
         error = luaL_dostring(pGlobalLua, luaGlobal.toUtf8().constData());
         if (!error) {
-            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         }
         qWarning() << "TLuaInterpreter::loadGlobal() loading " << pathFileName << " failed: " << lua_tostring(pGlobalLua, -1);
@@ -7559,14 +7558,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
-    
+
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
         auto [result, errorMessage] = host.setExperimentEnabled(key, getVerifiedBool(L, __func__, 2, "value"));
         if (!result) {
             return warnArgumentValue(L, __func__, errorMessage);
         }
-        
+
         // Special handling for 3D mapper experiment
         if (key == qsl("experiment.3dmap.modernmapper")) {
 #if defined(INCLUDE_3DMAPPER)
@@ -7577,7 +7576,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
-    
+
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7765,7 +7764,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         it->second();
         return 1;
     }
-    
+
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
         if (key == qsl("experiment.list")) {

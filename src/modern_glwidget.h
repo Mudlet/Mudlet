@@ -194,6 +194,7 @@ private:
     void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
     void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
     void renderUpDownIndicators(TRoom* pRoom, float x, float y, float z);
+    void renderInOutIndicators(TRoom* pRoom, float x, float y, float z);
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();

@@ -32,13 +32,11 @@
 struct GeometryData {
     QVector<float> vertices;
     QVector<float> colors;
-    QVector<float> normals;
     QVector<unsigned int> indices;
     
     void clear() {
         vertices.clear();
         colors.clear();
-        normals.clear();
         indices.clear();
     }
     
@@ -47,7 +45,7 @@ struct GeometryData {
     }
     
     int vertexCount() const {
-        return vertices.size() / 3;
+        return vertices.size() / 6;
     }
     
     int indexCount() const {
