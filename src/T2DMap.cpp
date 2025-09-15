@@ -5674,10 +5674,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                         polyLinePoints << origin;
                         polyLinePoints << fixedOffsetPoint;
                         
-                        // Transform custom line points (same as original: customLinePoints.at(pk).x() * mRoomWidth + mRX)
-                        for (int pk = 0, total = customLinePoints.size(); pk < total; ++pk) {
-                            const float pointX = customLinePoints.at(pk).x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
-                            const float pointY = customLinePoints.at(pk).y() * finalRoomSize * -1 + (padding - (pArea->min_y * finalRoomSize));
+                        // Transform custom line points (same as original: customLinePoint.x() * mRoomWidth + mRX)
+                        for (QPointF& const customLinePoint : customLinePoints) {
+                            const float pointX = customLinePoint.x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
+                            const float pointY = customLinePoint.y() * finalRoomSize * -1 + (padding - (pArea->min_y * finalRoomSize));
                             polyLinePoints << QPointF(pointX, pointY);
                         }
                         

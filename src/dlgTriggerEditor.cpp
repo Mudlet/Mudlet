@@ -10035,7 +10035,7 @@ void dlgTriggerEditor::slot_pasteXml()
         
         QString originalClipboard = QApplication::clipboard()->text();
         
-        for (QString xmlItem : xmlPackages) {
+        for (QString& xmlItem : qAsConst(xmlPackages)) {
             xmlItem = xmlItem.trimmed();
             if (xmlItem.isEmpty()) {
                 continue; // Skip empty items
