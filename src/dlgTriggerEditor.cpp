@@ -9953,14 +9953,14 @@ void dlgTriggerEditor::slot_pasteXml()
         
         QString originalClipboard = QApplication::clipboard()->text();
         
-        for (const QString& xmlItem : qAsConst(xmlPackages)) {
-            xmlItem = xmlItem.trimmed();
-            if (xmlItem.isEmpty()) {
+        for (const QString& xmlItem : xmlPackages) {
+            QString xmlItemTrimmed = xmlItem.trimmed();
+            if (xmlItemTrimmed.isEmpty()) {
                 continue; // Skip empty items
             }
             
             // Temporarily set clipboard to single item
-            QApplication::clipboard()->setText(xmlItem);
+            QApplication::clipboard()->setText(xmlItemTrimmed);
             
             // Import this single item
             XMLimport itemReader(mpHost);
