@@ -1541,12 +1541,40 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     }
 
     auto linesLimit = getVerifiedInt(L, __func__, s++, "linesLimit");
-    auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
+    auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s++, "sizeOfBatchDeletion");
+    
+    // Optional fourth parameter: useMaximum (boolean)
+    bool useMaximum = false;
+    if (s <= n) {
+        useMaximum = lua_toboolean(L, s);
+    }
 
     // The macro will have returned with a nil + error message if the windowName
     // was not found:
     auto console = CONSOLE(L, windowName);
-    console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
+    
+    if (useMaximum) {
+        // Use system maximum buffer size instead of the provided linesLimit
+        const int maxBufferSize = console->buffer.getMaxBufferSize();
+        console->buffer.setBufferSize(maxBufferSize, sizeOfBatchDeletion);
+        
+        // Update Host settings if this is the main console
+        Host& host = getHostFromLua(L);
+        if (console == host.mpConsole) {
+            host.setConsoleBufferSize(maxBufferSize);
+            host.setUseMaxConsoleBufferSize(true);
+        }
+    } else {
+        console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
+        
+        // Update Host settings if this is the main console
+        Host& host = getHostFromLua(L);
+        if (console == host.mpConsole) {
+            host.setConsoleBufferSize(linesLimit);
+            host.setUseMaxConsoleBufferSize(false);
+        }
+    }
+    
     // Indicate success with a true return value:
     lua_pushboolean(L, true);
     return 1;
