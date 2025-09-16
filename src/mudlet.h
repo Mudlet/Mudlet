@@ -572,6 +572,7 @@ private:
 
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString &dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
