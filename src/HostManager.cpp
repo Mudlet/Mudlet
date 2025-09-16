@@ -132,14 +132,14 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    for (QSharedPointer<Host> iHost : mHostPool.values()) {
-        iHost->mpConsole->changeColors();
+    for (QSharedPointer<Host> host : mHostPool.values()) {
+        host->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
-        auto mapper = iHost->mpMap->mpMapper;
+        auto mapper = host->mpMap->mpMapper;
         if (mapper) {
             mapper->setPalette(QApplication::palette());
         }
-        QMutableMapIterator<QString, TConsole*> itSubConsole(iHost->mpConsole->mSubConsoleMap);
+        QMutableMapIterator<QString, TConsole*> itSubConsole(host->mpConsole->mSubConsoleMap);
         while (itSubConsole.hasNext()) {
             itSubConsole.next();
             itSubConsole.value()->changeColors();
