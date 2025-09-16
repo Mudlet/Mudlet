@@ -572,6 +572,7 @@ private:
     QUndoStack* mpScriptUndoStack = nullptr;
     QUndoStack* mpActionUndoStack = nullptr;
     QUndoStack* mpKeyUndoStack = nullptr;
+    QUndoStack* mpVarsUndoStack = nullptr;
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 

@@ -32,6 +32,7 @@
 #include "ScriptUnit.h"
 #include "ActionUnit.h"
 #include "KeyUnit.h"
+#include <QTimer>
 #include "XMLexport.h"
 #include "XMLimport.h"
 #include <QBuffer>
@@ -74,7 +75,18 @@ DeleteItemCommand::DeleteItemCommand(dlgTriggerEditor* editor, QTreeWidgetItem* 
 void DeleteItemCommand::undo()
 {
     qDebug() << "DeleteItemCommand::undo() - Restoring" << mItemType << mItemName;
+
+    // Set the flag to prevent pattern change command pollution during restoration
+    bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
+    mEditor->mCreatingFromUndoCommand = true;
+
     restoreItem();
+
+    // Use QTimer to defer flag restoration to prevent pattern change command pollution
+    QTimer::singleShot(100, mEditor, [this, wasCreatingFromUndo]() {
+        mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+        qDebug() << "DeleteItemCommand::undo() - Restored mCreatingFromUndoCommand flag after UI events";
+    });
 }
 
 void DeleteItemCommand::redo()
@@ -97,12 +109,16 @@ void DeleteItemCommand::saveItemData()
     if (mItemType == qsl("Trigger")) {
         auto* trigger = mEditor->mpHost->getTriggerUnit()->getTrigger(mItemId);
         if (trigger) {
+            qDebug() << "Saving trigger data for ID" << mItemId << "name:" << trigger->getName();
             XMLexport writer(trigger);
             writer.exportToClipboard(trigger);
-            
+
             // Get the XML from clipboard and store it
             QClipboard* clipboard = QApplication::clipboard();
             mSerializedData = clipboard->text(QClipboard::Clipboard).toUtf8();
+            qDebug() << "Saved" << mSerializedData.size() << "bytes of XML data for" << mItemType << mItemId;
+        } else {
+            qDebug() << "ERROR: Could not find trigger with ID" << mItemId;
         }
     } else if (mItemType == qsl("Alias")) {
         auto* alias = mEditor->mpHost->getAliasUnit()->getAlias(mItemId);
@@ -280,9 +296,12 @@ void DeleteItemCommand::deleteItem()
             mEditor->delete_key();
         }
     }
-    
-    // Restore the flag
-    mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+
+    // Use QTimer to defer flag restoration to prevent pattern change command pollution
+    QTimer::singleShot(100, mEditor, [this, wasCreatingFromUndo]() {
+        mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+        qDebug() << "DeleteItemCommand: Restored mCreatingFromUndoCommand flag after UI events";
+    });
 }
 
 // AddItemCommand implementation
@@ -306,8 +325,19 @@ AddItemCommand::AddItemCommand(dlgTriggerEditor* editor, const QString& itemType
 void AddItemCommand::undo()
 {
     qDebug() << "AddItemCommand::undo() - Deleting created" << mItemType << "with ID" << mCreatedItemId;
+
+    // Set the flag to prevent pattern change command pollution during deletion
+    bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
+    mEditor->mCreatingFromUndoCommand = true;
+
     // Just delete the item - no need to save complex data for a simple "Add" operation
     deleteCreatedItem();
+
+    // Use QTimer to defer flag restoration to prevent pattern change command pollution
+    QTimer::singleShot(100, mEditor, [this, wasCreatingFromUndo]() {
+        mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+        qDebug() << "AddItemCommand::undo() - Restored mCreatingFromUndoCommand flag after UI events";
+    });
 }
 
 void AddItemCommand::redo()
@@ -331,6 +361,9 @@ void AddItemCommand::createItem()
         QTreeWidgetItem* currentItem = mEditor->treeWidget_triggers->currentItem();
         if (currentItem) {
             mCreatedItemId = currentItem->data(0, Qt::UserRole).toInt();
+            qDebug() << "AddItemCommand::createItem() - Captured trigger ID:" << mCreatedItemId << "from current item:" << currentItem->text(0);
+        } else {
+            qDebug() << "AddItemCommand::createItem() - ERROR: No current item after addTrigger!";
         }
     } else if (mItemType == qsl("Alias")) {
         mEditor->addAlias(mIsGroup);
@@ -368,29 +401,36 @@ void AddItemCommand::createItem()
         // We'll handle them separately if needed
     }
     
-    // Clear the flag after creation
-    mEditor->mCreatingFromUndoCommand = false;
-    
     qDebug() << "Created" << mItemType << "with ID" << mCreatedItemId << "with parent ID" << mParentItemId;
+
+    // Clear the flag after ALL UI events have processed to prevent auto-pattern changes from creating undo commands
+    // This ensures that pattern setup triggered by UI selection doesn't create additional undo commands on top of creation
+    QTimer::singleShot(0, mEditor, [this]() {
+        mEditor->mCreatingFromUndoCommand = false;
+        qDebug() << "AddItemCommand: Cleared mCreatingFromUndoCommand flag after UI events";
+    });
 }
 
 void AddItemCommand::deleteCreatedItem()
 {
     // Delete the item that was created (undo operation)
-    if (mCreatedItemId >= 0) {
-        qDebug() << "DeleteCreatedItem: Looking for" << mItemType << "with ID" << mCreatedItemId;
-        
+    if (mCreatedItemId > 0) {  // Changed from >= 0 to > 0 because ID 0 is likely invalid
+        qDebug() << "AddItemCommand::deleteCreatedItem() - Looking for" << mItemType << "with ID" << mCreatedItemId;
+
         // Find the tree widget item and select it, then delete through normal mechanism
         QTreeWidgetItem* item = nullptr;
         if (mItemType == qsl("Trigger")) {
             item = mEditor->findTriggerItemById(mCreatedItemId);
             if (item) {
+                qDebug() << "AddItemCommand::deleteCreatedItem() - Found trigger item:" << item->text(0) << "at address:" << item;
                 mEditor->treeWidget_triggers->setCurrentItem(item);
                 // Set flag to prevent recursion and use the normal delete mechanism
                 bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
                 mEditor->mCreatingFromUndoCommand = true;
                 mEditor->delete_trigger();
                 mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+            } else {
+                qDebug() << "AddItemCommand::deleteCreatedItem() - ERROR: Could not find trigger item with ID" << mCreatedItemId;
             }
         } else if (mItemType == qsl("Alias")) {
             item = mEditor->findAliasItemById(mCreatedItemId);
@@ -445,6 +485,8 @@ void AddItemCommand::deleteCreatedItem()
             qDebug() << "Could not find" << mItemType << "with ID" << mCreatedItemId << "for deletion";
         }
         mCreatedItemId = -1;
+    } else {
+        qDebug() << "AddItemCommand::deleteCreatedItem() - WARNING: Invalid ID" << mCreatedItemId << "for" << mItemType << "- cannot delete";
     }
 }
 
@@ -540,6 +582,20 @@ void PropertyChangeCommand::applyValue(const QVariant& value)
                 trigger->setSound(value.toString());
             } else if (mPropertyName == qsl("isActive")) {
                 trigger->setIsActive(value.toBool());
+            } else if (mPropertyName == qsl("foregroundColor")) {
+                QString colorString = value.toString();
+                if (colorString == qsl("transparent")) {
+                    trigger->setColorizerFgColor(QColorConstants::Transparent);
+                } else {
+                    trigger->setColorizerFgColor(QColor(colorString));
+                }
+            } else if (mPropertyName == qsl("backgroundColor")) {
+                QString colorString = value.toString();
+                if (colorString == qsl("transparent")) {
+                    trigger->setColorizerBgColor(QColorConstants::Transparent);
+                } else {
+                    trigger->setColorizerBgColor(QColor(colorString));
+                }
             } else if (mPropertyName.startsWith(qsl("PatternType_"))) {
                 // Handle pattern type changes for specific patterns
                 bool ok;
@@ -561,9 +617,10 @@ void PropertyChangeCommand::applyValue(const QVariant& value)
                 }
             }
         }
-        
+
         // Update UI without causing recursion
-        mEditor->populateTriggers();
+        // MEMORY FIX: Avoid populateTriggers() during undo to prevent heap-use-after-free
+        // mEditor->populateTriggers();
         mEditor->selectTriggerByID(mItemId);
         
     } else if (mItemType == qsl("alias")) {
@@ -586,7 +643,7 @@ void PropertyChangeCommand::applyValue(const QVariant& value)
     // Clear the recursion prevention flag
     mEditor->mCreatingFromUndoCommand = false;
     
-    qDebug() << "Applied property change:" << mItemType << mItemId << mPropertyName << value;
+    qDebug() << "PropertyChangeCommand: Applied property change:" << mItemType << mItemId << mPropertyName << value;
 }
 
 // DeleteMultipleItemsCommand implementation
@@ -607,12 +664,38 @@ DeleteMultipleItemsCommand::DeleteMultipleItemsCommand(dlgTriggerEditor* editor,
 
 void DeleteMultipleItemsCommand::undo()
 {
-    // The child commands will be undone automatically
+    qDebug() << "DeleteMultipleItemsCommand::undo() - Restoring" << mDeleteCommands.size() << "items";
+
+    // Manage the flag at the parent level to prevent child commands from interfering
+    bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
+    mEditor->mCreatingFromUndoCommand = true;
+
+    // Undo child commands in reverse order
+    for (int i = mDeleteCommands.size() - 1; i >= 0; --i) {
+        mDeleteCommands[i]->undo();
+    }
+
+    // Restore the flag state
+    mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+    qDebug() << "DeleteMultipleItemsCommand::undo() - Restored mCreatingFromUndoCommand flag after all operations";
 }
 
 void DeleteMultipleItemsCommand::redo()
 {
-    // The child commands will be redone automatically
+    qDebug() << "DeleteMultipleItemsCommand::redo() - Deleting" << mDeleteCommands.size() << "items";
+
+    // Manage the flag at the parent level to prevent child commands from interfering
+    bool wasCreatingFromUndo = mEditor->mCreatingFromUndoCommand;
+    mEditor->mCreatingFromUndoCommand = true;
+
+    // Redo child commands in forward order
+    for (auto* cmd : mDeleteCommands) {
+        cmd->redo();
+    }
+
+    // Restore the flag state
+    mEditor->mCreatingFromUndoCommand = wasCreatingFromUndo;
+    qDebug() << "DeleteMultipleItemsCommand::redo() - Restored mCreatingFromUndoCommand flag after all operations";
 }
 
 // TextChangeCommand implementation with cursor position preservation

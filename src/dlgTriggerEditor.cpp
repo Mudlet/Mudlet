@@ -74,7 +74,16 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 {
     // init generated dialog
     setupUi(this);
-    
+
+    // Enable multiple selection for all tree widgets
+    treeWidget_triggers->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeWidget_timers->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeWidget_keys->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeWidget_aliases->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeWidget_actions->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeWidget_scripts->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    treeWidget_variables->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
     // Initialize undo stack
     mUndoStack = new QUndoStack(this);
     mUndoStack->setUndoLimit(50); // Set a reasonable limit for undo levels
@@ -3338,13 +3347,14 @@ void dlgTriggerEditor::delete_alias()
     }
     
     // Use undo command for deletion unless called from undo command to prevent recursion
-    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
         auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Alias"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
-    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+    } else if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
         auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Alias"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
     }
     
@@ -3424,13 +3434,14 @@ void dlgTriggerEditor::delete_action()
     }
     
     // Use undo command for deletion unless called from undo command to prevent recursion
-    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
         auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Action"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
-    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+    } else if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
         auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Action"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
     }
     
@@ -3601,13 +3612,14 @@ void dlgTriggerEditor::delete_script()
     }
     
     // Use undo command for deletion unless called from undo command to prevent recursion
-    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
         auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Script"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
-    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+    } else if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
         auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Script"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
     }
     
@@ -3687,13 +3699,14 @@ void dlgTriggerEditor::delete_key()
     }
     
     // Use undo command for deletion unless called from undo command to prevent recursion
-    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
         auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Key"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
-    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+    } else if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
         auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Key"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
     }
     
@@ -3773,13 +3786,14 @@ void dlgTriggerEditor::delete_trigger()
     }
     
     // Use undo command for deletion unless called from undo command to prevent recursion
-    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
         auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Trigger"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
-    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+    } else if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
         auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Trigger"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
     }
     
@@ -3859,13 +3873,14 @@ void dlgTriggerEditor::delete_timer()
     }
     
     // Use undo command for deletion unless called from undo command to prevent recursion
-    if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() == 1) {
         auto* cmd = new DeleteItemCommand(this, selectedItems.first(), qsl("Timer"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
-    } else if (mUndoStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
+    } else if (currentStack && !mCreatingFromUndoCommand && selectedItems.size() > 1) {
         auto* cmd = new DeleteMultipleItemsCommand(this, selectedItems, qsl("Timer"));
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         return;
     }
     
@@ -6872,6 +6887,10 @@ void dlgTriggerEditor::slot_patternTypeChanged(int row, int oldType, int newType
     if (mIsLoadingItem || mCreatingFromUndoCommand) {
         return;
     }
+
+    // Note: Pattern changes should be tracked for user-initiated changes
+    // The pollution was caused by automatic changes during undo/redo operations
+    // which are already prevented by the mCreatingFromUndoCommand check above
     
     // Get current tab's undo stack for trigger editor
     QUndoStack* currentStack = getCurrentTabUndoStack();
@@ -9420,7 +9439,14 @@ void dlgTriggerEditor::slot_addNewItem()
 {
     // Prevent recursion when called from undo commands
     if (mCreatingFromUndoCommand) {
-        qDebug() << "slot_addNewItem() blocked - called from undo command";
+        qDebug() << "slot_addNewItem() blocked - called from undo command - attempting safety reset";
+        // Safety mechanism: if flag has been stuck for more than 100ms, reset it
+        QTimer::singleShot(100, this, [this]() {
+            if (mCreatingFromUndoCommand) {
+                qDebug() << "Safety reset: Clearing stuck mCreatingFromUndoCommand flag";
+                mCreatingFromUndoCommand = false;
+            }
+        });
         return;
     }
     
@@ -9452,8 +9478,9 @@ void dlgTriggerEditor::slot_addNewItem()
         return;
     }
     
-    // Use undo command for addition
-    if (mUndoStack) {
+    // Use undo command for addition - use the correct tab-specific stack
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack) {
         // Get current selection to maintain parent context
         QTreeWidgetItem* currentParent = nullptr;
         switch (mCurrentView) {
@@ -9489,7 +9516,7 @@ void dlgTriggerEditor::slot_addNewItem()
         }
         
         auto* cmd = new AddItemCommand(this, itemType, false, currentParent);
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         
         // Set focus based on item type
         switch (mCurrentView) {
@@ -9596,8 +9623,9 @@ void dlgTriggerEditor::slot_addNewGroup()
         return;
     }
     
-    // Use undo command for group addition
-    if (mUndoStack) {
+    // Use undo command for group addition - use the correct tab-specific stack
+    QUndoStack* currentStack = getCurrentTabUndoStack();
+    if (currentStack) {
         // Get current selection to maintain parent context
         QTreeWidgetItem* currentParent = nullptr;
         switch (mCurrentView) {
@@ -9633,7 +9661,7 @@ void dlgTriggerEditor::slot_addNewGroup()
         }
         
         auto* cmd = new AddItemCommand(this, itemType, true, currentParent);
-        mUndoStack->push(cmd);
+        currentStack->push(cmd);
         
         // Set focus based on item type
         switch (mCurrentView) {
@@ -11642,8 +11670,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     if (oldColorString != newColorString) {
         QUndoStack* currentStack = getCurrentTabUndoStack();
         if (currentStack) {
-            auto* command = new PropertyChangeCommand(this, pItem->data(0, Qt::UserRole).toInt(), 
-                                                     qsl("Trigger"), qsl("foregroundColor"), 
+            auto* command = new PropertyChangeCommand(this, pItem->data(0, Qt::UserRole).toInt(),
+                                                     qsl("trigger"), qsl("foregroundColor"),
                                                      oldColorString, newColorString);
             currentStack->push(command);
         }
@@ -11680,8 +11708,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     if (oldColorString != newColorString) {
         QUndoStack* currentStack = getCurrentTabUndoStack();
         if (currentStack) {
-            auto* command = new PropertyChangeCommand(this, pItem->data(0, Qt::UserRole).toInt(), 
-                                                     qsl("Trigger"), qsl("backgroundColor"), 
+            auto* command = new PropertyChangeCommand(this, pItem->data(0, Qt::UserRole).toInt(),
+                                                     qsl("trigger"), qsl("backgroundColor"),
                                                      oldColorString, newColorString);
             currentStack->push(command);
         }
@@ -12676,6 +12704,7 @@ void dlgTriggerEditor::initializeTabSpecificEditors()
     mpScriptUndoStack = new QUndoStack(this);
     mpActionUndoStack = new QUndoStack(this);
     mpKeyUndoStack = new QUndoStack(this);
+    mpVarsUndoStack = new QUndoStack(this);
     
     // Initialize the tab-specific system
     switchToTabEditor(mCurrentView);
@@ -12697,15 +12726,16 @@ void dlgTriggerEditor::switchToTabEditor(EditorViewType viewType)
         return;
     }
     
-    // Connect the undo/redo actions to the current tab's stack
+    // Connect the undo/redo actions to our slot methods (not directly to stack)
+    // This allows the complex logic in slot_undo/slot_redo to handle different priorities
     if (mUndoAction) {
-        connect(mUndoAction, &QAction::triggered, currentStack, &QUndoStack::undo);
+        connect(mUndoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_undo);
         connect(currentStack, &QUndoStack::canUndoChanged, mUndoAction, &QAction::setEnabled);
         mUndoAction->setEnabled(currentStack->canUndo());
     }
-    
+
     if (mRedoAction) {
-        connect(mRedoAction, &QAction::triggered, currentStack, &QUndoStack::redo);
+        connect(mRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_redo);
         connect(currentStack, &QUndoStack::canRedoChanged, mRedoAction, &QAction::setEnabled);
         mRedoAction->setEnabled(currentStack->canRedo());
     }
@@ -12736,6 +12766,8 @@ QUndoStack* dlgTriggerEditor::getCurrentTabUndoStack()
         return mpActionUndoStack;
     case EditorViewType::cmKeysView:
         return mpKeyUndoStack;
+    case EditorViewType::cmVarsView:
+        return mpVarsUndoStack;
     default:
         return mpTriggerUndoStack; // fallback to trigger stack
     }
