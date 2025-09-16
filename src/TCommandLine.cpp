@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -966,16 +966,16 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < commandList.size(); ++i) {
+    for (QString& command : commandList) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
-            mpHost->send(commandList.at(i));
+            mpHost->send(command);
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never){
             // This usage of commandList modifies the content!!!
-            mpConsole->printCommand(commandList[i]);
+            mpConsole->printCommand(command);
         }
     }
 

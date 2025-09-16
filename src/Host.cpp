@@ -4,7 +4,7 @@
  *   Copyright (C) 2015-2025 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -621,10 +621,8 @@ void Host::autoSaveMap()
 
 void Host::loadPackageInfo()
 {
-    const QStringList packages = mInstalledPackages;
-    for (int i = 0; i < packages.size(); i++) {
-        const QString packagePath{mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), packages.at(i))};
-        const QDir dir(packagePath);
+    for (const auto& package : mInstalledPackages) {
+        const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
         }
@@ -1353,11 +1351,10 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         return;
     }
 
-    for (int i = 0, total = commandList.size(); i < total; ++i) {
-        if (commandList.at(i).isEmpty()) {
+    for (QString& command : commandList) {
+        if (command.isEmpty()) {
             continue;
         }
-        QString command = commandList.at(i);
         command.remove(QChar::LineFeed);
         if (dontExpandAliases) {
             mTelnet.sendData(command);
@@ -1436,8 +1433,7 @@ int Host::findStopWatchId(const QString& name) const
     if (total > 1) {
         std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
     }
-    for (int index = 0, total = stopWatchIdList.size(); index < total; ++index) {
-        auto currentId = stopWatchIdList.at(index);
+    for (const int currentId: stopWatchIdList) {
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         if (pCurrentStopWatch->name() == name) {
             return currentId;
@@ -1662,8 +1658,7 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     int alreadyUsedId = 0;
     // we are looking BOTH for the current name and checking that any other
     // ones WITH names do not match the new name:
-    for (int index = 0; index < total; ++index) {
-        auto currentId = stopWatchIdList.at(index);
+    for (const int currentId : stopWatchIdList) {
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         // This will also pick up the FIRST (lowest id) currently unnamed
         // stopwatch:
@@ -1787,14 +1782,14 @@ void Host::raiseEvent(const TEvent& pE)
 
     if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
         const QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
-        for (int i = 0, total = functionsList.size(); i < total; ++i) {
-            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
+        for (const QString& function : functionsList) {
+            mLuaInterpreter.callEventHandler(function, pE);
         }
     }
     if (mAnonymousEventHandlerFunctions.contains(star)) {
         const QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
-        for (int i = 0, total = functionsList.size(); i < total; ++i) {
-            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
+        for (const QString& function : functionsList) {
+            mLuaInterpreter.callEventHandler(function, pE);
         }
     }
 
@@ -2327,13 +2322,12 @@ void Host::setupSandboxedLuaState(lua_State* L)
         // Environment manipulation
         "getfenv", "setfenv",
         // Raw memory access
-        "collectgarbage",
-        nullptr
+        "collectgarbage"
     };
     
-    for (int i = 0; dangerousFunctions[i] != nullptr; ++i) {
+    for (const auto& function : dangerousFunctions) {
         lua_pushnil(L);
-        lua_setglobal(L, dangerousFunctions[i]);
+        lua_setglobal(L, function);
     }
     
     // Remove package system entirely to prevent require() restoration
@@ -2344,13 +2338,12 @@ void Host::setupSandboxedLuaState(lua_State* L)
     lua_getglobal(L, "_G");
     if (lua_istable(L, -1)) {
         const char* removedBaseFunctions[] = {
-            "rawget", "rawset", "rawequal", "rawlen",
-            nullptr
+            "rawget", "rawset", "rawequal", "rawlen"
         };
         
-        for (int i = 0; removedBaseFunctions[i] != nullptr; ++i) {
+        for (const auto& function : removedBaseFunctions) {
             lua_pushnil(L);
-            lua_setfield(L, -2, removedBaseFunctions[i]);
+            lua_setfield(L, -2, function);
         }
     }
     lua_pop(L, 1); // pop _G

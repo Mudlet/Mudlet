@@ -7,7 +7,7 @@
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *   Copyright (C) 2011-2021 by Vadim Peretokin - vperetokin@gmail.com     *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -3977,8 +3977,8 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     // install default packages
-    for (int i = 0; i < mPackagesToInstallList.size(); i++) {
-        pHost->installPackage(mPackagesToInstallList[i], enums::PackageModuleType::Package);
+    for (const auto& package : mPackagesToInstallList) {
+        pHost->installPackage(package, enums::PackageModuleType::Package);
     }
 
     mPackagesToInstallList.clear();
@@ -4015,12 +4015,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
-    for (int i = 0; i < modules.size(); i++) {
-        QStringList entry = pHost->mInstalledModules[modules[i]];
+    for (const auto& module : modules) {
+        QStringList entry = pHost->mInstalledModules[module];
         pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-        pHost->mInstalledModules[modules[i]] = entry;
+        pHost->mInstalledModules[module] = entry;
     }
 }
 
@@ -5683,15 +5683,15 @@ int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
         std::sort(wl.begin(), wl.end(), sorter);
     }
 
-    for (int index = 0; index < wordCount; ++index) {
+    for (const auto& word : wl) {
         // qDebug().nospace().noquote() << "    " << wordList.at(index);
-        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, wl.at(index));
+        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, word);
         // The finder will be at the start of the string
         int startPos = 0;
         int endPos = graphemeFinder.toNextBoundary();
         do {
             if (endPos > 0) {
-                const QString grapheme(wl.at(index).mid(startPos, endPos - startPos));
+                const QString grapheme(word.mid(startPos, endPos - startPos));
                 if (gc.contains(grapheme)) {
                     ++gc[grapheme];
                 } else {
@@ -6173,8 +6173,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
     // splitter and then re-add each of them at the end in turn - once we have
     // gone through them all it will mean that they are in the same order as the
     // tabs:
-    for (int index = 0; index < itemsCount; ++index) {
-        const auto& wantedTabName = tabNamesInOrder.at(index);
+    for (const QString& wantedTabName : tabNamesInOrder) {
         mpSplitter_profileContainer->addWidget(widgetMap.value(wantedTabName));
     }
 }

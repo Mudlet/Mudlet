@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -723,8 +723,7 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
     const Host& host = getHostFromLua(L);
     const QList<int> stopWatchIds = host.getStopWatchIds();
     lua_newtable(L);
-    for (int index = 0, total = stopWatchIds.count(); index < total; ++index) {
-        const int watchId = stopWatchIds.at(index);
+    for (const int watchId : stopWatchIds) {
         lua_pushnumber(L, watchId);
         auto pStopWatch = host.getStopWatch(watchId);
         lua_newtable(L);
