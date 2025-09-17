@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -723,8 +723,7 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
     const Host& host = getHostFromLua(L);
     const QList<int> stopWatchIds = host.getStopWatchIds();
     lua_newtable(L);
-    for (int index = 0, total = stopWatchIds.count(); index < total; ++index) {
-        const int watchId = stopWatchIds.at(index);
+    for (const int watchId : stopWatchIds) {
         lua_pushnumber(L, watchId);
         auto pStopWatch = host.getStopWatch(watchId);
         lua_newtable(L);
@@ -1541,12 +1540,42 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     }
 
     auto linesLimit = getVerifiedInt(L, __func__, s++, "linesLimit");
-    auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
+    auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s++, "sizeOfBatchDeletion");
+    
+    // Optional fourth parameter: useMaximum (boolean)
+    bool useMaximum = false;
+    if (s <= n) {
+        useMaximum = lua_toboolean(L, s);
+    }
 
     // The macro will have returned with a nil + error message if the windowName
     // was not found:
     auto console = CONSOLE(L, windowName);
-    console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
+    Host& host = getHostFromLua(L);
+
+    if (useMaximum) {
+        // Maximum buffer size is only supported for the main console
+        if (console != host.mpConsole) {
+            return warnArgumentValue(L, __func__, "useMaximum parameter is only supported for the main console");
+        }
+
+        // Use system maximum buffer size instead of the provided linesLimit
+        const int maxBufferSize = console->buffer.getMaxBufferSize();
+        console->buffer.setBufferSize(maxBufferSize, sizeOfBatchDeletion);
+
+        // Update Host settings
+        host.setConsoleBufferSize(maxBufferSize);
+        host.setUseMaxConsoleBufferSize(true);
+    } else {
+        console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
+
+        // Update Host settings if this is the main console
+        if (console == host.mpConsole) {
+            host.setConsoleBufferSize(linesLimit);
+            host.setUseMaxConsoleBufferSize(false);
+        }
+    }
+    
     // Indicate success with a true return value:
     lua_pushboolean(L, true);
     return 1;

@@ -2,6 +2,7 @@
  *   Copyright (C) 2011 by Chris Mitchell                                  *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -84,14 +85,14 @@ void dlgModuleManager::layoutModules()
         it2.next();
         QStringList pModules = it2.value();
         pModules.sort();
-        for (int i = 0; i < pModules.size(); i++) {
+        for (const QString& pModule : pModules) {
             const int row = moduleTable->rowCount();
             moduleTable->insertRow(row);
             auto masterModule = new QTableWidgetItem();
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
-            QStringList moduleInfo = mpHost->mInstalledModules[pModules[i]];
+            QStringList moduleInfo = mpHost->mInstalledModules[pModule];
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -107,7 +108,7 @@ void dlgModuleManager::layoutModules()
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
 
-            const QString moduleName = pModules[i];
+            const QString moduleName = pModule;
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
