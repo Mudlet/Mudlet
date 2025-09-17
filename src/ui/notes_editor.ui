@@ -73,7 +73,7 @@
   </action>
   <action name="action_sendAll">
    <property name="text">
-    <string>Send All</string>
+    <string>Send all</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>
@@ -81,7 +81,7 @@
   </action>
   <action name="action_sendLine">
    <property name="text">
-    <string>Send Line</string>
+    <string>Send line</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>
@@ -89,7 +89,7 @@
   </action>
   <action name="action_sendSelected">
    <property name="text">
-    <string>Send Selected</string>
+    <string>Send selected</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>
