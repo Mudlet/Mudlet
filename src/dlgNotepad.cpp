@@ -51,7 +51,7 @@ dlgNotepad::dlgNotepad(Host* pH)
     lineEdit_prependText->setClearButtonEnabled(true);
     action_prependText = toolBar->addWidget(lineEdit_prependText);
 
-    action_stop = new QAction("Stop", this);
+    action_stop = new QAction(tr("Stop"), this);
     toolBar->addAction(action_stop);
     action_stop->setEnabled(false);
 
