@@ -5072,7 +5072,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name);
         pHost->setupIreDriverBugfix();
     }
 
@@ -6252,8 +6252,8 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
-    if (profileName == qsl("Mudlet Tutorial") && gameURL == qsl("localhost")) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage");
+    if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage"));
     }
 }
 
