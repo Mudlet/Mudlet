@@ -6169,19 +6169,22 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl)
+void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
 {
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
         {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
-        {qsl(":/echo.mpackage"),                          {qsl("*")}},
-        {qsl(":/deleteOldProfiles.mpackage"),             {qsl("*")}},
-        {qsl(":/enable-accessibility.mpackage"), {qsl("*")}},
-        {qsl(":/mpkg.mpackage"),                    {qsl("*")}},
+        {qsl(":/echo.mpackage"),                     {qsl("*")}},
+        {qsl(":/deleteOldProfiles.mpackage"),        {qsl("*")}},
+        {qsl(":/enable-accessibility.mpackage"),     {qsl("*")}},
+        {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
-        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
+        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
+                                                      qsl("mud.morgengrauen.info"),
+                                                      qsl("mg.morgengrauen.info"),
+                                                      qsl("morgengrauen.info")}},
         {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
@@ -6204,6 +6207,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+    }
+
+    // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
+    if (profileName == qsl("Mudlet Tutorial") && gameURL == qsl("localhost")) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage");
     }
 }
 
