@@ -42,6 +42,8 @@ dlgNotepad::dlgNotepad(Host* pH)
 {
     setupUi(this);
 
+    label_prependText = new QLabel("Prepend", this);
+    action_prependTextLabel = toolBar->addWidget(label_prependText);
     lineEdit_prependText = new QLineEdit(this);
     lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
     lineEdit_prependText->setClearButtonEnabled(true);
@@ -225,6 +227,10 @@ void dlgNotepad::slot_toggleSendControls(bool checked)
     action_sendAll->setVisible(checked);
     action_sendLine->setVisible(checked);
     action_sendSelected->setVisible(checked);
+
+    if (action_prependTextLabel) {
+        action_prependTextLabel->setVisible(checked);
+    }
 
     if (action_prependText) {
         action_prependText->setVisible(checked);

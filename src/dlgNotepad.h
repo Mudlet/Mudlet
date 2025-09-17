@@ -28,6 +28,7 @@
 #include "ui_notes_editor.h"
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
 #include <QSettings>
@@ -71,6 +72,8 @@ private:
     bool mNeedToSave = false;
     QAction* action_stop = nullptr;
     QAction* action_prependText = nullptr;
+    QAction* action_prependTextLabel = nullptr;
+    QLabel* label_prependText = nullptr;
     QLineEdit* lineEdit_prependText = nullptr;
     QStringList mLinesToSend;
     QTimer* mSendTimer = nullptr;
