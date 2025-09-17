@@ -93,7 +93,7 @@ void dlgRoomProperties::init(
         }
     }
     if (!lineEdit_roomSymbol->isHidden()) {
-        lineEdit_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+        lineEdit_roomSymbol->setFont(QApplication::font());
     }
     if (!comboBox_roomSymbol->isHidden()) {
         comboBox_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
