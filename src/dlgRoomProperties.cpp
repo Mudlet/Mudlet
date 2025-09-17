@@ -2,7 +2,7 @@
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *   Copyright (C) 2022-2023, 2025 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -429,8 +429,8 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
         const QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
         const QVector<quint32> codePoints = symbolString.toUcs4();
         QVector<bool> isUsable;
-        for (int i = 0; i < codePoints.size(); ++i) {
-            isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
+        for (const auto point : codePoints) {
+            isUsable.append(mapSymbolFontMetrics.inFontUcs4(point));
         }
         const bool needToFallback = isUsable.contains(false);
         if (needToFallback) {

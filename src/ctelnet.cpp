@@ -8,7 +8,7 @@
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
  *   Copyright (C) 2017 by Colton Rasbury - rasbury.colton@gmail.com       *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -575,8 +575,8 @@ void cTelnet::slot_socketDisconnected()
         if (sslerr) {
             mDontReconnect = true;
 
-            for (int a = 0; a < sslErrors.count(); ++a) {
-                reason.append(qsl("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+            for (const auto& error : sslErrors) {
+                reason.append(qsl("        %1\n").arg(QString(error.errorString())));
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
@@ -713,8 +713,8 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             }
         } else {
             // Plain, raw ASCII, we hope!
-            for (int i = 0, total = data.size(); i < total; ++i) {
-                if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
+            for (const auto c : data) {
+                if ((!mEncodingWarningIssued) && (c.row() || c.cell() > 127)){
                     QString errorMsg = tr(errorMsgTemplate,
                                           "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
@@ -2505,8 +2505,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 QByteArray acceptedCharacterSet;
 
                 if (!characterSetList.isEmpty()) {
-                    for (int i = 1; i < characterSetList.size(); ++i) {
-                        QByteArray characterSet = characterSetList.at(i).toUpper();
+                    for (QByteArray characterSet : characterSetList) {
+                        characterSet = characterSet.toUpper();
 
                         if (mAcceptableEncodings.contains(characterSet) ||
                             mAcceptableEncodings.contains(("M_" + characterSet)) ||

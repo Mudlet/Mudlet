@@ -38,7 +38,7 @@
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
-: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mpMap(pMap), mpHost(pHost)
+: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mInstanceBuffer(QOpenGLBuffer::VertexBuffer), mpMap(pMap), mpHost(pHost)
 {
     if (mpHost->mBgColor_2.alpha() < 255) {
         setAttribute(Qt::WA_OpaquePaintEvent, false);
@@ -70,6 +70,7 @@ void ModernGLWidget::cleanup()
     mColorBuffer.destroy();
     mNormalBuffer.destroy();
     mIndexBuffer.destroy();
+    mInstanceBuffer.destroy();
     mVAO.destroy();
     doneCurrent();
 }
@@ -167,6 +168,13 @@ void ModernGLWidget::setupBuffers()
     mIndexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Index buffer creation"));
 
+    // Create instance buffer for instanced rendering
+    mInstanceBuffer.create();
+    mResourceManager.onBufferCreated();
+    mInstanceBuffer.bind();
+    mInstanceBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    mResourceManager.checkGLError(qsl("Instance buffer creation"));
+
     // Configure vertex attribute pointers (will be set during rendering)
 }
 
@@ -238,18 +246,14 @@ void ModernGLWidget::paintGL()
             return;
         }
         
-        // Check if room ID changed and smooth camera experiment is enabled
-        if (mRID != mPreviousRID && mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
+        // Check if room ID changed and start smooth transition
+        if (mRID != mPreviousRID) {
             // Room changed - start smooth transition
             int targetAID = pRID->getArea();
             int targetX = pRID->x();
             int targetY = pRID->y();
             int targetZ = pRID->z();
-            
-            qDebug() << "[Smooth Camera] Room ID changed from" << mPreviousRID << "to" << mRID 
-                     << "- starting smooth transition from (" << mMapCenterX << "," << mMapCenterY << "," << mMapCenterZ << ")"
-                     << "to (" << targetX << "," << targetY << "," << targetZ << ")";
-            
+
             startSmoothTransition(targetAID, targetX, targetY, targetZ);
         }
         // Instant update map (smooth transition only impacts camera position)
@@ -262,9 +266,6 @@ void ModernGLWidget::paintGL()
         mMapCenterZ = oz;
         mPreviousRID = mRID; // Update tracking
 
-        if (mRID != mPreviousRID) {
-            qDebug() << "[Smooth Camera] Room ID changed but experiment disabled or not available";
-        }
 
     } else {
         ox = mMapCenterX;
@@ -299,9 +300,12 @@ void ModernGLWidget::paintGL()
     // Use our shader program
     shaderProgram->bind();
 
-    // Build up render commands
-    renderRooms();
+    // Enable room flattening
+    zFlattening = 8.0f;
+
+    // Build up render commands - render connections first so rooms appear above them
     renderConnections();
+    renderRooms();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer);
@@ -344,9 +348,19 @@ void ModernGLWidget::renderRooms()
         return;
     }
 
+    // Always enable depth testing
+    auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
+
     float pz = static_cast<float>(mMapCenterZ);
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
+
+    // Batched instance data for instanced rendering
+    QVector<CubeInstanceData> mainRoomInstances;
+    QVector<CubeInstanceData> currentRoomInstances;
+    QVector<CubeInstanceData> targetRoomInstances;
+    QVector<CubeInstanceData> overlayInstances;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -379,13 +393,19 @@ void ModernGLWidget::renderRooms()
         float roomAlpha = 1.0f;
         const float defaultSize = 1.0f / scale;
 
-        // 1. Render main room cube using correct planeColor logic
+        // 1. Collect main room cube data
         if (isCurrentRoom) {
             // Current room: red
-            renderCube(rx, ry, rz, defaultSize, 1.0f, 0.0f, 0.0f, 1.0f);
+            QMatrix4x4 transform = QMatrix4x4();
+            transform.translate(rx, ry, rz);
+            transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
+            currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
         } else if (isTargetRoom) {
             // Target room: green
-            renderCube(rx, ry, rz, defaultSize, 0.0f, 1.0f, 0.0f, 1.0f);
+            QMatrix4x4 transform = QMatrix4x4();
+            transform.translate(rx, ry, rz);
+            transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
+            targetRoomInstances.append(CubeInstanceData(transform, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
@@ -435,17 +455,16 @@ void ModernGLWidget::renderRooms()
                     blueComponent *= darkenFactor;
                 }
             }
-
-            renderCube(rx, ry, rz, defaultSize, redComponent, greenComponent, blueComponent, roomAlpha);
+            
+            QMatrix4x4 transform = QMatrix4x4();
+            transform.translate(rx, ry, rz);
+            transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
+            mainRoomInstances.append(CubeInstanceData(transform, redComponent, greenComponent, blueComponent, roomAlpha));
         }
 
-        // 2. Render thin environment color overlay on top
-        // Disable depth testing like the original to prevent clipping
-        auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
-
+        // 2. Collect environment color overlay data
         QColor envColor = getEnvironmentColor(pR);
-        float overlayZ = rz + 0.25f; // Slightly above the main cube
+        float overlayZ = rz + 0.25f/zFlattening; // Slightly above the main cube
         float envRed = envColor.redF();
         float envGreen = envColor.greenF();
         float envBlue = envColor.blueF();
@@ -483,17 +502,51 @@ void ModernGLWidget::renderRooms()
             }
         }
         
-        renderCube(rx,
-                   ry,
-                   overlayZ,
-                   0.75f / scale, // Slightly smaller and thinner
-                   envRed,
-                   envGreen,
-                   envBlue,
-                   overlayAlpha);
+        QMatrix4x4 transform = QMatrix4x4();
+        transform.translate(rx, ry, overlayZ);
+        transform.scale(0.75f / scale, 0.75f / scale, 1.0f / scale / zFlattening);
+        overlayInstances.append(CubeInstanceData(transform, envRed, envGreen, envBlue, overlayAlpha));
 
-        // 3. Render up/down exit indicators on the overlay
-        renderUpDownIndicators(pR, rx, ry, overlayZ + 0.1f);
+        // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
+        renderUpDownIndicators(pR, rx, ry, overlayZ + (1.0f / scale / zFlattening) + 0.1f/zFlattening);
+        
+        // 4. Render in/out exit indicators on the overlay (keep individual rendering for now)
+        renderInOutIndicators(pR, rx, ry, overlayZ + (1.0f / scale / zFlattening) + 0.1f/zFlattening);
+    }
+
+    // Create instanced render commands for each batch
+    if (!mainRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(mainRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!currentRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(currentRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    if (!targetRoomInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(targetRoomInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+    
+    if (!overlayInstances.isEmpty()) {
+        // Keep depth testing enabled for overlays (was conditional with experiment.always-depth-test)
+
+        auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
 
         // Re-enable depth testing for subsequent rendering
         auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
@@ -512,7 +565,13 @@ void ModernGLWidget::renderConnections()
         return;
     }
 
+    QVector<CubeInstanceData> roomConnectionInstances;
+    const QVector3D zVector = QVector3D(0, 0, 1);
+
     float pz = static_cast<float>(mMapCenterZ);
+
+    // Initialize instance queue
+    QVector<CubeInstanceData> areaExitInstances;
 
     // Collect all lines to draw
     QVector<float> lineVertices;
@@ -553,6 +612,8 @@ void ModernGLWidget::renderConnections()
         exitList.push_back(pR->getNorthwest());
         exitList.push_back(pR->getUp());
         exitList.push_back(pR->getDown());
+        exitList.push_back(pR->getIn());
+        exitList.push_back(pR->getOut());
 
         // Check if this is the current room
         bool isCurrentRoom = (rz == pz) && (rx == static_cast<float>(mMapCenterX)) && (ry == static_cast<float>(mMapCenterY));
@@ -581,6 +642,7 @@ void ModernGLWidget::renderConnections()
             }
 
             bool areaExit = (pExit->getArea() != mAID);
+            bool inOut = ((i == 10 || i == 11) && mpHost && mpHost->experimentEnabled("experiment.render-in-out-exits"));
 
             if (!areaExit) {
                 // Normal connection within same area
@@ -591,7 +653,7 @@ void ModernGLWidget::renderConnections()
                 // Add line from current room to exit room
                 lineVertices << rx << ry << rz; // Start point
                 lineVertices << ex << ey << ez; // End point
-
+                
                 // Determine translucency based on destination room level
                 bool exitAboveCurrentLevel = (ez > pz);
                 float connectionAlpha = exitAboveCurrentLevel ? 0.2f : 1.0f;
@@ -600,6 +662,23 @@ void ModernGLWidget::renderConnections()
                 lineColors << r << g << b << connectionAlpha; // Start color
                 lineColors << r << g << b << connectionAlpha; // End color
 
+                // for volume exits we calculate the cube transformation we need
+                const QVector3D exitVector = QVector3D(ex-rx, ey-ry, ez-rz);
+                const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
+                QMatrix4x4 transform = QMatrix4x4();
+                if (inOut) {
+                    transform.translate(3.0f*exitVector/8.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                } else {
+                    transform.translate(exitVector/4.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/4.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                }
             } else {
                 // Area exit - draw directional stub
                 float dx = rx, dy = ry, dz = rz;
@@ -629,6 +708,12 @@ void ModernGLWidget::renderConnections()
                     dz += 1.0f;
                 } else if (i == 9) { // Down
                     dz -= 1.0f;
+                } else if (i == 10) { // In
+                    dx -= 1.0f;
+                    dy += 0.5f;
+                } else if (i == 11) { // Out
+                    dx += 1.0f;
+                    dy -= 0.5f;
                 }
 
                 // Add line from current room to direction offset
@@ -656,14 +741,40 @@ void ModernGLWidget::renderConnections()
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // Start color
                 lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
 
+                // for volume exits we calculate the cube transformation we need
+                const QVector3D exitVector = QVector3D(dx-rx, dy-ry, dz-rz);
+                const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
+                // double length of normal exits since this exit is one sided
+                QMatrix4x4 transform = QMatrix4x4();
+                if (inOut) {
+                    transform.translate(3.0f*exitVector/8.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    transform.setToIdentity();
+                    transform.translate(5.0f*exitVector/8.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                } else {
+                    transform.translate(exitVector/2.0f);
+                    transform.translate(rx, ry, rz);
+                    transform.rotate(alignmentQuat);
+                    transform.scale(0.02f, 0.02f, exitVector.length()/2.0f);
+                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                }
+
                 // Render green area exit cube at the destination position with translucency and darkening
-                renderCube(dx, dy, dz, 1.0f / scale, exitRed, exitGreen, exitBlue, exitAlpha);
+                transform.setToIdentity();
+                transform.translate(dx, dy, dz);
+                transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
+                areaExitInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
-                auto disableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(disableDepthCommand2));
                 QColor envColor = getEnvironmentColor(pExit);
-                float overlayZ = dz + 0.25f;
+                float overlayZ = dz + 0.25f/zFlattening;
                 float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
                 
                 // Darken area exit environment overlay if above current level
@@ -679,24 +790,41 @@ void ModernGLWidget::renderConnections()
                     exitEnvBlue *= darkenFactor;
                 }
                 
-                renderCube(dx,
-                           dy,
-                           overlayZ,
-                           0.5f / scale, // Much smaller overlay
-                           exitEnvRed,
-                           exitEnvGreen,
-                           exitEnvBlue,
-                           overlayAlpha);
-                auto enableDepthCommand2 = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-                mRenderCommandQueue.addCommand(std::move(enableDepthCommand2));
+                transform.setToIdentity();
+                transform.translate(dx, dy, overlayZ);
+                transform.scale(0.5f/scale, 0.5f/scale, 1.0f/scale/zFlattening);
+                areaExitInstances.append(CubeInstanceData(transform, exitEnvRed, exitEnvGreen, exitEnvBlue, overlayAlpha));
             }
         }
     }
 
-    // Render all collected lines
-    if (!lineVertices.isEmpty()) {
-        renderLines(lineVertices, lineColors);
+    // Always enable depth testing
+    auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
+
+    // Always render room connection volumes
+    if (!roomConnectionInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(roomConnectionInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+
+    } else {
+        // Render all collected lines
+        if (!lineVertices.isEmpty()) {
+            renderLines(lineVertices, lineColors);
+        }
     }
+
+    if (!areaExitInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(areaExitInstances, 
+                                                                    mCameraController.getProjectionMatrix(), 
+                                                                    mCameraController.getViewMatrix(), 
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
 }
 
 void ModernGLWidget::renderCube(float x, float y, float z, float size, float r, float g, float b, float a)
@@ -904,18 +1032,8 @@ void ModernGLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
     mShiftMode = true;
     
-    if (mpHost && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-        // Use smooth transition
-        startSmoothTransition(areaId, xPos, yPos, zPos);
-    } else {
-        // Original instant movement
-        mAID = areaId;
-        mMapCenterX = xPos;
-        mMapCenterY = yPos;
-        mMapCenterZ = zPos;
-        mCameraController.setTarget(xPos, yPos, zPos);
-        update();
-    }
+    // Use smooth transition
+    startSmoothTransition(areaId, xPos, yPos, zPos);
 }
 
 void ModernGLWidget::wheelEvent(QWheelEvent* e)
@@ -1070,6 +1188,62 @@ void ModernGLWidget::renderUpDownIndicators(TRoom* pRoom, float x, float y, floa
 
         // Add gray color for all three vertices
         for (int i = 0; i < 3; ++i) {
+            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
+        }
+    }
+
+    // Render the triangles if we have any
+    if (!triangleVertices.isEmpty()) {
+        renderTriangles(triangleVertices, triangleColors);
+    }
+}
+
+void ModernGLWidget::renderInOutIndicators(TRoom* pRoom, float x, float y, float z)
+{
+    if (!pRoom || !(mpHost && mpHost->experimentEnabled("experiment.render-in-out-exits"))) {
+        return;
+    }
+
+    QVector<float> triangleVertices;
+    QVector<float> triangleColors;
+
+    // Gray color for indicators (same as original)
+    float gray[] = {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f};
+
+    // Triangle size
+    float halfHeight = 0.25f / scale;
+    float width = 0.5f / scale;
+
+    // In arrows (if room has in exit)
+    if (pRoom->getIn() > -1) {
+        // triangle pointing inwards: top-left, bottom-left, mid-center
+        triangleVertices << (x - width) << (y + halfHeight) << z; // Top-left
+        triangleVertices << (x - width) << (y - halfHeight) << z; // Bottom-left
+        triangleVertices << x << y << z;              // Mid-center
+        // triangle pointing inwards: top-right, bottom-right, mid-center
+        triangleVertices << (x + width) << (y + halfHeight) << z; // Top-right
+        triangleVertices << (x + width) << (y - halfHeight) << z; // Bottom-right
+        triangleVertices << x << y << z;              // Mid-center
+
+        // Add gray color for all six vertices
+        for (int i = 0; i < 6; ++i) {
+            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
+        }
+    }
+
+    // Out arrows (if room has out exit)
+    if (pRoom->getOut() > -1) {
+        // triangle pointing outwards: top-left, bottom-left, out-center
+        triangleVertices << (x - width) << (y + halfHeight) << z; // Top-left
+        triangleVertices << (x - width) << (y - halfHeight) << z; // Bottom-left
+        triangleVertices << x - 1.0f/scale << y << z;              // Outside-center
+        // triangle pointing outwards: top-right, bottom-right, out-center
+        triangleVertices << (x + width) << (y + halfHeight) << z; // Top-right
+        triangleVertices << (x + width) << (y - halfHeight) << z; // Bottom-right
+        triangleVertices << x + 1.0f/scale << y << z;              // Outside-center
+
+        // Add gray color for all six vertices
+        for (int i = 0; i < 6; ++i) {
             triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
         }
     }
@@ -1289,7 +1463,6 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     
     // Start animation timer
     mCameraAnimationTimer->start();
-    qDebug() << "[Smooth Camera] Timer started, animating flag set to true";
 }
 
 void ModernGLWidget::onCameraAnimationTick()
