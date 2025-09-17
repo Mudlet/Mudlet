@@ -5072,7 +5072,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name);
         pHost->setupIreDriverBugfix();
     }
 
@@ -6211,7 +6211,7 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl)
+void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
 {
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
@@ -6223,7 +6223,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
-        {qsl(":/mudlet-tutorial.mpackage"),          {qsl("localhost")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
                                                       qsl("mud.morgengrauen.info"),
                                                       qsl("mg.morgengrauen.info"),
@@ -6250,6 +6249,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+    }
+
+    // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
+    if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage"));
     }
 }
 
