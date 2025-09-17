@@ -2,6 +2,7 @@
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -121,14 +122,13 @@ void dlgPackageManager::slot_removePackages()
 {
     const QModelIndexList selection = packageTable->selectionModel()->selectedRows();
     QStringList removePackages;
-    for (int i = 0; i < selection.count(); i++) {
-        const QModelIndex index = selection.at(i);
+    for (const QModelIndex& index : selection) {
         auto package = packageTable->item(index.row(), 0);
         removePackages << package->text();
     }
 
-    for (int i = 0; i < removePackages.size(); i++) {
-        mpHost->uninstallPackage(removePackages.at(i), enums::PackageModuleType::Package);
+    for (const QString& package : removePackages) {
+        mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
     }
 
     additionalDetails->hide();

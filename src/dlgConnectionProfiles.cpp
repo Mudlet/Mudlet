@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1292,8 +1293,7 @@ void dlgConnectionProfiles::setProfileIcon() const
 {
     const QStringList defaultGames = TGameDetails::keys();
 
-    for (int i = 0; i < mProfileList.size(); i++) {
-        const QString& profileName = mProfileList.at(i);
+    for (const QString& profileName : mProfileList) {
         if (profileName.isEmpty()) {
             continue;
         }
@@ -1948,16 +1948,16 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
-    for (int i = 0; i < files.count(); i++) {
-        const QString srcName = sourceFolder + QDir::separator() + files[i];
-        const QString destName = destFolder + QDir::separator() + files[i];
+    for (const QString& file : files) {
+        const QString srcName = sourceFolder + QDir::separator() + file;
+        const QString destName = destFolder + QDir::separator() + file;
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (int i = 0; i < files.count(); i++) {
-        const QString srcName = sourceFolder + QDir::separator() + files[i];
-        const QString destName = destFolder + QDir::separator() + files[i];
+    for (const QString& file : files) {
+        const QString srcName = sourceFolder + QDir::separator() + file;
+        const QString destName = destFolder + QDir::separator() + file;
         copyFolder(srcName, destName);
     }
     return true;
