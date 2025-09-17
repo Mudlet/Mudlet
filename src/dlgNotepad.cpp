@@ -42,9 +42,11 @@ dlgNotepad::dlgNotepad(Host* pH)
 {
     setupUi(this);
 
+    //: label for prepended text entry box in notepad
     label_prependText = new QLabel("Prepend", this);
     action_prependTextLabel = toolBar->addWidget(label_prependText);
     lineEdit_prependText = new QLineEdit(this);
+    //: placeholder text for text entry box in notepad - text which gets added before sending a line
     lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
     lineEdit_prependText->setClearButtonEnabled(true);
     action_prependText = toolBar->addWidget(lineEdit_prependText);
