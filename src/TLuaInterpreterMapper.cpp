@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -101,14 +101,13 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
     }
     lua_newtable(L); //return table customLines[]
-    QStringList exits = pR->customLines.keys();
-    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
-        lua_pushstring(L, exits.at(i).toUtf8().constData());
+    for (const QString& exit : pR->customLines.keys()) {
+        lua_pushstring(L, exit.toUtf8().constData());
         lua_newtable(L); //customLines[direction]
         lua_pushstring(L, "attributes");
         lua_newtable(L); //customLines[direction]["attributes"]
         lua_pushstring(L, "style");
-        switch (pR->customLinesStyle.value(exits.at(i))) {
+        switch (pR->customLinesStyle.value(exit)) {
         case Qt::DotLine:
             lua_pushstring(L, "dot line");
             break;
@@ -128,24 +127,24 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         }
         lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
         lua_pushstring(L, "arrow");
-        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_pushboolean(L, pR->customLinesArrow.value(exit));
         lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
         lua_pushstring(L, "color");
         lua_newtable(L);
         lua_pushstring(L, "r");
-        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_pushinteger(L, pR->customLinesColor.value(exit).red());
         lua_settable(L, -3);
         lua_pushstring(L, "g");
-        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_pushinteger(L, pR->customLinesColor.value(exit).green());
         lua_settable(L, -3);
         lua_pushstring(L, "b");
-        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_pushinteger(L, pR->customLinesColor.value(exit).blue());
         lua_settable(L, -3);
         lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
         lua_settable(L, -3); //customLines[direction]["attributes"]
         lua_pushstring(L, "points");
         lua_newtable(L); //customLines[direction][points]
-        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        QList<QPointF> pointL = pR->customLines.value(exit);
         for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
             lua_pushnumber(L, k);
             lua_newtable(L);
@@ -2317,13 +2316,12 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
         specialExitsByExitId.insert(itSpecialExit.value(), itSpecialExit.key());
     }
 
-    QList<int> const exitRoomIdList = specialExitsByExitId.keys();
     lua_newtable(L);
-    for (int i = 0, exitRoomIdCount = exitRoomIdList.count(); i < exitRoomIdCount; ++i) {
-        lua_pushnumber(L, exitRoomIdList.at(i));
+    for (const int exitRoomId : specialExitsByExitId.keys()) {
+        lua_pushnumber(L, exitRoomId);
         lua_newtable(L);
         {
-            const QStringList exitCommandsToThisRoomId = specialExitsByExitId.values(exitRoomIdList.at(i));
+            const QStringList exitCommandsToThisRoomId = specialExitsByExitId.values(exitRoomId);
             int bestUnlockedExitIndex = -1;
             int bestUnlockedExitWeight = -1;
             int bestLockedExitIndex = -1;
