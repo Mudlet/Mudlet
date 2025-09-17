@@ -481,8 +481,9 @@ void cTelnet::connectIt(const QString& address, int port)
     /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
      * of the Game Server (or Proxy); %2 is the port number.
      */
-    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Looking up the details of server: %1:%2 ...\n")
+    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Looking up the details of server: %1:%2 ...")
                                                              .arg(displayAddress, QString::number(port))
+                                                             .append(QChar::LineFeed)
                                                           >> mpHost;
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
@@ -927,9 +928,9 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
          * means that we cannot proceed further to connect to the Game server.
          */
         TDebug(QColorConstants::Red, QColorConstants::White) << tr("Host name lookup Failure! A connection cannot be established.\n"
-                                                                    "The server name is not correct, or your nameservers are not\n"
-                                                                    "working properly.\n")
-                                                              >> mpHost;
+                                                                   "The server name is not correct, or your nameservers are not\n"
+                                                                   "working properly.\n")
+                                                             >> mpHost;
         //: %1 is the URL of the Game Server
         postMessage(tr("[ ERROR ] - Unable to connect to \"%1\".\n"
                        "Check your internet connection and the details entered for the game server.")
@@ -966,7 +967,8 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
              * perform a "reverse-lookup" to see if we can identify the URL that
              * matches it - but nothing useful was found.
              */
-            TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.\n")
+            TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.")
+                                                                            .append(QChar::LineFeed)
                                                                          >> mpHost;
         } else {
             /*: This text is used when the user has provided a raw IP address
@@ -987,8 +989,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
          * IP addresses, which will be listed (one per line) immediately
          * afterwards.
          */
-        TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:\n"
-                                                                    "%2",
+        TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:",
                                                                     // Intentional comment to separate arguments
                                                                     "",
                                                                     addressesToReport.count())
@@ -1119,6 +1120,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                      */
                     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4) connection to %1:%2 ...")
                                                                              .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
                                                                           >> mpHost;
                     //: %1 is a URL for the Game Server; %2 is the port number.
                     postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
@@ -1145,6 +1147,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                  */
                 TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...")
                                                                          .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
                                                                       >> mpHost;
                 //: %1 is a URL for the Game Server; %2 is the port number.
                 postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
@@ -1156,6 +1159,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                  */
                 TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4 and IPv6) connections to %1:%2 ...")
                                                                          .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
                                                                       >> mpHost;
                 //: %1 is a URL for the Game Server; %2 is the port number.
                 postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
@@ -1178,6 +1182,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                      */
                     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 via proxy...")
                                                                              .arg(displayAddress, QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
                                                                           >> mpHost;
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
                      * Game Server and %2 is the port number.
@@ -1190,6 +1195,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                      */
                     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 ...")
                                                                              .arg(displayAddress, QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
                                                                           >> mpHost;
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
                      * Game Server and %2 is the port number for the connection.
@@ -1211,6 +1217,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                      */
                     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 via proxy...")
                                                                              .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
                                                                           >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
                      * is the port number for the connection.
@@ -1224,6 +1231,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                      */
                     TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...")
                                                                              .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
                                                                           >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
                      * is the port number for the connection.
