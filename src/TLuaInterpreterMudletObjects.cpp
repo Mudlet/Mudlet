@@ -1552,23 +1552,25 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     // The macro will have returned with a nil + error message if the windowName
     // was not found:
     auto console = CONSOLE(L, windowName);
-    
+    Host& host = getHostFromLua(L);
+
     if (useMaximum) {
+        // Maximum buffer size is only supported for the main console
+        if (console != host.mpConsole) {
+            return warnArgumentValue(L, __func__, "useMaximum parameter is only supported for the main console");
+        }
+
         // Use system maximum buffer size instead of the provided linesLimit
         const int maxBufferSize = console->buffer.getMaxBufferSize();
         console->buffer.setBufferSize(maxBufferSize, sizeOfBatchDeletion);
-        
-        // Update Host settings if this is the main console
-        Host& host = getHostFromLua(L);
-        if (console == host.mpConsole) {
-            host.setConsoleBufferSize(maxBufferSize);
-            host.setUseMaxConsoleBufferSize(true);
-        }
+
+        // Update Host settings
+        host.setConsoleBufferSize(maxBufferSize);
+        host.setUseMaxConsoleBufferSize(true);
     } else {
         console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
-        
+
         // Update Host settings if this is the main console
-        Host& host = getHostFromLua(L);
         if (console == host.mpConsole) {
             host.setConsoleBufferSize(linesLimit);
             host.setUseMaxConsoleBufferSize(false);
