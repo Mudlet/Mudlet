@@ -1129,6 +1129,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWrapIndentCount = readElementText().toInt();
             } else if (name() == qsl("wrapHangingIndentCount")) {
                 pHost->mWrapHangingIndentCount = readElementText().toInt();
+            } else if (name() == qsl("consoleBufferSize")) {
+                pHost->mConsoleBufferSize = readElementText().toInt();
+            } else if (name() == qsl("useMaxConsoleBufferSize")) {
+                pHost->mUseMaxConsoleBufferSize = (readElementText() == qsl("yes"));
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
