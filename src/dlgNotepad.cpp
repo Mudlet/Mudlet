@@ -209,7 +209,7 @@ void dlgNotepad::slot_sendNextLine() {
 
     QString line = mLinesToSend[mCurrentLineIndex++];
     if (!line.isEmpty()) {
-        QString prepend = lineEdit_prependText->text().isEmpty() ? "" : lineEdit_prependText->text();
+        QString prepend = lineEdit_prependText->text().isEmpty() ? QString() : lineEdit_prependText->text();
         mpHost->send(prepend + line);
     }
 }
