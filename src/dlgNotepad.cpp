@@ -43,7 +43,7 @@ dlgNotepad::dlgNotepad(Host* pH)
     setupUi(this);
 
     //: label for prepended text entry box in notepad
-    label_prependText = new QLabel("Prepend", this);
+    label_prependText = new QLabel(tr("Prepend"), this);
     action_prependTextLabel = toolBar->addWidget(label_prependText);
     lineEdit_prependText = new QLineEdit(this);
     //: placeholder text for text entry box in notepad - text which gets added before sending a line
