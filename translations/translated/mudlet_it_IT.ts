@@ -813,13 +813,13 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2785"/>
       <source>Export area to image...</source>
       <extracomment>2D Mapper context menu (area) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esporta l'area come immagine...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2787"/>
       <source>Export the current area as an image file</source>
       <extracomment>2D Mapper context menu (area) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esporta l'area corrente come file immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2794"/>
@@ -1007,32 +1007,32 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="6046"/>
       <source>[MAP]: %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP]: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6076"/>
       <source>Unknown Area</source>
-      <translation type="unfinished"/>
+      <translation>Area Sconosciuta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6091"/>
       <source>area_%1.png</source>
-      <translation type="unfinished"/>
+      <translation>area_%1.png</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6096"/>
       <source>Export Area %1 to Image</source>
-      <translation type="unfinished"/>
+      <translation>Esporta l'area %1 come immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6098"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tiff);;All Files (*)</source>
-      <translation type="unfinished"/>
+      <translation>File immagine (*.png *.jpg *.jpeg *.bmp *.tiff);;Tutti i file (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6111"/>
       <source>[MAP]: Export failed - %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP]: Esportazione fallita - %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="577"/>
@@ -11128,7 +11128,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/mapper.ui" line="576"/>
       <source>Export current area to image</source>
-      <translation type="unfinished"/>
+      <translation>Esporta l'area corrente come immagine</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="592"/>
