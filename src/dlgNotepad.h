@@ -27,8 +27,10 @@
 #include "pre_guard.h"
 #include "ui_notes_editor.h"
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QLineEdit>
 #include <QPointer>
+#include <QSettings>
 #include <QTimer>
 #include "post_guard.h"
 
@@ -46,6 +48,8 @@ public:
 
     void save();
     void restore();
+    void saveSettings();
+    void restoreSettings();
     void setFont(const QFont &);
 
 private slots:
@@ -55,15 +59,18 @@ private slots:
     void slot_sendSelected();
     void slot_sendNextLine();
     void slot_stopSending();
+    void slot_toggleSendControls(bool checked);
 
 private:
     void timerEvent(QTimerEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
     void restoreFile(const QString&, const bool);
     void startSendingLines(const QStringList& lines);
 
     QPointer<Host> mpHost;
     bool mNeedToSave = false;
     QAction* action_stop = nullptr;
+    QAction* action_prependText = nullptr;
     QLineEdit* lineEdit_prependText = nullptr;
     QStringList mLinesToSend;
     QTimer* mSendTimer = nullptr;

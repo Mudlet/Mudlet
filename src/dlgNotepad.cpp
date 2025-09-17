@@ -45,7 +45,7 @@ dlgNotepad::dlgNotepad(Host* pH)
     lineEdit_prependText = new QLineEdit(this);
     lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
     lineEdit_prependText->setClearButtonEnabled(true);
-    toolBar->addWidget(lineEdit_prependText);
+    action_prependText = toolBar->addWidget(lineEdit_prependText);
 
     action_stop = new QAction("Stop", this);
     toolBar->addAction(action_stop);
@@ -55,10 +55,13 @@ dlgNotepad::dlgNotepad(Host* pH)
     connect(action_sendAll, &QAction::triggered, this, &dlgNotepad::slot_sendAll);
     connect(action_sendLine, &QAction::triggered, this, &dlgNotepad::slot_sendLine);
     connect(action_sendSelected, &QAction::triggered, this, &dlgNotepad::slot_sendSelected);
+    connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::slot_toggleSendControls);
+    connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::saveSettings);
 
     if (mpHost) {
         restore();
         notesEdit->setFont(mpHost->getDisplayFont());
+        restoreSettings();
     }
 
     connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textWritten);
@@ -215,4 +218,67 @@ void dlgNotepad::slot_stopSending() {
     action_stop->setEnabled(false);
     mLinesToSend.clear();
     mCurrentLineIndex = 0;
+}
+
+void dlgNotepad::slot_toggleSendControls(bool checked)
+{
+    action_sendAll->setVisible(checked);
+    action_sendLine->setVisible(checked);
+    action_sendSelected->setVisible(checked);
+
+    if (action_prependText) {
+        action_prependText->setVisible(checked);
+    }
+
+    if (action_stop) {
+        action_stop->setVisible(checked);
+    }
+
+    if (action_toggleSendControls->isChecked() != checked) {
+        action_toggleSendControls->setChecked(checked);
+    }
+}
+
+void dlgNotepad::saveSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QSettings* pQSettings = mudlet::getQSettings();
+    if (!pQSettings) {
+        return;
+    }
+
+    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
+    pQSettings->setValue(settingsKey, action_toggleSendControls->isChecked());
+}
+
+void dlgNotepad::restoreSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QSettings* pQSettings = mudlet::getQSettings();
+    if (!pQSettings) {
+        return;
+    }
+
+    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
+    const bool sendControlsVisible = pQSettings->value(settingsKey, false).toBool();
+
+    // Block signals to avoid triggering saveSettings during restoration
+    const bool wasBlocked = action_toggleSendControls->signalsBlocked();
+    action_toggleSendControls->blockSignals(true);
+    action_toggleSendControls->setChecked(sendControlsVisible);
+    action_toggleSendControls->blockSignals(wasBlocked);
+
+    slot_toggleSendControls(sendControlsVisible);
+}
+
+void dlgNotepad::closeEvent(QCloseEvent *event)
+{
+    saveSettings();
+    QMainWindow::closeEvent(event);
 }

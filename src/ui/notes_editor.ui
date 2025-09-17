@@ -44,11 +44,33 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="action_toggleSendControls"/>
    <addaction name="action_sendAll"/>
    <addaction name="action_sendLine"/>
    <addaction name="action_sendSelected"/>
    <addaction name="separator"/>
   </widget>
+  <action name="action_toggleSendControls">
+   <property name="text">
+    <string/>
+   </property>
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/arrow-right_grey-16x.png</normaloff>
+     <normalon>:/icons/arrow-down_grey-16x.png</normalon>
+     <activeoff>:/icons/arrow-right-16x.png</activeoff>
+     <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png</iconset>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
   <action name="action_sendAll">
    <property name="text">
     <string>Send All</string>
