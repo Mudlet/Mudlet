@@ -571,6 +571,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("wrapAt").text().set(QString::number(pHost->mWrapAt).toUtf8().constData());
         host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toUtf8().constData());
         host.append_child("wrapHangingIndentCount").text().set(QString::number(pHost->mWrapHangingIndentCount).toUtf8().constData());
+        host.append_child("consoleBufferSize").text().set(QString::number(pHost->mConsoleBufferSize).toUtf8().constData());
+        host.append_child("useMaxConsoleBufferSize").text().set(pHost->mUseMaxConsoleBufferSize ? "yes" : "no");
         host.append_child("mFgColor").text().set(pHost->mFgColor.name().toUtf8().constData());
         host.append_child("mBgColor").text().set(pHost->mBgColor.name().toUtf8().constData());
         host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toUtf8().constData());

@@ -2013,6 +2013,15 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
+    
+    // Apply Host's console buffer size settings to the newly created console
+    int bufferSize = pH->getConsoleBufferSize();
+    if (pH->getUseMaxConsoleBufferSize()) {
+        bufferSize = pConsole->buffer.getMaxBufferSize();
+    }
+    // Calculate batch delete size as 5% of buffer size (minimum 100)
+    const int batchDeleteSize = std::max(100, bufferSize / 5);
+    pConsole->buffer.setBufferSize(bufferSize, batchDeleteSize);
     const QString profileName = pH->getName();
 
     // Check if this profile should be in a detached window

@@ -260,6 +260,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWrapAt(100)
 , mWrapIndentCount(0)
 , mWrapHangingIndentCount(0)
+, mConsoleBufferSize(100000)
+, mUseMaxConsoleBufferSize(false)
 , mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
