@@ -1673,6 +1673,24 @@ void TTextEdit::searchSelectionOnline()
     QDesktopServices::openUrl(QUrl(url));
 }
 
+void TTextEdit::slot_copySelectionToSearchBar()
+{
+    if (!establishSelectedText()) {
+        return;
+    }
+
+    QString selectedText = getSelectedText(QChar::LineFeed).trimmed();
+
+    if (mudlet::self()->dactionInputLine->isChecked()) {
+        // If hidden then reveal as if pressed Alt-L
+        mudlet::self()->dactionInputLine->setChecked(false);
+        mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
+    }
+    mpConsole->mpBufferSearchBox->setText(selectedText);
+    mpConsole->mpBufferSearchBox->setFocus();
+    mpConsole->mpBufferSearchBox->selectAll();
+}
+
 QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps)
 {
     // mPA QPoint where selection started
@@ -1815,6 +1833,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
+        //: Populate search bar from console right-click.
+        QAction* action_searchBuffer = new QAction(tr("Search Buffer"));
+        action_searchBuffer->setToolTip(QString());
+        connect(action_searchBuffer, &QAction::triggered, this, &TTextEdit::slot_copySelectionToSearchBar);
+
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
@@ -1832,6 +1855,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->addAction(action2);
         popup->addAction(actionCopyImage);
         popup->addSeparator();
+        popup->addAction(action_searchBuffer);
         popup->addAction(action3);
 
         if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
