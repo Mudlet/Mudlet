@@ -47,7 +47,7 @@
    <addaction name="action_toggleSendControls"/>
    <addaction name="action_sendAll"/>
    <addaction name="action_sendLine"/>
-   <addaction name="action_sendSelected"/>
+   <addaction name="action_sendSelection"/>
    <addaction name="separator"/>
   </widget>
   <action name="action_toggleSendControls">
@@ -87,9 +87,9 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="action_sendSelected">
+  <action name="action_sendSelection">
    <property name="text">
-    <string>Send selected</string>
+    <string>Send selection</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>

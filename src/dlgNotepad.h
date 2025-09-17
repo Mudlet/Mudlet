@@ -57,7 +57,7 @@ private slots:
     void slot_textWritten();
     void slot_sendAll();
     void slot_sendLine();
-    void slot_sendSelected();
+    void slot_sendSelection();
     void slot_sendNextLine();
     void slot_stopSending();
     void slot_toggleSendControls(bool checked);

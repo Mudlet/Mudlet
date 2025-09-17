@@ -58,7 +58,7 @@ dlgNotepad::dlgNotepad(Host* pH)
     connect(action_stop, &QAction::triggered, this, &dlgNotepad::slot_stopSending);
     connect(action_sendAll, &QAction::triggered, this, &dlgNotepad::slot_sendAll);
     connect(action_sendLine, &QAction::triggered, this, &dlgNotepad::slot_sendLine);
-    connect(action_sendSelected, &QAction::triggered, this, &dlgNotepad::slot_sendSelected);
+    connect(action_sendSelection, &QAction::triggered, this, &dlgNotepad::slot_sendSelection);
     connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::slot_toggleSendControls);
     connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::saveSettings);
 
@@ -178,7 +178,7 @@ void dlgNotepad::slot_sendLine() {
     }
 }
 
-void dlgNotepad::slot_sendSelected() {
+void dlgNotepad::slot_sendSelection() {
     QString selectedText = notesEdit->textCursor().selectedText();
 
     if (!selectedText.isEmpty()) {
@@ -228,7 +228,7 @@ void dlgNotepad::slot_toggleSendControls(bool checked)
 {
     action_sendAll->setVisible(checked);
     action_sendLine->setVisible(checked);
-    action_sendSelected->setVisible(checked);
+    action_sendSelection->setVisible(checked);
 
     if (action_prependTextLabel) {
         action_prependTextLabel->setVisible(checked);
