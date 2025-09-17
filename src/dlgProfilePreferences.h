@@ -167,6 +167,7 @@ private slots:
     void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
+    void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_changeInvertMapZoom(const bool);

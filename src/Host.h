@@ -354,6 +354,10 @@ public:
     std::pair<bool, QString> setDisplayFont(const QFont&);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
+    int getConsoleBufferSize() const { return mConsoleBufferSize; }
+    void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
+    bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
+    void setUseMaxConsoleBufferSize(bool useMax) { mUseMaxConsoleBufferSize = useMax; }
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
@@ -611,6 +615,9 @@ public:
     int mWrapAt;
     int mWrapIndentCount;
     int mWrapHangingIndentCount;
+
+    int mConsoleBufferSize;
+    bool mUseMaxConsoleBufferSize;
 
     bool mEditorAutoComplete;
 
