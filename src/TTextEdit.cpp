@@ -1829,12 +1829,12 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         auto* actionCopyImage = new QAction(tr("Copy as image"), this);
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
-        QAction* action3 = new QAction(tr("Select All"), this);
+        QAction* action3 = new QAction(tr("Select all"), this);
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
         //: Populate search bar from console right-click.
-        QAction* action_searchBuffer = new QAction(tr("Search Buffer"));
+        QAction* action_searchBuffer = new QAction(tr("Search buffer"));
         action_searchBuffer->setToolTip(QString());
         connect(action_searchBuffer, &QAction::triggered, this, &TTextEdit::slot_copySelectionToSearchBar);
 
@@ -1855,7 +1855,6 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->addAction(action2);
         popup->addAction(actionCopyImage);
         popup->addSeparator();
-        popup->addAction(action_searchBuffer);
         popup->addAction(action3);
 
         if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
@@ -1874,6 +1873,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         popup->addSeparator();
+        popup->addAction(action_searchBuffer);
         popup->addAction(action4);
 
         if (!mudlet::self()->isControlsVisible()) {
