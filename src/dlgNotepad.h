@@ -45,11 +45,15 @@ public:
     void restore();
     void setFont(const QFont &);
 
+signals:
+    void notepadClosing(const QString& profileName);
+
 private slots:
     void slot_textWritten();
 
 private:
     void timerEvent(QTimerEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
     void restoreFile(const QString&, const bool);
 
     QPointer<Host> mpHost;

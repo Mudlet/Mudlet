@@ -112,7 +112,12 @@ class QTimer;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgIRC;
+class dlgNotepad;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgPackageExporter;
 class dlgProfilePreferences;
+class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
@@ -502,6 +507,13 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    static void restoreProfileFocus(const QString& profileName);
+    static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
+    void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
+    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
+    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager);
+    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter);
+    void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
     void slot_toggleMainToolBar();
@@ -760,7 +772,7 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
-
+    
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
     QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets

@@ -46,6 +46,7 @@
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
+#include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
 #include "pre_guard.h"
@@ -55,6 +56,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QShowEvent>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -1201,6 +1203,7 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
+    emit editorClosing();
     writeSettings();
     event->accept();
 }
@@ -1209,10 +1212,13 @@ void dlgTriggerEditor::readSettings()
 {
     QSettings& settings = *mudlet::getQSettings();
 
-    const QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
+    const QPoint savedPos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
-    move(pos);
+    
+    // Use smart positioning instead of blindly restoring saved position
+    // This ensures the dialog opens on the same screen as the active profile
+    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 
@@ -8237,6 +8243,15 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
     Q_UNUSED(pE)
 
     saveOpenChanges();
+}
+
+void dlgTriggerEditor::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    
+    // Always reposition the dialog to the correct screen when shown
+    // This ensures it follows the active profile, especially after reattachment
+    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)
