@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -832,10 +833,9 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         label.bgColor = defaultLabelBackground;
     }
 
-    const QJsonArray imageArray = labelObj.value(QLatin1String("image")).toArray();
     QList<QByteArray> pixmapData;
-    for (int i = 0, total = imageArray.size(); i < total; ++i) {
-        pixmapData.append(imageArray.at(i).toString().toLatin1());
+    for (const auto& image : labelObj.value(QLatin1String("image")).toArray()) {
+        pixmapData.append(image.toString().toLatin1());
     }
     label.pix = convertBase64DataToImage(pixmapData);
 

@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -53,8 +54,8 @@ TScript::~TScript()
     if (!mpHost) {
         return;
     }
-    for (int i = 0; i < mEventHandlerList.size(); i++) {
-        mpHost->unregisterEventHandler(mEventHandlerList[i], this);
+    for (const auto& handler : mEventHandlerList) {
+        mpHost->unregisterEventHandler(handler, this);
     }
     mpHost->getScriptUnit()->unregisterScript(this);
 }
@@ -70,16 +71,16 @@ bool TScript::registerScript()
 
 void TScript::setEventHandlerList(QStringList handlerList)
 {
-    for (int i = 0; i < mEventHandlerList.size(); i++) {
-        mpHost->unregisterEventHandler(mEventHandlerList[i], this);
+    for (const QString& handler : mEventHandlerList) {
+        mpHost->unregisterEventHandler(handler, this);
     }
     mEventHandlerList.clear();
-    for (int i = 0; i < handlerList.size(); i++) {
-        if (handlerList.at(i).isEmpty()) {
+    for (const QString& handler : handlerList) {
+        if (handler.isEmpty()) {
             continue;
         }
-        mEventHandlerList.append(handlerList[i]);
-        mpHost->registerEventHandler(handlerList[i], this);
+        mEventHandlerList.append(handler);
+        mpHost->registerEventHandler(handler, this);
     }
 }
 
