@@ -33,6 +33,7 @@
 #include "dlgProfilePreferences.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
+#include "TMCPServer.h"
 #include "LuaInterface.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
@@ -244,6 +245,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
+, mpMCPServer(new TMCPServer(this))
 , mpNotePad(nullptr)
 , mCommandEchoMode(CommandEchoMode::ScriptControl)
 , mIsCurrentLogFileInHtmlFormat(false)
@@ -459,6 +461,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    if (mpMCPServer && mpMCPServer->isRunning()) {
+        mpMCPServer->stopServer();
+    }
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
@@ -4662,4 +4667,34 @@ QStringList Host::getAllExperiments() const
 QStringList Host::getValidExperiments() const
 {
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+}
+
+void Host::setMCPEnabled(const bool enabled)
+{
+    if (mEnableMCP == enabled) {
+        return;
+    }
+
+    mEnableMCP = enabled;
+
+    if (enabled && !mpMCPServer->isRunning()) {
+        if (mpMCPServer->startServer(mMCPServerPort)) {
+            mMCPServerPort = mpMCPServer->getPort();
+            qDebug() << "MCP Server started for profile" << mHostName << "on port" << mMCPServerPort;
+        } else {
+            qWarning() << "Failed to start MCP Server for profile" << mHostName;
+            mEnableMCP = false;
+        }
+    } else if (!enabled && mpMCPServer->isRunning()) {
+        mpMCPServer->stopServer();
+        qDebug() << "MCP Server stopped for profile" << mHostName;
+    }
+}
+
+QString Host::getMCPServerInfo() const
+{
+    if (!mpMCPServer) {
+        return tr("MCP Server: Not available");
+    }
+    return mpMCPServer->getServerInfo();
 }

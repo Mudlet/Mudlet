@@ -90,6 +90,8 @@ set(mudlet_SRCS
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
+    TMCPServer.cpp
+    TMCPLuaBridge.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -271,6 +273,8 @@ set(mudlet_HDRS
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
+    TMCPServer.h
+    TMCPLuaBridge.h
     Host.h
     HostManager.h
     ircmessageformatter.h
