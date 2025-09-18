@@ -362,6 +362,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
+    // Add undo/redo shortcuts
+    QShortcut *undoShortcut = new QShortcut(QKeySequence::Undo, this);
+    undoShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(undoShortcut, &QShortcut::activated, mpSourceEditorEdbee->controller(), &edbee::TextEditorController::undo);
+
+    QShortcut *redoShortcut = new QShortcut(QKeySequence::Redo, this);
+    redoShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(redoShortcut, &QShortcut::activated, mpSourceEditorEdbee->controller(), &edbee::TextEditorController::redo);
+
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
 
@@ -11035,6 +11044,15 @@ void dlgTriggerEditor::slot_editorContextMenu()
     });
 
     menu->addAction(formatAction);
+
+    // Add undo/redo actions to context menu
+    QAction *undoAction = new QAction(QIcon::fromTheme("edit-undo"), tr("Undo"), menu);
+    connect(undoAction, &QAction::triggered, mpSourceEditorEdbee->controller(), &edbee::TextEditorController::undo);
+    menu->addAction(undoAction);
+
+    QAction *redoAction = new QAction(QIcon::fromTheme("edit-redo"), tr("Redo"), menu);
+    connect(redoAction, &QAction::triggered, mpSourceEditorEdbee->controller(), &edbee::TextEditorController::redo);
+    menu->addAction(redoAction);
     menu->exec(QCursor::pos());
 
     delete menu;
