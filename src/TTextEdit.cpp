@@ -1833,11 +1833,6 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
-        //: Populate search bar from console right-click.
-        QAction* action_searchBuffer = new QAction(tr("Search buffer"));
-        action_searchBuffer->setToolTip(QString());
-        connect(action_searchBuffer, &QAction::triggered, this, &TTextEdit::slot_copySelectionToSearchBar);
-
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
@@ -1873,7 +1868,6 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         popup->addSeparator();
-        popup->addAction(action_searchBuffer);
         popup->addAction(action4);
 
         if (!mudlet::self()->isControlsVisible()) {
