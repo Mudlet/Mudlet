@@ -27,16 +27,21 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QTcpServer>
-#include <QTcpSocket>
 #include <QString>
 #include <QTimer>
 #include <QVariantMap>
+#include <QUrl>
+#include <QUrlQuery>
+#include <QHttpServer>
+#include <QHttpServerRequest>
+#include <QHttpServerResponse>
+#include <QHttpHeaders>
+#include <QTcpServer>
 #include "post_guard.h"
 
 class TMCPLuaBridge;
 
-class TMCPServer : public QTcpServer
+class TMCPServer : public QObject
 {
     Q_OBJECT
 
@@ -54,37 +59,38 @@ public:
     static constexpr const char* MCP_SERVER_NAME = "mudlet";
     static constexpr const char* MCP_SERVER_VERSION = "1.0.0";
 
-protected:
-    void incomingConnection(qintptr socketDescriptor) override;
-
 private slots:
-    void handleClientConnected();
-    void handleClientDisconnected();
-    void handleClientReadyRead();
-    void handleClientError(QAbstractSocket::SocketError error);
 
 private:
-    struct MCPClient {
-        QTcpSocket* socket;
+    struct MCPSession {
+        QString sessionId;
         QString clientName;
         QString clientVersion;
         bool initialized;
         int requestId;
     };
 
-    void sendJsonRpcResponse(MCPClient* client, const QJsonObject& response);
-    void sendJsonRpcError(MCPClient* client, int id, int code, const QString& message, const QJsonValue& data = QJsonValue());
-    void handleInitializeRequest(MCPClient* client, const QJsonObject& request);
-    void handleListToolsRequest(MCPClient* client, const QJsonObject& request);
-    void handleCallToolRequest(MCPClient* client, const QJsonObject& request);
-    void handlePingRequest(MCPClient* client, const QJsonObject& request);
+    QHttpServerResponse handleHttpRequest(const QHttpServerRequest& request);
+    QHttpServerResponse handleMcpPost(const QHttpServerRequest& request);
+    QHttpServerResponse handleMcpGet(const QHttpServerRequest& request);
+
+    void handleInitializeRequest(const QJsonObject& request, QJsonObject& response, MCPSession* session);
+    void handleListToolsRequest(const QJsonObject& request, QJsonObject& response);
+    void handleCallToolRequest(const QJsonObject& request, QJsonObject& response);
+    void handlePingRequest(const QJsonObject& request, QJsonObject& response);
+
+    QJsonObject createJsonRpcError(int id, int code, const QString& message, const QJsonValue& data = QJsonValue());
+    QString generateSessionId();
+    MCPSession* getOrCreateSession(const QString& sessionId);
 
     QJsonObject createServerInfo() const;
     QJsonArray getAvailableTools() const;
 
     Host* mpHost;
     TMCPLuaBridge* mpLuaBridge;
-    QMap<QTcpSocket*, MCPClient*> mClients;
+    QHttpServer* mpHttpServer;
+    QTcpServer* mpTcpServer;
+    QMap<QString, MCPSession*> mSessions;
     int mPort;
     bool mServerRunning;
 

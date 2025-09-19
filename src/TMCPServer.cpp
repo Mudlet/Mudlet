@@ -23,21 +23,28 @@
 
 #include <QDebug>
 #include <QJsonParseError>
+#include <QHttpServerResponse>
 #include <QNetworkInterface>
+#include <QUuid>
 
 TMCPServer::TMCPServer(Host* pHost, QObject* parent)
-: QTcpServer(parent)
+: QObject(parent)
 , mpHost(pHost)
 , mpLuaBridge(nullptr)
+, mpHttpServer(nullptr)
+, mpTcpServer(nullptr)
 , mPort(0)
 , mServerRunning(false)
 {
     mpLuaBridge = new TMCPLuaBridge(mpHost, this);
+    mpHttpServer = new QHttpServer(this);
+    mpTcpServer = new QTcpServer(this);
 }
 
 TMCPServer::~TMCPServer()
 {
     stopServer();
+    qDeleteAll(mSessions);
 }
 
 bool TMCPServer::startServer(int port)
@@ -51,16 +58,40 @@ bool TMCPServer::startServer(int port)
         return false;
     }
 
+    // Set up HTTP routes for MCP
+    mpHttpServer->route("/", QHttpServerRequest::Method::Post,
+        [this](const QHttpServerRequest& request) {
+            return handleMcpPost(request);
+        });
+
+    mpHttpServer->route("/", QHttpServerRequest::Method::Get,
+        [this](const QHttpServerRequest& request) {
+            return handleMcpGet(request);
+        });
+
+    mpHttpServer->route("/", QHttpServerRequest::Method::Options,
+        [this](const QHttpServerRequest& request) {
+            Q_UNUSED(request)
+            return QHttpServerResponse(QHttpServerResponse::StatusCode::Ok);
+        });
+
+    // Bind to localhost
     QHostAddress address = QHostAddress::LocalHost;
-    if (!listen(address, port)) {
-        qWarning() << "TMCPServer: Failed to start server on port" << port << ":" << errorString();
+    if (!mpTcpServer->listen(address, port)) {
+        qWarning() << "TMCPServer: Failed to start server on port" << port << ":" << mpTcpServer->errorString();
         return false;
     }
 
-    mPort = serverPort();
+    if (!mpHttpServer->bind(mpTcpServer)) {
+        qWarning() << "TMCPServer: Failed to bind HTTP server to TCP server";
+        mpTcpServer->close();
+        return false;
+    }
+
+    mPort = mpTcpServer->serverPort();
     mServerRunning = true;
 
-    qDebug() << "TMCPServer: Started on" << address.toString() << ":" << mPort;
+    qDebug() << "TMCPServer: Started HTTP server on" << address.toString() << ":" << mPort;
     return true;
 }
 
@@ -70,14 +101,12 @@ void TMCPServer::stopServer()
         return;
     }
 
-    for (auto client : mClients) {
-        client->socket->disconnectFromHost();
-        client->socket->deleteLater();
-        delete client;
-    }
-    mClients.clear();
+    mpHttpServer->disconnect();
+    mpTcpServer->close();
 
-    close();
+    qDeleteAll(mSessions);
+    mSessions.clear();
+
     mServerRunning = false;
     mPort = 0;
 
@@ -99,178 +128,129 @@ QString TMCPServer::getServerInfo() const
     if (!mServerRunning) {
         return tr("MCP Server: Not running");
     }
-    return tr("MCP Server: Running on localhost:%1 (%2 clients)").arg(mPort).arg(mClients.size());
+    return tr("MCP Server: Running on localhost:%1 (%2 sessions)").arg(mPort).arg(mSessions.size());
 }
 
-void TMCPServer::incomingConnection(qintptr socketDescriptor)
+QHttpServerResponse TMCPServer::handleMcpPost(const QHttpServerRequest& request)
 {
-    QTcpSocket* socket = new QTcpSocket(this);
-    if (!socket->setSocketDescriptor(socketDescriptor)) {
-        delete socket;
-        return;
-    }
-
-    MCPClient* client = new MCPClient{
-        socket,
-        QString(),
-        QString(),
-        false,
-        1
-    };
-
-    mClients[socket] = client;
-
-    connect(socket, &QTcpSocket::connected, this, &TMCPServer::handleClientConnected);
-    connect(socket, &QTcpSocket::disconnected, this, &TMCPServer::handleClientDisconnected);
-    connect(socket, &QTcpSocket::readyRead, this, &TMCPServer::handleClientReadyRead);
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::errorOccurred),
-            this, &TMCPServer::handleClientError);
-
-    qDebug() << "TMCPServer: New client connected from" << socket->peerAddress().toString();
-}
-
-void TMCPServer::handleClientConnected()
-{
-    qDebug() << "TMCPServer: Client fully connected";
-}
-
-void TMCPServer::handleClientDisconnected()
-{
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
-    if (!socket || !mClients.contains(socket)) {
-        return;
-    }
-
-    MCPClient* client = mClients.take(socket);
-    qDebug() << "TMCPServer: Client disconnected:" << client->clientName;
-    delete client;
-    socket->deleteLater();
-}
-
-void TMCPServer::handleClientError(QAbstractSocket::SocketError error)
-{
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
-    if (!socket) {
-        return;
-    }
-
-    qWarning() << "TMCPServer: Client socket error:" << error << socket->errorString();
-}
-
-void TMCPServer::handleClientReadyRead()
-{
-    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
-    if (!socket || !mClients.contains(socket)) {
-        return;
-    }
-
-    MCPClient* client = mClients[socket];
-
-    while (socket->canReadLine()) {
-        QByteArray data = socket->readLine().trimmed();
-        if (data.isEmpty()) {
-            continue;
+    // Validate Origin header for security
+    if (request.headers().contains("Origin")) {
+        QString origin = QString::fromUtf8(request.headers().value("Origin"));
+        if (!origin.isEmpty() && !origin.startsWith("http://localhost") && !origin.startsWith("http://127.0.0.1")) {
+            qWarning() << "TMCPServer: Rejecting request from origin:" << origin;
+            return QHttpServerResponse(QHttpServerResponse::StatusCode::Forbidden);
         }
+    }
 
-        QJsonParseError parseError;
-        QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
+    // Get or create session
+    QString sessionId = QString::fromUtf8(request.headers().value("Mcp-Session-Id"));
+    if (sessionId.isEmpty()) {
+        sessionId = generateSessionId();
+    }
+    qDebug() << "TMCPServer: Processing request with sessionId:" << sessionId;
+    MCPSession* session = getOrCreateSession(sessionId);
+    qDebug() << "TMCPServer: Session initialized status:" << session->initialized;
 
-        if (parseError.error != QJsonParseError::NoError) {
-            sendJsonRpcError(client, -1, ParseError, tr("JSON parse error: %1").arg(parseError.errorString()));
-            continue;
-        }
+    // Parse JSON-RPC request
+    QByteArray requestBody = request.body();
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(requestBody, &parseError);
 
-        QJsonObject request = doc.object();
-        QString method = request[qsl("method")].toString();
+    if (parseError.error != QJsonParseError::NoError) {
+        QJsonObject error = createJsonRpcError(-1, ParseError, tr("JSON parse error: %1").arg(parseError.errorString()));
+        QJsonDocument errorDoc(error);
 
-        if (method == qsl("initialize")) {
-            handleInitializeRequest(client, request);
-        } else if (method == qsl("tools/list")) {
-            handleListToolsRequest(client, request);
-        } else if (method == qsl("tools/call")) {
-            handleCallToolRequest(client, request);
-        } else if (method == qsl("ping")) {
-            handlePingRequest(client, request);
+        QHttpServerResponse response(errorDoc.object(), QHttpServerResponse::StatusCode::BadRequest);
+        return response;
+    }
+
+    QJsonObject jsonRequest = doc.object();
+    QString method = jsonRequest[qsl("method")].toString();
+    QJsonObject jsonResponse;
+
+    // Handle the request
+    if (method == qsl("initialize")) {
+        handleInitializeRequest(jsonRequest, jsonResponse, session);
+    } else if (method == qsl("tools/list")) {
+        qDebug() << "TMCPServer: tools/list request for sessionId:" << sessionId << "initialized:" << session->initialized;
+        if (!session->initialized) {
+            jsonResponse = createJsonRpcError(jsonRequest[qsl("id")].toInt(), ServerError, tr("Client not initialized"));
         } else {
-            int id = request[qsl("id")].toInt(-1);
-            sendJsonRpcError(client, id, MethodNotFound, tr("Method not found: %1").arg(method));
+            handleListToolsRequest(jsonRequest, jsonResponse);
         }
-    }
-}
-
-void TMCPServer::sendJsonRpcResponse(MCPClient* client, const QJsonObject& response)
-{
-    QJsonDocument doc(response);
-    QByteArray data = doc.toJson(QJsonDocument::Compact) + "\n";
-    client->socket->write(data);
-}
-
-void TMCPServer::sendJsonRpcError(MCPClient* client, int id, int code, const QString& message, const QJsonValue& data)
-{
-    QJsonObject error;
-    error[qsl("code")] = code;
-    error[qsl("message")] = message;
-    if (!data.isNull()) {
-        error[qsl("data")] = data;
+    } else if (method == qsl("tools/call")) {
+        if (!session->initialized) {
+            jsonResponse = createJsonRpcError(jsonRequest[qsl("id")].toInt(), ServerError, tr("Client not initialized"));
+        } else {
+            handleCallToolRequest(jsonRequest, jsonResponse);
+        }
+    } else if (method == qsl("ping")) {
+        handlePingRequest(jsonRequest, jsonResponse);
+    } else {
+        int id = jsonRequest[qsl("id")].toInt(-1);
+        jsonResponse = createJsonRpcError(id, MethodNotFound, tr("Method not found: %1").arg(method));
     }
 
-    QJsonObject response;
-    response[qsl("jsonrpc")] = qsl("2.0");
-    response[qsl("id")] = id;
-    response[qsl("error")] = error;
+    // Send response
+    QHttpServerResponse response(jsonResponse, QHttpServerResponse::StatusCode::Ok);
 
-    sendJsonRpcResponse(client, response);
+    // Add session ID to headers
+    QHttpHeaders headers = response.headers();
+    headers.append("Mcp-Session-Id", sessionId.toUtf8());
+    response.setHeaders(headers);
+
+    return response;
 }
 
-void TMCPServer::handleInitializeRequest(MCPClient* client, const QJsonObject& request)
+QHttpServerResponse TMCPServer::handleMcpGet(const QHttpServerRequest& request)
 {
-    QJsonObject params = request[qsl("params")].toObject();
-    client->clientName = params[qsl("clientInfo")].toObject()[qsl("name")].toString();
-    client->clientVersion = params[qsl("clientInfo")].toObject()[qsl("version")].toString();
-    client->initialized = true;
+    // For GET requests, we could implement SSE streaming here if needed
+    // For now, return basic server info
+    Q_UNUSED(request)
 
     QJsonObject serverInfo = createServerInfo();
-    QJsonObject response;
+    QJsonDocument doc(serverInfo);
+
+    QHttpServerResponse response(serverInfo, QHttpServerResponse::StatusCode::Ok);
+
+    return response;
+}
+
+void TMCPServer::handleInitializeRequest(const QJsonObject& request, QJsonObject& response, MCPSession* session)
+{
+    QJsonObject params = request[qsl("params")].toObject();
+
+    QJsonObject clientInfo = params[qsl("clientInfo")].toObject();
+    session->clientName = clientInfo[qsl("name")].toString();
+    session->clientVersion = clientInfo[qsl("version")].toString();
+    session->initialized = true;
+
+    QJsonObject serverInfo = createServerInfo();
     response[qsl("jsonrpc")] = qsl("2.0");
     response[qsl("id")] = request[qsl("id")];
     response[qsl("result")] = serverInfo;
 
-    sendJsonRpcResponse(client, response);
-    qDebug() << "TMCPServer: Initialized client:" << client->clientName << client->clientVersion;
+    qDebug() << "TMCPServer: Initialized client:" << session->clientName << session->clientVersion << "sessionId:" << session->sessionId;
 }
 
-void TMCPServer::handleListToolsRequest(MCPClient* client, const QJsonObject& request)
+void TMCPServer::handleListToolsRequest(const QJsonObject& request, QJsonObject& response)
 {
-    if (!client->initialized) {
-        sendJsonRpcError(client, request[qsl("id")].toInt(), ServerError, tr("Client not initialized"));
-        return;
-    }
-
     QJsonObject result;
     result[qsl("tools")] = getAvailableTools();
 
-    QJsonObject response;
     response[qsl("jsonrpc")] = qsl("2.0");
     response[qsl("id")] = request[qsl("id")];
     response[qsl("result")] = result;
-
-    sendJsonRpcResponse(client, response);
 }
 
-void TMCPServer::handleCallToolRequest(MCPClient* client, const QJsonObject& request)
+void TMCPServer::handleCallToolRequest(const QJsonObject& request, QJsonObject& response)
 {
-    if (!client->initialized) {
-        sendJsonRpcError(client, request[qsl("id")].toInt(), ServerError, tr("Client not initialized"));
-        return;
-    }
-
     QJsonObject params = request[qsl("params")].toObject();
     QString toolName = params[qsl("name")].toString();
     QJsonObject arguments = params[qsl("arguments")].toObject();
 
     MCPToolResult result = mpLuaBridge->callTool(toolName, arguments);
 
-    QJsonObject response;
     response[qsl("jsonrpc")] = qsl("2.0");
     response[qsl("id")] = request[qsl("id")];
 
@@ -284,21 +264,49 @@ void TMCPServer::handleCallToolRequest(MCPClient* client, const QJsonObject& req
 
         response[qsl("result")] = resultObj;
     } else {
-        sendJsonRpcError(client, request[qsl("id")].toInt(), result.errorCode, result.errorMessage);
-        return;
+        response = createJsonRpcError(request[qsl("id")].toInt(), result.errorCode, result.errorMessage);
     }
-
-    sendJsonRpcResponse(client, response);
 }
 
-void TMCPServer::handlePingRequest(MCPClient* client, const QJsonObject& request)
+void TMCPServer::handlePingRequest(const QJsonObject& request, QJsonObject& response)
 {
-    QJsonObject response;
     response[qsl("jsonrpc")] = qsl("2.0");
     response[qsl("id")] = request[qsl("id")];
     response[qsl("result")] = QJsonObject();
+}
 
-    sendJsonRpcResponse(client, response);
+QJsonObject TMCPServer::createJsonRpcError(int id, int code, const QString& message, const QJsonValue& data)
+{
+    QJsonObject error;
+    error[qsl("code")] = code;
+    error[qsl("message")] = message;
+    if (!data.isNull()) {
+        error[qsl("data")] = data;
+    }
+
+    QJsonObject response;
+    response[qsl("jsonrpc")] = qsl("2.0");
+    response[qsl("id")] = id;
+    response[qsl("error")] = error;
+
+    return response;
+}
+
+QString TMCPServer::generateSessionId()
+{
+    return QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+TMCPServer::MCPSession* TMCPServer::getOrCreateSession(const QString& sessionId)
+{
+    if (!mSessions.contains(sessionId)) {
+        MCPSession* session = new MCPSession();
+        session->sessionId = sessionId;
+        session->initialized = false;
+        session->requestId = 1;
+        mSessions[sessionId] = session;
+    }
+    return mSessions[sessionId];
 }
 
 QJsonObject TMCPServer::createServerInfo() const

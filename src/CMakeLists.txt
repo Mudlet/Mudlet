@@ -444,7 +444,8 @@ find_package(Qt6 6.4.0 REQUIRED
                UiTools
                Widgets
                Concurrent
-               Core5Compat)
+               Core5Compat
+               HttpServer)
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -456,6 +457,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Network
               Qt6::Multimedia
               Qt6::MultimediaWidgets
+              Qt6::HttpServer
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets

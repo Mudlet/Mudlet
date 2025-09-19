@@ -493,7 +493,7 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP = true;
     bool mEnableMCP = false;
-    int mMCPServerPort = 0;
+    int mMCPServerPort = 11235;
     bool mEnableMSSP = true;
     bool mEnableMSDP = false;
     bool mEnableMSP = true;
