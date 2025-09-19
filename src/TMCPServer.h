@@ -55,11 +55,12 @@ public:
     int getPort() const;
     QString getServerInfo() const;
 
-    static constexpr const char* MCP_PROTOCOL_VERSION = "2024-11-05";
+    static constexpr const char* MCP_PROTOCOL_VERSION = "2025-06-18";
     static constexpr const char* MCP_SERVER_NAME = "mudlet";
     static constexpr const char* MCP_SERVER_VERSION = "1.0.0";
 
 private slots:
+    void notifyToolsChanged();
 
 private:
     struct MCPSession {
@@ -78,13 +79,15 @@ private:
     void handleListToolsRequest(const QJsonObject& request, QJsonObject& response);
     void handleCallToolRequest(const QJsonObject& request, QJsonObject& response);
     void handlePingRequest(const QJsonObject& request, QJsonObject& response);
+    void handleNotificationRequest(const QJsonObject& request);
 
     QJsonObject createJsonRpcError(int id, int code, const QString& message, const QJsonValue& data = QJsonValue());
     QString generateSessionId();
     MCPSession* getOrCreateSession(const QString& sessionId);
 
-    QJsonObject createServerInfo() const;
+    QJsonObject createInitializeResult(const QString& negotiatedVersion) const;
     QJsonArray getAvailableTools() const;
+    void sendNotificationToAllSessions(const QString& method, const QJsonObject& params = QJsonObject());
 
     Host* mpHost;
     TMCPLuaBridge* mpLuaBridge;

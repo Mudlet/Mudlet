@@ -49,6 +49,8 @@ bool TMCPLuaBridge::loadLuaFunctions()
 
     mFunctionsLoaded = true;
     qDebug() << "TMCPLuaBridge: Loaded" << mTools.size() << "Lua functions as MCP tools";
+
+    emit toolsChanged();
     return true;
 }
 

@@ -72,6 +72,9 @@ public:
     QJsonArray getAvailableTools() const;
     MCPToolResult callTool(const QString& toolName, const QJsonObject& arguments);
 
+signals:
+    void toolsChanged();
+
 private:
     struct MCPTool {
         QString name;
