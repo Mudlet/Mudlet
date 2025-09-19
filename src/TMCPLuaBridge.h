@@ -83,9 +83,8 @@ private:
         LuaFunctionInfo luaFunction;
     };
 
-    void parseLuaFunctionList();
-    MCPTool createMCPToolFromLuaFunction(const LuaFunctionInfo& luaFunc);
-    QJsonObject createInputSchemaForFunction(const LuaFunctionInfo& luaFunc);
+    void createLuaExecutionTool();
+    QJsonValue executeLuaCode(const QString& luaCode);
     QJsonValue executeLuaFunction(const LuaFunctionInfo& luaFunc, const QJsonObject& arguments);
     QJsonValue luaStackToJson(lua_State* L, int index);
     void jsonToLuaStack(lua_State* L, const QJsonValue& value);

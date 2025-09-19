@@ -147,7 +147,6 @@ QHttpServerResponse TMCPServer::handleMcpPost(const QHttpServerRequest& request)
 
     // Get or create session
     QString sessionId = QString::fromUtf8(request.headers().value("Mcp-Session-Id"));
-    qDebug() << "TMCPServer: Processing request with sessionId:" << sessionId;
 
     // Parse the method early to determine if this is initialization
     QByteArray requestBody = request.body();
@@ -302,26 +301,52 @@ void TMCPServer::handleListToolsRequest(const QJsonObject& request, QJsonObject&
 void TMCPServer::handleCallToolRequest(const QJsonObject& request, QJsonObject& response)
 {
     QJsonObject params = request[qsl("params")].toObject();
+
+    // Validate required parameters according to MCP spec
+    if (!params.contains(qsl("name"))) {
+        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Missing required parameter: name"));
+        return;
+    }
+
     QString toolName = params[qsl("name")].toString();
+    if (toolName.isEmpty()) {
+        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Tool name cannot be empty"));
+        return;
+    }
+
+    // arguments parameter is optional - default to empty object if not provided
     QJsonObject arguments = params[qsl("arguments")].toObject();
 
+    qDebug() << "TMCPServer: Calling tool:" << toolName << "with arguments:" << arguments;
     MCPToolResult result = mpLuaBridge->callTool(toolName, arguments);
 
     response[qsl("jsonrpc")] = qsl("2.0");
     response[qsl("id")] = request[qsl("id")];
 
-    if (result.success) {
-        QJsonObject content;
-        content[qsl("type")] = qsl("text");
-        content[qsl("text")] = result.result.toString();
-
-        QJsonObject resultObj;
-        resultObj[qsl("content")] = QJsonArray{content};
-
-        response[qsl("result")] = resultObj;
-    } else {
-        response = createJsonRpcError(request[qsl("id")].toInt(), result.errorCode, result.errorMessage);
+    // Handle protocol errors (unknown tools, server errors) vs tool execution errors
+    if (!result.success && result.errorCode == -32601) {
+        // Unknown tool - this is a protocol error, not a tool execution error
+        response = createJsonRpcError(request[qsl("id")].toInt(), MethodNotFound, tr("Unknown tool: %1").arg(toolName));
+        return;
     }
+
+    QJsonObject resultObj;
+    QJsonObject content;
+    content[qsl("type")] = qsl("text");
+
+    if (result.success) {
+        content[qsl("text")] = result.result.toString();
+        resultObj[qsl("content")] = QJsonArray{content};
+        resultObj[qsl("isError")] = false;
+    } else {
+        // For tool execution errors, return error content with isError: true
+        // This follows MCP spec for tool execution errors vs protocol errors
+        content[qsl("text")] = result.errorMessage;
+        resultObj[qsl("content")] = QJsonArray{content};
+        resultObj[qsl("isError")] = true;
+    }
+
+    response[qsl("result")] = resultObj;
 }
 
 void TMCPServer::handlePingRequest(const QJsonObject& request, QJsonObject& response)

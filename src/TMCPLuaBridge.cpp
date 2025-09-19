@@ -40,156 +40,139 @@ bool TMCPLuaBridge::loadLuaFunctions()
         return true;
     }
 
-    parseLuaFunctionList();
-
-    for (const auto& luaFunc : mLuaFunctions) {
-        MCPTool tool = createMCPToolFromLuaFunction(luaFunc);
-        mTools[tool.name] = tool;
-    }
+    // Create a single Lua execution tool instead of exposing all individual functions
+    createLuaExecutionTool();
 
     mFunctionsLoaded = true;
-    qDebug() << "TMCPLuaBridge: Loaded" << mTools.size() << "Lua functions as MCP tools";
+    qDebug() << "TMCPLuaBridge: Loaded" << mTools.size() << "MCP tools";
 
     emit toolsChanged();
     return true;
 }
 
-void TMCPLuaBridge::parseLuaFunctionList()
-{
-    QString functionListPath = qsl(":/lua-function-list.json");
 
-    QFile file(functionListPath);
-    if (!file.exists()) {
-        functionListPath = QStandardPaths::locate(QStandardPaths::AppDataLocation, qsl("lua-function-list.json"));
-        file.setFileName(functionListPath);
-    }
-
-    if (!file.exists()) {
-        file.setFileName(qsl("src/lua-function-list.json"));
-    }
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "TMCPLuaBridge: Could not open lua-function-list.json";
-        return;
-    }
-
-    QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parseError);
-    file.close();
-
-    if (parseError.error != QJsonParseError::NoError) {
-        qWarning() << "TMCPLuaBridge: Error parsing lua-function-list.json:" << parseError.errorString();
-        return;
-    }
-
-    QJsonObject functionList = doc.object();
-    for (auto it = functionList.begin(); it != functionList.end(); ++it) {
-        LuaFunctionInfo funcInfo;
-        funcInfo.name = it.key();
-        funcInfo.signature = it.value().toString();
-
-        QRegularExpression re(qsl(R"((\w+)\s*=\s*(\w+)\((.*)\))"));
-        QRegularExpressionMatch match = re.match(funcInfo.signature);
-
-        if (match.hasMatch()) {
-            funcInfo.returnType = match.captured(1);
-            QString params = match.captured(3);
-
-            if (!params.isEmpty()) {
-                QStringList paramList = params.split(qsl(","));
-                for (QString& param : paramList) {
-                    param = param.trimmed();
-                    if (param.startsWith(qsl("["))) {
-                        param = param.mid(1);
-                        if (param.endsWith(qsl("]"))) {
-                            param.chop(1);
-                        }
-                    }
-                    if (!param.isEmpty()) {
-                        funcInfo.parameters.append(param);
-                    }
-                }
-            }
-        } else {
-            funcInfo.returnType = qsl("unknown");
-        }
-
-        funcInfo.description = tr("Mudlet Lua function: %1").arg(funcInfo.signature);
-        mLuaFunctions[funcInfo.name] = funcInfo;
-    }
-}
-
-TMCPLuaBridge::MCPTool TMCPLuaBridge::createMCPToolFromLuaFunction(const LuaFunctionInfo& luaFunc)
+void TMCPLuaBridge::createLuaExecutionTool()
 {
     MCPTool tool;
-    tool.name = luaFunc.name;
-    tool.description = luaFunc.description;
-    tool.inputSchema = createInputSchemaForFunction(luaFunc);
-    tool.luaFunction = luaFunc;
-    return tool;
-}
+    tool.name = qsl("lua");
+    tool.description = tr("Run Lua code in the Mudlet client");
 
-QJsonObject TMCPLuaBridge::createInputSchemaForFunction(const LuaFunctionInfo& luaFunc)
-{
+    // Create input schema for the Lua execution tool
     QJsonObject schema;
     schema[qsl("type")] = qsl("object");
 
     QJsonObject properties;
     QJsonArray required;
 
-    for (const QString& param : luaFunc.parameters) {
-        QString cleanParam = param;
-        bool optional = cleanParam.startsWith(qsl("[")) && cleanParam.endsWith(qsl("]"));
-        if (optional) {
-            cleanParam = cleanParam.mid(1, cleanParam.length() - 2);
-        }
-
-        QString paramType = extractParameterType(luaFunc.signature, cleanParam);
-
-        QJsonObject paramSchema;
-        if (paramType == qsl("number") || paramType == qsl("int")) {
-            paramSchema[qsl("type")] = qsl("number");
-        } else if (paramType == qsl("boolean") || paramType == qsl("bool")) {
-            paramSchema[qsl("type")] = qsl("boolean");
-        } else if (paramType == qsl("table") || paramType == qsl("array")) {
-            paramSchema[qsl("type")] = qsl("array");
-        } else {
-            paramSchema[qsl("type")] = qsl("string");
-        }
-
-        paramSchema[qsl("description")] = tr("Parameter for %1").arg(cleanParam);
-        properties[cleanParam] = paramSchema;
-
-        if (!optional) {
-            required.append(cleanParam);
-        }
-    }
+    // Required 'code' parameter
+    QJsonObject codeParam;
+    codeParam[qsl("type")] = qsl("string");
+    codeParam[qsl("description")] = tr("Lua code to run");
+    properties[qsl("code")] = codeParam;
+    required.append(qsl("code"));
 
     schema[qsl("properties")] = properties;
-    if (!required.isEmpty()) {
-        schema[qsl("required")] = required;
-    }
+    schema[qsl("required")] = required;
 
-    return schema;
+    tool.inputSchema = schema;
+
+    // Store a placeholder lua function info (not used for execution)
+    tool.luaFunction.name = qsl("lua");
+    tool.luaFunction.description = tool.description;
+
+    mTools[tool.name] = tool;
+    qDebug() << "TMCPLuaBridge: Created Lua tool";
 }
 
-QString TMCPLuaBridge::extractParameterType(const QString& signature, const QString& paramName)
+QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode)
 {
-    Q_UNUSED(signature)
-    Q_UNUSED(paramName)
+    if (!mpHost) {
+        return QJsonValue(tr("No host available for Lua execution"));
+    }
 
-    return qsl("string");
+    lua_State* L = mpHost->getLuaInterpreter()->pGlobalLua;
+    if (!L) {
+        return QJsonValue(tr("Lua interpreter not available"));
+    }
+
+    // Capture output by redirecting print function temporarily
+    QString output;
+    QString originalPrintCode = qsl(R"(
+        local original_print = print
+        local captured_output = {}
+        print = function(...)
+            local args = {...}
+            local str_args = {}
+            for i, v in ipairs(args) do
+                str_args[i] = tostring(v)
+            end
+            table.insert(captured_output, table.concat(str_args, '\t'))
+        end
+    )");
+
+    // Execute setup code
+    int setupResult = luaL_dostring(L, originalPrintCode.toUtf8().constData());
+    if (setupResult) {
+        return QJsonValue(tr("Failed to setup Lua output capture"));
+    }
+
+    // Execute the user's code
+    int result = luaL_dostring(L, luaCode.toUtf8().constData());
+
+    QString resultStr;
+    if (result) {
+        // Handle Lua error
+        if (lua_gettop(L) > 0) {
+            resultStr = tr("Lua Error: %1").arg(QString::fromUtf8(lua_tostring(L, -1)));
+            lua_pop(L, 1);
+        } else {
+            resultStr = tr("Unknown Lua error occurred");
+        }
+    } else {
+        // Get any return value
+        if (lua_gettop(L) > 0) {
+            QJsonValue returnValue = luaStackToJson(L, -1);
+            if (!returnValue.isNull()) {
+                resultStr += tr("Return value: %1\n").arg(QJsonDocument(QJsonArray{returnValue}).toJson(QJsonDocument::Compact));
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    // Get captured output
+    QString getCapturedCode = qsl(R"(
+        local result = table.concat(captured_output, '\n')
+        print = original_print
+        return result
+    )");
+
+    if (luaL_dostring(L, getCapturedCode.toUtf8().constData()) == 0) {
+        if (lua_gettop(L) > 0) {
+            QString capturedOutput = QString::fromUtf8(lua_tostring(L, -1));
+            if (!capturedOutput.isEmpty()) {
+                resultStr = capturedOutput + (resultStr.isEmpty() ? "" : "\n" + resultStr);
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    return QJsonValue(resultStr);
 }
 
 QJsonArray TMCPLuaBridge::getAvailableTools() const
 {
     QJsonArray tools;
 
+    qDebug() << "TMCPLuaBridge: Returning" << mTools.size() << "tools";
+
     for (const auto& tool : mTools) {
         QJsonObject toolDef;
         toolDef[qsl("name")] = tool.name;
+        toolDef[qsl("title")] = tool.name; // Add optional title field
         toolDef[qsl("description")] = tool.description;
         toolDef[qsl("inputSchema")] = tool.inputSchema;
+
+        qDebug() << "TMCPLuaBridge: Tool:" << tool.name << "schema:" << tool.inputSchema;
         tools.append(toolDef);
     }
 
@@ -211,14 +194,26 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
     const MCPTool& tool = mTools[toolName];
 
     try {
-        result.result = executeLuaFunction(tool.luaFunction, arguments);
+        if (toolName == qsl("lua")) {
+            // Special handling for the Lua tool
+            QString luaCode = arguments[qsl("code")].toString();
+            if (luaCode.isEmpty()) {
+                result.errorMessage = tr("Missing required parameter: code");
+                result.errorCode = -32602;
+                return result;
+            }
+            result.result = executeLuaCode(luaCode);
+        } else {
+            // Handle regular Lua function tools (if any remain)
+            result.result = executeLuaFunction(tool.luaFunction, arguments);
+        }
         result.success = true;
         result.errorMessage.clear();
         result.errorCode = 0;
     } catch (const std::exception& e) {
-        result.errorMessage = tr("Error executing Lua function %1: %2").arg(toolName, QString::fromStdString(e.what()));
+        result.errorMessage = tr("Error executing tool %1: %2").arg(toolName, QString::fromStdString(e.what()));
     } catch (...) {
-        result.errorMessage = tr("Unknown error executing Lua function %1").arg(toolName);
+        result.errorMessage = tr("Unknown error executing tool %1").arg(toolName);
     }
 
     return result;
