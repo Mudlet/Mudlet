@@ -20,6 +20,7 @@
 #include "TMCPLuaBridge.h"
 #include "Host.h"
 #include "TLuaInterpreter.h"
+#include "mudlet.h"
 
 #include <QDebug>
 #include <QFile>
@@ -71,6 +72,12 @@ void TMCPLuaBridge::createLuaExecutionTool()
     properties[qsl("code")] = codeParam;
     required.append(qsl("code"));
 
+    // Optional 'profile' parameter
+    QJsonObject profileParam;
+    profileParam[qsl("type")] = qsl("string");
+    profileParam[qsl("description")] = tr("Profile name to run the code in. If not specified, uses the currently active profile");
+    properties[qsl("profile")] = profileParam;
+
     schema[qsl("properties")] = properties;
     schema[qsl("required")] = required;
 
@@ -84,13 +91,25 @@ void TMCPLuaBridge::createLuaExecutionTool()
     qDebug() << "TMCPLuaBridge: Created Lua tool";
 }
 
-QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode)
+QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode, const QString& profileName)
 {
-    if (!mpHost) {
-        return QJsonValue(tr("No host available for Lua execution"));
+    Host* targetHost = mpHost;
+
+    // If a profile name is specified, try to get that profile's host
+    if (!profileName.isEmpty()) {
+        targetHost = mudlet::self()->getHostManager().getHost(profileName);
+        if (!targetHost) {
+            return QJsonValue(tr("Profile '%1' not found").arg(profileName));
+        }
+    } else if (!targetHost) {
+        // If no profile specified and mpHost is null, try to get the active host
+        targetHost = mudlet::self()->getActiveHost();
+        if (!targetHost) {
+            return QJsonValue(tr("No active profile available for Lua execution"));
+        }
     }
 
-    lua_State* L = mpHost->getLuaInterpreter()->pGlobalLua;
+    lua_State* L = targetHost->getLuaInterpreter()->pGlobalLua;
     if (!L) {
         return QJsonValue(tr("Lua interpreter not available"));
     }
@@ -141,7 +160,10 @@ QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode)
 
     // Get captured output
     QString getCapturedCode = qsl(R"(
-        local result = table.concat(captured_output, '\n')
+        local result = ""
+        if captured_output and type(captured_output) == "table" then
+            result = table.concat(captured_output, '\n')
+        end
         print = original_print
         return result
     )");
@@ -154,6 +176,11 @@ QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode)
             }
             lua_pop(L, 1);
         }
+    }
+
+    // Return null if no output or return value
+    if (resultStr.isEmpty()) {
+        return QJsonValue();
     }
 
     return QJsonValue(resultStr);
@@ -202,7 +229,8 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
                 result.errorCode = -32602;
                 return result;
             }
-            result.result = executeLuaCode(luaCode);
+            QString profileName = arguments[qsl("profile")].toString();
+            result.result = executeLuaCode(luaCode, profileName);
         } else {
             // Handle regular Lua function tools (if any remain)
             result.result = executeLuaFunction(tool.luaFunction, arguments);

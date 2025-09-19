@@ -331,16 +331,21 @@ void TMCPServer::handleCallToolRequest(const QJsonObject& request, QJsonObject& 
     }
 
     QJsonObject resultObj;
-    QJsonObject content;
-    content[qsl("type")] = qsl("text");
+    resultObj[qsl("isError")] = false;
 
     if (result.success) {
-        content[qsl("text")] = result.result.toString();
-        resultObj[qsl("content")] = QJsonArray{content};
-        resultObj[qsl("isError")] = false;
+        // Only include content if there's actually something to show
+        if (!result.result.isNull() && !result.result.toString().isEmpty()) {
+            QJsonObject content;
+            content[qsl("type")] = qsl("text");
+            content[qsl("text")] = result.result.toString();
+            resultObj[qsl("content")] = QJsonArray{content};
+        }
     } else {
         // For tool execution errors, return error content with isError: true
         // This follows MCP spec for tool execution errors vs protocol errors
+        QJsonObject content;
+        content[qsl("type")] = qsl("text");
         content[qsl("text")] = result.errorMessage;
         resultObj[qsl("content")] = QJsonArray{content};
         resultObj[qsl("isError")] = true;

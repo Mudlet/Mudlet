@@ -84,7 +84,7 @@ private:
     };
 
     void createLuaExecutionTool();
-    QJsonValue executeLuaCode(const QString& luaCode);
+    QJsonValue executeLuaCode(const QString& luaCode, const QString& profileName = QString());
     QJsonValue executeLuaFunction(const LuaFunctionInfo& luaFunc, const QJsonObject& arguments);
     QJsonValue luaStackToJson(lua_State* L, int index);
     void jsonToLuaStack(lua_State* L, const QJsonValue& value);
