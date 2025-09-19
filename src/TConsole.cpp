@@ -2625,7 +2625,5 @@ void TConsole::slot_restoreCommandSearchSettings()
         return;
     }
 
-    if (!commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray())) {
-
-    };
+    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
 }
