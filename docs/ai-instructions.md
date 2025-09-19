@@ -48,6 +48,10 @@ QString objectName = qsl("timer(Host:%1)(TTimerId:%2)").arg(hostName, timerName)
 
 // Prefer QString for UI, tr() for user-visible strings
 QString displayText = tr("Connection failed: %1").arg(errorMessage);
+
+// Always add contextual comments for translators using //:
+//: Toast notification shown when user dismisses an editor tip banner
+QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 ```
 
 ### Memory management
