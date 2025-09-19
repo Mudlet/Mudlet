@@ -496,6 +496,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     commandSplitter->setStretchFactor(0, 3); // command line
     commandSplitter->setStretchFactor(1, 1); // search layer
 
+    // Prevent widgets from being completely hidden
+    layerCommandLine->setMinimumWidth(200);
+    mpButtonMainLayer->setMinimumWidth(150);
+    commandSplitter->setCollapsible(0, false); // command line cannot collapse
+    commandSplitter->setCollapsible(1, false); // search layer cannot collapse
+
     centralLayout->addWidget(commandSplitter);
     slot_restoreCommandSearchSettings();
 
