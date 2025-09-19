@@ -59,6 +59,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     ui->setupUi(this);
     ui->splitter_metadataAssets->hide();
     ui->Icon->hide();
+    ui->pushButton_removeIcon->hide();
 
     mpExportSelection = ui->treeWidget_exportSelection;
     mpSelectionText = ui->groupBox_exportSelection;
@@ -109,6 +110,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
     connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
+    connect(ui->pushButton_removeIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
 
     ui->listWidget_addedFiles->installEventFilter(this);
@@ -165,44 +167,44 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
     if (isModule) {
         // Update the window title for module creation
         setWindowTitle(tr("Create Module - %1").arg(mpHost->getName()));
-        
+
         // Update UI elements for module creation
         ui->lineEdit_packageName->setPlaceholderText(tr("Enter module name"));
-        
+
         // Update button text to be module-specific
         mExportButton->setText(tr("Create Module"));
-        
+
         // Update export location button text
         ui->pushButton_packageLocation->setText(tr("Select where to save module"));
-        
+
         // Update the groupbox title for module creation
         ui->groupBox_exportSelection->setTitle(tr("Select items to include in module"));
-        
+
         // Hide the package list dropdown and "or" label for cleaner module creation
         ui->packageList->setVisible(false);
         ui->label_or->setVisible(false);
-        
+
         // Update the description button text to be module-specific
         // IMPORTANT: Must use setText not setPlaceholderText for buttons
         ui->pushButton_openInfos->setText(tr("Add module description, icon, and assets (optional)"));
-        
+
         // Update the export location widget to be more descriptive
         ui->lineEdit_filePath->setPlaceholderText(tr("Module location"));
-        
+
         // Update info label if visible
         ui->infoLabel->setText(QString());
-        
+
         // Update metadata labels to be module-specific
         ui->label_shortDescription->setText(tr("Module description"));
         ui->lineEdit_title->setPlaceholderText(tr("Brief description of your module"));
         ui->lineEdit_author->setPlaceholderText(tr("Module author (recommended)"));
         ui->lineEdit_version->setPlaceholderText(tr("Module version (recommended)"));
-        
+
         // Update dependencies and assets labels
         ui->label_requiredPackages->setText(tr("Module dependencies"));
         ui->label_assets->setText(tr("Include module assets (images, sounds, fonts)"));
         ui->addFiles->setText(tr("Select files to include in module"));
-        
+
         // Clear dropdown lists that have package-specific items
         // Temporarily disconnect the signal to prevent unwanted selections when clearing
         disconnect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
@@ -217,7 +219,7 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
         }
         // Reconnect the signal (though it's not needed in module creation mode)
         connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
-        
+
         // Clear the default package template text and set module-specific template
         ui->textEdit_description->clear();
         ui->textEdit_description->setPlainText(tr("(optional)\n\n"
@@ -232,7 +234,7 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
             "### See Also\n\n"
             "Further reading material, e.g., links to documentation or forum posts.\n\n"
             "* https://wiki.mudlet.org/w/Manual:Modules"));
-        
+
         // Focus on the module name input
         ui->lineEdit_packageName->setFocus();
     }
@@ -243,15 +245,15 @@ void dlgPackageExporter::preselectTrigger(QTreeWidgetItem* item)
     if (!item) {
         return;
     }
-    
+
     // Get the trigger ID from the editor tree item
     const int triggerId = item->data(0, Qt::UserRole).toInt();
-    
+
     // Don't select anything if the ID is invalid (0 or negative)
     if (triggerId <= 0) {
         return;
     }
-    
+
     // Find the matching trigger in our trigger map by ID
     for (auto it = triggerMap.begin(); it != triggerMap.end(); ++it) {
         if (it.value()->getID() == triggerId) {
@@ -266,15 +268,15 @@ void dlgPackageExporter::preselectTimer(QTreeWidgetItem* item)
     if (!item) {
         return;
     }
-    
+
     // Get the timer ID from the editor tree item
     const int timerId = item->data(0, Qt::UserRole).toInt();
-    
+
     // Don't select anything if the ID is invalid (0 or negative)
     if (timerId <= 0) {
         return;
     }
-    
+
     // Find the matching timer in our timer map by ID
     for (auto it = timerMap.begin(); it != timerMap.end(); ++it) {
         if (it.value()->getID() == timerId) {
@@ -289,15 +291,15 @@ void dlgPackageExporter::preselectAlias(QTreeWidgetItem* item)
     if (!item) {
         return;
     }
-    
+
     // Get the alias ID from the editor tree item
     const int aliasId = item->data(0, Qt::UserRole).toInt();
-    
+
     // Don't select anything if the ID is invalid (0 or negative)
     if (aliasId <= 0) {
         return;
     }
-    
+
     // Find the matching alias in our alias map by ID
     for (auto it = aliasMap.begin(); it != aliasMap.end(); ++it) {
         if (it.value()->getID() == aliasId) {
@@ -312,15 +314,15 @@ void dlgPackageExporter::preselectScript(QTreeWidgetItem* item)
     if (!item) {
         return;
     }
-    
+
     // Get the script ID from the editor tree item
     const int scriptId = item->data(0, Qt::UserRole).toInt();
-    
+
     // Don't select anything if the ID is invalid (0 or negative)
     if (scriptId <= 0) {
         return;
     }
-    
+
     // Find the matching script in our script map by ID
     for (auto it = scriptMap.begin(); it != scriptMap.end(); ++it) {
         if (it.value()->getID() == scriptId) {
@@ -335,15 +337,15 @@ void dlgPackageExporter::preselectAction(QTreeWidgetItem* item)
     if (!item) {
         return;
     }
-    
+
     // Get the action ID from the editor tree item
     const int actionId = item->data(0, Qt::UserRole).toInt();
-    
+
     // Don't select anything if the ID is invalid (0 or negative)
     if (actionId <= 0) {
         return;
     }
-    
+
     // Find the matching action in our action map by ID
     for (auto it = actionMap.begin(); it != actionMap.end(); ++it) {
         if (it.value()->getID() == actionId) {
@@ -358,15 +360,15 @@ void dlgPackageExporter::preselectKey(QTreeWidgetItem* item)
     if (!item) {
         return;
     }
-    
+
     // Get the key ID from the editor tree item
     const int keyId = item->data(0, Qt::UserRole).toInt();
-    
+
     // Don't select anything if the ID is invalid (0 or negative)
     if (keyId <= 0) {
         return;
     }
-    
+
     // Find the matching key in our key map by ID
     for (auto it = keyMap.begin(); it != keyMap.end(); ++it) {
         if (it.value()->getID() == keyId) {
@@ -522,8 +524,10 @@ void dlgPackageExporter::slot_packageChanged(int index)
     if (!icon.isEmpty()) {
         mPackageIconPath = qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
         ui->Icon->show();
+        ui->pushButton_removeIcon->show();
     } else {
         ui->Icon->hide();
+        ui->pushButton_removeIcon->show();
     }
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -624,6 +628,14 @@ void dlgPackageExporter::slot_importIcon()
     ui->Icon->clear();
     ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->Icon->show();
+    ui->pushButton_removeIcon->show();
+}
+
+void dlgPackageExporter::slot_removeIcon()
+{
+    mPackageIconPath.clear();
+    ui->Icon->hide();
+    ui->pushButton_removeIcon->hide();
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
@@ -744,7 +756,7 @@ void dlgPackageExporter::slot_exportPackage()
 
     // Check if any items are selected for export
     bool hasSelectedItems = false;
-    
+
     // Check triggers
     if (mpTriggers) {
         QTreeWidgetItemIterator it(mpTriggers);
@@ -756,7 +768,7 @@ void dlgPackageExporter::slot_exportPackage()
             ++it;
         }
     }
-    
+
     // Check timers if no triggers selected
     if (!hasSelectedItems && mpTimers) {
         QTreeWidgetItemIterator it(mpTimers);
@@ -768,7 +780,7 @@ void dlgPackageExporter::slot_exportPackage()
             ++it;
         }
     }
-    
+
     // Check aliases if no triggers/timers selected
     if (!hasSelectedItems && mpAliases) {
         QTreeWidgetItemIterator it(mpAliases);
@@ -780,7 +792,7 @@ void dlgPackageExporter::slot_exportPackage()
             ++it;
         }
     }
-    
+
     // Check actions if no triggers/timers/aliases selected
     if (!hasSelectedItems && mpButtons) {
         QTreeWidgetItemIterator it(mpButtons);
@@ -792,7 +804,7 @@ void dlgPackageExporter::slot_exportPackage()
             ++it;
         }
     }
-    
+
     // Check scripts if no triggers/timers/aliases/actions selected
     if (!hasSelectedItems && mpScripts) {
         QTreeWidgetItemIterator it(mpScripts);
@@ -804,7 +816,7 @@ void dlgPackageExporter::slot_exportPackage()
             ++it;
         }
     }
-    
+
     // Check keys if no other items selected
     if (!hasSelectedItems && mpKeys) {
         QTreeWidgetItemIterator it(mpKeys);
@@ -816,7 +828,7 @@ void dlgPackageExporter::slot_exportPackage()
             ++it;
         }
     }
-    
+
     if (!hasSelectedItems) {
         if (mIsModuleCreationMode) {
             displayResultMessage(tr("Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module."), false);
@@ -936,7 +948,7 @@ void dlgPackageExporter::slot_exportPackage()
                             displayResultMessage(tr("Module \"%1\" created and installed successfully! You can now close this dialog.")
                                                          .arg(mPackageName.toHtmlEscaped()),
                                                  true);
-                            
+
                             // Clear the form to allow creating another module
                             ui->lineEdit_packageName->clear();
                             ui->lineEdit_packageName->setFocus();
@@ -950,7 +962,7 @@ void dlgPackageExporter::slot_exportPackage()
                                 msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
                                 msgBox.setDefaultButton(QMessageBox::No);
                                 msgBox.setIcon(QMessageBox::Question);
-                                
+
                                 if (msgBox.exec() == QMessageBox::Yes) {
                                     // User chose to overwrite - uninstall first, then reinstall
                                     if (mpHost->uninstallPackage(mPackageName, enums::PackageModuleType::ModuleFromUI)) {
@@ -964,7 +976,7 @@ void dlgPackageExporter::slot_exportPackage()
                                             successBox.setIcon(QMessageBox::Information);
                                             successBox.setStandardButtons(QMessageBox::Ok);
                                             successBox.exec();
-                                            
+
                                             // Close the dialog after successful module overwrite to prevent duplicates
                                             this->accept();
                                         } else {
@@ -999,7 +1011,7 @@ void dlgPackageExporter::slot_exportPackage()
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
                 QApplication::restoreOverrideCursor();
-                
+
                 // Clean up the watcher
                 watcher->deleteLater();
             });
