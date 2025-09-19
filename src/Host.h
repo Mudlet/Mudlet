@@ -75,7 +75,9 @@ class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
 class cTelnet;
+#ifdef INCLUDE_MCPSERVER
 class TMCPServer;
+#endif
 
 class stopWatch {
     friend class XMLimport;
@@ -189,11 +191,13 @@ public:
     void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
     void            setTimeout(const int seconds)    { mTimeout = seconds; }
+#ifdef INCLUDE_MCPSERVER
     bool            getMCPEnabled() const            { return mEnableMCP; }
     void            setMCPEnabled(const bool enabled);
     int             getMCPServerPort() const         { return mMCPServerPort; }
     void            setMCPServerPort(const int port) { mMCPServerPort = port; }
     QString         getMCPServerInfo() const;
+#endif
     bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
     void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
@@ -492,8 +496,10 @@ public:
     bool mEchoLuaErrors;
     QString mCommandSeparator;
     bool mEnableGMCP = true;
+#ifdef INCLUDE_MCPSERVER
     bool mEnableMCP = false;
     int mMCPServerPort = 11235;
+#endif
     bool mEnableMSSP = true;
     bool mEnableMSDP = false;
     bool mEnableMSP = true;
@@ -539,7 +545,9 @@ public:
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
+#ifdef INCLUDE_MCPSERVER
     QScopedPointer<TMCPServer> mpMCPServer;
+#endif
     dlgNotepad* mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:

@@ -223,7 +223,9 @@ private:
     QMap<QString, QKeySequence*> currentShortcuts;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
+#ifdef INCLUDE_MCPSERVER
     QPointer<QAction> mEnableMCP;
+#endif
     QPointer<QAction> mEnableMSDP;
     QPointer<QAction> mEnableMSSP;
     QPointer<QAction> mEnableMSP;

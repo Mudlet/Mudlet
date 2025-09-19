@@ -912,10 +912,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
 
+#ifdef INCLUDE_MCPSERVER
     mEnableMCP = new QAction(tr("MCP: Model Context Protocol Server"), nullptr);
     mEnableMCP->setCheckable(true);
     mEnableMCP->setChecked(pHost->mEnableMCP);
     protocolMenu->addAction(mEnableMCP);
+#endif
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
     mEnableMSDP->setCheckable(true);
@@ -1265,12 +1267,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+#ifdef INCLUDE_MCPSERVER
     connect(mEnableMCP, &QAction::toggled, this, [this, pHost]() {
         // MCP server doesn't require reconnection, handle immediately
         if (pHost) {
             pHost->setMCPEnabled(mEnableMCP->isChecked());
         }
     });
+#endif
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1397,7 +1401,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAction::toggled, nullptr, nullptr);
+#ifdef INCLUDE_MCPSERVER
     disconnect(mEnableMCP, &QAction::toggled, nullptr, nullptr);
+#endif
     disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSP, &QAction::toggled, nullptr, nullptr);
@@ -2928,7 +2934,9 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
+#ifdef INCLUDE_MCPSERVER
         pHost->mEnableMCP = mEnableMCP->isChecked();
+#endif
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mEnableMSP = mEnableMSP->isChecked();

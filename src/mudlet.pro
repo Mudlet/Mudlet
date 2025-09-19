@@ -245,6 +245,22 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+########################### MCP server toggle ###############################
+# To remove the MCP server, set the environment WITH_MCPSERVER variable to "NO"
+# ie: export WITH_MCPSERVER="NO" qmake
+#
+MCPSERVER_TEST = $$upper($$(WITH_MCPSERVER))
+isEmpty( MCPSERVER_TEST ) | !equals(MCPSERVER_TEST, "NO" ) {
+    DEFINES += INCLUDE_MCPSERVER
+    QT += httpserver
+
+    SOURCES += TMCPServer.cpp \
+               TMCPLuaBridge.cpp
+
+    HEADERS += TMCPServer.h \
+               TMCPLuaBridge.h
+}
+
 ######################### Shader hot-reload toggle ############################
 # To enable shader hot-reloading, set the environment WITH_SHADER_HOT_RELOAD variable to "YES"
 # ie: export WITH_SHADER_HOT_RELOAD="YES" qmake

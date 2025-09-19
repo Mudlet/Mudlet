@@ -33,7 +33,9 @@
 #include "dlgProfilePreferences.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
+#ifdef INCLUDE_MCPSERVER
 #include "TMCPServer.h"
+#endif
 #include "LuaInterface.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
@@ -245,7 +247,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
+#ifdef INCLUDE_MCPSERVER
 , mpMCPServer(new TMCPServer(this))
+#endif
 , mpNotePad(nullptr)
 , mCommandEchoMode(CommandEchoMode::ScriptControl)
 , mIsCurrentLogFileInHtmlFormat(false)
@@ -461,9 +465,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+#ifdef INCLUDE_MCPSERVER
     if (mpMCPServer && mpMCPServer->isRunning()) {
         mpMCPServer->stopServer();
     }
+#endif
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
@@ -4669,6 +4675,7 @@ QStringList Host::getValidExperiments() const
     return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
 }
 
+#ifdef INCLUDE_MCPSERVER
 void Host::setMCPEnabled(const bool enabled)
 {
     if (mEnableMCP == enabled) {
@@ -4698,3 +4705,4 @@ QString Host::getMCPServerInfo() const
     }
     return mpMCPServer->getServerInfo();
 }
+#endif

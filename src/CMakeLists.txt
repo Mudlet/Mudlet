@@ -90,8 +90,6 @@ set(mudlet_SRCS
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
-    TMCPServer.cpp
-    TMCPLuaBridge.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -273,8 +271,6 @@ set(mudlet_HDRS
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
-    TMCPServer.h
-    TMCPLuaBridge.h
     Host.h
     HostManager.h
     ircmessageformatter.h
@@ -399,6 +395,13 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
+if(USE_MCPSERVER)
+  list(APPEND mudlet_SRCS TMCPServer.cpp)
+  list(APPEND mudlet_SRCS TMCPLuaBridge.cpp)
+  list(APPEND mudlet_HDRS TMCPServer.h)
+  list(APPEND mudlet_HDRS TMCPLuaBridge.h)
+endif(USE_MCPSERVER)
+
 # credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
 macro(set_alternate_linker linker)
   find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
@@ -444,8 +447,11 @@ find_package(Qt6 6.4.0 REQUIRED
                UiTools
                Widgets
                Concurrent
-               Core5Compat
-               HttpServer)
+               Core5Compat)
+
+if(USE_MCPSERVER)
+  find_package(Qt6 COMPONENTS HttpServer REQUIRED)
+endif()
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -457,12 +463,15 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Network
               Qt6::Multimedia
               Qt6::MultimediaWidgets
-              Qt6::HttpServer
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
               Qt6::Core5Compat
               qt6keychain)
+
+if(USE_MCPSERVER)
+  list(APPEND QT_LIBS Qt6::HttpServer)
+endif()
 
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
@@ -651,6 +660,9 @@ if(USE_3DMAPPER)
   target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
 endif()
 
+if(USE_MCPSERVER)
+  target_compile_definitions(mudlet PRIVATE INCLUDE_MCPSERVER)
+endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(mudlet PRIVATE INCLUDE_VARIABLE_SPLASH_SCREEN)
