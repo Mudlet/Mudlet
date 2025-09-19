@@ -183,7 +183,6 @@ QHttpServerResponse TMCPServer::handleMcpPost(const QHttpServerRequest& request)
         }
     }
 
-    qDebug() << "TMCPServer: Session initialized status:" << session->initialized;
 
     QJsonObject jsonResponse;
 
