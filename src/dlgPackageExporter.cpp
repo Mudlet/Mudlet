@@ -2023,3 +2023,11 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
         QTextEdit::insertFromMimeData(source);
     }
 }
+
+void dlgPackageExporter::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit packageExporterClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
+}

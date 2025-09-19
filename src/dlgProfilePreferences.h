@@ -41,6 +41,7 @@
 #include <QDoubleSpinBox>
 #include <QFontDialog>
 #include <QMap>
+#include <QCloseEvent>
 #include "post_guard.h"
 
 class Host;
@@ -183,6 +184,10 @@ signals:
     void signal_themeUpdateCompleted();
     void signal_preferencesSaved();
     void signal_resetMainWindowShortcutsToDefaults();
+    void preferencesClosing(const QString& profileName);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void setColors();

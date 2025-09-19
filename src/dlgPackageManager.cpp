@@ -26,6 +26,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QCloseEvent>
 #include <QFileDialog>
 #include <QScrollBar>
 #include <QMessageBox>
@@ -244,4 +245,12 @@ void dlgPackageManager::slot_toggleRemoveButton()
         //: Message on button in package manager initially and when there is no packages to remove
         removeButton->setText(tr("Remove package"));
     }
+}
+
+void dlgPackageManager::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit packageManagerClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
 }
