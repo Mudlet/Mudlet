@@ -258,7 +258,7 @@ void dlgNotepad::saveSettings()
         return;
     }
 
-    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
+    const QString settingsKey = qsl("Notepad/%1/sendControlsVisible").arg(mpHost->getName());
     pQSettings->setValue(settingsKey, action_toggleSendControls->isChecked());
 }
 
@@ -273,7 +273,7 @@ void dlgNotepad::restoreSettings()
         return;
     }
 
-    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
+    const QString settingsKey = qsl("Notepad/%1/sendControlsVisible").arg(mpHost->getName());
     const bool sendControlsVisible = pQSettings->value(settingsKey, false).toBool();
 
     // Block signals to avoid triggering saveSettings during restoration
